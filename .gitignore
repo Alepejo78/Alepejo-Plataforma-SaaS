@@ -1,0 +1,36 @@
+# AI Tools
+.agents/
+.claude/
+.windsurf/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build
+dist/
+**/dist/
+.next/
+out/
+.turbo/
+coverage/
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma local
+**/prisma/dev.db
+**/prisma/dev.db-journal

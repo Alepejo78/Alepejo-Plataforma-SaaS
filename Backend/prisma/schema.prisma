@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  PENDING_ACTIVATION
+  ACTIVE
+  LOCKED
+  BLOCKED
+  DISABLED
+}
+
+model Company {
+  id String @id @default(cuid())
+
+  code String @unique @db.VarChar(20)
+
+  legalName String @db.VarChar(200)
+
+  tradeName String? @db.VarChar(200)
+
+  document String @unique @db.VarChar(20)
+
+  stateRegistration String? @db.VarChar(30)
+
+  municipalRegistration String? @db.VarChar(30)
+
+  email String? @db.VarChar(150)
+
+  phone String? @db.VarChar(30)
+
+  mobile String? @db.VarChar(30)
+
+  website String? @db.VarChar(200)
+
+  logo String? @db.VarChar(255)
+
+  timezone String @default("America/Sao_Paulo") @db.VarChar(60)
+
+  language String @default("pt-BR") @db.VarChar(10)
+
+  currency String @default("BRL") @db.VarChar(10)
+
+  active Boolean @default(true)
+
+  users User[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  @@map("companies")
+}
+
+model User {
+  id String @id @default(cuid())
+
+  companyId String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  name String @db.VarChar(150)
+
+  email String @unique @db.VarChar(150)
+
+  // Será removido quando toda a aplicação migrar para passwordHash
+  password String @db.VarChar(255)
+
+  passwordHash String? @db.VarChar(255)
+
+  status UserStatus @default(PENDING_ACTIVATION)
+
+  mustChangePassword Boolean @default(true)
+
+  passwordChangedAt DateTime?
+
+  lastLoginAt DateTime?
+
+  lastLoginIp String? @db.VarChar(45)
+
+  failedLoginAttempts Int @default(0)
+
+  lockedUntil DateTime?
+
+  refreshTokenHash String? @db.VarChar(255)
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  @@index([companyId])
+  @@index([email])
+  @@index([status])
+  @@map("users")
+}
