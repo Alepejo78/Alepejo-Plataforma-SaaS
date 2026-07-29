@@ -26,7 +26,7 @@ export class UsersRepository {
     });
   }
 
-  async findById(id: string): Promise<User | null> {
+  async findById(id: string) {
     return this.prisma.user.findFirst({
       where: {
         id,
@@ -34,15 +34,54 @@ export class UsersRepository {
       },
       include: {
         company: true,
+
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: {
+                      include: {
+                        group: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string) {
     return this.prisma.user.findFirst({
       where: {
         email,
         deletedAt: null,
+      },
+      include: {
+        company: true,
+
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: {
+                      include: {
+                        group: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
   }

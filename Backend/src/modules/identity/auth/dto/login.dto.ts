@@ -1,34 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
-
 import {
   IsEmail,
   IsNotEmpty,
+  IsString,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 
 export class LoginDto {
   @ApiProperty({
-    example: 'admin@empresa.com',
+    example: 'admin@empresa.com.br',
   })
-  @IsEmail(
-    {},
-    {
-      message: 'E-mail inválido.',
-    },
-  )
-  @IsNotEmpty({
-    message: 'O e-mail é obrigatório.',
-  })
+  @IsEmail()
+  @MaxLength(150)
   email: string;
 
   @ApiProperty({
-    example: '123456',
+    example: 'Senha@123',
   })
-  @IsNotEmpty({
-    message: 'A senha é obrigatória.',
-  })
-  @MinLength(6, {
-    message: 'A senha deve possuir no mínimo 6 caracteres.',
-  })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8)
+  @MaxLength(100)
   password: string;
 }

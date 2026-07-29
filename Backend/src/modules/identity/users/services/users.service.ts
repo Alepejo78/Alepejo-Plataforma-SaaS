@@ -4,8 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { CompanyService } from '../../company/services/company.service';
+import { UserStatus } from '@prisma/client';
 
+import { PasswordService } from '../../../../core/security/password.service';
+
+import { CompanyService } from '../../company/services/company.service';
 import { UsersRepository } from '../repositories/users.repository';
 
 import { CreateUserDto } from '../dto/create-user.dto';
@@ -16,6 +19,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly companyService: CompanyService,
+    private readonly passwordService: PasswordService,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -37,6 +41,10 @@ export class UsersService {
       );
     }
 
+    const passwordHash = await this.passwordService.hash(
+      createUserDto.password,
+    );
+
     return this.usersRepository.create({
       company: {
         connect: {
@@ -45,7 +53,10 @@ export class UsersService {
       },
       name: createUserDto.name,
       email: createUserDto.email,
-      password: createUserDto.password,
+      passwordHash,
+      status: UserStatus.PENDING_ACTIVATION,
+      mustChangePassword: true,
+      active: true,
     });
   }
 
@@ -63,10 +74,28 @@ export class UsersService {
     return user;
   }
 
+  async findByEmail(email: string) {
+    return this.usersRepository.findByEmail(email);
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto) {
     await this.findById(id);
 
     return this.usersRepository.update(id, updateUserDto);
+  }
+
+  async updateLoginSuccess(id: string) {
+    return this.usersRepository.update(id, {
+      lastLoginAt: new Date(),
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+    });
+  }
+
+  async updateFailedLogin(id: string, attempts: number) {
+    return this.usersRepository.update(id, {
+      failedLoginAttempts: attempts,
+    });
   }
 
   async remove(id: string) {

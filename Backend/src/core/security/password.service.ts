@@ -11,8 +11,14 @@ export class PasswordService {
 
   async compare(
     password: string,
-    passwordHash: string,
+    hash: string,
   ): Promise<boolean> {
-    return bcrypt.compare(password, passwordHash);
+    return bcrypt.compare(password, hash);
+  }
+
+  async needsRehash(hash: string): Promise<boolean> {
+    const rounds = bcrypt.getRounds(hash);
+
+    return rounds < this.saltRounds;
   }
 }

@@ -10,9 +10,21 @@ datasource db {
 enum UserStatus {
   PENDING_ACTIVATION
   ACTIVE
+  PASSWORD_EXPIRED
   LOCKED
   BLOCKED
   DISABLED
+}
+
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
 }
 
 model Company {
@@ -50,6 +62,10 @@ model Company {
 
   users User[]
 
+  roles Role[]
+
+  clients Client[]
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
@@ -57,6 +73,59 @@ model Company {
   deletedAt DateTime?
 
   @@map("companies")
+}
+
+model Client {
+  id String @id @default(cuid())
+
+  companyId String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name String @db.VarChar(150)
+
+  document String @db.VarChar(20)
+
+  email String? @db.VarChar(150)
+
+  phone String? @db.VarChar(30)
+
+  mobile String? @db.VarChar(30)
+
+  contactName String? @db.VarChar(150)
+
+  zipCode String? @db.VarChar(15)
+
+  street String? @db.VarChar(150)
+
+  number String? @db.VarChar(20)
+
+  complement String? @db.VarChar(100)
+
+  district String? @db.VarChar(100)
+
+  city String? @db.VarChar(100)
+
+  state String? @db.VarChar(2)
+
+  notes String? @db.Text
+
+  status ClientStatus @default(ACTIVE)
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  @@unique([companyId, document])
+  @@index([companyId])
+  @@index([name])
+  @@index([document])
+  @@index([status])
+  @@map("clients")
 }
 
 model User {
@@ -70,10 +139,7 @@ model User {
 
   email String @unique @db.VarChar(150)
 
-  // Será removido quando toda a aplicação migrar para passwordHash
-  password String @db.VarChar(255)
-
-  passwordHash String? @db.VarChar(255)
+  passwordHash String @db.VarChar(255)
 
   status UserStatus @default(PENDING_ACTIVATION)
 
@@ -93,6 +159,8 @@ model User {
 
   active Boolean @default(true)
 
+  roles UserRole[]
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
@@ -103,4 +171,120 @@ model User {
   @@index([email])
   @@index([status])
   @@map("users")
+}
+
+model Role {
+  id String @id @default(cuid())
+
+  companyId String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name String @db.VarChar(100)
+
+  code String @db.VarChar(100)
+
+  description String? @db.VarChar(255)
+
+  isSystem Boolean @default(false)
+
+  active Boolean @default(true)
+
+  users UserRole[]
+
+  permissions RolePermission[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  @@unique([companyId, code])
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("roles")
+}
+
+model PermissionGroup {
+  id String @id @default(cuid())
+
+  name String @unique @db.VarChar(100)
+
+  code String @unique @db.VarChar(100)
+
+  description String? @db.VarChar(255)
+
+  permissions Permission[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@map("permission_groups")
+}
+
+model Permission {
+  id String @id @default(cuid())
+
+  groupId String
+
+  group PermissionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  name String @db.VarChar(150)
+
+  code String @unique @db.VarChar(150)
+
+  description String? @db.VarChar(255)
+
+  active Boolean @default(true)
+
+  roles RolePermission[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([groupId])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id String @id @default(cuid())
+
+  roleId String
+
+  permissionId String
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  effect PermissionEffect @default(ALLOW)
+
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id String @id @default(cuid())
+
+  userId String
+
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
 }

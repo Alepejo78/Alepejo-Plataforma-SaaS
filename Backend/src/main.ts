@@ -1,9 +1,11 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { AppModule } from './app.module';
-import { ResponseInterceptor } from './core/interceptors/response.interceptor';
+
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
+import { ResponseInterceptor } from './core/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,13 +21,29 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
+
+  app.useGlobalInterceptors(
+    new ResponseInterceptor(),
+  );
+
+  app.useGlobalFilters(
+    new HttpExceptionFilter(),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('AlePejo ERP API')
     .setDescription('Documentação oficial da API do AlePejo ERP Cloud')
     .setVersion('1.0.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        in: 'header',
+      },
+      'JWT',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
