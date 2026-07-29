@@ -1,6 +1,6 @@
 import type { AppShellProps } from "./AppShell.types";
 
-import { Sidebar } from "@/components";
+import { Sidebar } from "../Sidebar";
 
 export function AppShell({ children }: AppShellProps) {
   return (

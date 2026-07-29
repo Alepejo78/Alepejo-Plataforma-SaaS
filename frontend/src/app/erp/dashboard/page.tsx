@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import {
+  AppShell,
   DashboardHeader,
   QuickActions,
   RecentActivities,
@@ -18,73 +19,75 @@ import {
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <AppShell>
+      <div className="space-y-8">
 
-      <DashboardHeader
-        userName="Alessandro"
-        companyName="AlePejo ERP Cloud"
-      />
-
-      <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-
-        <StatCard
-          title="Faturamento"
-          value="R$ 458.920"
-          subtitle="Últimos 30 dias"
-          icon={<CircleDollarSign size={22} />}
-          trend={{
-            value: 12.8,
-            positive: true,
-          }}
+        <DashboardHeader
+          userName="Alessandro"
+          companyName="AlePejo ERP Cloud"
         />
 
-        <StatCard
-          title="Pedidos"
-          value="1.248"
-          subtitle="Pedidos emitidos"
-          icon={<ShoppingCart size={22} />}
-          trend={{
-            value: 8.3,
-            positive: true,
-          }}
-        />
+        <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
 
-        <StatCard
-          title="Produtos"
-          value="8.432"
-          subtitle="Produtos cadastrados"
-          icon={<Package size={22} />}
-          trend={{
-            value: 2.1,
-            positive: true,
-          }}
-        />
+          <StatCard
+            title="Faturamento"
+            value="R$ 458.920"
+            subtitle="Últimos 30 dias"
+            icon={<CircleDollarSign size={22} />}
+            trend={{
+              value: 12.8,
+              positive: true,
+            }}
+          />
 
-        <StatCard
-          title="Empresas"
-          value="18"
-          subtitle="Empresas ativas"
-          icon={<Building2 size={22} />}
-          trend={{
-            value: 0,
-            positive: true,
-          }}
-        />
+          <StatCard
+            title="Pedidos"
+            value="1.248"
+            subtitle="Pedidos emitidos"
+            icon={<ShoppingCart size={22} />}
+            trend={{
+              value: 8.3,
+              positive: true,
+            }}
+          />
 
-      </section>
+          <StatCard
+            title="Produtos"
+            value="8.432"
+            subtitle="Produtos cadastrados"
+            icon={<Package size={22} />}
+            trend={{
+              value: 2.1,
+              positive: true,
+            }}
+          />
 
-      <QuickActions />
+          <StatCard
+            title="Empresas"
+            value="18"
+            subtitle="Empresas ativas"
+            icon={<Building2 size={22} />}
+            trend={{
+              value: 0,
+              positive: true,
+            }}
+          />
 
-      <section className="grid gap-6 xl:grid-cols-2">
+        </section>
 
-        <RevenueChart />
+        <QuickActions />
 
-        <SalesChart />
+        <section className="grid gap-6 xl:grid-cols-2">
 
-      </section>
+          <RevenueChart />
 
-      <RecentActivities />
+          <SalesChart />
 
-    </div>
+        </section>
+
+        <RecentActivities />
+
+      </div>
+    </AppShell>
   );
 }

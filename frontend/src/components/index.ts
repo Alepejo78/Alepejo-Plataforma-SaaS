@@ -6,3 +6,4 @@ export * from "./ui/Surface";
 export * from "./layout/AppShell";
 export * from "./layout/Sidebar";
 export * from "./layout/TopBar";
+export * from "./dashboard";

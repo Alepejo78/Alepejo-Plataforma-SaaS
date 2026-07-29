@@ -1,28 +1,19 @@
 import "./globals.css";
+
 import { ThemeProvider } from "../providers/theme-provider";
 
 export default function RootLayout({
-children,
+  children,
 }: Readonly<{
-children: React.ReactNode;
+  children: React.ReactNode;
 }>) {
-
-return (
-
-<html lang="pt-BR" suppressHydrationWarning>
-
-<body>
-
-
-
-{children}
-
-
-
-</body>
-
-</html>
-
-);
-
+  return (
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  );
 }

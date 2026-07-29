@@ -1,3 +1,4 @@
+import { AppShell } from "@/components";
 import {
   DashboardHeader,
   QuickAction,
@@ -5,12 +6,11 @@ import {
   StatCard,
 } from "@/components/dashboard";
 
-import { AppShell } from "@/components";
-
 import {
   DollarSign,
   Package,
   ShoppingCart,
+  UserPlus,
   Users,
 } from "lucide-react";
 
@@ -18,11 +18,9 @@ export default function HomePage() {
   return (
     <AppShell>
       <div className="space-y-8">
-
         <DashboardHeader />
 
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-
           <StatCard
             title="Faturamento"
             value="R$ 1.250.000"
@@ -50,25 +48,22 @@ export default function HomePage() {
             icon={Users}
             variation="+18%"
           />
-
         </section>
 
         <section className="grid gap-6 xl:grid-cols-3">
-
           <div className="xl:col-span-2">
-
             <RecentActivities />
-
           </div>
 
           <div>
-
-            <QuickAction />
-
+            <QuickAction
+              title="Novo Cliente"
+              description="Cadastrar um novo cliente"
+              icon={<UserPlus size={22} />}
+              href="/erp/clientes"
+            />
           </div>
-
         </section>
-
       </div>
     </AppShell>
   );

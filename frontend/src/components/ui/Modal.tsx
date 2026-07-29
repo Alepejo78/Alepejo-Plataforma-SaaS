@@ -1,57 +1,89 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useEffect } from "react";
 
-import {
-  Button,
-  Surface,
-  Typography,
-} from "@/components";
+import { X } from "lucide-react";
 
-import { ClientTable } from "@/components/clientes/ClientTable";
-import { DataTableToolbar } from "@/components/ui/DataTableToolbar";
+import { Typography } from "@/components";
 
-export default function ClientesPage() {
-  const [search, setSearch] = useState("");
+interface ModalProps {
+  open: boolean;
+  title: string;
+  size?: "sm" | "md" | "lg" | "xl";
+  onClose: () => void;
+  children: ReactNode;
+}
+
+const sizeClasses: Record<NonNullable<ModalProps["size"]>, string> = {
+  sm: "max-w-md",
+  md: "max-w-lg",
+  lg: "max-w-2xl",
+  xl: "max-w-4xl",
+};
+
+export function Modal({
+  open,
+  title,
+  size = "md",
+  onClose,
+  children,
+}: ModalProps) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  if (!open) {
+    return null;
+  }
 
   return (
-    <div className="space-y-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        aria-hidden
+      />
 
-      <div className="flex items-center justify-between">
-
-        <div>
-
-          <Typography variant="h1">
-            Clientes
+      <div
+        role="dialog"
+        aria-modal
+        aria-labelledby="modal-title"
+        className={`
+          relative
+          w-full
+          ${sizeClasses[size]}
+          rounded-2xl
+          border
+          border-[var(--border)]
+          bg-[var(--surface)]
+          shadow-xl
+        `}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
+          <Typography id="modal-title" variant="title">
+            {title}
           </Typography>
 
-          <Typography
-            variant="body"
-            className="text-[var(--text-muted)]"
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 transition hover:bg-[var(--surface-hover)]"
+            aria-label="Fechar"
           >
-            Gerencie todos os clientes cadastrados.
-          </Typography>
-
+            <X size={20} />
+          </button>
         </div>
 
+        <div className="p-6">{children}</div>
       </div>
-
-      <Surface className="rounded-2xl border border-[var(--border)] p-6">
-
-        <DataTableToolbar
-          search={search}
-          onSearch={setSearch}
-          newLabel="Novo Cliente"
-          onNew={() => {}}
-          onFilter={() => {}}
-          onExport={() => {}}
-          placeholder="Pesquisar cliente por código, nome ou documento..."
-        />
-
-      </Surface>
-
-      <ClientTable />
-
     </div>
   );
 }

@@ -11,7 +11,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   function handleLogin() {
-    router.push("/dashboard");
+    router.push("/");
   }
 
   return (
@@ -21,13 +21,13 @@ export default function LoginPage() {
       <div className="hidden md:flex w-1/2 bg-black text-white flex-col justify-center items-center p-10">
 
         <img
-          src={systemConfig.logo}
+          src={systemConfig.company.logo}
           alt="Logo"
           className="w-28 mb-6"
         />
 
         <h1 className="text-4xl font-bold text-white text-center">
-          {systemConfig.name}
+          {systemConfig.company.name}
         </h1>
 
         <p className="text-gray-300 mt-4 text-center max-w-md">
