@@ -27,6 +27,36 @@ enum ClientStatus {
   BLOCKED
 }
 
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum ProductType {
+  PRODUCT
+  SERVICE
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum InventoryControl {
+  NONE
+  SIMPLE
+  BATCH
+  SERIAL
+}
+
+enum StockMovementType {
+  ENTRY
+  EXIT
+  ADJUSTMENT
+  TRANSFER
+}
+
 model Company {
   id String @id @default(cuid())
 
@@ -66,11 +96,26 @@ model Company {
 
   clients Client[]
 
+  suppliers Supplier[]
+
+  productCategories ProductCategory[]
+
+  brands Brand[]
+
+  units UnitOfMeasure[]
+
+  products Product[]
+
   createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+  updatedAt      DateTime        @updatedAt
+  warehouses     Warehouse[]
+  inventories    Inventory[]
+  stockMovements StockMovement[]
 
   deletedAt DateTime?
+  purchases Purchase[]
+  sales     Sale[]
 
   @@map("companies")
 }
@@ -119,6 +164,7 @@ model Client {
   updatedAt DateTime @updatedAt
 
   deletedAt DateTime?
+  Sale      Sale[]
 
   @@unique([companyId, document])
   @@index([companyId])
@@ -287,4 +333,303 @@ model UserRole {
   @@index([userId])
   @@index([roleId])
   @@map("user_roles")
+}
+
+model Supplier {
+  id String @id @default(cuid())
+
+  companyId String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  corporateName String @db.VarChar(200)
+
+  tradeName String? @db.VarChar(200)
+
+  document String @db.VarChar(20)
+
+  stateRegistration String? @db.VarChar(30)
+
+  email String? @db.VarChar(150)
+
+  phone String? @db.VarChar(30)
+
+  mobile String? @db.VarChar(30)
+
+  contact String? @db.VarChar(150)
+
+  zipCode String? @db.VarChar(15)
+
+  street String? @db.VarChar(150)
+
+  number String? @db.VarChar(20)
+
+  complement String? @db.VarChar(100)
+
+  district String? @db.VarChar(100)
+
+  city String? @db.VarChar(100)
+
+  state String? @db.VarChar(2)
+
+  notes String? @db.Text
+
+  status SupplierStatus @default(ACTIVE)
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+  purchases Purchase[]
+
+  @@unique([companyId, document])
+  @@index([companyId])
+  @@index([corporateName])
+  @@index([document])
+  @@map("suppliers")
+}
+
+model ProductCategory {
+  id          String      @id @default(cuid())
+  companyId   String
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String      @db.VarChar(120)
+  description String?     @db.VarChar(255)
+  active      Boolean     @default(true)
+  products    Product[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  inventories Inventory[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("product_categories")
+}
+
+model Brand {
+  id        String    @id @default(cuid())
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String    @db.VarChar(120)
+  active    Boolean   @default(true)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("brands")
+}
+
+model UnitOfMeasure {
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code        String    @db.VarChar(10)
+  description String    @db.VarChar(80)
+  active      Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("units")
+}
+
+model Product {
+  id                       String           @id @default(cuid())
+  companyId                String
+  company                  Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  categoryId               String?
+  category                 ProductCategory? @relation(fields: [categoryId], references: [id])
+  brandId                  String?
+  brand                    Brand?           @relation(fields: [brandId], references: [id])
+  unitId                   String
+  unit                     UnitOfMeasure    @relation(fields: [unitId], references: [id])
+  code                     String           @db.VarChar(30)
+  barcode                  String?          @db.VarChar(30)
+  description              String           @db.VarChar(200)
+  complementaryDescription String?          @db.VarChar(255)
+  type                     ProductType      @default(PRODUCT)
+  inventoryControl         InventoryControl @default(SIMPLE)
+  cost                     Decimal          @db.Decimal(18, 2)
+  salePrice                Decimal          @db.Decimal(18, 2)
+  minimumStock             Decimal          @default(0) @db.Decimal(18, 3)
+  currentStock             Decimal          @default(0) @db.Decimal(18, 3)
+  status                   ProductStatus    @default(ACTIVE)
+  active                   Boolean          @default(true)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  deletedAt                DateTime?
+  Inventory                Inventory[]
+  purchaseItems            PurchaseItem[]
+  saleItems                SaleItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("products")
+}
+
+model Warehouse {
+  id          String      @id @default(cuid())
+  companyId   String
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code        String      @db.VarChar(20)
+  description String      @db.VarChar(120)
+  active      Boolean     @default(true)
+  inventories Inventory[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  purchases   Purchase[]
+  sales       Sale[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("warehouses")
+}
+
+model Inventory {
+  id                String           @id @default(cuid())
+  companyId         String
+  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId       String
+  warehouse         Warehouse        @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  quantity          Decimal          @default(0) @db.Decimal(18, 4)
+  averageCost       Decimal          @default(0) @db.Decimal(18, 4)
+  active            Boolean          @default(true)
+  movements         StockMovement[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  ProductCategory   ProductCategory? @relation(fields: [productCategoryId], references: [id])
+  productCategoryId String?
+
+  @@unique([companyId, productId, warehouseId])
+  @@index([companyId])
+  @@index([productId])
+  @@index([warehouseId])
+  @@map("inventories")
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  companyId   String
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  inventoryId String
+  inventory   Inventory         @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  type        StockMovementType
+  quantity    Decimal           @db.Decimal(18, 4)
+  unitCost    Decimal?          @db.Decimal(18, 4)
+  observation String?           @db.VarChar(255)
+  createdAt   DateTime          @default(now())
+
+  @@index([companyId])
+  @@index([inventoryId])
+  @@map("stock_movements")
+}
+
+enum PurchaseStatus {
+  DRAFT
+  APPROVED
+  RECEIVED
+  CANCELLED
+}
+
+enum SaleStatus {
+  DRAFT
+  APPROVED
+  INVOICED
+  SHIPPED
+  CANCELLED
+}
+
+model Purchase {
+  id           String         @id @default(cuid())
+  companyId    String
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplierId   String
+  supplier     Supplier       @relation(fields: [supplierId], references: [id])
+  warehouseId  String
+  warehouse    Warehouse      @relation(fields: [warehouseId], references: [id])
+  status       PurchaseStatus @default(DRAFT)
+  purchaseDate DateTime?
+  observation  String?
+  totalAmount  Decimal        @default(0) @db.Decimal(18, 2)
+  items        PurchaseItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([companyId])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Decimal  @db.Decimal(18, 3)
+  unitPrice  Decimal  @db.Decimal(18, 2)
+  totalPrice Decimal  @db.Decimal(18, 2)
+
+  @@index([purchaseId])
+  @@map("purchase_items")
+}
+
+model Sale {
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  clientId    String
+  customer    Client    @relation(fields: [clientId], references: [id])
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  status SaleStatus @default(DRAFT)
+
+  saleDate DateTime?
+
+  approvedAt  DateTime?
+  invoicedAt  DateTime?
+  shippedAt   DateTime?
+  cancelledAt DateTime?
+
+  invoiceNumber String? @db.VarChar(50)
+  trackingCode  String? @db.VarChar(100)
+
+  observation String?
+
+  discountValue Decimal @default(0) @db.Decimal(18, 2)
+  freightValue  Decimal @default(0) @db.Decimal(18, 2)
+  otherExpenses Decimal @default(0) @db.Decimal(18, 2)
+  totalAmount   Decimal @default(0) @db.Decimal(18, 2)
+  netAmount     Decimal @default(0) @db.Decimal(18, 2)
+
+  items SaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("sales")
+}
+
+model SaleItem {
+  id         String  @id @default(cuid())
+  saleId     String
+  sale       Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  quantity   Decimal @db.Decimal(18, 3)
+  unitPrice  Decimal @db.Decimal(18, 2)
+  totalPrice Decimal @db.Decimal(18, 2)
+
+  @@index([saleId])
+  @@map("sale_items")
 }

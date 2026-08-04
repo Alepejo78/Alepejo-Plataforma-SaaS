@@ -3,21 +3,57 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { systemConfig } from "../../config/system";
+import { api } from "@/services/api";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleLogin() {
-    router.push("/");
+  async function handleLogin() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const { data } = await api.post("/auth/login", {
+        email,
+        password,
+      });
+
+      const auth = data.data;
+
+      localStorage.setItem(
+        "access_token",
+        auth.accessToken,
+      );
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(auth.user),
+      );
+
+      router.replace("/");
+
+      router.refresh();
+    } catch (err: any) {
+      console.error(err);
+
+      setError(
+        err?.response?.data?.message ??
+          "Usuário ou senha inválidos."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="min-h-screen flex bg-white">
 
-      {/* LADO ESQUERDO */}
       <div className="hidden md:flex w-1/2 bg-black text-white flex-col justify-center items-center p-10">
 
         <img
@@ -26,22 +62,22 @@ export default function LoginPage() {
           className="w-28 mb-6"
         />
 
-        <h1 className="text-4xl font-bold text-white text-center">
+        <h1 className="text-4xl font-bold text-center">
           {systemConfig.company.name}
         </h1>
 
         <p className="text-gray-300 mt-4 text-center max-w-md">
           Gestão inteligente para empresas modernas
         </p>
+
       </div>
 
-      {/* LADO DIREITO */}
-      <div className="flex w-full md:w-1/2 items-center justify-center bg-white p-8">
+      <div className="flex w-full md:w-1/2 items-center justify-center p-8">
 
-        <div className="w-full max-w-md border border-gray-300 p-8 rounded-2xl shadow-sm">
+        <div className="w-full max-w-md border border-gray-300 rounded-2xl shadow-sm p-8">
 
           <h2 className="text-2xl font-bold text-black mb-6">
-            Acessar sistema
+            Acessar Sistema
           </h2>
 
           <label className="text-sm font-medium text-black">
@@ -49,11 +85,14 @@ export default function LoginPage() {
           </label>
 
           <input
+            id="email"
+            name="email"
+            autoComplete="email"
             type="email"
-            placeholder="Digite seu email"
-            className="w-full border border-gray-400 p-3 rounded-lg mb-4 text-black focus:outline-none focus:ring-2 focus:ring-black"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            placeholder="Digite seu email"
+            className="w-full border border-gray-400 rounded-lg p-3 mb-4 text-black"
           />
 
           <label className="text-sm font-medium text-black">
@@ -61,31 +100,51 @@ export default function LoginPage() {
           </label>
 
           <input
+            id="password"
+            name="password"
+            autoComplete="current-password"
             type="password"
-            placeholder="Digite sua senha"
-            className="w-full border border-gray-400 p-3 rounded-lg mb-6 text-black focus:outline-none focus:ring-2 focus:ring-black"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="Digite sua senha"
+            className="w-full border border-gray-400 rounded-lg p-3 text-black"
           />
 
+          {error && (
+            <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
           <button
+            type="button"
+            disabled={loading}
             onClick={handleLogin}
-            className="w-full bg-black text-white p-3 rounded-lg hover:bg-gray-800 transition font-semibold"
+            className="mt-6 w-full rounded-lg bg-black p-3 font-semibold text-white hover:bg-gray-800 disabled:opacity-60"
           >
-            Entrar
+            {loading ? "Entrando..." : "Entrar"}
           </button>
 
-          <div className="flex justify-between text-sm text-gray-700 mt-4">
-            <a className="hover:underline cursor-pointer">
-              Esqueci senha
-            </a>
+          <div className="mt-5 flex justify-between text-sm">
 
-            <a className="text-black font-semibold hover:underline cursor-pointer">
+            <button
+              type="button"
+              className="text-gray-700 hover:underline"
+            >
+              Esqueci minha senha
+            </button>
+
+            <button
+              type="button"
+              className="font-semibold text-black hover:underline"
+            >
               Criar conta
-            </a>
+            </button>
+
           </div>
 
         </div>
+
       </div>
 
     </div>

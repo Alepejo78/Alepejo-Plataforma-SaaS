@@ -1,0 +1,1 @@
+export { InventoryControl } from '@prisma/client';

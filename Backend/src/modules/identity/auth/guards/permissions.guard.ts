@@ -42,7 +42,14 @@ import {
       const userPermissions: string[] = Array.isArray(user.permissions)
         ? user.permissions
         : [];
-  
+        console.log("===== USER =====");
+        console.log(user);
+        
+        console.log("===== REQUIRED =====");
+        console.log(requiredPermissions);
+        
+        console.log("===== PERMISSIONS =====");
+        console.log(user.permissions);
       const authorized = requiredPermissions.every(permission =>
         userPermissions.includes(permission),
       );

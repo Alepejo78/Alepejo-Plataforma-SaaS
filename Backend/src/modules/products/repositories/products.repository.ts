@@ -1,0 +1,143 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma, Product } from '@prisma/client';
+
+import { PrismaService } from '../../../core/prisma/prisma.service';
+
+import { CreateProductDto } from '../dto/create-product.dto';
+import { UpdateProductDto } from '../dto/update-product.dto';
+import { ProductFilterDto } from '../dto/product-filter.dto';
+
+@Injectable()
+export class ProductsRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(data: CreateProductDto): Promise<Product> {
+    return this.prisma.product.create({
+      data,
+    });
+  }
+
+  async findById(id: string): Promise<Product | null> {
+    return this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        brand: true,
+        unit: true,
+      },
+    });
+  }
+
+  async findByCode(
+    companyId: string,
+    code: string,
+  ): Promise<Product | null> {
+    return this.prisma.product.findFirst({
+      where: {
+        companyId,
+        code,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async findAll(filter: ProductFilterDto) {
+    const {
+      companyId,
+      search,
+      categoryId,
+      brandId,
+      unitId,
+      type,
+      status,
+      inventoryControl,
+      page,
+      limit,
+      orderBy,
+      order,
+    } = filter;
+
+    const where: Prisma.ProductWhereInput = {
+      companyId,
+      deletedAt: null,
+
+      ...(search && {
+        OR: [
+          {
+            description: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            code: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            barcode: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      }),
+
+      ...(categoryId && { categoryId }),
+      ...(brandId && { brandId }),
+      ...(unitId && { unitId }),
+      ...(type && { type }),
+      ...(status && { status }),
+      ...(inventoryControl && { inventoryControl }),
+    };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.product.findMany({
+        where,
+        include: {
+          category: true,
+          brand: true,
+          unit: true,
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: {
+          [orderBy]: order,
+        },
+      }),
+
+      this.prisma.product.count({
+        where,
+      }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    };
+  }
+
+  async update(
+    id: string,
+    data: UpdateProductDto,
+  ): Promise<Product> {
+    return this.prisma.product.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async delete(id: string): Promise<Product> {
+    return this.prisma.product.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        active: false,
+      },
+    });
+  }
+}

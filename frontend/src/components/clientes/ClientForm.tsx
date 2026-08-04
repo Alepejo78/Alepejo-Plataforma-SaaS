@@ -1,13 +1,116 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { Button, Surface, Typography } from "@/components";
+import {
+  Button,
+  Surface,
+  Typography,
+} from "@/components";
+
 import { FormField } from "@/components/ui/FormField";
 import { ClientTabs } from "./ClientTabs";
 
+import {
+  clientService,
+  CreateClientDto,
+} from "@/services/client.service";
+
 export function ClientForm() {
-  const [activeTab, setActiveTab] = useState("geral");
+  const router = useRouter();
+
+  const [activeTab, setActiveTab] =
+    useState("geral");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [personType, setPersonType] =
+    useState("JURIDICA");
+
+  const [status, setStatus] =
+    useState("ACTIVE");
+
+  const [corporateName, setCorporateName] =
+    useState("");
+
+  const [tradeName, setTradeName] =
+    useState("");
+
+  const [document, setDocument] =
+    useState("");
+
+  const [
+    stateRegistration,
+    setStateRegistration,
+  ] = useState("");
+
+  const [
+    municipalRegistration,
+    setMunicipalRegistration,
+  ] = useState("");
+
+  const [email, setEmail] =
+    useState("");
+
+  const [phone, setPhone] =
+    useState("");
+
+  const [mobilePhone, setMobilePhone] =
+    useState("");
+
+  const [website, setWebsite] =
+    useState("");
+
+  async function handleSubmit() {
+    try {
+      setLoading(true);
+
+      const dto: CreateClientDto = {
+        personType,
+        status,
+        corporateName,
+        tradeName,
+        document,
+        stateRegistration,
+        municipalRegistration,
+        email,
+        phone,
+        mobilePhone,
+        website,
+      };
+
+      await clientService.create(dto);
+
+      alert(
+        "Cliente cadastrado com sucesso."
+      );
+
+      setPersonType("JURIDICA");
+      setStatus("ACTIVE");
+      setCorporateName("");
+      setTradeName("");
+      setDocument("");
+      setStateRegistration("");
+      setMunicipalRegistration("");
+      setEmail("");
+      setPhone("");
+      setMobilePhone("");
+      setWebsite("");
+
+      router.refresh();
+    } catch (error: any) {
+      console.error(error);
+
+      alert(
+        error?.response?.data?.message ??
+          "Erro ao salvar cliente."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <Surface className="rounded-2xl border border-[var(--border)] p-8">
@@ -37,89 +140,143 @@ export function ClientForm() {
         {activeTab === "geral" && (
 
           <div className="grid gap-6 xl:grid-cols-3">
+          
+          <div>
 
-            <div>
+<label className="mb-2 block text-sm font-medium">
+  Tipo Pessoa
+</label>
 
-              <label className="mb-2 block text-sm font-medium">
-                Tipo Pessoa
-              </label>
+<select
+  value={personType}
+  onChange={(e) =>
+    setPersonType(e.target.value)
+  }
+  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4"
+>
+  <option value="JURIDICA">
+    Pessoa Jurídica
+  </option>
 
-              <select className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4">
+  <option value="FISICA">
+    Pessoa Física
+  </option>
 
-                <option>Pessoa Jurídica</option>
+</select>
 
-                <option>Pessoa Física</option>
+</div>
 
-              </select>
+<div>
 
-            </div>
+<label className="mb-2 block text-sm font-medium">
+  Situação
+</label>
 
-            <div>
+<select
+  value={status}
+  onChange={(e) =>
+    setStatus(e.target.value)
+  }
+  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4"
+>
+  <option value="ACTIVE">
+    Ativo
+  </option>
 
-              <label className="mb-2 block text-sm font-medium">
-                Situação
-              </label>
+  <option value="INACTIVE">
+    Inativo
+  </option>
 
-              <select className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4">
+</select>
 
-                <option>Ativo</option>
+</div>
 
-                <option>Inativo</option>
+<FormField
+label="Código"
+value="CLI000001"
+disabled
+/>
 
-              </select>
+<div className="xl:col-span-3">
 
-            </div>
+<FormField
+  label="Razão Social"
+  required
+  value={corporateName}
+  onChange={(e) =>
+    setCorporateName(e.target.value)
+  }
+/>
 
-            <FormField
-              label="Código"
-              value="CLI000001"
-              disabled
-            />
+</div>
 
-            <div className="xl:col-span-3">
+<FormField
+label="Nome Fantasia"
+value={tradeName}
+onChange={(e) =>
+  setTradeName(e.target.value)
+}
+/>
 
-              <FormField
-                label="Razão Social"
-                placeholder="Informe a razão social"
-                required
-              />
+<FormField
+label="CPF / CNPJ"
+required
+value={document}
+onChange={(e) =>
+  setDocument(e.target.value)
+}
+/>
 
-            </div>
+<FormField
+label="Inscrição Estadual"
+value={stateRegistration}
+onChange={(e) =>
+  setStateRegistration(
+    e.target.value,
+  )
+}
+/>
 
-            <FormField
-              label="Nome Fantasia"
-              placeholder="Nome fantasia"
-            />
-
-            <FormField
-              label="CPF / CNPJ"
-              placeholder="00.000.000/0000-00"
-              required
-            />
-
-            <FormField
-              label="Inscrição Estadual"
-            />
-
-            <FormField
-              label="Inscrição Municipal"
-            />
-
-            <FormField
+<FormField
+label="Inscrição Municipal"
+value={municipalRegistration}
+onChange={(e) =>
+  setMunicipalRegistration(
+    e.target.value,
+  )
+}
+/>
+<FormField
               label="E-mail"
               type="email"
+              value={email}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
             />
 
             <FormField
               label="Telefone"
+              value={phone}
+              onChange={(e) =>
+                setPhone(e.target.value)
+              }
             />
 
             <FormField
               label="Celular"
+              value={mobilePhone}
+              onChange={(e) =>
+                setMobilePhone(e.target.value)
+              }
             />
 
             <FormField
               label="Site"
+              value={website}
+              onChange={(e) =>
+                setWebsite(e.target.value)
+              }
             />
 
           </div>
@@ -145,16 +302,38 @@ export function ClientForm() {
 
       <div className="mt-10 flex justify-end gap-3">
 
-        <Button variant="outline">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={loading}
+          onClick={() => {
+            setPersonType("JURIDICA");
+            setStatus("ACTIVE");
+            setCorporateName("");
+            setTradeName("");
+            setDocument("");
+            setStateRegistration("");
+            setMunicipalRegistration("");
+            setEmail("");
+            setPhone("");
+            setMobilePhone("");
+            setWebsite("");
+          }}
+        >
           Cancelar
         </Button>
-
-        <Button>
-          Salvar Cliente
+        <Button
+          type="button"
+          disabled={loading}
+          onClick={handleSubmit}
+        >
+          {loading
+            ? "Salvando..."
+            : "Salvar Cliente"}
         </Button>
 
       </div>
 
     </Surface>
-  );
-}
+      );
+    }

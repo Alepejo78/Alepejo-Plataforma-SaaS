@@ -6,16 +6,22 @@ interface ClientTabsProps {
 }
 
 const tabs = [
-  { id: "geral", label: "Geral" },
-  { id: "endereco", label: "Endereço" },
-  { id: "contatos", label: "Contatos" },
-  { id: "fiscal", label: "Fiscal" },
-  { id: "financeiro", label: "Financeiro" },
-  { id: "comercial", label: "Comercial" },
-  { id: "transportes", label: "Transportes" },
-  { id: "observacoes", label: "Observações" },
-  { id: "anexos", label: "Anexos" },
-  { id: "historico", label: "Histórico" },
+  {
+    id: "geral",
+    label: "Geral",
+  },
+  {
+    id: "endereco",
+    label: "Endereço",
+  },
+  {
+    id: "financeiro",
+    label: "Financeiro",
+  },
+  {
+    id: "observacoes",
+    label: "Observações",
+  },
 ];
 
 export function ClientTabs({
@@ -25,10 +31,10 @@ export function ClientTabs({
   return (
     <div className="overflow-x-auto">
       <div className="flex min-w-max gap-2 border-b border-[var(--border)] pb-2">
-
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onChange(tab.id)}
             className={`
               rounded-xl
@@ -36,8 +42,8 @@ export function ClientTabs({
               py-2.5
               text-sm
               font-medium
-              transition-all
               whitespace-nowrap
+              transition-all
               ${
                 activeTab === tab.id
                   ? "bg-[var(--primary)] text-white shadow-md"
@@ -48,7 +54,6 @@ export function ClientTabs({
             {tab.label}
           </button>
         ))}
-
       </div>
     </div>
   );
