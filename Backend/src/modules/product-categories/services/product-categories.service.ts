@@ -17,10 +17,11 @@ export class ProductCategoriesService {
   ) {}
 
   async create(
+    companyId: string,
     createProductCategoryDto: CreateProductCategoryDto,
   ) {
     const exists = await this.repository.findByName(
-      createProductCategoryDto.companyId,
+      companyId,
       createProductCategoryDto.name,
     );
 
@@ -30,15 +31,15 @@ export class ProductCategoriesService {
       );
     }
 
-    return this.repository.create(createProductCategoryDto);
+    return this.repository.create(companyId, createProductCategoryDto);
   }
 
-  async findAll(filter: ProductCategoryFilterDto) {
-    return this.repository.findAll(filter);
+  async findAll(companyId: string, filter: ProductCategoryFilterDto) {
+    return this.repository.findAll(companyId, filter);
   }
 
-  async findOne(id: string) {
-    const category = await this.repository.findById(id);
+  async findOne(companyId: string, id: string) {
+    const category = await this.repository.findById(companyId, id);
 
     if (!category) {
       throw new NotFoundException(
@@ -50,10 +51,11 @@ export class ProductCategoriesService {
   }
 
   async update(
+    companyId: string,
     id: string,
     updateProductCategoryDto: UpdateProductCategoryDto,
   ) {
-    await this.findOne(id);
+    await this.findOne(companyId, id);
 
     return this.repository.update(
       id,
@@ -61,8 +63,8 @@ export class ProductCategoriesService {
     );
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(companyId: string, id: string) {
+    await this.findOne(companyId, id);
 
     return this.repository.delete(id);
   }

@@ -11,9 +11,6 @@ import {
 import { Transform, Type } from 'class-transformer';
 
 export class InventoryFilterDto {
-  @ApiPropertyOptional()
-  @IsUUID()
-  companyId: string;
 
   @ApiPropertyOptional()
   @IsOptional()

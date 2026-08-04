@@ -20,10 +20,6 @@ export class CreateClientDto {
   @MaxLength(20)
   document: string;
 
-  @IsString()
-  @IsNotEmpty()
-  companyId: string;
-
   @IsOptional()
   @IsEmail()
   @MaxLength(150)

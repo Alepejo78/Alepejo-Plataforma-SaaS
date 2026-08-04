@@ -6,7 +6,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUUID,
   Max,
   Min,
 } from 'class-validator';
@@ -14,10 +13,6 @@ import {
 import { ClientStatus } from '../enums/client-status.enum';
 
 export class ClientFilterDto {
-  @IsOptional()
-  @IsUUID()
-  companyId?: string;
-
   @IsOptional()
   @IsString()
   search?: string;

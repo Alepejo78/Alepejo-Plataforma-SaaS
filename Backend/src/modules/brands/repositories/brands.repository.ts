@@ -13,20 +13,21 @@ export class BrandsRepository {
     private readonly prisma: PrismaService,
   ) {}
 
-  async create(data: CreateBrandDto): Promise<Brand> {
+  async create(companyId: string, data: CreateBrandDto): Promise<Brand> {
     return this.prisma.brand.create({
       data: {
-        companyId: data.companyId,
+        companyId,
         name: data.name,
         active: data.active,
       },
     });
   }
 
-  async findById(id: string): Promise<Brand | null> {
-    return this.prisma.brand.findUnique({
+  async findById(companyId: string, id: string): Promise<Brand | null> {
+    return this.prisma.brand.findFirst({
       where: {
         id,
+        companyId,
       },
     });
   }
@@ -43,9 +44,8 @@ export class BrandsRepository {
     });
   }
 
-  async findAll(filter: BrandFilterDto) {
+  async findAll(companyId: string, filter: BrandFilterDto) {
     const {
-      companyId,
       search,
       page,
       limit,
@@ -88,6 +88,9 @@ export class BrandsRepository {
     };
   }
 
+  // Observação: Prisma só aceita campos únicos em `where` de update().
+  // A checagem de que `id` pertence a `companyId` é feita no service
+  // (via findById) ANTES de chamar estes métodos.
   async update(
     id: string,
     data: UpdateBrandDto,

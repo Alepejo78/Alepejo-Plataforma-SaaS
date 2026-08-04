@@ -1,113 +1,64 @@
 import {
   Injectable,
   UnauthorizedException,
-} from "@nestjs/common";
+} from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 
-import { PassportStrategy } from "@nestjs/passport";
-import {
-  ExtractJwt,
-  Strategy,
-} from "passport-jwt";
-
-import { PrismaService } from "../../../../core/prisma/prisma.service";
+import { PrismaService } from '../../../../core/prisma/prisma.service';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(
-  Strategy,
-) {
+export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest:
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
-
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-
       secretOrKey:
-        process.env.JWT_SECRET ??
-        "alepejo-secret",
-
-      passReqToCallback: false,
+        process.env.JWT_SECRET ?? 'alepejo-secret',
     });
-
-    console.log("");
-    console.log(
-      "========================================",
-    );
-    console.log(
-      "JWT_SECRET:",
-      process.env.JWT_SECRET ??
-        "alepejo-secret",
-    );
-    console.log(
-      "========================================",
-    );
-    console.log("");
   }
 
   async validate(payload: any) {
-    console.log("");
-    console.log(
-      "========== JWT VALIDATE ==========",
-    );
-    console.log(payload);
-    console.log("");
-
-    const user =
-      await this.prisma.user.findFirst({
-        where: {
-          id: payload.sub,
-          active: true,
-          deletedAt: null,
-        },
-        include: {
-          company: true,
-          roles: {
-            include: {
-              role: {
-                include: {
-                  permissions: {
-                    include: {
-                      permission: true,
-                    },
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: payload.sub,
+        active: true,
+        deletedAt: null,
+      },
+      include: {
+        company: true,
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
                   },
                 },
               },
             },
           },
         },
-      });
+      },
+    });
 
     if (!user) {
-      console.log(
-        "USUÁRIO NÃO ENCONTRADO",
-      );
-
       throw new UnauthorizedException(
-        "Usuário não encontrado.",
+        'Usuário não encontrado.',
       );
     }
 
-    const permissions =
-      user.roles.flatMap((userRole) =>
-        userRole.role.permissions
-          .filter(
-            (rolePermission) =>
-              rolePermission.effect ===
-              "ALLOW",
-          )
-          .map(
-            (rolePermission) =>
-              rolePermission.permission.code,
-          ),
-      );
-
-    console.log("USER:");
-    console.log(user.email);
-
-    console.log("PERMISSIONS:");
-    console.log(permissions);
+    const permissions = user.roles.flatMap((userRole) =>
+      userRole.role.permissions.map(
+        (rolePermission) => ({
+          code: rolePermission.permission.code,
+          effect: rolePermission.effect,
+        }),
+      ),
+    );
 
     return {
       id: user.id,

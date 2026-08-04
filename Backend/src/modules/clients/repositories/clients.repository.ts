@@ -14,16 +14,22 @@ export class ClientsRepository {
     private readonly prisma: PrismaService,
   ) {}
 
-  async create(data: CreateClientDto) {
+  async create(companyId: string, data: CreateClientDto) {
     return this.prisma.client.create({
-      data,
+      data: {
+        ...data,
+        company: {
+          connect: { id: companyId },
+        },
+      },
     });
   }
 
-  async findById(id: string) {
+  async findById(companyId: string, id: string) {
     return this.prisma.client.findFirst({
       where: {
         id,
+        companyId,
         deletedAt: null,
       },
     });
@@ -42,14 +48,11 @@ export class ClientsRepository {
     });
   }
 
-  async findAll(filter: ClientFilterDto) {
+  async findAll(companyId: string, filter: ClientFilterDto) {
     const where: Prisma.ClientWhereInput = {
+      companyId,
       deletedAt: null,
     };
-
-    if (filter.companyId) {
-      where.companyId = filter.companyId;
-    }
 
     if (filter.status) {
       where.status = filter.status;
@@ -114,6 +117,9 @@ export class ClientsRepository {
     };
   }
 
+  // Observação: Prisma só aceita campos únicos em `where` de update().
+  // A verificação de que `id` pertence a `companyId` é feita no service
+  // (via findById) ANTES de chamar estes métodos.
   async update(
     id: string,
     data: UpdateClientDto,

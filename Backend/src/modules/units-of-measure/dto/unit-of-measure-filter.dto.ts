@@ -12,9 +12,6 @@ import {
 import { Transform, Type } from 'class-transformer';
 
 export class UnitOfMeasureFilterDto {
-  @ApiPropertyOptional()
-  @IsUUID()
-  companyId: string;
 
   @ApiPropertyOptional()
   @IsOptional()

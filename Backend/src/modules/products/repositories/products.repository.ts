@@ -11,15 +11,18 @@ import { ProductFilterDto } from '../dto/product-filter.dto';
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateProductDto): Promise<Product> {
+  async create(companyId: string, data: CreateProductDto): Promise<Product> {
     return this.prisma.product.create({
-      data,
+      data: {
+        ...data,
+        companyId,
+      },
     });
   }
 
-  async findById(id: string): Promise<Product | null> {
-    return this.prisma.product.findUnique({
-      where: { id },
+  async findById(companyId: string, id: string): Promise<Product | null> {
+    return this.prisma.product.findFirst({
+      where: { id, companyId },
       include: {
         category: true,
         brand: true,
@@ -41,9 +44,8 @@ export class ProductsRepository {
     });
   }
 
-  async findAll(filter: ProductFilterDto) {
+  async findAll(companyId: string, filter: ProductFilterDto) {
     const {
-      companyId,
       search,
       categoryId,
       brandId,
@@ -121,6 +123,9 @@ export class ProductsRepository {
     };
   }
 
+  // Observação: Prisma só aceita campos únicos em `where` de update().
+  // A checagem de que `id` pertence a `companyId` é feita no service
+  // (via findById) ANTES de chamar estes métodos.
   async update(
     id: string,
     data: UpdateProductDto,

@@ -12,10 +12,14 @@ export class SupplierRepository {
     });
   }
 
-  async findById(id: string): Promise<Supplier | null> {
+  async findById(
+    companyId: string,
+    id: string,
+  ): Promise<Supplier | null> {
     return this.prisma.supplier.findFirst({
       where: {
         id,
+        companyId,
         deletedAt: null,
       },
     });

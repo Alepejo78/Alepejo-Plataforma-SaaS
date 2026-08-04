@@ -9,11 +9,6 @@ import {
 } from 'class-validator';
 
 export class CreateUnitOfMeasureDto {
-  @ApiProperty({
-    example: '8d3b4e4c-7d7d-4a63-8c5d-6a5b4d7f5b8d',
-  })
-  @IsUUID()
-  companyId: string;
 
   @ApiProperty({
     example: 'UN',

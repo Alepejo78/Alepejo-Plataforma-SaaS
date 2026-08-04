@@ -17,11 +17,12 @@ export class InventoryRepository {
   ) {}
 
   async create(
+    companyId: string,
     data: CreateInventoryDto,
   ): Promise<Inventory> {
     return this.prisma.inventory.create({
       data: {
-        companyId: data.companyId,
+        companyId,
         productId: data.productId,
         warehouseId: data.warehouseId,
         quantity: data.quantity,
@@ -32,11 +33,13 @@ export class InventoryRepository {
   }
 
   async findById(
+    companyId: string,
     id: string,
   ): Promise<Inventory | null> {
-    return this.prisma.inventory.findUnique({
+    return this.prisma.inventory.findFirst({
       where: {
         id,
+        companyId,
       },
       include: {
         product: true,
@@ -60,10 +63,10 @@ export class InventoryRepository {
   }
 
   async findAll(
+    companyId: string,
     filter: InventoryFilterDto,
   ) {
     const {
-      companyId,
       productId,
       warehouseId,
       page,
@@ -113,6 +116,9 @@ export class InventoryRepository {
     };
   }
 
+  // Observação: Prisma só aceita campos únicos em `where` de update().
+  // A checagem de que `id` pertence a `companyId` é feita no service
+  // (via findById) ANTES de chamar estes métodos.
   async update(
     id: string,
     data: UpdateInventoryDto,

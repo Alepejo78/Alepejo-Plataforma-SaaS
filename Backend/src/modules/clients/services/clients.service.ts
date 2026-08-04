@@ -16,9 +16,9 @@ export class ClientsService {
     private readonly repository: ClientsRepository,
   ) {}
 
-  async create(dto: CreateClientDto) {
+  async create(companyId: string, dto: CreateClientDto) {
     const exists = await this.repository.findByDocument(
-      dto.companyId,
+      companyId,
       dto.document,
     );
 
@@ -28,15 +28,15 @@ export class ClientsService {
       );
     }
 
-    return this.repository.create(dto);
+    return this.repository.create(companyId, dto);
   }
 
-  async findAll(filter: ClientFilterDto) {
-    return this.repository.findAll(filter);
+  async findAll(companyId: string, filter: ClientFilterDto) {
+    return this.repository.findAll(companyId, filter);
   }
 
-  async findById(id: string) {
-    const client = await this.repository.findById(id);
+  async findById(companyId: string, id: string) {
+    const client = await this.repository.findById(companyId, id);
 
     if (!client) {
       throw new NotFoundException(
@@ -48,14 +48,15 @@ export class ClientsService {
   }
 
   async update(
+    companyId: string,
     id: string,
     dto: UpdateClientDto,
   ) {
-    await this.findById(id);
+    await this.findById(companyId, id);
 
-    if (dto.document && dto.companyId) {
+    if (dto.document) {
       const exists = await this.repository.findByDocument(
-        dto.companyId,
+        companyId,
         dto.document,
       );
 
@@ -69,8 +70,8 @@ export class ClientsService {
     return this.repository.update(id, dto);
   }
 
-  async remove(id: string) {
-    await this.findById(id);
+  async remove(companyId: string, id: string) {
+    await this.findById(companyId, id);
 
     return this.repository.softDelete(id);
   }

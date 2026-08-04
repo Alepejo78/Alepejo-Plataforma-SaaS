@@ -9,8 +9,6 @@ import {
 } from 'class-validator';
 
 export class BrandFilterDto {
-  @IsString()
-  companyId: string;
 
   @IsOptional()
   @IsString()

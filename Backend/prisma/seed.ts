@@ -27,16 +27,6 @@ const permissionGroups = [
     ],
   },
   {
-    code: "CLIENT",
-    name: "Clientes",
-    permissions: [
-      ["CLIENT_VIEW", "Visualizar Clientes"],
-      ["CLIENT_CREATE", "Cadastrar Clientes"],
-      ["CLIENT_UPDATE", "Alterar Clientes"],
-      ["CLIENT_DELETE", "Excluir Clientes"],
-    ],
-  },
-  {
     code: "USER",
     name: "Usuários",
     permissions: [

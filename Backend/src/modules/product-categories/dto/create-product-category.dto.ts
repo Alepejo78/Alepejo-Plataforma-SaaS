@@ -7,9 +7,6 @@ import {
 } from 'class-validator';
 
 export class CreateProductCategoryDto {
-  @IsString()
-  @IsNotEmpty()
-  companyId: string;
 
   @IsString()
   @IsNotEmpty()

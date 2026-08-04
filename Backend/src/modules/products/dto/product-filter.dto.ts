@@ -16,8 +16,6 @@ import {
   } from '@prisma/client';
   
   export class ProductFilterDto {
-    @IsUUID()
-    companyId: string;
   
     @IsOptional()
     @IsString()

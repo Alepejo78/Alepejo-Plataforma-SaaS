@@ -14,11 +14,12 @@ export class UnitsOfMeasureRepository {
   ) {}
 
   async create(
+    companyId: string,
     data: CreateUnitOfMeasureDto,
   ): Promise<UnitOfMeasure> {
     return this.prisma.unitOfMeasure.create({
       data: {
-        companyId: data.companyId,
+        companyId,
         code: data.code,
         description: data.description,
         active: data.active ?? true,
@@ -27,11 +28,13 @@ export class UnitsOfMeasureRepository {
   }
 
   async findById(
+    companyId: string,
     id: string,
   ): Promise<UnitOfMeasure | null> {
-    return this.prisma.unitOfMeasure.findUnique({
+    return this.prisma.unitOfMeasure.findFirst({
       where: {
         id,
+        companyId,
       },
     });
   }
@@ -61,10 +64,10 @@ export class UnitsOfMeasureRepository {
   }
 
   async findAll(
+    companyId: string,
     filter: UnitOfMeasureFilterDto,
   ) {
     const {
-      companyId,
       search,
       page,
       limit,
@@ -120,6 +123,9 @@ export class UnitsOfMeasureRepository {
     };
   }
 
+  // Observação: Prisma só aceita campos únicos em `where` de update().
+  // A checagem de que `id` pertence a `companyId` é feita no service
+  // (via findById) ANTES de chamar estes métodos.
   async update(
     id: string,
     data: UpdateUnitOfMeasureDto,

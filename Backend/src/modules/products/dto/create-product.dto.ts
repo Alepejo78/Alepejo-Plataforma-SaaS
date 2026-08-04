@@ -17,8 +17,6 @@ import {
   } from '@prisma/client';
   
   export class CreateProductDto {
-    @IsUUID()
-    companyId: string;
   
     @IsString()
     @Length(1, 30)

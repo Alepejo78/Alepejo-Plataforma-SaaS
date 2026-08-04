@@ -3,88 +3,89 @@ import {
     Injectable,
     NotFoundException,
   } from '@nestjs/common';
-  
+
   import { UnitOfMeasure } from '@prisma/client';
-  
+
   import { UnitsOfMeasureRepository } from '../repositories/units-of-measure.repository';
-  
+
   import { CreateUnitOfMeasureDto } from '../dto/create-unit-of-measure.dto';
   import { UpdateUnitOfMeasureDto } from '../dto/update-unit-of-measure.dto';
   import { UnitOfMeasureFilterDto } from '../dto/unit-of-measure-filter.dto';
-  
+
   @Injectable()
   export class UnitsOfMeasureService {
     constructor(
       private readonly unitsOfMeasureRepository: UnitsOfMeasureRepository,
     ) {}
-  
+
     async create(
+      companyId: string,
       createUnitOfMeasureDto: CreateUnitOfMeasureDto,
     ): Promise<UnitOfMeasure> {
       const codeExists =
         await this.unitsOfMeasureRepository.findByCode(
-          createUnitOfMeasureDto.companyId,
+          companyId,
           createUnitOfMeasureDto.code,
         );
-  
+
       if (codeExists) {
         throw new BadRequestException(
           'Já existe uma unidade de medida cadastrada com este código.',
         );
       }
-  
+
       const descriptionExists =
         await this.unitsOfMeasureRepository.findByDescription(
-          createUnitOfMeasureDto.companyId,
+          companyId,
           createUnitOfMeasureDto.description,
         );
-  
+
       if (descriptionExists) {
         throw new BadRequestException(
           'Já existe uma unidade de medida cadastrada com esta descrição.',
         );
       }
-  
+
       return this.unitsOfMeasureRepository.create(
+        companyId,
         createUnitOfMeasureDto,
       );
     }
-  
-    async findAll(filter: UnitOfMeasureFilterDto) {
-      return this.unitsOfMeasureRepository.findAll(filter);
+
+    async findAll(companyId: string, filter: UnitOfMeasureFilterDto) {
+      return this.unitsOfMeasureRepository.findAll(companyId, filter);
     }
-  
+
     async findById(
+      companyId: string,
       id: string,
     ): Promise<UnitOfMeasure> {
       const unit =
-        await this.unitsOfMeasureRepository.findById(id);
-  
+        await this.unitsOfMeasureRepository.findById(companyId, id);
+
       if (!unit) {
         throw new NotFoundException(
           'Unidade de medida não encontrada.',
         );
       }
-  
+
       return unit;
     }
-  
+
     async update(
+      companyId: string,
       id: string,
       updateUnitOfMeasureDto: UpdateUnitOfMeasureDto,
     ): Promise<UnitOfMeasure> {
-      await this.findById(id);
-  
-      if (
-        updateUnitOfMeasureDto.companyId &&
-        updateUnitOfMeasureDto.code
-      ) {
+      await this.findById(companyId, id);
+
+      if (updateUnitOfMeasureDto.code) {
         const codeExists =
           await this.unitsOfMeasureRepository.findByCode(
-            updateUnitOfMeasureDto.companyId,
+            companyId,
             updateUnitOfMeasureDto.code,
           );
-  
+
         if (
           codeExists &&
           codeExists.id !== id
@@ -94,17 +95,14 @@ import {
           );
         }
       }
-  
-      if (
-        updateUnitOfMeasureDto.companyId &&
-        updateUnitOfMeasureDto.description
-      ) {
+
+      if (updateUnitOfMeasureDto.description) {
         const descriptionExists =
           await this.unitsOfMeasureRepository.findByDescription(
-            updateUnitOfMeasureDto.companyId,
+            companyId,
             updateUnitOfMeasureDto.description,
           );
-  
+
         if (
           descriptionExists &&
           descriptionExists.id !== id
@@ -114,18 +112,19 @@ import {
           );
         }
       }
-  
+
       return this.unitsOfMeasureRepository.update(
         id,
         updateUnitOfMeasureDto,
       );
     }
-  
+
     async remove(
+      companyId: string,
       id: string,
     ): Promise<void> {
-      await this.findById(id);
-  
+      await this.findById(companyId, id);
+
       await this.unitsOfMeasureRepository.delete(id);
     }
   }

@@ -9,11 +9,6 @@ import {
 } from 'class-validator';
 
 export class CreateInventoryDto {
-  @ApiProperty({
-    example: 'b84efea8-4d2d-4af9-aed5-f8e43dcdd4fd',
-  })
-  @IsUUID()
-  companyId: string;
 
   @ApiProperty({
     example: '6a32d83e-96d8-42c2-b61f-4db66d1d12d4',

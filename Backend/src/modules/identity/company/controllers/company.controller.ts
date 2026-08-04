@@ -1,12 +1,9 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
-  Param,
   Patch,
   Post,
-  Query,
 } from '@nestjs/common';
 
 import {
@@ -15,13 +12,25 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { PaginationDto } from '../../../../core/dto/pagination.dto';
+import { Public } from '../../../../core/decorators/public.decorator';
+import { CurrentUser } from '../../../../core/decorators/current-user.decorator';
+import { Permissions } from '../../auth/decorators/permissions.decorator';
+import { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 
 import { CompanyService } from '../services/company.service';
 
 import { CreateCompanyDto } from '../dto/create-company.dto';
 import { UpdateCompanyDto } from '../dto/update-company.dto';
 
+/**
+ * Não existe (ainda) um conceito de administrador de plataforma
+ * capaz de gerenciar todas as empresas do SaaS. Por isso, este
+ * controller expõe apenas o autoatendimento: uma empresa só pode
+ * ver/alterar os próprios dados (identificados pelo token JWT).
+ *
+ * A listagem/edição/exclusão de empresas arbitrárias por ID foi
+ * removida propositalmente para evitar vazamento entre tenants.
+ */
 @ApiTags('Companies')
 @Controller('companies')
 export class CompanyController {
@@ -29,8 +38,11 @@ export class CompanyController {
     private readonly companyService: CompanyService,
   ) {}
 
+  @Public()
   @Post()
-  @ApiOperation({ summary: 'Cadastrar empresa' })
+  @ApiOperation({
+    summary: 'Cadastrar nova empresa (onboarding/self-signup)',
+  })
   @ApiResponse({
     status: 201,
     description: 'Empresa cadastrada com sucesso.',
@@ -43,61 +55,28 @@ export class CompanyController {
     return this.companyService.create(dto);
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Listar empresas' })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista paginada de empresas.',
-  })
-  findAll(
-    @Query() pagination: PaginationDto,
-  ) {
-    return this.companyService.findAll(
-      pagination.page,
-      pagination.limit,
-    );
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Buscar empresa por ID' })
+  @Get('me')
+  @Permissions('company.view')
+  @ApiOperation({ summary: 'Dados da minha empresa' })
   @ApiResponse({
     status: 200,
     description: 'Empresa encontrada.',
   })
-  @ApiResponse({
-    status: 404,
-    description: 'Empresa não encontrada.',
-  })
-  findById(
-    @Param('id') id: string,
-  ) {
-    return this.companyService.findById(id);
+  findMine(@CurrentUser() user: AuthenticatedUser) {
+    return this.companyService.findById(user.companyId);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Atualizar empresa' })
+  @Patch('me')
+  @Permissions('company.update')
+  @ApiOperation({ summary: 'Atualizar minha empresa' })
   @ApiResponse({
     status: 200,
     description: 'Empresa atualizada.',
   })
-  update(
-    @Param('id') id: string,
+  updateMine(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateCompanyDto,
   ) {
-    return this.companyService.update(id, dto);
-  }
-
-  @Delete(':id')
-  @ApiOperation({
-    summary: 'Excluir empresa (Soft Delete)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Empresa excluída.',
-  })
-  remove(
-    @Param('id') id: string,
-  ) {
-    return this.companyService.remove(id);
+    return this.companyService.update(user.companyId, dto);
   }
 }
