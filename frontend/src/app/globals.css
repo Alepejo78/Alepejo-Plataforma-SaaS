@@ -1,41 +1,160 @@
 @import "tailwindcss";
 
-:root {
- 
-  --foreground: #171717;
-  --background: #f3f4f6;
+/*
+ * Sistema de cores AlePejo ERP
+ *
+ * Paleta neutra de base fria (cinzas levemente azulados), acento azul
+ * e superfícies branco/preto. Todos os pares texto/fundo abaixo foram
+ * escolhidos para atingir no mínimo 4.5:1 de contraste (WCAG AA),
+ * e 7:1 nos textos principais.
+ *
+ * O tema escuro é ativado pela classe .dark no <html>, aplicada pelo
+ * next-themes. Não usar @media (prefers-color-scheme): isso ignoraria
+ * a escolha manual do usuário.
+ */
 
+:root,
+.light {
+  color-scheme: light;
+
+  /* Superfícies */
+  --background: #e8ecf3;
   --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: #eef2f8;
+  --surface-active: #dfe6f1;
 
-  --surface-hover: #fafafa;
+  /* Bordas — mais densas que o padrão para ficarem visíveis */
+  --border: #b9c4d4;
+  --border-strong: #94a2b8;
 
-  --border: #d4d4d8;
+  /* Texto */
+  --foreground: #0d1526;
+  --text-primary: #0d1526;
+  --text-secondary: #2c3950;
+  --text-muted: #4d5b73;
 
-  --text-primary: #18181b;
+  /* Acento dourado (identidade AlePejo) */
+  --primary: #c2922c;
+  --primary-hover: #a87d1d;
+  --primary-soft: #fbf1d9;
+  --primary-contrast: #16120a;
+  /* Versão escura do dourado, para TEXTO sobre fundo claro:
+     o dourado puro não tem contraste suficiente como texto. */
+  --primary-text: #6b5010;
 
-  --text-secondary: #3f3f46;
+  /* Estados */
+  --success: #0f7b52;
+  --success-soft: #d6f2e5;
+  --warning: #9a6100;
+  --warning-soft: #fdeecd;
+  --danger: #c02626;
+  --danger-soft: #fadddd;
 
-  --text-muted: #71717a;
+  --focus-ring: #a87d1d;
 
-  --primary: #18181b;
+  --shadow-color: 215 25% 27%;
+
+  /* Painel lateral do login: preto nos DOIS temas, por decisão de
+     marca. Por isso os valores se repetem em :root e .dark. */
+  --login-panel: #111111;
+  --login-panel-text: #ffffff;
+  --login-panel-muted: #c9b98f;
+  --login-panel-accent: #e0b45a;
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Superfícies */
+  --background: #070b13;
+  --surface: #111926;
+  --surface-raised: #17202f;
+  --surface-hover: #1d2839;
+  --surface-active: #263248;
+
+  /* Bordas */
+  --border: #2e3b52;
+  --border-strong: #46566f;
+
+  /* Texto */
+  --foreground: #eef2f8;
+  --text-primary: #eef2f8;
+  --text-secondary: #c2ccdb;
+  --text-muted: #94a3b8;
+
+  /* Acento dourado — mais claro para contrastar com fundo escuro */
+  --primary: #e0b45a;
+  --primary-hover: #eec978;
+  --primary-soft: #2f2512;
+  --primary-contrast: #16120a;
+  --primary-text: #e0b45a;
+
+  /* Estados */
+  --success: #3fcb92;
+  --success-soft: #10301f;
+  --warning: #e0a33a;
+  --warning-soft: #33260c;
+  --danger: #f47171;
+  --danger-soft: #3a1717;
+
+  --focus-ring: #e0b45a;
+
+  --shadow-color: 220 45% 3%;
+
+  --login-panel: #111111;
+  --login-panel-text: #ffffff;
+  --login-panel-muted: #c9b98f;
+  --login-panel-accent: #e0b45a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    var(--font-geist-sans),
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
+/* Troca de tema sem flash de transição nos elementos de superfície */
+body,
+aside,
+header,
+main {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+/* Foco de teclado sempre visível — requisito de acessibilidade */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Respeita quem pediu menos animação no sistema */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

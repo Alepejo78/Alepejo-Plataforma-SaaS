@@ -4,6 +4,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 
+import { BusinessPartnerRole } from '@prisma/client';
+
+import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+
 import { PrismaService } from '../../../core/prisma/prisma.service';
 
 import { SaleRepository } from '../repositories/sale.repository';
@@ -16,25 +20,20 @@ export class SaleService {
   constructor(
     private readonly repository: SaleRepository,
     private readonly prisma: PrismaService,
+    private readonly businessPartnersService: BusinessPartnersService,
   ) {}
 
   async create(
     companyId: string,
     dto: CreateSaleDto,
   ) {
-    const client =
-      await this.prisma.client.findFirst({
-        where: {
-          id: dto.clientId,
-          companyId,
-        },
-      });
-
-    if (!client) {
-      throw new NotFoundException(
-        'Cliente não encontrado.',
-      );
-    }
+    // Valida que o parceiro existe, pertence à empresa e possui o
+    // papel de CLIENTE (um fornecedor puro não pode receber venda).
+    await this.businessPartnersService.assertHasRole(
+      companyId,
+      dto.partnerId,
+      BusinessPartnerRole.CUSTOMER,
+    );
 
     const warehouse =
       await this.prisma.warehouse.findFirst({

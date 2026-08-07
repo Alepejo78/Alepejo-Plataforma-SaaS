@@ -9,6 +9,10 @@ import {
   StockMovementType,
 } from '@prisma/client';
 
+import { BusinessPartnerRole } from '@prisma/client';
+
+import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+
 import { PrismaService } from '../../../core/prisma/prisma.service';
 
 import { PurchaseRepository } from '../repositories/purchase.repository';
@@ -21,25 +25,20 @@ export class PurchaseService {
   constructor(
     private readonly repository: PurchaseRepository,
     private readonly prisma: PrismaService,
+    private readonly businessPartnersService: BusinessPartnersService,
   ) {}
 
   async create(
     companyId: string,
     dto: CreatePurchaseDto,
   ) {
-    const supplier =
-      await this.prisma.supplier.findFirst({
-        where: {
-          id: dto.supplierId,
-          companyId,
-        },
-      });
-
-    if (!supplier) {
-      throw new NotFoundException(
-        'Fornecedor não encontrado.',
-      );
-    }
+    // Valida que o parceiro existe, pertence à empresa e possui o
+    // papel de FORNECEDOR.
+    await this.businessPartnersService.assertHasRole(
+      companyId,
+      dto.partnerId,
+      BusinessPartnerRole.SUPPLIER,
+    );
 
     const warehouse =
       await this.prisma.warehouse.findFirst({

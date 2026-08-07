@@ -5,13 +5,13 @@ import {
   import {
     IsNumber,
     IsPositive,
-    IsUUID,
+    IsString,
     Min,
   } from 'class-validator';
   
   export class CreatePurchaseItemDto {
     @ApiProperty()
-    @IsUUID()
+    @IsString()
     productId: string;
   
     @ApiProperty({

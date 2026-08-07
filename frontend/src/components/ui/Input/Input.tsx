@@ -15,7 +15,7 @@ export function Input({
     <div className="space-y-2">
 
       {label && (
-        <label className="text-sm font-medium text-zinc-700">
+        <label className="text-sm font-medium text-[var(--text-secondary)]">
           {label}
         </label>
       )}
@@ -23,7 +23,7 @@ export function Input({
       <div className="relative">
 
         {leftIcon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
             {leftIcon}
           </div>
         )}
@@ -40,7 +40,7 @@ export function Input({
         />
 
         {rightIcon && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
             {rightIcon}
           </div>
         )}
@@ -53,7 +53,7 @@ export function Input({
         </p>
       ) : (
         helperText && (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-[var(--text-muted)]">
             {helperText}
           </p>
         )

@@ -6,7 +6,6 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -16,11 +15,11 @@ import { CreateSaleItemDto } from './create-sale-item.dto';
 
 export class CreateSaleDto {
   @ApiProperty()
-  @IsUUID()
-  clientId: string;
+  @IsString()
+  partnerId: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsString()
   warehouseId: string;
 
   @ApiProperty({

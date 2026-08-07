@@ -4,13 +4,12 @@ import {
   IsEnum,
   IsOptional,
   IsString,
-  IsUUID,
 } from 'class-validator';
 
 export class StockMovementFilterDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
   inventoryId?: string;
 
   @ApiPropertyOptional({

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import MainLayout from "@/components/layout/MainLayout";
+import { AppShell } from "@/components";
 
 const modules = [
   {
@@ -9,8 +9,8 @@ const modules = [
   },
   {
     title: "Clientes",
-    description: "Cadastro e manutenção de clientes.",
-    href: "/erp/clientes",
+    description: "Clientes, fornecedores e demais parceiros.",
+    href: "/erp/parceiros",
   },
   {
     title: "Orçamentos",
@@ -26,14 +26,14 @@ const modules = [
 
 export default function Comercial() {
   return (
-    <MainLayout>
+    <AppShell workspaceLabel="Comercial">
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Comercial
           </h1>
 
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-[var(--text-muted)]">
             Central do módulo comercial.
           </p>
         </div>
@@ -42,27 +42,27 @@ export default function Comercial() {
           {modules.map((module) => (
             <div
               key={module.title}
-              className="rounded-xl border bg-white p-6 shadow-sm transition hover:shadow-md"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm transition hover:shadow-md"
             >
               <h2 className="text-lg font-semibold">
                 {module.title}
               </h2>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
                 {module.description}
               </p>
 
               {module.href === "#" ? (
                 <button
                   disabled
-                  className="mt-6 w-full rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-500"
+                  className="mt-6 w-full rounded-lg bg-[var(--surface-active)] px-4 py-2 text-sm font-medium text-[var(--text-muted)]"
                 >
                   Em breve
                 </button>
               ) : (
                 <Link
                   href={module.href}
-                  className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
+                  className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
                 >
                   Acessar
                 </Link>
@@ -71,6 +71,6 @@ export default function Comercial() {
           ))}
         </div>
       </div>
-    </MainLayout>
+    </AppShell>
   );
 }

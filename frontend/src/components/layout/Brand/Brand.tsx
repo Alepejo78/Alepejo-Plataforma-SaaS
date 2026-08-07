@@ -13,24 +13,28 @@ export function Brand({
 }: BrandProps) {
   const { company, systemName } = systemConfig;
 
+  // Recolhida, a barra tem 72px: a logo precisa caber dentro dela.
+  const size = collapsed ? 36 : company.logoWidth;
+
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex min-w-0 items-center gap-3">
       <Image
         src={company.logo}
         alt={company.name}
-        width={company.logoWidth}
-        height={company.logoHeight}
+        width={size}
+        height={size}
         priority
-        className="flex-shrink-0 object-contain"
+        className="shrink-0 object-contain"
+        style={{ width: size, height: size }}
       />
 
       {!collapsed && (
         <div className="min-w-0">
-          <h1 className="truncate text-3xl font-bold text-[var(--text-primary)]">
+          <h1 className="truncate text-2xl font-bold text-[var(--text-primary)]">
             {company.name}
           </h1>
 
-          <p className="truncate text-base text-[var(--text-muted)]">
+          <p className="truncate text-sm text-[var(--text-secondary)]">
             {systemName}
           </p>
         </div>

@@ -6,16 +6,26 @@ import { WarehouseController } from './controllers/warehouse.controller';
 import { WarehouseRepository } from './repositories/warehouse.repository';
 import { WarehouseService } from './services/warehouse.service';
 
+import { LicenseModule } from '../identity/license/license.module';
+
 @Module({
-  imports: [PrismaModule],
-  controllers: [WarehouseController],
-  providers: [
-    WarehouseRepository,
-    WarehouseService,
+  imports: [
+    PrismaModule,
+    LicenseModule,
   ],
-  exports: [
-    WarehouseRepository,
+
+  controllers: [
+    WarehouseController,
+  ],
+
+  providers: [
     WarehouseService,
+    WarehouseRepository,
+  ],
+
+  exports: [
+    WarehouseService,
+    WarehouseRepository,
   ],
 })
 export class WarehouseModule {}

@@ -62,14 +62,14 @@ export function SaleForm() {
             onChange={(e) =>
               setClient(e.target.value)
             }
-            className="w-full rounded-xl border px-3 py-2"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
             placeholder="Pesquisar cliente..."
           />
         </div>
 
       </div>
 
-      <div className="rounded-xl border p-4">
+      <div className="rounded-xl border border-[var(--border)] p-4">
 
         <h3 className="mb-4 font-semibold">
           Adicionar Produto
@@ -82,7 +82,7 @@ export function SaleForm() {
             onChange={(e) =>
               setProduct(e.target.value)
             }
-            className="rounded-xl border px-3 py-2"
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
             placeholder="Produto"
           />
 
@@ -92,7 +92,7 @@ export function SaleForm() {
             onChange={(e) =>
               setQuantity(Number(e.target.value))
             }
-            className="rounded-xl border px-3 py-2"
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
             placeholder="Qtde"
           />
 
@@ -102,13 +102,13 @@ export function SaleForm() {
             onChange={(e) =>
               setUnitPrice(Number(e.target.value))
             }
-            className="rounded-xl border px-3 py-2"
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
             placeholder="Valor"
           />
 
           <button
             onClick={addItem}
-            className="rounded-xl bg-black text-white"
+            className="rounded-xl bg-[var(--primary)] text-white"
           >
             Adicionar
           </button>
@@ -117,11 +117,11 @@ export function SaleForm() {
 
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-xl border border-[var(--border)]">
 
         <table className="w-full">
 
-          <thead className="bg-zinc-100">
+          <thead className="bg-[var(--surface-hover)]">
 
             <tr>
 
@@ -207,7 +207,7 @@ export function SaleForm() {
 
                 <td
                   colSpan={5}
-                  className="p-8 text-center text-zinc-500"
+                  className="p-8 text-center text-[var(--text-muted)]"
                 >
                   Nenhum item informado.
                 </td>
@@ -224,7 +224,7 @@ export function SaleForm() {
 
       <div className="flex justify-end">
 
-        <div className="w-72 rounded-xl border p-5">
+        <div className="w-72 rounded-xl border border-[var(--border)] p-5">
 
           <div className="flex justify-between text-lg font-semibold">
 

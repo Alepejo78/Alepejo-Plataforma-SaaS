@@ -1,11 +1,11 @@
-import MainLayout from "@/components/layout/MainLayout";
+import { AppShell } from "@/components";
 
 export default function Financeiro() {
   return (
-    <MainLayout>
+    <AppShell workspaceLabel="Financeiro">
       <h1 className="text-2xl font-bold">
         Financeiro
       </h1>
-    </MainLayout>
+    </AppShell>
   );
 }

@@ -11,8 +11,9 @@ export function Surface({
       className={cn(
         "rounded-3xl",
         "border",
-        "border-zinc-200/80",
-        "bg-white",
+        "border-[var(--border)]",
+        "bg-[var(--surface)]",
+        "text-[var(--text-primary)]",
         "shadow-sm",
         "transition-all",
         "duration-200",

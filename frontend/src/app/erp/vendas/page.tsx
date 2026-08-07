@@ -28,9 +28,9 @@ export default function VendasPage() {
           />
         }
         table={
-          <div className="overflow-hidden rounded-xl border bg-white">
+          <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
             <table className="w-full">
-              <thead className="border-b bg-zinc-50">
+              <thead className="border-b border-[var(--border)] bg-[var(--surface-hover)] text-sm font-semibold text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 text-left">
                     Número
@@ -58,7 +58,7 @@ export default function VendasPage() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="py-16 text-center text-zinc-500"
+                    className="py-16 text-center text-[var(--text-muted)]"
                   >
                     Nenhuma venda cadastrada.
                   </td>

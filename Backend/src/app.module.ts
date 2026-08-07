@@ -9,11 +9,11 @@ import { SecurityModule } from './core/security/security.module';
 
 import { JwtAuthGuard } from './modules/identity/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './modules/identity/auth/guards/permissions.guard';
+import { LicenseGuard } from './modules/identity/license/guards/license.guard';
 
 import { IdentityModule } from './modules/identity/identity.module';
 import { PlatformModule } from './modules/platform/platform.module';
-import { ClientsModule } from './modules/clients/clients.module';
-import { SuppliersModule } from './modules/suppliers/suppliers.module';
+import { BusinessPartnersModule } from './modules/business-partners/business-partners.module';
 
 import { ProductsModule } from './modules/products/products.module';
 import { ProductCategoriesModule } from './modules/product-categories/product-categories.module';
@@ -33,8 +33,7 @@ import { SalesModule } from './modules/sales/sales.module';
     IdentityModule,
     PlatformModule,
 
-    ClientsModule,
-    SuppliersModule,
+    BusinessPartnersModule,
     ProductsModule,
     ProductCategoriesModule,
     BrandsModule,
@@ -48,12 +47,17 @@ import { SalesModule } from './modules/sales/sales.module';
   controllers: [AppController],
   providers: [
     AppService,
-    // Ordem importa: primeiro autentica (JWT), depois autoriza (permissões).
-    // Aplicados globalmente: todo endpoint exige token válido,
-    // a menos que seja marcado com @Public().
+    // Ordem importa: 1) autentica (JWT) -> 2) checa licença do módulo
+    // (LicenseGuard, live no banco) -> 3) checa permissão granular (RBAC).
+    // Aplicados globalmente aqui via APP_GUARD (única fonte de verdade;
+    // NÃO registrar de novo em main.ts com app.useGlobalGuards()).
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: LicenseGuard,
     },
     {
       provide: APP_GUARD,

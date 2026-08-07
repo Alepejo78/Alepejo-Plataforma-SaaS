@@ -8,7 +8,6 @@ import { UserStatus } from '@prisma/client';
 
 import { PasswordService } from '../../../../core/security/password.service';
 
-import { CompanyService } from '../../company/services/company.service';
 import { UsersRepository } from '../repositories/users.repository';
 
 import { CreateUserDto } from '../dto/create-user.dto';
@@ -18,19 +17,10 @@ import { UpdateUserDto } from '../dto/update-user.dto';
 export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
-    private readonly companyService: CompanyService,
     private readonly passwordService: PasswordService,
   ) {}
 
-  async create(createUserDto: CreateUserDto) {
-    const company = await this.companyService.findById(
-      createUserDto.companyId,
-    );
-
-    if (!company) {
-      throw new NotFoundException('Empresa não encontrada.');
-    }
-
+  async create(companyId: string, createUserDto: CreateUserDto) {
     const userExists = await this.usersRepository.findByEmail(
       createUserDto.email,
     );
@@ -48,7 +38,7 @@ export class UsersService {
     return this.usersRepository.create({
       company: {
         connect: {
-          id: createUserDto.companyId,
+          id: companyId,
         },
       },
       name: createUserDto.name,
@@ -60,12 +50,12 @@ export class UsersService {
     });
   }
 
-  async findAll() {
-    return this.usersRepository.findAll();
+  async findAll(companyId: string) {
+    return this.usersRepository.findAll(companyId);
   }
 
-  async findById(id: string) {
-    const user = await this.usersRepository.findById(id);
+  async findById(companyId: string, id: string) {
+    const user = await this.usersRepository.findById(companyId, id);
 
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
@@ -74,12 +64,18 @@ export class UsersService {
     return user;
   }
 
+  // Usado apenas internamente pelo AuthService (login/refresh),
+  // deliberadamente não escopado por companyId.
   async findByEmail(email: string) {
     return this.usersRepository.findByEmail(email);
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
-    await this.findById(id);
+  async update(
+    companyId: string,
+    id: string,
+    updateUserDto: UpdateUserDto,
+  ) {
+    await this.findById(companyId, id);
 
     return this.usersRepository.update(id, updateUserDto);
   }
@@ -98,8 +94,8 @@ export class UsersService {
     });
   }
 
-  async remove(id: string) {
-    await this.findById(id);
+  async remove(companyId: string, id: string) {
+    await this.findById(companyId, id);
 
     return this.usersRepository.softDelete(id);
   }

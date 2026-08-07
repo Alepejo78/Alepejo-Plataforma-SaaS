@@ -2,7 +2,7 @@ import { HTMLAttributes } from "react";
 
 import { cn } from "@/lib";
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {}
+type CardProps = HTMLAttributes<HTMLDivElement>;
 
 export function Card({
   className,
@@ -13,8 +13,9 @@ export function Card({
       className={cn(
         "rounded-3xl",
         "border",
-        "border-zinc-200",
-        "bg-white",
+        "border-[var(--border)]",
+        "bg-[var(--surface)]",
+        "text-[var(--text-primary)]",
         "shadow-sm",
         "transition-all",
         className

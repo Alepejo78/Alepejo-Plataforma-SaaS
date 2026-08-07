@@ -6,16 +6,17 @@ import {
   Patch,
   Post,
   Query,
-  Req,
 } from '@nestjs/common';
 
 import {
-  ApiBearerAuth,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
 
-import type { Request } from 'express';
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
+
+import { Module } from '../../identity/license/decorators/module.decorator';
 
 import { SaleService } from '../services/sale.service';
 
@@ -23,79 +24,84 @@ import { CreateSaleDto } from '../dto/create-sale.dto';
 import { SaleFilterDto } from '../dto/sale-filter.dto';
 
 @ApiTags('Sales')
-@ApiBearerAuth()
 @Controller('sales')
+@Module('SALES')
 export class SaleController {
   constructor(
     private readonly service: SaleService,
   ) {}
 
   @Post()
+  @Permissions('sale.create')
   @ApiOperation({
     summary: 'Cadastrar venda',
   })
   create(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Body() dto: CreateSaleDto,
   ) {
     return this.service.create(
-      (req as any).user.companyId,
+      companyId,
       dto,
     );
   }
 
   @Get()
+  @Permissions('sale.view')
   @ApiOperation({
     summary: 'Listar vendas',
   })
   findAll(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Query() filter: SaleFilterDto,
   ) {
     return this.service.findAll(
-      (req as any).user.companyId,
+      companyId,
       filter,
     );
   }
 
   @Get(':id')
+  @Permissions('sale.view')
   @ApiOperation({
     summary: 'Buscar venda',
   })
   findOne(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.findOne(
-      (req as any).user.companyId,
+      companyId,
       id,
     );
   }
 
   @Patch(':id/approve')
+  @Permissions('sale.approve')
   @ApiOperation({
     summary: 'Aprovar venda',
   })
   approve(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.approve(
-      (req as any).user.companyId,
+      companyId,
       id,
     );
   }
 
   @Patch(':id/cancel')
+  @Permissions('sale.cancel')
   @ApiOperation({
     summary: 'Cancelar aprovação da venda',
   })
   cancelApproval(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.cancelApproval(
-      (req as any).user.companyId,
+      companyId,
       id,
     );
   }

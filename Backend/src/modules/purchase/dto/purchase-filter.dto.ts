@@ -5,7 +5,7 @@ import {
   import {
     IsEnum,
     IsOptional,
-    IsUUID,
+    IsString,
   } from 'class-validator';
   
   export enum PurchaseStatusFilter {
@@ -18,12 +18,12 @@ import {
   export class PurchaseFilterDto {
     @ApiPropertyOptional()
     @IsOptional()
-    @IsUUID()
-    supplierId?: string;
+    @IsString()
+    partnerId?: string;
   
     @ApiPropertyOptional()
     @IsOptional()
-    @IsUUID()
+    @IsString()
     warehouseId?: string;
   
     @ApiPropertyOptional({

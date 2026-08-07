@@ -15,6 +15,11 @@ import {
   PermissionEffect,
 } from '../interfaces/authenticated-user.interface';
 
+/**
+ * Responsável SOMENTE por checar permissões (RBAC).
+ * A checagem de licença/módulo contratado é feita pelo LicenseGuard
+ * (identity/license/guards/license.guard.ts) — não duplicar aqui.
+ */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}

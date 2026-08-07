@@ -6,152 +6,77 @@ export const buttonVariants = cva(
     "items-center",
     "justify-center",
     "gap-2",
-
     "rounded-2xl",
-
     "font-medium",
-
     "transition-all",
-
     "duration-200",
-
     "select-none",
-
     "outline-none",
-
     "active:scale-[0.98]",
-
     "disabled:pointer-events-none",
-
     "disabled:opacity-50",
-
-    "focus-visible:ring-2",
-
-    "focus-visible:ring-zinc-900/20",
   ],
 
   {
     variants: {
-
       variant: {
-
         primary: [
-
-          "bg-zinc-950",
-
-          "text-white",
-
+          "bg-[var(--primary)]",
+          "text-[var(--primary-contrast)]",
           "shadow-sm",
-
-          "hover:bg-zinc-800",
-
+          "hover:bg-[var(--primary-hover)]",
         ],
 
         secondary: [
-
-          "bg-white",
-
+          "bg-[var(--surface)]",
           "border",
-
-          "border-zinc-200",
-
-          "text-zinc-900",
-
-          "hover:bg-zinc-50",
-
+          "border-[var(--border)]",
+          "text-[var(--text-primary)]",
+          "hover:bg-[var(--surface-hover)]",
+          "hover:border-[var(--border-strong)]",
         ],
 
         outline: [
-
           "border",
-
-          "border-zinc-300",
-
+          "border-[var(--border-strong)]",
           "bg-transparent",
-
-          "hover:bg-zinc-100",
-
+          "text-[var(--text-primary)]",
+          "hover:bg-[var(--surface-hover)]",
         ],
 
         ghost: [
-
-          "hover:bg-zinc-100",
-
-          "text-zinc-800",
-
+          "text-[var(--text-secondary)]",
+          "hover:bg-[var(--surface-hover)]",
+          "hover:text-[var(--text-primary)]",
         ],
 
         success: [
-
-          "bg-emerald-600",
-
+          "bg-[var(--success)]",
           "text-white",
-
-          "hover:bg-emerald-700",
-
+          "hover:opacity-90",
         ],
 
         danger: [
-
-          "bg-red-600",
-
+          "bg-[var(--danger)]",
           "text-white",
-
-          "hover:bg-red-700",
-
+          "hover:opacity-90",
         ],
-
       },
 
       size: {
-
-        sm: [
-
-          "h-9",
-
-          "px-4",
-
-          "text-sm",
-
-        ],
-
-        md: [
-
-          "h-11",
-
-          "px-5",
-
-          "text-sm",
-
-        ],
-
-        lg: [
-
-          "h-12",
-
-          "px-6",
-
-          "text-base",
-
-        ],
-
+        sm: ["h-9", "px-4", "text-sm"],
+        md: ["h-11", "px-5", "text-sm"],
+        lg: ["h-12", "px-6", "text-base"],
       },
 
       fullWidth: {
-
         true: "w-full",
-
       },
-
     },
 
     defaultVariants: {
-
       variant: "primary",
-
       size: "md",
-
     },
-
   }
 );

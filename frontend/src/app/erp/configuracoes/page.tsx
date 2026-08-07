@@ -1,11 +1,11 @@
-import MainLayout from "@/components/layout/MainLayout";
+import { AppShell } from "@/components";
 
 export default function Configuracoes() {
   return (
-    <MainLayout>
+    <AppShell workspaceLabel="Configurações">
       <h1 className="text-2xl font-bold">
         Configurações
       </h1>
-    </MainLayout>
+    </AppShell>
   );
 }

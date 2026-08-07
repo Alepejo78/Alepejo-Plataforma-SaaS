@@ -3,13 +3,13 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsNumber,
   IsPositive,
-  IsUUID,
   Min,
+  IsString,
 } from 'class-validator';
 
 export class CreateSaleItemDto {
   @ApiProperty()
-  @IsUUID()
+  @IsString()
   productId: string;
 
   @ApiProperty({

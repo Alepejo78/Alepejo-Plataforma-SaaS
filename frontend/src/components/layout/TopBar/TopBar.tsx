@@ -4,6 +4,7 @@ import { Menu, X } from "lucide-react";
 
 import { cn } from "@/lib";
 
+import { ThemeSwitcher } from "../ThemeSwitcher";
 import { topBarStyles } from "./TopBar.styles";
 import type { TopBarProps } from "./TopBar.types";
 
@@ -51,6 +52,8 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-3">
+        <ThemeSwitcher />
+
         <div className={topBarStyles.company} title={companyName}>
           <span aria-hidden="true" className={topBarStyles.companyIndicator} />
           <span className={topBarStyles.companyName}>
@@ -60,7 +63,7 @@ export function TopBar({
 
         <span
           aria-label={userName ? `Usuário: ${userName}` : "Usuário não identificado"}
-          className={cn(topBarStyles.userAvatar, !userName && "bg-zinc-400")}
+          className={cn(topBarStyles.userAvatar, !userName && "bg-[var(--surface-active)] text-[var(--text-muted)]")}
           role="img"
           title={userName}
         >

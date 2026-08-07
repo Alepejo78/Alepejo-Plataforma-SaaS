@@ -3,7 +3,6 @@ import {
     IsInt,
     IsOptional,
     IsString,
-    IsUUID,
     Max,
     Min,
   } from 'class-validator';
@@ -30,15 +29,15 @@ import {
     barcode?: string;
   
     @IsOptional()
-    @IsUUID()
+    @IsString()
     categoryId?: string;
   
     @IsOptional()
-    @IsUUID()
+    @IsString()
     brandId?: string;
   
     @IsOptional()
-    @IsUUID()
+    @IsString()
     unitId?: string;
   
     @IsOptional()

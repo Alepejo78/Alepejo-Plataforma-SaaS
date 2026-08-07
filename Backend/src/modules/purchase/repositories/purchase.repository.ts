@@ -23,7 +23,7 @@ export class PurchaseRepository {
     return this.prisma.purchase.create({
       data: {
         companyId,
-        supplierId: dto.supplierId,
+        partnerId: dto.partnerId,
         warehouseId: dto.warehouseId,
         purchaseDate: dto.purchaseDate,
         observation: dto.observation,
@@ -40,7 +40,7 @@ export class PurchaseRepository {
         },
       },
       include: {
-        supplier: true,
+        partner: true,
         warehouse: true,
         items: {
           include: {
@@ -59,8 +59,8 @@ export class PurchaseRepository {
       companyId,
     };
 
-    if (filter.supplierId) {
-      where.supplierId = filter.supplierId;
+    if (filter.partnerId) {
+      where.partnerId = filter.partnerId;
     }
 
     if (filter.warehouseId) {
@@ -74,7 +74,7 @@ export class PurchaseRepository {
     return this.prisma.purchase.findMany({
       where,
       include: {
-        supplier: true,
+        partner: true,
         warehouse: true,
         items: {
           include: {
@@ -98,7 +98,7 @@ export class PurchaseRepository {
         companyId,
       },
       include: {
-        supplier: true,
+        partner: true,
         warehouse: true,
         items: {
           include: {

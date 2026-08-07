@@ -18,7 +18,7 @@ export function SidebarHeader({
         border-[var(--border)]
         transition-all
         duration-300
-        ${collapsed ? "px-2 py-5" : "p-6"}
+        ${collapsed ? "px-2 py-4" : "p-6"}
       `}
     >
       <div
@@ -29,15 +29,7 @@ export function SidebarHeader({
           ${collapsed ? "justify-center" : "justify-start"}
         `}
       >
-        <div
-          className={`
-            transition-all
-            duration-300
-            ${collapsed ? "scale-150" : "scale-100"}
-          `}
-        >
-          <Brand collapsed={collapsed} />
-        </div>
+        <Brand collapsed={collapsed} />
       </div>
 
       {!collapsed && (

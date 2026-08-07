@@ -1,42 +1,133 @@
-import axios from "axios";
+import axios, {
+  AxiosError,
+  AxiosRequestConfig,
+} from "axios";
 
+import { env } from "@/lib/env";
+
+/**
+ * Cliente HTTP da aplicação.
+ *
+ * `withCredentials: true` é obrigatório: os tokens ficam em cookies
+ * httpOnly, e sem essa flag o navegador não os envia para a API
+ * (origem diferente: :3000 -> :3001). Não existe Authorization header
+ * aqui — o JavaScript propositalmente não tem acesso ao token.
+ */
 export const api = axios.create({
-  baseURL:
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:3001/api",
-
+  baseURL: env.apiUrl,
   timeout: 30000,
-
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-api.interceptors.request.use((config) => {
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("access_token")
-      : null;
+type FailedRequest = {
+  resolve: (value: unknown) => void;
+  reject: (reason?: unknown) => void;
+  config: AxiosRequestConfig;
+};
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+let isRefreshing = false;
+let failedQueue: FailedRequest[] = [];
+
+/**
+ * Quando o access token expira, várias chamadas podem falhar ao mesmo
+ * tempo. Sem essa fila, cada uma dispararia seu próprio /auth/refresh —
+ * e como o backend faz rotação de refresh token (reuso invalida a
+ * sessão), a segunda chamada derrubaria a sessão inteira.
+ * Por isso: só um refresh por vez; as demais aguardam o resultado.
+ */
+const processQueue = (error: unknown, success: boolean) => {
+  failedQueue.forEach((pending) => {
+    if (success) {
+      pending.resolve(api(pending.config));
+    } else {
+      pending.reject(error);
+    }
+  });
+
+  failedQueue = [];
+};
+
+const redirectToLogin = () => {
+  if (typeof window === "undefined") {
+    return;
   }
 
-  return config;
-});
+  const { pathname, search } = window.location;
+
+  if (pathname.startsWith("/login")) {
+    return;
+  }
+
+  const from = encodeURIComponent(`${pathname}${search}`);
+
+  window.location.href = `/login?from=${from}`;
+};
 
 api.interceptors.response.use(
   (response) => response,
 
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("access_token");
+  async (error: AxiosError) => {
+    const status = error.response?.status;
 
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
-      }
+    const originalRequest = error.config as
+      | (AxiosRequestConfig & { _retry?: boolean })
+      | undefined;
+
+    if (status !== 401 || !originalRequest) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    const url = originalRequest.url ?? "";
+
+    // Falha no próprio login/refresh não deve gerar novo refresh.
+    if (
+      url.includes("/auth/login") ||
+      url.includes("/auth/refresh")
+    ) {
+      if (url.includes("/auth/refresh")) {
+        redirectToLogin();
+      }
+
+      return Promise.reject(error);
+    }
+
+    if (originalRequest._retry) {
+      redirectToLogin();
+
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({
+          resolve,
+          reject,
+          config: originalRequest,
+        });
+      });
+    }
+
+    isRefreshing = true;
+
+    try {
+      await api.post("/auth/refresh");
+
+      processQueue(null, true);
+
+      return api(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, false);
+
+      redirectToLogin();
+
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );

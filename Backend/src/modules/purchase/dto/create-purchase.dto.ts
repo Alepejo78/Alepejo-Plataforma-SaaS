@@ -8,7 +8,6 @@ import {
     IsDateString,
     IsOptional,
     IsString,
-    IsUUID,
     MaxLength,
   } from 'class-validator';
   
@@ -16,11 +15,11 @@ import {
   
   export class CreatePurchaseDto {
     @ApiProperty()
-    @IsUUID()
-    supplierId: string;
+    @IsString()
+    partnerId: string;
   
     @ApiProperty()
-    @IsUUID()
+    @IsString()
     warehouseId: string;
   
     @ApiProperty({

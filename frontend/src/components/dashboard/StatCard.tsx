@@ -30,7 +30,7 @@ function renderIcon(icon?: ReactNode | LucideIcon) {
   return (
     <IconComponent
       size={22}
-      className="text-zinc-700"
+      className="text-[var(--text-secondary)]"
     />
   );
 }
@@ -55,7 +55,7 @@ export function StatCard({
         <div className="space-y-2">
           <Typography
             variant="caption"
-            className="text-zinc-500"
+            className="text-[var(--text-muted)]"
           >
             {title}
           </Typography>
@@ -84,7 +84,7 @@ export function StatCard({
         </div>
 
         {icon && (
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--surface-hover)]">
             {renderIcon(icon)}
           </div>
         )}

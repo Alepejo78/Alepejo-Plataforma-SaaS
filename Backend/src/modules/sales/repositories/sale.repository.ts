@@ -22,7 +22,7 @@ export class SaleRepository {
       data: {
         companyId,
 
-        clientId: dto.clientId,
+        partnerId: dto.partnerId,
         warehouseId: dto.warehouseId,
 
         saleDate: dto.saleDate,
@@ -46,7 +46,7 @@ export class SaleRepository {
       },
 
       include: {
-        customer: true,
+        partner: true,
         warehouse: true,
         items: {
           include: {
@@ -65,8 +65,8 @@ export class SaleRepository {
       companyId,
     };
 
-    if (filter.clientId) {
-      where.clientId = filter.clientId;
+    if (filter.partnerId) {
+      where.partnerId = filter.partnerId;
     }
 
     if (filter.warehouseId) {
@@ -81,7 +81,7 @@ export class SaleRepository {
       where,
 
       include: {
-        customer: true,
+        partner: true,
         warehouse: true,
         items: {
           include: {
@@ -107,7 +107,7 @@ export class SaleRepository {
       },
 
       include: {
-        customer: true,
+        partner: true,
         warehouse: true,
         items: {
           include: {

@@ -39,7 +39,30 @@ export class AuthService {
         deletedAt: null,
       },
       include: {
-        company: true,
+        company: {
+          include: {
+            companyPlan: {
+              include: {
+                plan: {
+                  include: {
+                    planModules: {
+                      include: {
+                        module: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+      
+            companyModules: {
+              include: {
+                module: true,
+              },
+            },
+          },
+        },
+      
         roles: {
           include: {
             role: {
@@ -127,13 +150,8 @@ export class AuthService {
     return user;
   }
 
-  private async issueTokens(user: {
-    id: string;
-    companyId: string;
-    email: string;
-    name: string;
-    status: string;
-  }) {
+  private async issueTokens(user: any)
+  {
     const accessTokenPayload = {
       sub: user.id,
       companyId: user.companyId,
@@ -171,8 +189,9 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      tokenType: 'Bearer',
+      tokenType: "Bearer",
       expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+    
       user: {
         id: user.id,
         companyId: user.companyId,
@@ -180,6 +199,53 @@ export class AuthService {
         email: user.email,
         status: user.status,
       },
+    
+      company: {
+        id: user.company.id,
+        code: user.company.code,
+        legalName: user.company.legalName,
+        tradeName: user.company.tradeName,
+        logo: user.company.logo,
+        language: user.company.language,
+        timezone: user.company.timezone,
+        currency: user.company.currency,
+      },
+    
+      permissions: this.buildPermissions(user),
+    
+      plan: user.company.companyPlan?.plan
+        ? {
+            id: user.company.companyPlan.plan.id,
+            code: user.company.companyPlan.plan.code,
+            name: user.company.companyPlan.plan.name,
+          }
+        : null,
+    
+      modules: [
+        ...(user.company.companyPlan?.plan?.planModules ?? [])
+          .filter((item) => item.included)
+          .map((item) => ({
+            id: item.module.id,
+            code: item.module.code,
+            name: item.module.name,
+            route: item.module.route,
+            icon: item.module.icon,
+          })),
+    
+        ...(user.company.companyModules ?? [])
+          .filter(
+            (item) =>
+              item.enabled &&
+              item.licensed,
+          )
+          .map((item) => ({
+            id: item.module.id,
+            code: item.module.code,
+            name: item.module.name,
+            route: item.module.route,
+            icon: item.module.icon,
+          })),
+      ],
     };
   }
 
@@ -191,6 +257,14 @@ export class AuthService {
 
   async refresh(dto: RefreshTokenDto) {
     let payload: { sub: string; type: string };
+
+    // O refresh token agora chega via cookie httpOnly; se o cookie não
+    // existir (sessão nunca criada ou já expirada), o valor vem undefined.
+    if (!dto?.refreshToken) {
+      throw new UnauthorizedException(
+        'Sessão não encontrada. Faça login novamente.',
+      );
+    }
 
     try {
       payload = await this.jwtService.verifyAsync(dto.refreshToken, {
@@ -239,6 +313,26 @@ export class AuthService {
 
     // Rotaciona o refresh token a cada uso.
     return this.issueTokens(user);
+  }
+
+  /**
+   * Usado pelo endpoint público de logout: tenta identificar o usuário
+   * pelo access token para revogar o refresh token no banco. Se o token
+   * estiver inválido/expirado, apenas ignora — os cookies já terão sido
+   * limpos pelo controller.
+   */
+  async logoutByAccessToken(accessToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(
+        accessToken,
+      );
+
+      if (payload?.sub) {
+        await this.logout(payload.sub);
+      }
+    } catch {
+      // Token inválido: não há sessão a revogar.
+    }
   }
 
   async logout(userId: string) {

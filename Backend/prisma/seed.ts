@@ -6,6 +6,38 @@ const prisma = new PrismaClient();
 const ADMIN_EMAIL = "alessandro.lourenco@alepejo.com.br";
 const ADMIN_PASSWORD = "Lore@251378";
 
+/**
+ * Catálogo de módulos licenciáveis.
+ *
+ * IMPORTANTE: o `code` precisa bater (em MAIÚSCULAS) com o valor passado
+ * ao decorator @Module(...) nos controllers, porque o LicenseGuard compara
+ * `module.code` com o código exigido pela rota (o decorator faz toUpperCase).
+ * Ex.: products.controller usa @Module(ERP_MODULES.PRODUCTS) -> "PRODUCTS".
+ */
+const erpModules: {
+  code: string;
+  name: string;
+  route: string;
+  sortOrder: number;
+}[] = [
+  { code: "BPS", name: "Cadastros (Clientes/Fornecedores)", route: "/erp/cadastros", sortOrder: 1 },
+  { code: "PRODUCTS", name: "Produtos", route: "/erp/produtos", sortOrder: 2 },
+  { code: "INVENTORY", name: "Estoque", route: "/erp/estoque", sortOrder: 3 },
+  { code: "PURCHASE", name: "Compras", route: "/erp/compras", sortOrder: 4 },
+  { code: "SALES", name: "Vendas", route: "/erp/vendas", sortOrder: 5 },
+];
+
+/**
+ * Plano padrão. Inclui todos os módulos acima para que a empresa seed
+ * (ALEPEJO) tenha acesso total assim que o sistema sobe. Sem isso, o
+ * LicenseGuard bloquearia (403) todos os módulos não-básicos.
+ */
+const DEFAULT_PLAN = {
+  code: "ENTERPRISE",
+  name: "Enterprise",
+  description: "Plano completo com todos os módulos.",
+};
+
 const permissionGroups = [
   {
     code: "SYSTEM",
@@ -61,11 +93,10 @@ const permissionGroups = [
     code: "SALES",
     name: "Vendas",
     permissions: [
-      ["sales.view", "Consultar Vendas"],
-      ["sales.create", "Criar Vendas"],
-      ["sales.update", "Alterar Vendas"],
-      ["sales.cancel", "Cancelar Vendas"],
-      ["sales.invoice", "Faturar Vendas"],
+      ["sale.view", "Consultar Vendas"],
+      ["sale.create", "Criar Vendas"],
+      ["sale.approve", "Aprovar Vendas"],
+      ["sale.cancel", "Cancelar Vendas"],
     ],
   },
   {
@@ -74,8 +105,9 @@ const permissionGroups = [
     permissions: [
       ["purchase.view", "Consultar Compras"],
       ["purchase.create", "Criar Compras"],
-      ["purchase.update", "Alterar Compras"],
       ["purchase.approve", "Aprovar Compras"],
+      ["purchase.receive", "Receber Compras"],
+      ["purchase.cancel", "Cancelar Compras"],
     ],
   },
   {
@@ -83,10 +115,115 @@ const permissionGroups = [
     name: "Estoque",
     permissions: [
       ["inventory.view", "Consultar Estoque"],
+      ["inventory.create", "Cadastrar Registro de Estoque"],
+      ["inventory.update", "Alterar Registro de Estoque"],
+      ["inventory.delete", "Excluir Registro de Estoque"],
       ["inventory.entry", "Entrada"],
       ["inventory.exit", "Saída"],
       ["inventory.adjust", "Ajuste"],
       ["inventory.transfer", "Transferência"],
+    ],
+  },
+  {
+    code: "PARTNER",
+    name: "Parceiros (Clientes/Fornecedores)",
+    permissions: [
+      ["partner.view", "Visualizar Parceiros"],
+      ["partner.create", "Cadastrar Parceiros"],
+      ["partner.update", "Alterar Parceiros"],
+      ["partner.delete", "Excluir Parceiros"],
+    ],
+  },
+  {
+    code: "PRODUCT",
+    name: "Produtos",
+    permissions: [
+      ["product.view", "Visualizar Produtos"],
+      ["product.create", "Cadastrar Produtos"],
+      ["product.update", "Alterar Produtos"],
+      ["product.delete", "Excluir Produtos"],
+    ],
+  },
+  {
+    code: "PRODUCT_CATEGORY",
+    name: "Categorias de Produto",
+    permissions: [
+      ["product-category.view", "Visualizar Categorias"],
+      ["product-category.create", "Cadastrar Categorias"],
+      ["product-category.update", "Alterar Categorias"],
+      ["product-category.delete", "Excluir Categorias"],
+    ],
+  },
+  {
+    code: "BRAND",
+    name: "Marcas",
+    permissions: [
+      ["brand.view", "Visualizar Marcas"],
+      ["brand.create", "Cadastrar Marcas"],
+      ["brand.update", "Alterar Marcas"],
+      ["brand.delete", "Excluir Marcas"],
+    ],
+  },
+  {
+    code: "UNIT_OF_MEASURE",
+    name: "Unidades de Medida",
+    permissions: [
+      ["unit-of-measure.view", "Visualizar Unidades de Medida"],
+      ["unit-of-measure.create", "Cadastrar Unidades de Medida"],
+      ["unit-of-measure.update", "Alterar Unidades de Medida"],
+      ["unit-of-measure.delete", "Excluir Unidades de Medida"],
+    ],
+  },
+  {
+    code: "WAREHOUSE",
+    name: "Depósitos",
+    permissions: [
+      ["warehouse.view", "Visualizar Depósitos"],
+      ["warehouse.create", "Cadastrar Depósitos"],
+      ["warehouse.update", "Alterar Depósitos"],
+      ["warehouse.delete", "Excluir Depósitos"],
+    ],
+  },
+  {
+    code: "STOCK_MOVEMENT",
+    name: "Movimentação de Estoque",
+    permissions: [
+      ["stock-movement.view", "Visualizar Movimentações"],
+      ["stock-movement.create", "Registrar Movimentações"],
+    ],
+  },
+  {
+    code: "PERMISSION",
+    name: "Permissões (Plataforma)",
+    permissions: [
+      ["permission.view", "Visualizar Permissões"],
+      ["platform.permission.manage", "Gerenciar Catálogo de Permissões"],
+    ],
+  },
+  {
+    code: "ROLE_PERMISSION",
+    name: "Vínculo Perfil x Permissão",
+    permissions: [
+      ["role-permission.view", "Visualizar Vínculos"],
+      ["role-permission.manage", "Gerenciar Vínculos"],
+    ],
+  },
+  {
+    code: "USER_ROLE",
+    name: "Vínculo Usuário x Perfil",
+    permissions: [
+      ["user-role.view", "Visualizar Vínculos"],
+      ["user-role.manage", "Gerenciar Vínculos"],
+    ],
+  },
+  {
+    code: "LICENSE",
+    name: "Licenciamento",
+    permissions: [
+      ["license.view", "Ver Minha Licença"],
+      ["license.trial", "Iniciar Trial de Módulo"],
+      ["license.catalog.view", "Ver Catálogo de Planos/Módulos"],
+      ["platform.license.manage", "Gerenciar Licenciamento (Plataforma)"],
     ],
   },
   {
@@ -164,6 +301,76 @@ async function main() {
       });
     }
   }
+  // ==========================
+  // Licenciamento: módulos + plano padrão + vínculo com a empresa
+  // ==========================
+
+  for (const mod of erpModules) {
+    await prisma.module.upsert({
+      where: { code: mod.code },
+      update: {
+        name: mod.name,
+        route: mod.route,
+        sortOrder: mod.sortOrder,
+        active: true,
+      },
+      create: {
+        code: mod.code,
+        name: mod.name,
+        route: mod.route,
+        sortOrder: mod.sortOrder,
+        active: true,
+      },
+    });
+  }
+
+  const defaultPlan = await prisma.plan.upsert({
+    where: { code: DEFAULT_PLAN.code },
+    update: {
+      name: DEFAULT_PLAN.name,
+      description: DEFAULT_PLAN.description,
+      active: true,
+    },
+    create: {
+      code: DEFAULT_PLAN.code,
+      name: DEFAULT_PLAN.name,
+      description: DEFAULT_PLAN.description,
+      active: true,
+    },
+  });
+
+  const allModules = await prisma.module.findMany();
+
+  for (const mod of allModules) {
+    await prisma.planModule.upsert({
+      where: {
+        planId_moduleId: {
+          planId: defaultPlan.id,
+          moduleId: mod.id,
+        },
+      },
+      update: { included: true },
+      create: {
+        planId: defaultPlan.id,
+        moduleId: mod.id,
+        included: true,
+      },
+    });
+  }
+
+  await prisma.companyPlan.upsert({
+    where: { companyId: company.id },
+    update: {
+      planId: defaultPlan.id,
+      active: true,
+    },
+    create: {
+      companyId: company.id,
+      planId: defaultPlan.id,
+      active: true,
+    },
+  });
+
   const administratorRole =
   await prisma.role.upsert({
     where: {

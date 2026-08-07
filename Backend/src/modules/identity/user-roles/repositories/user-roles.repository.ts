@@ -17,6 +17,40 @@ export class UserRolesRepository extends BaseRepository {
     super(prisma);
   }
 
+  async userBelongsToCompany(
+    companyId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        companyId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return !!user;
+  }
+
+  async roleBelongsToCompany(
+    companyId: string,
+    roleId: string,
+  ): Promise<boolean> {
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id: roleId,
+        companyId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return !!role;
+  }
+
   async create(
     data: Prisma.UserRoleCreateInput,
   ): Promise<UserRole> {
@@ -30,12 +64,17 @@ export class UserRolesRepository extends BaseRepository {
   }
 
   async findAll(
+    companyId: string,
     filter: UserRoleFilterDto,
   ) {
     const page = Number(filter.page ?? 1);
     const limit = Number(filter.limit ?? 20);
 
-    const where: Prisma.UserRoleWhereInput = {};
+    const where: Prisma.UserRoleWhereInput = {
+      user: {
+        companyId,
+      },
+    };
 
     if (filter.userId) {
       where.userId = filter.userId;
@@ -75,11 +114,15 @@ export class UserRolesRepository extends BaseRepository {
   }
 
   async findById(
+    companyId: string,
     id: string,
   ): Promise<UserRole | null> {
-    return this.prisma.userRole.findUnique({
+    return this.prisma.userRole.findFirst({
       where: {
         id,
+        user: {
+          companyId,
+        },
       },
       include: {
         user: true,
@@ -89,35 +132,23 @@ export class UserRolesRepository extends BaseRepository {
   }
 
   async findByUserAndRole(
+    companyId: string,
     userId: string,
     roleId: string,
   ): Promise<UserRole | null> {
-    return this.prisma.userRole.findUnique({
+    return this.prisma.userRole.findFirst({
       where: {
-        userId_roleId: {
-          userId,
-          roleId,
+        userId,
+        roleId,
+        user: {
+          companyId,
         },
       },
     });
   }
 
-  async update(
-    id: string,
-    data: Prisma.UserRoleUpdateInput,
-  ): Promise<UserRole> {
-    return this.prisma.userRole.update({
-      where: {
-        id,
-      },
-      data,
-      include: {
-        user: true,
-        role: true,
-      },
-    });
-  }
-
+  // A checagem de que o vínculo pertence a `companyId` é feita no
+  // service (findById) ANTES de chamar delete.
   async delete(
     id: string,
   ): Promise<UserRole> {

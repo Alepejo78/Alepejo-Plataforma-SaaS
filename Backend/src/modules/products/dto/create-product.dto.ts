@@ -4,7 +4,6 @@ import {
     IsNumber,
     IsOptional,
     IsString,
-    IsUUID,
     Length,
     MaxLength,
     Min,
@@ -43,14 +42,14 @@ import {
     inventoryControl: InventoryControl;
   
     @IsOptional()
-    @IsUUID()
+    @IsString()
     categoryId?: string;
   
     @IsOptional()
-    @IsUUID()
+    @IsString()
     brandId?: string;
   
-    @IsUUID()
+    @IsString()
     unitId: string;
   
     @IsNumber({ maxDecimalPlaces: 2 })

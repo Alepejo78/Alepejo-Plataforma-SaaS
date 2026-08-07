@@ -1,15 +1,39 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import {
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
+
+import { useAuth } from "@/providers/AuthProvider";
+import { useMenu } from "@/hooks/useMenu";
 
 import { SidebarHeader } from "./SidebarHeader";
 import { SidebarItem } from "./SidebarItem";
-import { menu } from "./menu";
 import { sidebarStyles } from "./Sidebar.styles";
+
+function getInitials(name?: string) {
+  if (!name) {
+    return "?";
+  }
+
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+}
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+
+  const { user, logout, loading } = useAuth();
+
+  const menuItems = useMenu();
 
   useEffect(() => {
     const value = localStorage.getItem("sidebar-collapsed");
@@ -39,7 +63,10 @@ export function Sidebar() {
       <div className="flex justify-end p-3">
         <button
           onClick={toggleSidebar}
-          className="rounded-xl p-2 hover:bg-[var(--surface-hover)]"
+          aria-label={
+            collapsed ? "Expandir menu" : "Recolher menu"
+          }
+          className={`${sidebarStyles.iconButton} size-9`}
         >
           {collapsed ? (
             <PanelLeftOpen size={20} />
@@ -52,31 +79,60 @@ export function Sidebar() {
       <SidebarHeader collapsed={collapsed} />
 
       <nav className={sidebarStyles.navigation}>
-        {menu.map((item) => (
-          <SidebarItem
-            key={item.id}
-            item={item}
-            collapsed={collapsed}
-          />
-        ))}
+        {loading ? (
+          <div className="space-y-2 px-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-10 animate-pulse rounded-xl bg-[var(--surface-hover)]"
+              />
+            ))}
+          </div>
+        ) : (
+          menuItems.map((item) => (
+            <SidebarItem
+              key={item.id}
+              item={item}
+              collapsed={collapsed}
+            />
+          ))
+        )}
       </nav>
 
       <div className="border-t border-[var(--border)] p-4">
-        {!collapsed && (
+        {collapsed ? (
+          <button
+            onClick={() => void logout()}
+            title="Sair"
+            aria-label="Sair"
+            className={`${sidebarStyles.iconButton} h-9 w-full`}
+          >
+            <LogOut size={20} />
+          </button>
+        ) : (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)] text-white">
-              A
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white">
+              {getInitials(user?.name)}
             </div>
 
-            <div>
-              <p className="font-semibold text-[var(--text-primary)]">
-                Alessandro
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-[var(--text-primary)]">
+                {user?.name ?? "—"}
               </p>
 
-              <p className="text-sm text-[var(--text-muted)]">
-                Administrador
+              <p className="truncate text-sm text-[var(--text-secondary)]">
+                {user?.company?.tradeName ?? ""}
               </p>
             </div>
+
+            <button
+              onClick={() => void logout()}
+              title="Sair"
+              aria-label="Sair"
+              className={`${sidebarStyles.iconButton} size-9 shrink-0`}
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         )}
       </div>

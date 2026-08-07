@@ -3,7 +3,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsOptional,
-  IsUUID,
+  IsString,
 } from 'class-validator';
 
 export enum SaleStatusFilter {
@@ -17,12 +17,12 @@ export enum SaleStatusFilter {
 export class SaleFilterDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
-  clientId?: string;
+  @IsString()
+  partnerId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
   warehouseId?: string;
 
   @ApiPropertyOptional({

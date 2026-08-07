@@ -18,7 +18,7 @@ const actions = [
     title: "Novo Cliente",
     description: "Cadastrar um novo cliente",
     icon: <UserPlus size={22} />,
-    href: "/erp/clientes/novo",
+    href: "/erp/parceiros",
   },
   {
     title: "Novo Produto",

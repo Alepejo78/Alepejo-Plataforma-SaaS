@@ -1,3 +1,4 @@
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import {
     Body,
     Controller,
@@ -5,24 +6,20 @@ import {
     Param,
     Post,
     Query,
-    Req,
   } from '@nestjs/common';
   
   import {
-    ApiBearerAuth,
     ApiOperation,
     ApiTags,
   } from '@nestjs/swagger';
   
-  import type { Request } from 'express';
-  
+    
   import { StockMovementService } from '../services/stock-movement.service';
   
   import { CreateStockMovementDto } from '../dto/create-stock-movement.dto';
   import { StockMovementFilterDto } from '../dto/stock-movement-filter.dto';
   
   @ApiTags('Stock Movements')
-  @ApiBearerAuth()
   @Controller('stock-movements')
   export class StockMovementController {
     constructor(
@@ -34,11 +31,11 @@ import {
       summary: 'Registrar movimentação de estoque',
     })
     create(
-      @Req() req: Request,
+      @CurrentUser('companyId') companyId: string,
       @Body() dto: CreateStockMovementDto,
     ) {
       return this.service.create(
-        (req as any).user.companyId,
+        companyId,
         dto,
       );
     }
@@ -48,11 +45,11 @@ import {
       summary: 'Listar movimentações',
     })
     findAll(
-      @Req() req: Request,
+      @CurrentUser('companyId') companyId: string,
       @Query() filter: StockMovementFilterDto,
     ) {
       return this.service.findAll(
-        (req as any).user.companyId,
+        companyId,
         filter,
       );
     }
@@ -62,11 +59,11 @@ import {
       summary: 'Buscar movimentação',
     })
     findOne(
-      @Req() req: Request,
+      @CurrentUser('companyId') companyId: string,
       @Param('id') id: string,
     ) {
       return this.service.findOne(
-        (req as any).user.companyId,
+        companyId,
         id,
       );
     }

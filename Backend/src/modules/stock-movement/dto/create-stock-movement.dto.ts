@@ -6,14 +6,13 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
   MaxLength,
 } from 'class-validator';
 
 export class CreateStockMovementDto {
   @ApiProperty()
-  @IsUUID()
+  @IsString()
   inventoryId: string;
 
   @ApiProperty({

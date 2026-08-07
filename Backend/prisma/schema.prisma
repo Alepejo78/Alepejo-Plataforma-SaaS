@@ -21,16 +21,24 @@ enum PermissionEffect {
   DENY
 }
 
-enum ClientStatus {
+
+
+enum BusinessPartnerStatus {
   ACTIVE
   INACTIVE
   BLOCKED
 }
 
-enum SupplierStatus {
-  ACTIVE
-  INACTIVE
-  BLOCKED
+enum BusinessPartnerRole {
+  CUSTOMER
+  SUPPLIER
+  CARRIER
+  SALES_REP
+}
+
+enum PersonType {
+  INDIVIDUAL
+  COMPANY
 }
 
 enum ProductType {
@@ -94,9 +102,7 @@ model Company {
 
   roles Role[]
 
-  clients Client[]
-
-  suppliers Supplier[]
+  partners BusinessPartner[]
 
   productCategories ProductCategory[]
 
@@ -105,6 +111,12 @@ model Company {
   units UnitOfMeasure[]
 
   products Product[]
+
+  companyPlan CompanyPlan?
+
+  companyModules CompanyModule[]
+
+  licenseHistory LicenseHistory[]
 
   createdAt DateTime @default(now())
 
@@ -117,19 +129,36 @@ model Company {
   purchases Purchase[]
   sales     Sale[]
 
+
   @@map("companies")
 }
 
-model Client {
+
+model BusinessPartner {
   id String @id @default(cuid())
 
   companyId String
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  name String @db.VarChar(150)
+  /// Papéis do parceiro. Um mesmo cadastro pode ser cliente e
+  /// fornecedor ao mesmo tempo. Deve conter ao menos um item
+  /// (validado na camada de serviço).
+  roles BusinessPartnerRole[]
 
+  personType PersonType @default(COMPANY)
+
+  /// Razão social (PJ) ou nome completo (PF)
+  legalName String @db.VarChar(200)
+
+  /// Nome fantasia (PJ) ou apelido (PF)
+  tradeName String? @db.VarChar(200)
+
+  /// CNPJ ou CPF — único por empresa
   document String @db.VarChar(20)
+
+  /// Inscrição estadual (PJ) ou RG (PF)
+  stateRegistration String? @db.VarChar(30)
 
   email String? @db.VarChar(150)
 
@@ -155,23 +184,26 @@ model Client {
 
   notes String? @db.Text
 
-  status ClientStatus @default(ACTIVE)
+  status BusinessPartnerStatus @default(ACTIVE)
 
   active Boolean @default(true)
+
+  sales Sale[] @relation("SalePartner")
+
+  purchases Purchase[] @relation("PurchasePartner")
 
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
 
   deletedAt DateTime?
-  Sale      Sale[]
 
   @@unique([companyId, document])
   @@index([companyId])
-  @@index([name])
+  @@index([legalName])
   @@index([document])
   @@index([status])
-  @@map("clients")
+  @@map("business_partners")
 }
 
 model User {
@@ -335,62 +367,6 @@ model UserRole {
   @@map("user_roles")
 }
 
-model Supplier {
-  id String @id @default(cuid())
-
-  companyId String
-
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  corporateName String @db.VarChar(200)
-
-  tradeName String? @db.VarChar(200)
-
-  document String @db.VarChar(20)
-
-  stateRegistration String? @db.VarChar(30)
-
-  email String? @db.VarChar(150)
-
-  phone String? @db.VarChar(30)
-
-  mobile String? @db.VarChar(30)
-
-  contact String? @db.VarChar(150)
-
-  zipCode String? @db.VarChar(15)
-
-  street String? @db.VarChar(150)
-
-  number String? @db.VarChar(20)
-
-  complement String? @db.VarChar(100)
-
-  district String? @db.VarChar(100)
-
-  city String? @db.VarChar(100)
-
-  state String? @db.VarChar(2)
-
-  notes String? @db.Text
-
-  status SupplierStatus @default(ACTIVE)
-
-  active Boolean @default(true)
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  deletedAt DateTime?
-  purchases Purchase[]
-
-  @@unique([companyId, document])
-  @@index([companyId])
-  @@index([corporateName])
-  @@index([document])
-  @@map("suppliers")
-}
 
 model ProductCategory {
   id          String      @id @default(cuid())
@@ -552,8 +528,8 @@ model Purchase {
   id           String         @id @default(cuid())
   companyId    String
   company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  supplierId   String
-  supplier     Supplier       @relation(fields: [supplierId], references: [id])
+  partnerId    String
+  partner      BusinessPartner @relation("PurchasePartner", fields: [partnerId], references: [id])
   warehouseId  String
   warehouse    Warehouse      @relation(fields: [warehouseId], references: [id])
   status       PurchaseStatus @default(DRAFT)
@@ -586,8 +562,8 @@ model Sale {
   id          String    @id @default(cuid())
   companyId   String
   company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  clientId    String
-  customer    Client    @relation(fields: [clientId], references: [id])
+  partnerId   String
+  partner     BusinessPartner @relation("SalePartner", fields: [partnerId], references: [id])
   warehouseId String
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
@@ -632,4 +608,115 @@ model SaleItem {
 
   @@index([saleId])
   @@map("sale_items")
+}
+
+model Module {
+  id             String           @id @default(cuid())
+  code           String           @unique @db.VarChar(50)
+  name           String           @db.VarChar(150)
+  description    String?          @db.VarChar(500)
+  icon           String?          @db.VarChar(100)
+  route          String?          @db.VarChar(150)
+  sortOrder      Int              @default(0)
+  active         Boolean          @default(true)
+  planModules    PlanModule[]
+  companyModules CompanyModule[]
+  licenseHistory LicenseHistory[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("modules")
+}
+
+model Plan {
+  id             String           @id @default(cuid())
+  code           String           @unique @db.VarChar(50)
+  name           String           @db.VarChar(150)
+  description    String?          @db.VarChar(500)
+  monthlyPrice   Decimal?         @db.Decimal(18, 2)
+  yearlyPrice    Decimal?         @db.Decimal(18, 2)
+  maxUsers       Int?
+  active         Boolean          @default(true)
+  planModules    PlanModule[]
+  companyPlans   CompanyPlan[]
+  licenseHistory LicenseHistory[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("plans")
+}
+
+model PlanModule {
+  id        String   @id @default(cuid())
+  planId    String
+  moduleId  String
+  included  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, moduleId])
+  @@index([planId])
+  @@index([moduleId])
+  @@map("plan_modules")
+}
+
+model CompanyPlan {
+  id          String    @id @default(cuid())
+  companyId   String    @unique
+  planId      String
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  trialEndsAt DateTime?
+  active      Boolean   @default(true)
+  autoRenew   Boolean   @default(true)
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan        Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([planId])
+  @@map("company_plans")
+}
+
+model CompanyModule {
+  id            String    @id @default(cuid())
+  companyId     String
+  moduleId      String
+  enabled       Boolean   @default(true)
+  licensed      Boolean   @default(true)
+  trial         Boolean   @default(false)
+  trialStartsAt DateTime?
+  trialEndsAt   DateTime?
+  activatedAt   DateTime?
+  expiresAt     DateTime?
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  module        Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([companyId, moduleId])
+  @@index([companyId])
+  @@index([moduleId])
+  @@map("company_modules")
+}
+
+model LicenseHistory {
+  id          String   @id @default(cuid())
+  companyId   String
+  moduleId    String?
+  planId      String?
+  event       String   @db.VarChar(50)
+  description String?  @db.VarChar(500)
+  createdBy   String?
+  metadata    Json?
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  module      Module?  @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  plan        Plan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([moduleId])
+  @@index([planId])
+  @@map("license_history")
 }

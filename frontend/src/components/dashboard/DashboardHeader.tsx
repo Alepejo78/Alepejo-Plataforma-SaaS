@@ -60,18 +60,18 @@ export function DashboardHeader({
           variant="outline"
           onClick={onRefresh}
           className="
-            border-zinc-400
-            bg-zinc-200
-            text-zinc-800
-            hover:bg-zinc-300
-            hover:border-zinc-500
-            hover:text-zinc-900
+            border-[var(--border-strong)]
+            bg-[var(--surface-active)]
+            text-[var(--text-secondary)]
+            hover:bg-[var(--surface-hover)]
+            hover:border-[var(--primary)]
+            hover:text-[var(--text-primary)]
             shadow-sm
           "
         >
           <RefreshCw
             size={18}
-            className="text-zinc-800"
+            className="text-[var(--text-secondary)]"
           />
 
           <span>Atualizar</span>
@@ -81,18 +81,18 @@ export function DashboardHeader({
           variant="outline"
           onClick={onNotifications}
           className="
-            border-zinc-400
-            bg-zinc-200
-            text-zinc-800
-            hover:bg-zinc-300
-            hover:border-zinc-500
-            hover:text-zinc-900
+            border-[var(--border-strong)]
+            bg-[var(--surface-active)]
+            text-[var(--text-secondary)]
+            hover:bg-[var(--surface-hover)]
+            hover:border-[var(--primary)]
+            hover:text-[var(--text-primary)]
             shadow-sm
           "
         >
           <Bell
             size={18}
-            className="text-zinc-800"
+            className="text-[var(--text-secondary)]"
           />
 
           <span>Notificações</span>

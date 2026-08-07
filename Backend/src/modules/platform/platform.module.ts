@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 
-import { ClientsModule } from '../clients/clients.module';
+import { BusinessPartnersModule } from '../business-partners/business-partners.module';
 
 @Module({
   imports: [
-    ClientsModule,
+    BusinessPartnersModule,
   ],
   exports: [
-    ClientsModule,
+    BusinessPartnersModule,
   ],
 })
 export class PlatformModule {}

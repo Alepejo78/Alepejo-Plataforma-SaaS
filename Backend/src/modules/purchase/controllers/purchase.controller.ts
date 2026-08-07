@@ -6,16 +6,17 @@ import {
   Patch,
   Post,
   Query,
-  Req,
 } from '@nestjs/common';
 
 import {
-  ApiBearerAuth,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
 
-import type { Request } from 'express';
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
+
+import { Module } from '../../identity/license/decorators/module.decorator';
 
 import { PurchaseService } from '../services/purchase.service';
 
@@ -23,93 +24,99 @@ import { CreatePurchaseDto } from '../dto/create-purchase.dto';
 import { PurchaseFilterDto } from '../dto/purchase-filter.dto';
 
 @ApiTags('Purchases')
-@ApiBearerAuth()
 @Controller('purchases')
+@Module('PURCHASE')
 export class PurchaseController {
   constructor(
     private readonly service: PurchaseService,
   ) {}
 
   @Post()
+  @Permissions('purchase.create')
   @ApiOperation({
     summary: 'Cadastrar compra',
   })
   create(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Body() dto: CreatePurchaseDto,
   ) {
     return this.service.create(
-      (req as any).user.companyId,
+      companyId,
       dto,
     );
   }
 
   @Get()
+  @Permissions('purchase.view')
   @ApiOperation({
     summary: 'Listar compras',
   })
   findAll(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Query() filter: PurchaseFilterDto,
   ) {
     return this.service.findAll(
-      (req as any).user.companyId,
+      companyId,
       filter,
     );
   }
 
   @Get(':id')
+  @Permissions('purchase.view')
   @ApiOperation({
     summary: 'Buscar compra',
   })
   findOne(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.findOne(
-      (req as any).user.companyId,
+      companyId,
       id,
     );
   }
 
   @Patch(':id/approve')
+  @Permissions('purchase.approve')
   @ApiOperation({
     summary: 'Aprovar compra',
   })
   approve(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.approve(
-      (req as any).user.companyId,
+      companyId,
       id,
     );
   }
 
   @Patch(':id/receive')
+  @Permissions('purchase.receive')
   @ApiOperation({
     summary: 'Receber compra',
   })
   receive(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.receive(
-      (req as any).user.companyId,
+      companyId,
       id,
     );
   }
 
   @Patch(':id/cancel')
+  @Permissions('purchase.cancel')
   @ApiOperation({
     summary: 'Cancelar compra',
   })
   cancel(
-    @Req() req: Request,
+    @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.cancel(
-      (req as any).user.companyId,
+      companyId,
       id,
     );
   }

@@ -12,9 +12,10 @@ export class UsersRepository {
     });
   }
 
-  async findAll(): Promise<User[]> {
+  async findAll(companyId: string): Promise<User[]> {
     return this.prisma.user.findMany({
       where: {
+        companyId,
         deletedAt: null,
       },
       include: {
@@ -26,10 +27,11 @@ export class UsersRepository {
     });
   }
 
-  async findById(id: string) {
+  async findById(companyId: string, id: string) {
     return this.prisma.user.findFirst({
       where: {
         id,
+        companyId,
         deletedAt: null,
       },
       include: {
@@ -56,6 +58,9 @@ export class UsersRepository {
     });
   }
 
+  // Usado apenas pelo fluxo de login: e-mail é único globalmente no
+  // sistema (@unique no schema), então essa busca não é escopada por
+  // companyId de propósito.
   async findByEmail(email: string) {
     return this.prisma.user.findFirst({
       where: {
@@ -102,6 +107,7 @@ export class UsersRepository {
       },
       data: {
         deletedAt: new Date(),
+        active: false,
       },
     });
   }

@@ -17,6 +17,23 @@ export class RolePermissionsRepository extends BaseRepository {
     super(prisma);
   }
 
+  async roleBelongsToCompany(
+    companyId: string,
+    roleId: string,
+  ): Promise<boolean> {
+    const role = await this.prisma.role.findFirst({
+      where: {
+        id: roleId,
+        companyId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return !!role;
+  }
+
   async create(
     data: Prisma.RolePermissionCreateInput,
   ): Promise<RolePermission> {
@@ -34,12 +51,17 @@ export class RolePermissionsRepository extends BaseRepository {
   }
 
   async findAll(
+    companyId: string,
     filter: RolePermissionFilterDto,
   ) {
     const page = Number(filter.page ?? 1);
     const limit = Number(filter.limit ?? 20);
 
-    const where: Prisma.RolePermissionWhereInput = {};
+    const where: Prisma.RolePermissionWhereInput = {
+      role: {
+        companyId,
+      },
+    };
 
     if (filter.roleId) {
       where.roleId = filter.roleId;
@@ -83,11 +105,15 @@ export class RolePermissionsRepository extends BaseRepository {
   }
 
   async findById(
+    companyId: string,
     id: string,
   ): Promise<RolePermission | null> {
-    return this.prisma.rolePermission.findUnique({
+    return this.prisma.rolePermission.findFirst({
       where: {
         id,
+        role: {
+          companyId,
+        },
       },
       include: {
         role: true,
@@ -101,19 +127,23 @@ export class RolePermissionsRepository extends BaseRepository {
   }
 
   async findByRoleAndPermission(
+    companyId: string,
     roleId: string,
     permissionId: string,
   ): Promise<RolePermission | null> {
-    return this.prisma.rolePermission.findUnique({
+    return this.prisma.rolePermission.findFirst({
       where: {
-        roleId_permissionId: {
-          roleId,
-          permissionId,
+        roleId,
+        permissionId,
+        role: {
+          companyId,
         },
       },
     });
   }
 
+  // A checagem de que o vínculo pertence a `companyId` (via role) é
+  // feita no service (findById) ANTES de chamar update/delete.
   async update(
     id: string,
     data: Prisma.RolePermissionUpdateInput,

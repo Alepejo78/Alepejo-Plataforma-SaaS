@@ -8,13 +8,6 @@ import {
 } from 'class-validator';
 
 export class CreateUserDto {
-  @ApiProperty({
-    example: 'cmrwjaeux0000y8akgy83spq1',
-    description: 'ID da empresa',
-  })
-  @IsString({ message: 'O ID da empresa deve ser um texto.' })
-  @IsNotEmpty({ message: 'A empresa é obrigatória.' })
-  companyId: string;
 
   @ApiProperty({
     example: 'Administrador',

@@ -15,7 +15,7 @@ import {
 import { Public } from '../../../../core/decorators/public.decorator';
 import { CurrentUser } from '../../../../core/decorators/current-user.decorator';
 import { Permissions } from '../../auth/decorators/permissions.decorator';
-import { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
+import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 
 import { CompanyService } from '../services/company.service';
 

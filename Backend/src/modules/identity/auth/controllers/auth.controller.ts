@@ -1,12 +1,16 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
+  Req,
+  Res,
 } from '@nestjs/common';
 import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response, Request } from 'express';
 
 import { Public } from '../../../../core/decorators/public.decorator';
 import { CurrentUser } from '../../../../core/decorators/current-user.decorator';
@@ -14,8 +18,15 @@ import { CurrentUser } from '../../../../core/decorators/current-user.decorator'
 import { AuthService } from '../services/auth.service';
 
 import { LoginDto } from '../dto/login.dto';
-import { RefreshTokenDto } from '../dto/refresh-token.dto';
-import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
+import type { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
+
+import {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  accessTokenCookieOptions,
+  refreshTokenCookieOptions,
+  clearCookieOptions,
+} from '../constants/cookie.constants';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -24,6 +35,29 @@ export class AuthController {
     private readonly authService: AuthService,
   ) {}
 
+  /**
+   * Grava os tokens em cookies httpOnly e devolve apenas os dados
+   * públicos da sessão. Os tokens NÃO voltam no corpo da resposta:
+   * assim nenhum JavaScript do frontend consegue lê-los, o que
+   * neutraliza roubo de sessão por XSS.
+   */
+  private setSessionCookies(
+    res: Response,
+    tokens: { accessToken: string; refreshToken: string },
+  ): void {
+    res.cookie(
+      ACCESS_TOKEN_COOKIE,
+      tokens.accessToken,
+      accessTokenCookieOptions(),
+    );
+
+    res.cookie(
+      REFRESH_TOKEN_COOKIE,
+      tokens.refreshToken,
+      refreshTokenCookieOptions(),
+    );
+  }
+
   @Public()
   @Post('login')
   @ApiOperation({
@@ -31,8 +65,16 @@ export class AuthController {
   })
   async login(
     @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.login(dto);
+    const result = await this.authService.login(dto);
+
+    this.setSessionCookies(res, result);
+
+    return {
+      user: result.user,
+      expiresIn: result.expiresIn,
+    };
   }
 
   @Public()
@@ -41,18 +83,87 @@ export class AuthController {
     summary: 'Renovar Access Token',
   })
   async refresh(
-    @Body() dto: RefreshTokenDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.refresh(dto);
+    const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+
+    let result: Awaited<
+      ReturnType<AuthService['refresh']>
+    >;
+
+    try {
+      result = await this.authService.refresh({
+        refreshToken,
+      });
+    } catch (error) {
+      // Sessão irrecuperável: limpa os cookies para que o usuário
+      // consiga voltar à tela de login em vez de ficar com um
+      // cookie inválido preso no navegador.
+      res.clearCookie(
+        ACCESS_TOKEN_COOKIE,
+        clearCookieOptions(),
+      );
+
+      res.clearCookie(
+        REFRESH_TOKEN_COOKIE,
+        clearCookieOptions(),
+      );
+
+      throw error;
+    }
+
+    this.setSessionCookies(res, result);
+
+    return {
+      user: result.user,
+      expiresIn: result.expiresIn,
+    };
   }
 
+  @Get('me')
+  @ApiOperation({
+    summary: 'Dados da sessão atual',
+  })
+  async me(
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return user;
+  }
+
+  /**
+   * Público de propósito: sair precisa funcionar MESMO com token
+   * inválido ou expirado. Se exigisse autenticação, um usuário com
+   * cookie inválido receberia 401 e ficaria preso, sem conseguir
+   * limpar a sessão.
+   *
+   * A revogação no banco só ocorre se houver usuário identificado;
+   * a limpeza dos cookies acontece sempre.
+   */
+  @Public()
   @Post('logout')
   @ApiOperation({
     summary: 'Efetuar logout',
   })
   async logout(
-    @CurrentUser() user: AuthenticatedUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.logout(user.id);
+    res.clearCookie(ACCESS_TOKEN_COOKIE, clearCookieOptions());
+    res.clearCookie(REFRESH_TOKEN_COOKIE, clearCookieOptions());
+
+    const accessToken =
+      req.cookies?.[ACCESS_TOKEN_COOKIE];
+
+    if (accessToken) {
+      await this.authService.logoutByAccessToken(
+        accessToken,
+      );
+    }
+
+    return {
+      success: true,
+      message: 'Logout realizado com sucesso.',
+    };
   }
 }
