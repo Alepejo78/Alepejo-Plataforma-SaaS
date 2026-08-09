@@ -78,6 +78,15 @@ export function maskCEP(value: string): string {
   return digits.replace(/(\d{5})(\d{1,3})$/, "$1-$2");
 }
 
+/** 00.00.00 — código de conta do plano de contas */
+export function maskAccountCode(value: string): string {
+  const digits = onlyDigits(value).slice(0, 6);
+
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{2})\.(\d{2})(\d{1,2})$/, "$1.$2.$3");
+}
+
 export function isValidCNPJLength(value: string): boolean {
   return onlyDigits(value).length === 14;
 }

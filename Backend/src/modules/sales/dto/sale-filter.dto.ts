@@ -31,4 +31,11 @@ export class SaleFilterDto {
   @IsOptional()
   @IsEnum(SaleStatusFilter)
   status?: SaleStatusFilter;
+
+  /// Busca livre: número da venda (ex.: "V000000012" ou "12") ou
+  /// nome do cliente.
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

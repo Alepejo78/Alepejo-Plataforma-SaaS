@@ -45,6 +45,7 @@ export interface AuxiliaryRecord {
   name: string;
   description?: string | null;
   active: boolean;
+  [key: string]: unknown;
 }
 
 export interface UnitOfMeasure {
@@ -52,6 +53,7 @@ export interface UnitOfMeasure {
   code: string;
   description: string;
   active: boolean;
+  [key: string]: unknown;
 }
 
 export interface Product {
@@ -79,6 +81,7 @@ export interface Product {
 
 export interface ProductFilter {
   search?: string;
+  barcode?: string;
   categoryId?: string;
   brandId?: string;
   type?: ProductType;

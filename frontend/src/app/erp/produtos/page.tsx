@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
+import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ProductForm } from "@/components/products/ProductForm";
 
 import {
@@ -180,70 +181,74 @@ export default function ProdutosPage() {
 
   return (
     <AppShell workspaceLabel="Produtos">
-      <div className="space-y-6">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-              Produtos
-            </h1>
+      <ListPageLayout
+        header={
+          <>
+            <header className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+                  Produtos
+                </h1>
 
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Produtos e serviços disponíveis para venda e
-              compra.
-            </p>
-          </div>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  Produtos e serviços disponíveis para venda
+                  e compra.
+                </p>
+              </div>
 
-          <div className="flex gap-2">
-            <Link
-              href="/erp/produtos/cadastros"
-              className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-            >
-              <Settings2 size={18} />
-              Categorias, marcas e unidades
-            </Link>
+              <div className="flex gap-2">
+                <Link
+                  href="/erp/produtos/cadastros"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                >
+                  <Settings2 size={18} />
+                  Categorias, marcas e unidades
+                </Link>
 
-            <Can permission="product.create">
-              <button
-                type="button"
-                onClick={openCreate}
-                disabled={missingUnits}
-                title={
-                  missingUnits
-                    ? "Cadastre ao menos uma unidade de medida primeiro"
-                    : undefined
-                }
-                className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
-              >
-                <Plus size={18} />
-                Novo produto
-              </button>
-            </Can>
-          </div>
-        </header>
+                <Can permission="product.create">
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    disabled={missingUnits}
+                    title={
+                      missingUnits
+                        ? "Cadastre ao menos uma unidade de medida primeiro"
+                        : undefined
+                    }
+                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                  >
+                    <Plus size={18} />
+                    Novo produto
+                  </button>
+                </Can>
+              </div>
+            </header>
 
-        {missingUnits && (
-          <div className="rounded-xl border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm text-[var(--warning)]">
-            Cadastre ao menos uma unidade de medida (UN, KG,
-            CX...) antes de criar produtos — ela é
-            obrigatória.
-          </div>
-        )}
+            {missingUnits && (
+              <div className="rounded-xl border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm text-[var(--warning)]">
+                Cadastre ao menos uma unidade de medida (UN,
+                KG, CX...) antes de criar produtos — ela é
+                obrigatória.
+              </div>
+            )}
 
-        <input
-          placeholder="Buscar por código, descrição ou código de barras"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
-        />
+            <input
+              placeholder="Buscar por código, descrição ou código de barras"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
+            />
 
-        {listError && (
-          <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-            {listError}
-          </div>
-        )}
-
+            {listError && (
+              <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                {listError}
+              </div>
+            )}
+          </>
+        }
+      >
         {loading ? (
-          <div className="space-y-2">
+          <div className="space-y-2 p-4">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={index}
@@ -252,7 +257,7 @@ export default function ProdutosPage() {
             ))}
           </div>
         ) : products.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[var(--border-strong)] p-12 text-center">
+          <div className="p-12 text-center">
             <p className="font-medium text-[var(--text-primary)]">
               Nenhum produto encontrado
             </p>
@@ -263,9 +268,9 @@ export default function ProdutosPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+              <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">
                     Código
@@ -365,7 +370,7 @@ export default function ProdutosPage() {
             </table>
           </div>
         )}
-      </div>
+      </ListPageLayout>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">

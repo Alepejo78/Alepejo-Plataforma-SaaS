@@ -55,6 +55,7 @@ export class BrandsRepository {
 
     const where: Prisma.BrandWhereInput = {
       companyId,
+      active: true,
       ...(search
         ? {
             name: {
@@ -117,6 +118,28 @@ export class BrandsRepository {
       },
       data: {
         active: false,
+      },
+    });
+  }
+
+  /** Quantos produtos usam esta marca. */
+  async countProducts(brandId: string): Promise<number> {
+    return this.prisma.product.count({
+      where: { brandId },
+    });
+  }
+
+  /**
+   * Reativa uma marca excluída (soft delete) com o mesmo nome,
+   * em vez de criar uma linha nova (o índice único de companyId+name
+   * não exclui marcas inativas, então um create() colidiria).
+   */
+  async restore(id: string, data: CreateBrandDto): Promise<Brand> {
+    return this.prisma.brand.update({
+      where: { id },
+      data: {
+        name: data.name,
+        active: true,
       },
     });
   }

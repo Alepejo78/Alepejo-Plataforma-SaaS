@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 
 import {
+  FinancialDocumentType,
+  FinancialEntryStatus,
+  FinancialEntryType,
+  PurchaseOrderStatus,
   PurchaseStatus,
   StockMovementType,
 } from '@prisma/client';
@@ -12,13 +16,32 @@ import {
 import { BusinessPartnerRole } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+import { FinancialEntriesService } from '../../financial-entries/services/financial-entries.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { calculateDueDate } from '../../../core/utils/business-day.util';
+import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { PurchaseRepository } from '../repositories/purchase.repository';
 
 import { CreatePurchaseDto } from '../dto/create-purchase.dto';
 import { PurchaseFilterDto } from '../dto/purchase-filter.dto';
+import { ReceivePurchaseDto } from '../dto/receive-purchase.dto';
+
+const SEQUENCE_TYPE = 'PURCHASE';
+
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  BOLETO: 'Boleto',
+  CARNE: 'Carnê',
+  CUPOM_FISCAL: 'Cupom Fiscal',
+  NOTA_FISCAL: 'Nota fiscal',
+  RECIBO: 'Recibo',
+  OUTRO: 'Outro',
+};
+
+function formatPurchaseNumber(n: number) {
+  return `C${String(n).padStart(9, '0')}`;
+}
 
 @Injectable()
 export class PurchaseService {
@@ -26,6 +49,8 @@ export class PurchaseService {
     private readonly repository: PurchaseRepository,
     private readonly prisma: PrismaService,
     private readonly businessPartnersService: BusinessPartnersService,
+    private readonly financialEntriesService: FinancialEntriesService,
+    private readonly documentSequence: DocumentSequenceService,
   ) {}
 
   async create(
@@ -75,11 +100,50 @@ export class PurchaseService {
         item.quantity * item.unitPrice;
     }
 
-    return this.repository.create(
-      companyId,
-      dto,
-      totalAmount,
-    );
+    if (dto.purchaseOrderId) {
+      const order = await this.prisma.purchaseOrder.findFirst(
+        {
+          where: { id: dto.purchaseOrderId, companyId },
+        },
+      );
+
+      if (!order) {
+        throw new NotFoundException(
+          'Pedido de compra não encontrado.',
+        );
+      }
+
+      if (order.status !== PurchaseOrderStatus.DRAFT) {
+        throw new BadRequestException(
+          'Este pedido de compra já foi convertido em compra ou está cancelado.',
+        );
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const number = await this.documentSequence.next(
+        tx,
+        companyId,
+        SEQUENCE_TYPE,
+      );
+
+      const purchase = await this.repository.create(
+        tx,
+        companyId,
+        number,
+        dto,
+        totalAmount,
+      );
+
+      if (dto.purchaseOrderId) {
+        await tx.purchaseOrder.update({
+          where: { id: dto.purchaseOrderId },
+          data: { status: PurchaseOrderStatus.CONVERTED },
+        });
+      }
+
+      return purchase;
+    });
   }
 
   async findAll(
@@ -139,6 +203,7 @@ export class PurchaseService {
   async receive(
     companyId: string,
     id: string,
+    dto: ReceivePurchaseDto = {},
   ) {
     const purchase =
       await this.prisma.purchase.findFirst({
@@ -168,6 +233,28 @@ export class PurchaseService {
 
     await this.prisma.$transaction(
       async (tx) => {
+        const documentNumber = formatPurchaseNumber(
+          purchase.number,
+        );
+
+        // Sem tipo informado, mas com chave de acesso: só pode ser
+        // nota fiscal eletrônica.
+        const documentType =
+          dto.documentType ??
+          (dto.invoiceKey
+            ? FinancialDocumentType.NOTA_FISCAL
+            : undefined);
+
+        const entryObservation = [
+          'Entrada',
+          documentType
+            ? DOCUMENT_TYPE_LABELS[documentType]
+            : undefined,
+          dto.invoiceNumber,
+        ]
+          .filter(Boolean)
+          .join(' ');
+
         for (const item of purchase.items) {
           let inventory =
             await tx.inventory.findFirst({
@@ -190,9 +277,36 @@ export class PurchaseService {
                   productId:
                     item.productId,
                   quantity: 0,
+                  averageCost: 0,
                 },
               });
           }
+
+          // Custo médio ponderado: mistura o saldo existente com o
+          // que está entrando nesta compra.
+          const existingQuantity = Number(
+            inventory.quantity,
+          );
+          const existingAverageCost = Number(
+            inventory.averageCost,
+          );
+          const receivedQuantity = Number(
+            item.quantity,
+          );
+          const receivedCost = Number(
+            item.unitPrice,
+          );
+          const totalQuantity =
+            existingQuantity + receivedQuantity;
+
+          const newAverageCost =
+            totalQuantity > 0
+              ? (existingQuantity *
+                  existingAverageCost +
+                  receivedQuantity *
+                    receivedCost) /
+                totalQuantity
+              : existingAverageCost;
 
           await tx.inventory.update({
             where: {
@@ -200,9 +314,9 @@ export class PurchaseService {
             },
             data: {
               quantity: {
-                increment:
-                  Number(item.quantity),
+                increment: receivedQuantity,
               },
+              averageCost: newAverageCost,
             },
           });
 
@@ -217,7 +331,174 @@ export class PurchaseService {
                 Number(item.quantity),
               unitCost:
                 Number(item.unitPrice),
-              observation: `Entrada automática da compra ${purchase.id}`,
+              observation: entryObservation,
+              documentNumber,
+            },
+          });
+        }
+
+        const invoiceIssueDate =
+          dto.invoiceIssueDate
+            ? new Date(dto.invoiceIssueDate)
+            : undefined;
+
+        // Recebimento é quando a nota fiscal de verdade chega —
+        // se vier prazo/forma de pagamento aqui, eles valem mais
+        // que o estimado no lançamento da compra, e o vencimento é
+        // recalculado a partir da data de emissão da nota (não da
+        // data de lançamento).
+        const termDays =
+          dto.termDays ?? purchase.termDays ?? 0;
+        const paymentMethod =
+          dto.paymentMethod ?? purchase.paymentMethod;
+        const issueDate =
+          invoiceIssueDate ??
+          purchase.purchaseDate ??
+          new Date();
+        const dueDate = calculateDueDate(
+          issueDate,
+          termDays,
+        );
+
+        await tx.purchase.update({
+          where: {
+            id: purchase.id,
+          },
+          data: {
+            status:
+              PurchaseStatus.RECEIVED,
+            invoiceNumber: dto.invoiceNumber,
+            invoiceKey: dto.invoiceKey,
+            invoiceIssueDate,
+            termDays,
+            paymentMethod,
+            dueDate,
+          },
+        });
+
+        // Gera automaticamente a conta a pagar desta compra, já
+        // com os dados fiscais e financeiros informados no
+        // recebimento — não precisa entrar em Contas a pagar depois
+        // para completar vencimento/forma de pagamento.
+        await this.financialEntriesService.createFromDocument(
+          tx,
+          {
+            companyId,
+            type: FinancialEntryType.PAYABLE,
+            partnerId: purchase.partnerId,
+            amount: Number(purchase.totalAmount),
+            issueDate,
+            termDays,
+            dueDate,
+            paymentMethod,
+            documentNumber: dto.invoiceNumber,
+            documentKey: dto.invoiceKey,
+            documentType,
+            purchaseId: purchase.id,
+            observation: `Compra ${purchase.id}`,
+          },
+        );
+      },
+    );
+
+    return this.findOne(
+      companyId,
+      id,
+    );
+  }
+
+  async unreceive(
+    companyId: string,
+    id: string,
+  ) {
+    const purchase =
+      await this.prisma.purchase.findFirst({
+        where: {
+          id,
+          companyId,
+        },
+        include: {
+          items: true,
+          financialEntries: true,
+        },
+      });
+
+    if (!purchase) {
+      throw new NotFoundException(
+        'Compra não encontrada.',
+      );
+    }
+
+    if (
+      purchase.status !==
+      PurchaseStatus.RECEIVED
+    ) {
+      throw new BadRequestException(
+        'Somente compras recebidas podem ter o recebimento estornado.',
+      );
+    }
+
+    const jaPago = purchase.financialEntries.some(
+      (entry) =>
+        entry.status === FinancialEntryStatus.PAID,
+    );
+
+    if (jaPago) {
+      throw new BadRequestException(
+        'Esta compra já tem pagamento registrado no financeiro. Estorne a baixa antes de estornar o recebimento.',
+      );
+    }
+
+    await this.prisma.$transaction(
+      async (tx) => {
+        for (const item of purchase.items) {
+          const inventory =
+            await tx.inventory.findFirst({
+              where: {
+                companyId,
+                warehouseId:
+                  purchase.warehouseId,
+                productId:
+                  item.productId,
+              },
+            });
+
+          const saldo = Number(
+            inventory?.quantity ?? 0,
+          );
+          const quantidade = Number(
+            item.quantity,
+          );
+
+          if (!inventory || saldo < quantidade) {
+            throw new BadRequestException(
+              `Estoque insuficiente para estornar o recebimento do produto ${item.productId} — parte do saldo já foi movimentada.`,
+            );
+          }
+
+          await tx.inventory.update({
+            where: {
+              id: inventory.id,
+            },
+            data: {
+              quantity: saldo - quantidade,
+            },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              companyId,
+              inventoryId:
+                inventory.id,
+              type:
+                StockMovementType.EXIT,
+              quantity: quantidade,
+              unitCost:
+                Number(item.unitPrice),
+              observation: 'Estorno do recebimento da compra',
+              documentNumber: formatPurchaseNumber(
+                purchase.number,
+              ),
             },
           });
         }
@@ -228,7 +509,17 @@ export class PurchaseService {
           },
           data: {
             status:
-              PurchaseStatus.RECEIVED,
+              PurchaseStatus.APPROVED,
+          },
+        });
+
+        await tx.financialEntry.updateMany({
+          where: {
+            purchaseId: purchase.id,
+            status: FinancialEntryStatus.OPEN,
+          },
+          data: {
+            status: FinancialEntryStatus.CANCELLED,
           },
         });
       },

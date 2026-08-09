@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Volume2 } from "lucide-react";
 
 import { systemConfig } from "../../config/system";
 import { useAuth } from "@/providers/AuthProvider";
@@ -10,6 +10,8 @@ import { useAuth } from "@/providers/AuthProvider";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const { login } = useAuth();
 
@@ -19,6 +21,59 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  // Autoplay com som é bloqueado pelo navegador sem interação do
+  // usuário — o vídeo começa mudo (autoplay é sempre permitido assim)
+  // e ganha som no primeiro clique/toque em qualquer lugar da página.
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    const tryPlay = () => {
+      void video.play().catch(() => {});
+    };
+
+    tryPlay();
+
+    video.addEventListener("loadeddata", tryPlay);
+    video.addEventListener("canplay", tryPlay);
+
+    return () => {
+      video.removeEventListener("loadeddata", tryPlay);
+      video.removeEventListener("canplay", tryPlay);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (soundEnabled) {
+      return;
+    }
+
+    const unlockSound = () => {
+      const video = videoRef.current;
+
+      if (video) {
+        video.muted = false;
+        void video.play().catch(() => {});
+      }
+
+      setSoundEnabled(true);
+    };
+
+    document.addEventListener("pointerdown", unlockSound, {
+      once: true,
+    });
+
+    return () =>
+      document.removeEventListener(
+        "pointerdown",
+        unlockSound
+      );
+  }, [soundEnabled]);
 
   async function handleLogin() {
     if (loading) {
@@ -56,11 +111,25 @@ export default function LoginPage() {
 
       <div className="hidden w-1/2 flex-col items-center justify-center bg-[var(--login-panel)] p-10 text-[var(--login-panel-text)] md:flex">
 
-        <img
-          src={systemConfig.company.logo}
-          alt={systemConfig.company.name}
-          className="mb-8 w-56"
-        />
+        <div className="relative mb-8">
+          <video
+            ref={videoRef}
+            src={systemConfig.company.loginVideo}
+            autoPlay
+            loop
+            muted={!soundEnabled}
+            playsInline
+            preload="auto"
+            className="w-56"
+          />
+
+          {!soundEnabled && (
+            <span className="absolute -bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+              <Volume2 size={14} />
+              Toque na tela para ativar o som
+            </span>
+          )}
+        </div>
 
         <h1 className="text-center text-5xl font-bold text-[var(--login-panel-text)]">
           {systemConfig.company.name}

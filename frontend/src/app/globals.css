@@ -34,14 +34,13 @@
   --text-secondary: #2c3950;
   --text-muted: #4d5b73;
 
-  /* Acento dourado (identidade AlePejo) */
-  --primary: #c2922c;
-  --primary-hover: #a87d1d;
-  --primary-soft: #fbf1d9;
-  --primary-contrast: #16120a;
-  /* Versão escura do dourado, para TEXTO sobre fundo claro:
-     o dourado puro não tem contraste suficiente como texto. */
-  --primary-text: #6b5010;
+  /* Acento azul (identidade AlePejo) */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #dbeafe;
+  --primary-contrast: #ffffff;
+  /* Versão mais escura do azul, para TEXTO sobre fundo claro. */
+  --primary-text: #1e40af;
 
   /* Estados */
   --success: #0f7b52;
@@ -51,16 +50,20 @@
   --danger: #c02626;
   --danger-soft: #fadddd;
 
-  --focus-ring: #a87d1d;
+  --focus-ring: #1d4ed8;
 
   --shadow-color: 215 25% 27%;
+
+  /* Cabeçalho de tabelas estilo planilha (ex.: fluxo de caixa). */
+  --table-header-bg: #0d1526;
+  --table-header-fg: #ffffff;
 
   /* Painel lateral do login: preto nos DOIS temas, por decisão de
      marca. Por isso os valores se repetem em :root e .dark. */
   --login-panel: #111111;
   --login-panel-text: #ffffff;
-  --login-panel-muted: #c9b98f;
-  --login-panel-accent: #e0b45a;
+  --login-panel-muted: #94a3b8;
+  --login-panel-accent: #60a5fa;
 }
 
 .dark {
@@ -83,12 +86,12 @@
   --text-secondary: #c2ccdb;
   --text-muted: #94a3b8;
 
-  /* Acento dourado — mais claro para contrastar com fundo escuro */
-  --primary: #e0b45a;
-  --primary-hover: #eec978;
-  --primary-soft: #2f2512;
-  --primary-contrast: #16120a;
-  --primary-text: #e0b45a;
+  /* Acento azul — mais claro para contrastar com fundo escuro */
+  --primary: #60a5fa;
+  --primary-hover: #93c5fd;
+  --primary-soft: #17233b;
+  --primary-contrast: #0b1220;
+  --primary-text: #93c5fd;
 
   /* Estados */
   --success: #3fcb92;
@@ -98,14 +101,19 @@
   --danger: #f47171;
   --danger-soft: #3a1717;
 
-  --focus-ring: #e0b45a;
+  --focus-ring: #60a5fa;
 
   --shadow-color: 220 45% 3%;
 
+  /* No escuro o fundo já é bem escuro — usa um tom mais claro que o
+     card para o cabeçalho continuar se destacando. */
+  --table-header-bg: #263248;
+  --table-header-fg: #eef2f8;
+
   --login-panel: #111111;
   --login-panel-text: #ffffff;
-  --login-panel-muted: #c9b98f;
-  --login-panel-accent: #e0b45a;
+  --login-panel-muted: #94a3b8;
+  --login-panel-accent: #60a5fa;
 }
 
 @theme inline {

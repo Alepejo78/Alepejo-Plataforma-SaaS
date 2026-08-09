@@ -10,6 +10,7 @@ import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ACCESS_TOKEN_EXPIRES_IN } from './constants/token.constants';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
         process.env.JWT_SECRET ??
         'alepejo-secret',
       signOptions: {
-        expiresIn: '1h',
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN,
       },
     }),
 

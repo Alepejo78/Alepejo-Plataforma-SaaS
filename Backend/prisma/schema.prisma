@@ -21,8 +21,6 @@ enum PermissionEffect {
   DENY
 }
 
-
-
 enum BusinessPartnerStatus {
   ACTIVE
   INACTIVE
@@ -63,6 +61,10 @@ enum StockMovementType {
   EXIT
   ADJUSTMENT
   TRANSFER
+  /// Registro de bloqueio/reserva/quarentena/avaria (StockHold criado).
+  HOLD
+  /// Registro de liberação de um StockHold.
+  RELEASE
 }
 
 model Company {
@@ -88,7 +90,27 @@ model Company {
 
   website String? @db.VarChar(200)
 
+  /// Logo para o tema claro. Padrão do sistema se vazio.
   logo String? @db.VarChar(255)
+
+  /// Logo para o tema escuro (módulo BRANDING). Sem ela, usa `logo` também no escuro.
+  logoDark String? @db.VarChar(255)
+
+  /// Nome exibido no lugar de "AlePejo ERP Cloud" (módulo BRANDING).
+  systemName String? @db.VarChar(150)
+
+  /// Chaves liga/desliga do módulo BRANDING — cada uma independente:
+  /// desligada, usa o padrão AlePejo naquele item mesmo que exista
+  /// arquivo/nome salvo (permite deixar algo pronto sem publicar).
+  brandingLogoLightEnabled  Boolean @default(false)
+  brandingLogoDarkEnabled   Boolean @default(false)
+  brandingLoginVideoEnabled Boolean @default(false)
+  brandingSystemNameEnabled Boolean @default(false)
+  brandingThemeToggleEnabled Boolean @default(false)
+
+  /// Layout do menu: "vertical" (sidebar lateral) ou "horizontal"
+  /// (barra tipo ribbon no topo). Módulo BRANDING.
+  sidebarLayout String @default("vertical") @db.VarChar(10)
 
   timezone String @default("America/Sao_Paulo") @db.VarChar(60)
 
@@ -124,15 +146,31 @@ model Company {
   warehouses     Warehouse[]
   inventories    Inventory[]
   stockMovements StockMovement[]
+  stockHolds     StockHold[]
 
   deletedAt DateTime?
   purchases Purchase[]
   sales     Sale[]
 
+  chartOfAccounts               ChartOfAccount[]
+  chartOfAccountClassifications ChartOfAccountClassification[]
+  financialEntries              FinancialEntry[]
+
+  quotes            Quote[]
+  salesOrders       SalesOrder[]
+  quotations        Quotation[]
+  purchaseOrders    PurchaseOrder[]
+  documentSequences DocumentSequence[]
+
+  sectors        Sector[]
+  jobFunctions   JobFunction[]
+  workSchedules  WorkSchedule[]
+  ppeTypes       PpeType[]
+  employees      Employee[]
+  ppeDeliveries  PpeDelivery[]
 
   @@map("companies")
 }
-
 
 model BusinessPartner {
   id String @id @default(cuid())
@@ -192,6 +230,13 @@ model BusinessPartner {
 
   purchases Purchase[] @relation("PurchasePartner")
 
+  financialEntries FinancialEntry[] @relation("FinancialEntryPartner")
+
+  quotes          Quote[]          @relation("QuotePartner")
+  salesOrders     SalesOrder[]     @relation("SalesOrderPartner")
+  quotationOffers QuotationOffer[] @relation("QuotationOfferPartner")
+  purchaseOrders  PurchaseOrder[]  @relation("PurchaseOrderPartner")
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
@@ -236,6 +281,12 @@ model User {
   refreshTokenHash String? @db.VarChar(255)
 
   active Boolean @default(true)
+
+  /// Foto de perfil (autoatendimento, não depende de licença/módulo).
+  avatar String? @db.VarChar(255)
+
+  /// Desligada, mostra as iniciais no lugar da foto mesmo com uma já enviada.
+  avatarEnabled Boolean @default(false)
 
   roles UserRole[]
 
@@ -367,7 +418,6 @@ model UserRole {
   @@map("user_roles")
 }
 
-
 model ProductCategory {
   id          String      @id @default(cuid())
   companyId   String
@@ -444,6 +494,11 @@ model Product {
   Inventory                Inventory[]
   purchaseItems            PurchaseItem[]
   saleItems                SaleItem[]
+  quoteItems               QuoteItem[]
+  salesOrderItems          SalesOrderItem[]
+  quotationItems           QuotationItem[]
+  quotationOfferItems      QuotationOfferItem[]
+  purchaseOrderItems       PurchaseOrderItem[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -461,6 +516,10 @@ model Warehouse {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   purchases   Purchase[]
+  quotes         Quote[]
+  salesOrders    SalesOrder[]
+  quotations     Quotation[]
+  purchaseOrders PurchaseOrder[]
   sales       Sale[]
 
   @@unique([companyId, code])
@@ -478,8 +537,23 @@ model Inventory {
   warehouse         Warehouse        @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   quantity          Decimal          @default(0) @db.Decimal(18, 4)
   averageCost       Decimal          @default(0) @db.Decimal(18, 4)
+
+  /// Quantidade bloqueada para venda (não é reserva nem avaria — só
+  /// impede a venda por decisão administrativa).
+  blockedQuantity Decimal @default(0) @db.Decimal(18, 4)
+
+  /// Quantidade reservada (comprometida com algo, ex.: um pedido).
+  reservedQuantity Decimal @default(0) @db.Decimal(18, 4)
+
+  /// Quantidade em quarentena (aguardando inspeção/liberação).
+  quarantineQuantity Decimal @default(0) @db.Decimal(18, 4)
+
+  /// Quantidade avariada (danificada, não vendável).
+  damagedQuantity Decimal @default(0) @db.Decimal(18, 4)
+
   active            Boolean          @default(true)
   movements         StockMovement[]
+  holds             StockHold[]
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   ProductCategory   ProductCategory? @relation(fields: [productCategoryId], references: [id])
@@ -492,6 +566,50 @@ model Inventory {
   @@map("inventories")
 }
 
+enum StockHoldType {
+  BLOCKED
+  RESERVED
+  QUARANTINE
+  DAMAGED
+}
+
+enum StockHoldStatus {
+  ACTIVE
+  RELEASED
+}
+
+/// Retenção de estoque: separa parte do saldo físico do que está
+/// disponível para venda (bloqueio, reserva, quarentena ou avaria).
+/// A soma das retenções ativas por tipo é espelhada nos campos
+/// `blockedQuantity`/`reservedQuantity`/`quarantineQuantity`/
+/// `damagedQuantity` do Inventory, para leitura rápida; este model é
+/// o histórico/auditoria de cada retenção e sua liberação.
+model StockHold {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  inventoryId String
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  type   StockHoldType
+  status StockHoldStatus @default(ACTIVE)
+
+  quantity Decimal @db.Decimal(18, 4)
+  reason   String? @db.VarChar(255)
+
+  releasedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([inventoryId])
+  @@index([type, status])
+  @@map("stock_holds")
+}
+
 model StockMovement {
   id          String            @id @default(cuid())
   companyId   String
@@ -502,6 +620,12 @@ model StockMovement {
   quantity    Decimal           @db.Decimal(18, 4)
   unitCost    Decimal?          @db.Decimal(18, 4)
   observation String?           @db.VarChar(255)
+
+  /// Documento que originou a movimentação: número da compra/venda
+  /// (ex.: C000000005/V000000007) nas automáticas, ou o que o
+  /// usuário informou (ex.: "Nota Fiscal nº 55501") nas manuais.
+  documentNumber String? @db.VarChar(100)
+
   createdAt   DateTime          @default(now())
 
   @@index([companyId])
@@ -525,21 +649,50 @@ enum SaleStatus {
 }
 
 model Purchase {
-  id           String         @id @default(cuid())
+  id           String          @id @default(cuid())
   companyId    String
-  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
+  /// Formatada no frontend como "C" + 9 dígitos (ex.: C000000001).
+  number Int
+
   partnerId    String
   partner      BusinessPartner @relation("PurchasePartner", fields: [partnerId], references: [id])
   warehouseId  String
-  warehouse    Warehouse      @relation(fields: [warehouseId], references: [id])
-  status       PurchaseStatus @default(DRAFT)
+  warehouse    Warehouse       @relation(fields: [warehouseId], references: [id])
+  status       PurchaseStatus  @default(DRAFT)
   purchaseDate DateTime?
   observation  String?
-  totalAmount  Decimal        @default(0) @db.Decimal(18, 2)
-  items        PurchaseItem[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  totalAmount  Decimal         @default(0) @db.Decimal(18, 2)
 
+  /// Prazo em dias até o vencimento do título gerado no recebimento.
+  termDays Int? @default(0)
+
+  /// Vencimento calculado (purchaseDate + termDays), já ajustado para
+  /// dia útil (nunca sábado ou domingo).
+  dueDate DateTime?
+
+  paymentMethod PaymentMethod?
+
+  /// Dados fiscais informados no recebimento (nota fiscal do
+  /// fornecedor) — repassados ao título gerado no financeiro.
+  invoiceNumber    String?   @db.VarChar(50)
+  invoiceKey       String?   @db.VarChar(50)
+  invoiceIssueDate DateTime?
+
+  items PurchaseItem[]
+
+  financialEntries FinancialEntry[]
+
+  /// Preenchido quando a compra nasceu de um pedido de compra.
+  purchaseOrderId String?        @unique
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, number])
   @@index([companyId])
   @@map("purchases")
 }
@@ -558,14 +711,181 @@ model PurchaseItem {
   @@map("purchase_items")
 }
 
-model Sale {
+enum QuotationStatus {
+  DRAFT
+  DECIDED
+  CANCELLED
+}
+
+/// Cotação: compara até 3 propostas de fornecedores diferentes para
+/// os mesmos itens. Ao escolher o vencedor, trava (DECIDED) — daí
+/// pode virar um Pedido de Compra com os dados do fornecedor
+/// escolhido.
+model Quotation {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
+  number Int
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  status QuotationStatus @default(DRAFT)
+
+  quotationDate DateTime?
+  observation   String?
+
+  items          QuotationItem[]
+  offers         QuotationOffer[]
+  purchaseOrders PurchaseOrder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@map("quotations")
+}
+
+/// O que está sendo cotado — só produto e quantidade, sem preço
+/// (o preço vem de cada QuotationOffer).
+model QuotationItem {
   id          String    @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  quantity    Decimal   @db.Decimal(18, 3)
+
+  @@index([quotationId])
+  @@map("quotation_items")
+}
+
+/// Proposta de um fornecedor para a cotação (no máximo 3 por
+/// cotação — validado na camada de serviço).
+model QuotationOffer {
+  id String @id @default(cuid())
+
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  partnerId String
+  partner   BusinessPartner @relation("QuotationOfferPartner", fields: [partnerId], references: [id])
+
+  isWinner Boolean @default(false)
+
+  termDays      Int?
+  paymentMethod PaymentMethod?
+
+  totalAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  items         QuotationOfferItem[]
+  purchaseOrder PurchaseOrder?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([quotationId, partnerId])
+  @@index([quotationId])
+  @@map("quotation_offers")
+}
+
+model QuotationOfferItem {
+  id               String         @id @default(cuid())
+  quotationOfferId String
+  quotationOffer   QuotationOffer @relation(fields: [quotationOfferId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product        @relation(fields: [productId], references: [id])
+  unitPrice        Decimal        @db.Decimal(18, 2)
+  totalPrice       Decimal        @db.Decimal(18, 2)
+
+  @@index([quotationOfferId])
+  @@map("quotation_offer_items")
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  CONVERTED
+  CANCELLED
+}
+
+/// Pedido de compra: compromisso com o fornecedor antes de virar
+/// Compra. Pode nascer do zero ou puxado do vencedor de uma
+/// Cotação. Se convertido, vira uma Compra (Purchase.purchaseOrderId)
+/// e o status passa a CONVERTED — a partir daí não pode mais ser
+/// editado.
+model PurchaseOrder {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
+  number Int
+
+  partnerId String
+  partner   BusinessPartner @relation("PurchaseOrderPartner", fields: [partnerId], references: [id])
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  status PurchaseOrderStatus @default(DRAFT)
+
+  orderDate   DateTime?
+  observation String?
+
+  totalAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  items PurchaseOrderItem[]
+  purchase Purchase?
+
+  /// Preenchido quando o pedido nasceu da proposta vencedora de uma
+  /// cotação.
+  quotationId String?
+  quotation   Quotation? @relation(fields: [quotationId], references: [id])
+
+  quotationOfferId String?         @unique
+  quotationOffer   QuotationOffer? @relation(fields: [quotationOfferId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@index([quotationId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Decimal       @db.Decimal(18, 3)
+  unitPrice       Decimal       @db.Decimal(18, 2)
+  totalPrice      Decimal       @db.Decimal(18, 2)
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_items")
+}
+
+model Sale {
+  id          String          @id @default(cuid())
   companyId   String
-  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
+  /// Formatada no frontend como "V" + 9 dígitos (ex.: V000000001).
+  number Int
+
   partnerId   String
   partner     BusinessPartner @relation("SalePartner", fields: [partnerId], references: [id])
   warehouseId String
-  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  warehouse   Warehouse       @relation(fields: [warehouseId], references: [id])
 
   status SaleStatus @default(DRAFT)
 
@@ -579,6 +899,11 @@ model Sale {
   invoiceNumber String? @db.VarChar(50)
   trackingCode  String? @db.VarChar(100)
 
+  /// Dados fiscais informados na aprovação (nota fiscal da venda) —
+  /// repassados ao título gerado no financeiro.
+  invoiceKey       String?   @db.VarChar(50)
+  invoiceIssueDate DateTime?
+
   observation String?
 
   discountValue Decimal @default(0) @db.Decimal(18, 2)
@@ -587,11 +912,30 @@ model Sale {
   totalAmount   Decimal @default(0) @db.Decimal(18, 2)
   netAmount     Decimal @default(0) @db.Decimal(18, 2)
 
+  /// Prazo em dias até o vencimento do título gerado na aprovação.
+  termDays Int? @default(0)
+
+  /// Vencimento calculado (saleDate + termDays), já ajustado para dia
+  /// útil (nunca sábado ou domingo).
+  dueDate DateTime?
+
+  paymentMethod PaymentMethod?
+
   items SaleItem[]
+
+  financialEntries FinancialEntry[]
+
+  /// Preenchido quando a venda nasceu de um orçamento ou pedido de
+  /// venda (só um dos dois, escolhido no cadastro da venda).
+  quoteId String?     @unique
+  quote   Quote?      @relation(fields: [quoteId], references: [id])
+  salesOrderId String? @unique
+  salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([companyId, number])
   @@index([companyId])
   @@map("sales")
 }
@@ -608,6 +952,286 @@ model SaleItem {
 
   @@index([saleId])
   @@map("sale_items")
+}
+
+/// Contador de numeração sequencial por empresa e por tipo de
+/// documento (ex.: QUOTE, SALES_ORDER). Incrementado atomicamente
+/// (upsert com `increment`) para nunca repetir número, mesmo com
+/// duas requisições simultâneas.
+model DocumentSequence {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  type       String @db.VarChar(30)
+  lastNumber Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, type])
+  @@map("document_sequences")
+}
+
+enum QuoteStatus {
+  DRAFT
+  CONVERTED
+  CANCELLED
+}
+
+/// Orçamento: proposta enviada ao cliente antes da venda. Se
+/// aceito, vira uma Venda (Sale.quoteId) e o status passa a
+/// CONVERTED — a partir daí não pode mais ser editado.
+model Quote {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
+  number Int
+
+  partnerId String
+  partner   BusinessPartner @relation("QuotePartner", fields: [partnerId], references: [id])
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  status QuoteStatus @default(DRAFT)
+
+  quoteDate  DateTime?
+  validUntil DateTime?
+
+  observation String?
+
+  discountValue Decimal @default(0) @db.Decimal(18, 2)
+  freightValue  Decimal @default(0) @db.Decimal(18, 2)
+  otherExpenses Decimal @default(0) @db.Decimal(18, 2)
+  totalAmount   Decimal @default(0) @db.Decimal(18, 2)
+  netAmount     Decimal @default(0) @db.Decimal(18, 2)
+
+  items QuoteItem[]
+  sale  Sale?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id         String  @id @default(cuid())
+  quoteId    String
+  quote      Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  quantity   Decimal @db.Decimal(18, 3)
+  unitPrice  Decimal @db.Decimal(18, 2)
+  totalPrice Decimal @db.Decimal(18, 2)
+
+  @@index([quoteId])
+  @@map("quote_items")
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONVERTED
+  CANCELLED
+}
+
+/// Pedido de venda: compromisso firmado com o cliente antes de
+/// virar Venda (diferente do orçamento, que é só uma proposta).
+/// Se convertido, vira uma Venda (Sale.salesOrderId) e o status
+/// passa a CONVERTED — a partir daí não pode mais ser editado.
+model SalesOrder {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
+  number Int
+
+  partnerId String
+  partner   BusinessPartner @relation("SalesOrderPartner", fields: [partnerId], references: [id])
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  status SalesOrderStatus @default(DRAFT)
+
+  orderDate DateTime?
+
+  observation String?
+
+  discountValue Decimal @default(0) @db.Decimal(18, 2)
+  freightValue  Decimal @default(0) @db.Decimal(18, 2)
+  otherExpenses Decimal @default(0) @db.Decimal(18, 2)
+  totalAmount   Decimal @default(0) @db.Decimal(18, 2)
+  netAmount     Decimal @default(0) @db.Decimal(18, 2)
+
+  items SalesOrderItem[]
+  sale  Sale?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String     @id @default(cuid())
+  salesOrderId String
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  quantity     Decimal    @db.Decimal(18, 3)
+  unitPrice    Decimal    @db.Decimal(18, 2)
+  totalPrice   Decimal    @db.Decimal(18, 2)
+
+  @@index([salesOrderId])
+  @@map("sales_order_items")
+}
+
+enum ChartOfAccountType {
+  RECEITA
+  DESPESA
+}
+
+model ChartOfAccountClassification {
+  id        String           @id @default(cuid())
+  companyId String
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String           @db.VarChar(120)
+  active    Boolean          @default(true)
+  accounts  ChartOfAccount[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("chart_of_account_classifications")
+}
+
+model ChartOfAccount {
+  id               String                       @id @default(cuid())
+  companyId        String
+  company          Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code             String                       @db.VarChar(20)
+  classificationId String
+  classification   ChartOfAccountClassification @relation(fields: [classificationId], references: [id])
+  description      String                       @db.VarChar(255)
+  type             ChartOfAccountType           @default(DESPESA)
+  parentId         String?
+  parent           ChartOfAccount?              @relation("ChartOfAccountHierarchy", fields: [parentId], references: [id])
+  children         ChartOfAccount[]             @relation("ChartOfAccountHierarchy")
+  financialEntries FinancialEntry[]
+  active           Boolean                      @default(true)
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([classificationId])
+  @@map("chart_of_accounts")
+}
+
+/// Título financeiro: uma conta a pagar (PAYABLE) ou a receber
+/// (RECEIVABLE). Vem das abas FLUXO_PAGAR e FLUXO_RECEBER da planilha,
+/// que têm a mesma estrutura — por isso um único model com `type`.
+enum FinancialEntryType {
+  RECEIVABLE
+  PAYABLE
+}
+
+enum FinancialEntryStatus {
+  OPEN
+  PAID
+  CANCELLED
+}
+
+/// Tipo do documento que originou o título (aba MANUTENCAO_VALIDAÇOES,
+/// coluna "TIPO PAGTO").
+enum FinancialDocumentType {
+  BOLETO
+  CARNE
+  CUPOM_FISCAL
+  NOTA_FISCAL
+  RECIBO
+  OUTRO
+}
+
+/// Como o título foi/será liquidado (coluna "FORMA PAGTO" da planilha).
+enum PaymentMethod {
+  DINHEIRO
+  PIX
+  BOLETO
+  TRANSFERENCIA
+  DEPOSITO
+  DEBITO
+  CREDITO
+  CHEQUE
+  DESCONTO_NF
+  OUTRO
+}
+
+model FinancialEntry {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  type   FinancialEntryType
+  status FinancialEntryStatus @default(OPEN)
+
+  /// Cliente (a receber) ou fornecedor (a pagar).
+  partnerId String
+  partner   BusinessPartner @relation("FinancialEntryPartner", fields: [partnerId], references: [id])
+
+  chartOfAccountId String?
+  chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
+  /// Data de emissão / da compra.
+  issueDate DateTime
+
+  /// Prazo em dias — só informativo; o vencimento é o que vale.
+  termDays Int?
+
+  dueDate DateTime
+
+  documentNumber String?                @db.VarChar(50)
+  documentType   FinancialDocumentType?
+
+  /// Chave de acesso da nota fiscal eletrônica (44 dígitos).
+  documentKey String? @db.VarChar(50)
+
+  amount     Decimal @db.Decimal(18, 2)
+  paidAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  paymentDate   DateTime?
+  paymentMethod PaymentMethod?
+
+  observation String?
+
+  /// Preenchidos quando o título nasce automaticamente de uma
+  /// compra recebida ou de uma venda aprovada.
+  purchaseId String?
+  purchase   Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  saleId     String?
+  sale       Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([partnerId])
+  @@index([type, status])
+  @@index([dueDate])
+  @@map("financial_entries")
 }
 
 model Module {
@@ -719,4 +1343,289 @@ model LicenseHistory {
   @@index([moduleId])
   @@index([planId])
   @@map("license_history")
+}
+
+// ============================================================
+// RH (Recursos Humanos) — módulo add-on licenciável
+// ============================================================
+
+/// Tabela oficial de ocupações (CBO 2002 — Classificação Brasileira de
+/// Ocupações), catálogo global, não é por empresa. Só leitura: usada como
+/// busca/autocomplete no campo CBO de Função. Fonte: dataset público
+/// (Ministério do Trabalho), importado via prisma/data/cbo.csv.
+model CboOccupation {
+  code  String @id @db.VarChar(10)
+  title String @db.VarChar(200)
+
+  @@index([title])
+  @@map("cbo_occupations")
+}
+
+model Sector {
+  id           String        @id @default(cuid())
+  companyId    String
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String        @db.VarChar(120)
+  description  String?       @db.VarChar(255)
+  active       Boolean       @default(true)
+  jobFunctions JobFunction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("sectors")
+}
+
+/// Cadastro de horários de trabalho (ex.: "Comercial (Seg a Sex)" —
+/// "SEG A SEX: 07:30-12:00 | 13:12-17:30"), reaproveitável entre funções.
+model WorkSchedule {
+  id           String        @id @default(cuid())
+  companyId    String
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String        @db.VarChar(120)
+  description  String?       @db.VarChar(255)
+  active       Boolean       @default(true)
+  jobFunctions JobFunction[]
+  employees    Employee[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("work_schedules")
+}
+
+/// Cadastro de tipos de EPI (equipamento de proteção individual) —
+/// entrega/ficha por colaborador fica para o módulo de EPI (sprint
+/// seguinte); aqui é só o catálogo, vinculável às funções que exigem uso.
+model PpeType {
+  id           String        @id @default(cuid())
+  companyId    String
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String        @db.VarChar(120)
+  description  String?       @db.VarChar(255)
+  active       Boolean       @default(true)
+  jobFunctions JobFunction[]
+  deliveries   PpeDelivery[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("ppe_types")
+}
+
+enum SalaryType {
+  MENSALISTA
+  HORISTA
+  DIARISTA
+  COMISSIONADO
+  OUTRO
+}
+
+model JobFunction {
+  id          String  @id @default(cuid())
+  companyId   String
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String  @db.VarChar(150)
+  description String? @db.VarChar(255)
+
+  /// Código CBO (ex.: "2521-05") — referência livre à CboOccupation, sem
+  /// FK (a tabela é global e não precisa travar a integridade aqui).
+  cboCode  String? @db.VarChar(10)
+  cboTitle String? @db.VarChar(200)
+
+  sectorId String?
+  sector   Sector? @relation(fields: [sectorId], references: [id])
+
+  baseSalary Decimal?    @db.Decimal(18, 2)
+  salaryType SalaryType?
+
+  workScheduleId String?
+  workSchedule   WorkSchedule? @relation(fields: [workScheduleId], references: [id])
+
+  /// Se a função exige uso de EPI. Os EPIs específicos ficam em `ppeTypes`.
+  requiresPpe Boolean   @default(false)
+  ppeTypes    PpeType[]
+
+  employees Employee[]
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@index([sectorId])
+  @@index([workScheduleId])
+  @@map("job_functions")
+}
+
+enum Gender {
+  MASCULINO
+  FEMININO
+  OUTRO
+}
+
+enum MaritalStatus {
+  SOLTEIRO
+  CASADO
+  DIVORCIADO
+  VIUVO
+  UNIAO_ESTAVEL
+  OUTRO
+}
+
+enum EducationLevel {
+  FUNDAMENTAL_INCOMPLETO
+  FUNDAMENTAL_COMPLETO
+  MEDIO_INCOMPLETO
+  MEDIO_COMPLETO
+  SUPERIOR_INCOMPLETO
+  SUPERIOR_COMPLETO
+  POS_GRADUACAO
+  MESTRADO
+  DOUTORADO
+}
+
+enum EmployeeStatus {
+  EXPERIENCIA
+  ATIVO
+  AFASTADO
+  DEMITIDO
+}
+
+enum DependentRelationship {
+  FILHO
+  CONJUGE
+  PAI
+  MAE
+  OUTRO
+}
+
+/// Colaborador (aba CAD_COLABORADOR da planilha original — 68 campos).
+/// Campos agrupados abaixo pelas mesmas seções da tela (não um
+/// formulário único): Pessoais, Documentos, Contato, Contratuais,
+/// Saúde ocupacional, Benefícios. Dependentes é tabela filha.
+model Employee {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // --- Pessoais ---
+  name          String @db.VarChar(150)
+  fatherName    String? @db.VarChar(150)
+  motherName    String? @db.VarChar(150)
+  birthDate     DateTime?
+  gender        Gender?
+  birthCity     String? @db.VarChar(100)
+  birthState    String? @db.VarChar(2)
+  maritalStatus MaritalStatus?
+  educationLevel EducationLevel?
+
+  // --- Documentos ---
+  cpf            String? @db.VarChar(14)
+  rg             String? @db.VarChar(20)
+  workCard       String? @db.VarChar(20)
+  workCardSeries String? @db.VarChar(20)
+  pis            String? @db.VarChar(20)
+
+  // --- Contato ---
+  zipCode  String? @db.VarChar(10)
+  street   String? @db.VarChar(200)
+  number   String? @db.VarChar(20)
+  district String? @db.VarChar(100)
+  city     String? @db.VarChar(100)
+  state    String? @db.VarChar(2)
+  phone    String? @db.VarChar(20)
+  mobile   String? @db.VarChar(20)
+  email    String? @db.VarChar(150)
+
+  // --- Contratuais ---
+  jobFunctionId String?
+  jobFunction   JobFunction? @relation(fields: [jobFunctionId], references: [id])
+
+  workScheduleId String?
+  workSchedule   WorkSchedule? @relation(fields: [workScheduleId], references: [id])
+
+  baseSalary    Decimal? @db.Decimal(18, 2)
+  salaryType    SalaryType?
+  paymentMethod PaymentMethod?
+
+  admissionDate       DateTime?
+  experienceEndDate   DateTime?
+  contractEndDate     DateTime?
+  terminationDate     DateTime?
+  status              EmployeeStatus @default(EXPERIENCIA)
+
+  // --- Saúde ocupacional ---
+  examDate      DateTime?
+  examCompleted Boolean   @default(false)
+  nextExamDate  DateTime?
+  noticeDays    Int?
+  onLeave       Boolean   @default(false)
+
+  // --- Benefícios ---
+  transportVoucher Boolean @default(false)
+  lockerKey        String? @db.VarChar(20)
+  lockerNumber     String? @db.VarChar(20)
+
+  observation String? @db.VarChar(500)
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dependents    EmployeeDependent[]
+  ppeDeliveries PpeDelivery[]
+
+  @@unique([companyId, cpf])
+  @@index([companyId])
+  @@index([jobFunctionId])
+  @@map("employees")
+}
+
+model EmployeeDependent {
+  id           String                 @id @default(cuid())
+  employeeId   String
+  employee     Employee               @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  name         String                 @db.VarChar(150)
+  birthDate    DateTime?
+  relationship DependentRelationship?
+  createdAt    DateTime               @default(now())
+
+  @@index([employeeId])
+  @@map("employee_dependents")
+}
+
+/// Entrega de EPI a um colaborador (aba FICHA_EPI da planilha
+/// original — declaração de recebimento conforme NR-6/Portaria
+/// 3214/78). Cada linha vira uma linha da ficha impressa
+/// (Data/Especificação/CA/Qtde/Assinatura).
+model PpeDelivery {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  ppeTypeId String
+  ppeType   PpeType @relation(fields: [ppeTypeId], references: [id])
+
+  /// Certificado de Aprovação do EPI entregue nesta remessa
+  /// (varia por lote/fabricante, por isso fica na entrega e não
+  /// no cadastro do tipo de EPI).
+  ca String? @db.VarChar(20)
+
+  quantity     Decimal  @default(1) @db.Decimal(10, 2)
+  deliveryDate DateTime @default(now())
+  observation  String?  @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("ppe_deliveries")
 }

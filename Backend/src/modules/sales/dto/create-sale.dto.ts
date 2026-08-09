@@ -3,6 +3,8 @@ import {
   ArrayMinSize,
   IsArray,
   IsDateString,
+  IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -10,6 +12,8 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+import { PaymentMethod } from '@prisma/client';
 
 import { CreateSaleItemDto } from './create-sale-item.dto';
 
@@ -67,6 +71,43 @@ export class CreateSaleDto {
   @IsNumber()
   @Min(0)
   otherExpenses?: number = 0;
+
+  @ApiProperty({
+    required: false,
+    default: 0,
+    description: 'Prazo em dias para o vencimento do título gerado na aprovação.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  termDays?: number;
+
+  @ApiProperty({
+    required: false,
+    enum: PaymentMethod,
+  })
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Orçamento de origem — a venda nasce com os dados dele e ele passa para CONVERTED.',
+  })
+  @IsOptional()
+  @IsString()
+  quoteId?: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Pedido de venda de origem — a venda nasce com os dados dele e ele passa para CONVERTED.',
+  })
+  @IsOptional()
+  @IsString()
+  salesOrderId?: string;
 
   @ApiProperty({
     type: [CreateSaleItemDto],

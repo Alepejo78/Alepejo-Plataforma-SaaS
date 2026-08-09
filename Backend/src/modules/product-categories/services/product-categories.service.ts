@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -26,8 +27,15 @@ export class ProductCategoriesService {
     );
 
     if (exists) {
-      throw new ConflictException(
-        'Já existe uma categoria com este nome.',
+      if (exists.active) {
+        throw new ConflictException(
+          'Já existe uma categoria com este nome.',
+        );
+      }
+
+      return this.repository.restore(
+        exists.id,
+        createProductCategoryDto,
       );
     }
 
@@ -65,6 +73,14 @@ export class ProductCategoriesService {
 
   async remove(companyId: string, id: string) {
     await this.findOne(companyId, id);
+
+    const inUse = await this.repository.countProducts(id);
+
+    if (inUse > 0) {
+      throw new BadRequestException(
+        'Esta categoria está vinculada a produtos e não pode ser excluída.',
+      );
+    }
 
     return this.repository.delete(id);
   }

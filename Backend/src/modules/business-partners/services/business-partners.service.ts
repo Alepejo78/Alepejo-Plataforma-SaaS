@@ -37,6 +37,18 @@ export class BusinessPartnersService {
       );
     }
 
+    const deleted = await this.repository.findDeletedByDocument(
+      companyId,
+      dto.document,
+    );
+
+    if (deleted) {
+      return this.repository.restore(deleted.id, companyId, {
+        ...dto,
+        roles: this.normalizeRoles(dto.roles),
+      });
+    }
+
     return this.repository.create(companyId, {
       ...dto,
       roles: this.normalizeRoles(dto.roles),

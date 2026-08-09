@@ -44,6 +44,9 @@ export class InventoryRepository {
       include: {
         product: true,
         warehouse: true,
+        holds: {
+          where: { status: 'ACTIVE' },
+        },
       },
     });
   }
@@ -94,6 +97,9 @@ export class InventoryRepository {
           include: {
             product: true,
             warehouse: true,
+            holds: {
+              where: { status: 'ACTIVE' },
+            },
           },
           skip: (page - 1) * limit,
           take: limit,

@@ -4,6 +4,8 @@ import { PrismaModule } from '../../core/prisma/prisma.module';
 
 import { LicenseModule } from '../identity/license/license.module';
 import { BusinessPartnersModule } from '../business-partners/business-partners.module';
+import { FinancialEntriesModule } from '../financial-entries/financial-entries.module';
+import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
 
 import { PurchaseController } from './controllers/purchase.controller';
 import { PurchaseRepository } from './repositories/purchase.repository';
@@ -14,6 +16,8 @@ import { PurchaseService } from './services/purchase.service';
     PrismaModule,
     LicenseModule,
     BusinessPartnersModule,
+    FinancialEntriesModule,
+    DocumentSequenceModule,
   ],
 
   controllers: [

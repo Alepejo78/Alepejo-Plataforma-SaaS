@@ -8,9 +8,6 @@ import type { CookieOptions } from 'express';
 export const ACCESS_TOKEN_COOKIE = 'alepejo_at';
 export const REFRESH_TOKEN_COOKIE = 'alepejo_rt';
 
-const ONE_HOUR_MS = 60 * 60 * 1000;
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
 const isProduction = (): boolean =>
   process.env.NODE_ENV === 'production';
 
@@ -20,6 +17,12 @@ const isProduction = (): boolean =>
  *   em requisições cross-site de terceiros (proteção contra CSRF).
  * secure: só trafega em HTTPS. Desligado em dev para funcionar em
  *   http://localhost.
+ *
+ * Sem `maxAge`: cookie de sessão — o navegador apaga ao fechar (a
+ * pedido do usuário, para não continuar logado depois de fechar o
+ * navegador). O token em si continua expirando no prazo normal
+ * (JWT_EXPIRES_IN / JWT_REFRESH_EXPIRES_IN) — isso só controla até
+ * quando o navegador guarda o cookie.
  */
 const baseCookieOptions = (): CookieOptions => ({
   httpOnly: true,
@@ -28,15 +31,11 @@ const baseCookieOptions = (): CookieOptions => ({
   path: '/',
 });
 
-export const accessTokenCookieOptions = (): CookieOptions => ({
-  ...baseCookieOptions(),
-  maxAge: ONE_HOUR_MS,
-});
+export const accessTokenCookieOptions = (): CookieOptions =>
+  baseCookieOptions();
 
-export const refreshTokenCookieOptions = (): CookieOptions => ({
-  ...baseCookieOptions(),
-  maxAge: SEVEN_DAYS_MS,
-});
+export const refreshTokenCookieOptions = (): CookieOptions =>
+  baseCookieOptions();
 
 export const clearCookieOptions = (): CookieOptions =>
   baseCookieOptions();

@@ -77,6 +77,7 @@ export class UnitsOfMeasureRepository {
 
     const where: Prisma.UnitOfMeasureWhereInput = {
       companyId,
+      active: true,
 
       ...(search
         ? {
@@ -159,6 +160,32 @@ export class UnitsOfMeasureRepository {
       },
       data: {
         active: false,
+      },
+    });
+  }
+
+  /** Quantos produtos usam esta unidade de medida. */
+  async countProducts(unitId: string): Promise<number> {
+    return this.prisma.product.count({
+      where: { unitId },
+    });
+  }
+
+  /**
+   * Reativa uma unidade excluída (soft delete) com o mesmo código,
+   * em vez de criar uma linha nova (o índice único de companyId+code
+   * não exclui unidades inativas, então um create() colidiria).
+   */
+  async restore(
+    id: string,
+    data: CreateUnitOfMeasureDto,
+  ): Promise<UnitOfMeasure> {
+    return this.prisma.unitOfMeasure.update({
+      where: { id },
+      data: {
+        code: data.code,
+        description: data.description,
+        active: true,
       },
     });
   }

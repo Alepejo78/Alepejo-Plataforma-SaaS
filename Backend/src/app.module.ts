@@ -22,8 +22,24 @@ import { UnitsOfMeasureModule } from './modules/units-of-measure/units-of-measur
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { StockMovementModule } from './modules/stock-movement/stock-movement.module';
+import { StockHoldModule } from './modules/stock-hold/stock-hold.module';
 import { PurchaseModule } from './modules/purchase/purchase.module';
 import { SalesModule } from './modules/sales/sales.module';
+import { QuotesModule } from './modules/quotes/quotes.module';
+import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
+import { QuotationsModule } from './modules/quotations/quotations.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
+import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-accounts.module';
+import { ChartOfAccountClassificationsModule } from './modules/chart-of-account-classifications/chart-of-account-classifications.module';
+import { FinancialEntriesModule } from './modules/financial-entries/financial-entries.module';
+
+import { SectorsModule } from './modules/sectors/sectors.module';
+import { WorkSchedulesModule } from './modules/work-schedules/work-schedules.module';
+import { PpeTypesModule } from './modules/ppe-types/ppe-types.module';
+import { JobFunctionsModule } from './modules/job-functions/job-functions.module';
+import { CboModule } from './modules/cbo/cbo.module';
+import { EmployeesModule } from './modules/employees/employees.module';
+import { PpeDeliveriesModule } from './modules/ppe-deliveries/ppe-deliveries.module';
 
 @Module({
   imports: [
@@ -41,8 +57,24 @@ import { SalesModule } from './modules/sales/sales.module';
     WarehouseModule,
     InventoryModule,
     StockMovementModule,
+    StockHoldModule,
     PurchaseModule,
     SalesModule,
+    QuotesModule,
+    SalesOrdersModule,
+    QuotationsModule,
+    PurchaseOrdersModule,
+    ChartOfAccountsModule,
+    ChartOfAccountClassificationsModule,
+    FinancialEntriesModule,
+
+    SectorsModule,
+    WorkSchedulesModule,
+    PpeTypesModule,
+    JobFunctionsModule,
+    CboModule,
+    EmployeesModule,
+    PpeDeliveriesModule,
   ],
   controllers: [AppController],
   providers: [

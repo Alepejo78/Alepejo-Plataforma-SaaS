@@ -4,8 +4,10 @@ import {
 } from '@nestjs/common';
 import type { ValidationError } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { join } from 'path';
 
 import { AppModule } from './app.module';
 
@@ -13,11 +15,18 @@ import { HttpExceptionFilter } from './core/filters/http-exception.filter';
 import { ResponseInterceptor } from './core/interceptors/response.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app =
+    await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.setGlobalPrefix('api');
 
   app.use(cookieParser());
+
+  // Logos enviadas pelo módulo de personalização (BRANDING). Fora do
+  // prefixo /api de propósito: são arquivos estáticos, não rotas da API.
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   // CORS precisa listar as origens explicitamente: com `origin: '*'`
   // o navegador se recusa a enviar cookies (credentials), o que

@@ -47,6 +47,7 @@ export class ProductsRepository {
   async findAll(companyId: string, filter: ProductFilterDto) {
     const {
       search,
+      barcode,
       categoryId,
       brandId,
       unitId,
@@ -86,6 +87,7 @@ export class ProductsRepository {
         ],
       }),
 
+      ...(barcode && { barcode }),
       ...(categoryId && { categoryId }),
       ...(brandId && { brandId }),
       ...(unitId && { unitId }),

@@ -2,49 +2,44 @@
 
 import { Menu, X } from "lucide-react";
 
-import { cn } from "@/lib";
+import { useAuth } from "@/providers/AuthProvider";
 
 import { ThemeSwitcher } from "../ThemeSwitcher";
+import { UserMenu } from "../UserMenu/UserMenu";
 import { topBarStyles } from "./TopBar.styles";
 import type { TopBarProps } from "./TopBar.types";
-
-function getInitials(name?: string) {
-  if (!name) {
-    return "?";
-  }
-
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join("")
-    .toUpperCase();
-}
 
 export function TopBar({
   companyName,
   isMobileNavigationOpen,
   onMobileNavigationToggle,
-  userName,
   workspaceLabel = "Visão geral",
+  showMobileNavigationToggle = true,
 }: TopBarProps) {
+  const { user, hasModule } = useAuth();
+
+  const canToggleTheme =
+    hasModule("BRANDING") &&
+    Boolean(user?.company.brandingThemeToggleEnabled);
+
   return (
     <header className={topBarStyles.root}>
       <div className="flex min-w-0 items-center gap-3">
-        <button
-          aria-expanded={isMobileNavigationOpen}
-          aria-label={isMobileNavigationOpen ? "Fechar navegação" : "Abrir navegação"}
-          className={topBarStyles.mobileNavigationButton}
-          onClick={onMobileNavigationToggle}
-          type="button"
-        >
-          {isMobileNavigationOpen ? (
-            <X aria-hidden="true" className="size-5" />
-          ) : (
-            <Menu aria-hidden="true" className="size-5" />
-          )}
-        </button>
+        {showMobileNavigationToggle && (
+          <button
+            aria-expanded={isMobileNavigationOpen}
+            aria-label={isMobileNavigationOpen ? "Fechar navegação" : "Abrir navegação"}
+            className={topBarStyles.mobileNavigationButton}
+            onClick={onMobileNavigationToggle}
+            type="button"
+          >
+            {isMobileNavigationOpen ? (
+              <X aria-hidden="true" className="size-5" />
+            ) : (
+              <Menu aria-hidden="true" className="size-5" />
+            )}
+          </button>
+        )}
 
         <div className={topBarStyles.workspace}>
           <p className={topBarStyles.workspaceLabel}>{workspaceLabel}</p>
@@ -52,7 +47,7 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-3">
-        <ThemeSwitcher />
+        {canToggleTheme && <ThemeSwitcher />}
 
         <div className={topBarStyles.company} title={companyName}>
           <span aria-hidden="true" className={topBarStyles.companyIndicator} />
@@ -61,14 +56,7 @@ export function TopBar({
           </span>
         </div>
 
-        <span
-          aria-label={userName ? `Usuário: ${userName}` : "Usuário não identificado"}
-          className={cn(topBarStyles.userAvatar, !userName && "bg-[var(--surface-active)] text-[var(--text-muted)]")}
-          role="img"
-          title={userName}
-        >
-          {getInitials(userName)}
-        </span>
+        <UserMenu />
       </div>
     </header>
   );

@@ -54,6 +54,20 @@ export class BusinessPartnersRepository {
     });
   }
 
+  /** Parceiro excluído (soft delete) com este documento, se houver. */
+  async findDeletedByDocument(
+    companyId: string,
+    document: string,
+  ): Promise<BusinessPartner | null> {
+    return this.prisma.businessPartner.findFirst({
+      where: {
+        companyId,
+        document,
+        deletedAt: { not: null },
+      },
+    });
+  }
+
   async findAll(
     companyId: string,
     filter: BusinessPartnerFilterDto,
@@ -160,6 +174,27 @@ export class BusinessPartnersRepository {
       data: {
         active: false,
         deletedAt: new Date(),
+      },
+    });
+  }
+
+  /**
+   * Reaproveita um registro soft-deletado com o mesmo documento,
+   * em vez de criar uma linha nova (o índice único de companyId+document
+   * não exclui registros excluídos, então um create() colidiria).
+   */
+  async restore(
+    id: string,
+    companyId: string,
+    data: CreateBusinessPartnerDto,
+  ): Promise<BusinessPartner> {
+    return this.prisma.businessPartner.update({
+      where: { id },
+      data: {
+        ...data,
+        companyId,
+        active: true,
+        deletedAt: null,
       },
     });
   }

@@ -140,6 +140,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       name: user.name,
       status: user.status,
+      avatar: user.avatar,
+      avatarEnabled: user.avatarEnabled,
       permissions,
       modules: [...licensedModules.values()],
       company: {
@@ -147,6 +149,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         code: user.company.code,
         legalName: user.company.legalName,
         tradeName: user.company.tradeName,
+        logo: user.company.logo,
+        logoDark: user.company.logoDark,
+        systemName: user.company.systemName,
+        brandingLogoLightEnabled:
+          user.company.brandingLogoLightEnabled,
+        brandingLogoDarkEnabled:
+          user.company.brandingLogoDarkEnabled,
+        brandingSystemNameEnabled:
+          user.company.brandingSystemNameEnabled,
+        brandingThemeToggleEnabled:
+          user.company.brandingThemeToggleEnabled,
+        sidebarLayout: user.company.sidebarLayout,
       },
     };
   }

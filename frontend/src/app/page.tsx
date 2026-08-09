@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Boxes,
   Package,
+  PiggyBank,
   Users,
   Wallet,
 } from "lucide-react";
@@ -16,6 +17,8 @@ import { DashboardHeader } from "@/components/dashboard";
 import { useAuth } from "@/providers/AuthProvider";
 import { partnerService } from "@/services/partner.service";
 import { productService } from "@/services/product.service";
+import { inventoryService } from "@/services/inventory.service";
+import { financialEntryService } from "@/services/financial-entry.service";
 
 function money(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -88,23 +91,85 @@ export default function HomePage() {
   const [products, setProducts] = useState<number | null>(
     null
   );
+  const [inventoryItems, setInventoryItems] = useState<
+    number | null
+  >(null);
   const [loading, setLoading] = useState(true);
+
+  const [aReceberMes, setAReceberMes] = useState<
+    number | null
+  >(null);
+  const [aPagarMes, setAPagarMes] = useState<number | null>(
+    null
+  );
+  const [recebidoTotal, setRecebidoTotal] = useState<
+    number | null
+  >(null);
+  const [pagoTotal, setPagoTotal] = useState<number | null>(
+    null
+  );
+  const [cashFlowLoading, setCashFlowLoading] =
+    useState(true);
 
   useEffect(() => {
     Promise.all([
       partnerService.list({ limit: 1 }),
       partnerService.list({ limit: 1, role: "CUSTOMER" }),
       productService.list({ limit: 1 }),
+      inventoryService.list({ limit: 1 }),
     ])
-      .then(([todos, clientes, prods]) => {
+      .then(([todos, clientes, prods, estoque]) => {
         setPartners(todos.total);
         setCustomers(clientes.total);
         setProducts(prods.total);
+        setInventoryItems(estoque.total);
       })
       .catch(() => {
         // Sem dados: os cartões mostram "—" em vez de quebrar a tela.
       })
       .finally(() => setLoading(false));
+
+    const now = new Date();
+
+    financialEntryService
+      .getCashFlow(now.getFullYear())
+      .then((cashFlow) => {
+        const mesAtual = cashFlow.months[now.getMonth()];
+
+        setAReceberMes(
+          mesAtual.receivable.open +
+            mesAtual.receivable.overdue
+        );
+
+        setAPagarMes(
+          mesAtual.payable.open + mesAtual.payable.overdue
+        );
+
+        // Realizado no ano até o mês atual (o que já entrou/saiu de
+        // fato, diferente do "a receber/a pagar" que é o pendente).
+        const mesesDoAno = cashFlow.months.slice(
+          0,
+          now.getMonth() + 1
+        );
+
+        setRecebidoTotal(
+          mesesDoAno.reduce(
+            (soma, mes) => soma + mes.receivable.settled,
+            0
+          )
+        );
+
+        setPagoTotal(
+          mesesDoAno.reduce(
+            (soma, mes) => soma + mes.payable.settled,
+            0
+          )
+        );
+      })
+      .catch(() => {
+        // Sem licença do Financeiro ou sem dados: cartão mostra "—".
+      })
+      .finally(() => setCashFlowLoading(false));
   }, []);
 
   return (
@@ -147,17 +212,76 @@ export default function HomePage() {
 
           <StatCard
             title="Itens em estoque"
-            value="—"
-            hint="Disponível após o módulo de estoque"
+            value={
+              inventoryItems !== null
+                ? String(inventoryItems)
+                : "—"
+            }
+            hint="Produtos com saldo cadastrado por depósito"
             icon={Boxes}
-            loading={false}
+            href="/erp/estoque"
+            loading={loading}
           />
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-2">
+        <section className="grid gap-5 xl:grid-cols-3">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="mb-4 flex items-center gap-2">
               <Wallet
+                size={18}
+                className="text-[var(--text-secondary)]"
+              />
+
+              <h2 className="font-semibold text-[var(--text-primary)]">
+                A pagar/receber
+              </h2>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                {
+                  label: "A receber no mês",
+                  value: aReceberMes,
+                },
+                { label: "A pagar no mês", value: aPagarMes },
+                {
+                  label: "Saldo previsto",
+                  value:
+                    aReceberMes !== null && aPagarMes !== null
+                      ? aReceberMes - aPagarMes
+                      : null,
+                },
+              ].map((linha) => (
+                <div
+                  key={linha.label}
+                  className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
+                >
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    {linha.label}
+                  </span>
+
+                  {cashFlowLoading ? (
+                    <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
+                  ) : (
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {linha.value !== null
+                        ? money(linha.value)
+                        : "—"}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-4 text-xs text-[var(--text-muted)]">
+              Valores em aberto do mês atual, calculados a
+              partir de Contas a Receber e a Pagar.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <PiggyBank
                 size={18}
                 className="text-[var(--text-secondary)]"
               />
@@ -169,9 +293,15 @@ export default function HomePage() {
 
             <div className="space-y-3">
               {[
-                { label: "A receber no mês", value: 0 },
-                { label: "A pagar no mês", value: 0 },
-                { label: "Saldo previsto", value: 0 },
+                { label: "Recebido", value: recebidoTotal },
+                { label: "Pago", value: pagoTotal },
+                {
+                  label: "Total em caixa",
+                  value:
+                    recebidoTotal !== null && pagoTotal !== null
+                      ? recebidoTotal - pagoTotal
+                      : null,
+                },
               ].map((linha) => (
                 <div
                   key={linha.label}
@@ -181,16 +311,22 @@ export default function HomePage() {
                     {linha.label}
                   </span>
 
-                  <span className="font-medium text-[var(--text-primary)]">
-                    {money(linha.value)}
-                  </span>
+                  {cashFlowLoading ? (
+                    <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
+                  ) : (
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {linha.value !== null
+                        ? money(linha.value)
+                        : "—"}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
 
             <p className="mt-4 text-xs text-[var(--text-muted)]">
-              Os valores serão preenchidos quando o módulo
-              Financeiro estiver disponível.
+              Realizado no ano até o mês atual, a partir das
+              baixas em Contas a Receber e a Pagar.
             </p>
           </div>
 

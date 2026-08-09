@@ -32,4 +32,11 @@ import {
     @IsOptional()
     @IsEnum(PurchaseStatusFilter)
     status?: PurchaseStatusFilter;
+
+    /// Busca livre: número da compra (ex.: "C000000012" ou "12") ou
+    /// nome do fornecedor.
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    search?: string;
   }

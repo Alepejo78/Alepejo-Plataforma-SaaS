@@ -1,0 +1,218 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+import { BusinessPartnerRole, QuoteStatus } from '@prisma/client';
+
+import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+
+import { PrismaService } from '../../../core/prisma/prisma.service';
+import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
+
+import { QuoteRepository } from '../repositories/quote.repository';
+
+import { CreateQuoteDto } from '../dto/create-quote.dto';
+import { UpdateQuoteDto } from '../dto/update-quote.dto';
+import { QuoteFilterDto } from '../dto/quote-filter.dto';
+
+const SEQUENCE_TYPE = 'QUOTE';
+
+@Injectable()
+export class QuoteService {
+  constructor(
+    private readonly repository: QuoteRepository,
+    private readonly prisma: PrismaService,
+    private readonly businessPartnersService: BusinessPartnersService,
+    private readonly documentSequence: DocumentSequenceService,
+  ) {}
+
+  async create(companyId: string, dto: CreateQuoteDto) {
+    await this.businessPartnersService.assertHasRole(
+      companyId,
+      dto.partnerId,
+      BusinessPartnerRole.CUSTOMER,
+    );
+
+    const warehouse = await this.prisma.warehouse.findFirst({
+      where: { id: dto.warehouseId, companyId },
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException(
+        'Almoxarifado não encontrado.',
+      );
+    }
+
+    let totalAmount = 0;
+
+    for (const item of dto.items) {
+      const product = await this.prisma.product.findFirst({
+        where: { id: item.productId, companyId },
+      });
+
+      if (!product) {
+        throw new NotFoundException(
+          `Produto ${item.productId} não encontrado.`,
+        );
+      }
+
+      totalAmount += item.quantity * item.unitPrice;
+    }
+
+    const netAmount =
+      totalAmount -
+      (dto.discountValue ?? 0) +
+      (dto.freightValue ?? 0) +
+      (dto.otherExpenses ?? 0);
+
+    return this.prisma.$transaction(async (tx) => {
+      const number = await this.documentSequence.next(
+        tx,
+        companyId,
+        SEQUENCE_TYPE,
+      );
+
+      return this.repository.create(
+        tx,
+        companyId,
+        number,
+        dto,
+        totalAmount,
+        netAmount,
+      );
+    });
+  }
+
+  async findAll(companyId: string, filter: QuoteFilterDto) {
+    return this.repository.findAll(companyId, filter);
+  }
+
+  async findOne(companyId: string, id: string) {
+    const quote = await this.repository.findById(
+      companyId,
+      id,
+    );
+
+    if (!quote) {
+      throw new NotFoundException(
+        'Orçamento não encontrado.',
+      );
+    }
+
+    return quote;
+  }
+
+  async update(
+    companyId: string,
+    id: string,
+    dto: UpdateQuoteDto,
+  ) {
+    const quote = await this.findOne(companyId, id);
+
+    if (quote.status !== QuoteStatus.DRAFT) {
+      throw new BadRequestException(
+        'Somente orçamentos em rascunho podem ser alterados.',
+      );
+    }
+
+    if (dto.partnerId) {
+      await this.businessPartnersService.assertHasRole(
+        companyId,
+        dto.partnerId,
+        BusinessPartnerRole.CUSTOMER,
+      );
+    }
+
+    if (dto.warehouseId) {
+      const warehouse = await this.prisma.warehouse.findFirst(
+        {
+          where: { id: dto.warehouseId, companyId },
+        },
+      );
+
+      if (!warehouse) {
+        throw new NotFoundException(
+          'Almoxarifado não encontrado.',
+        );
+      }
+    }
+
+    let items:
+      | {
+          productId: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+        }[]
+      | undefined;
+
+    let totalAmount = Number(quote.totalAmount);
+
+    if (dto.items) {
+      totalAmount = 0;
+
+      for (const item of dto.items) {
+        const product = await this.prisma.product.findFirst({
+          where: { id: item.productId, companyId },
+        });
+
+        if (!product) {
+          throw new NotFoundException(
+            `Produto ${item.productId} não encontrado.`,
+          );
+        }
+
+        totalAmount += item.quantity * item.unitPrice;
+      }
+
+      items = dto.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.quantity * item.unitPrice,
+      }));
+    }
+
+    const discountValue =
+      dto.discountValue ?? Number(quote.discountValue);
+    const freightValue =
+      dto.freightValue ?? Number(quote.freightValue);
+    const otherExpenses =
+      dto.otherExpenses ?? Number(quote.otherExpenses);
+
+    const netAmount =
+      totalAmount - discountValue + freightValue + otherExpenses;
+
+    return this.repository.update(id, {
+      partnerId: dto.partnerId,
+      warehouseId: dto.warehouseId,
+      quoteDate: dto.quoteDate
+        ? new Date(dto.quoteDate)
+        : undefined,
+      validUntil: dto.validUntil
+        ? new Date(dto.validUntil)
+        : undefined,
+      observation: dto.observation,
+      discountValue,
+      freightValue,
+      otherExpenses,
+      totalAmount,
+      netAmount,
+      items,
+    });
+  }
+
+  async cancel(companyId: string, id: string) {
+    const quote = await this.findOne(companyId, id);
+
+    if (quote.status !== QuoteStatus.DRAFT) {
+      throw new BadRequestException(
+        'Somente orçamentos em rascunho podem ser cancelados.',
+      );
+    }
+
+    return this.repository.cancel(id);
+  }
+}

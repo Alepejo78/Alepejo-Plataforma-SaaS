@@ -22,6 +22,7 @@ import { SaleService } from '../services/sale.service';
 
 import { CreateSaleDto } from '../dto/create-sale.dto';
 import { SaleFilterDto } from '../dto/sale-filter.dto';
+import { ApproveSaleDto } from '../dto/approve-sale.dto';
 
 @ApiTags('Sales')
 @Controller('sales')
@@ -84,10 +85,12 @@ export class SaleController {
   approve(
     @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
+    @Body() dto: ApproveSaleDto,
   ) {
     return this.service.approve(
       companyId,
       id,
+      dto,
     );
   }
 

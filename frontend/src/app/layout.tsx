@@ -2,6 +2,7 @@ import "./globals.css";
 
 import { ThemeProvider } from "../providers/theme-provider";
 import { AuthProvider } from "../providers/AuthProvider";
+import { BrandFooter } from "../components/layout/BrandFooter";
 
 export default function RootLayout({
   children,
@@ -11,11 +12,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body>
-        <ThemeProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <ThemeProvider>
             {children}
-          </AuthProvider>
-        </ThemeProvider>
+            <BrandFooter />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

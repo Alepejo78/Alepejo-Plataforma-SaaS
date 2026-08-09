@@ -209,7 +209,7 @@ export class LicenseController {
     return this.service.enableModule(
       companyId,
       dto.moduleId,
-      dto.expiresAt,
+      dto.expiresAt ? new Date(dto.expiresAt) : undefined,
     );
   }
 

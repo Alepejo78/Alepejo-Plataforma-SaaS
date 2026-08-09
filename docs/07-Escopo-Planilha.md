@@ -24,14 +24,9 @@ Atualizado em: 07/08/2026
 | Categorias / Marcas / Unidades | (não existiam) | Completo |
 | Identidade e permissões | usuario, MANUTENCAO_USUARIO | Completo |
 | Licenciamento | (não existia) | Completo |
-
-### Backend pronto, falta tela
-| Módulo | Abas | Falta |
-|---|---|---|
-| Estoque | (não existia na planilha) | Tela de saldo e movimentação |
-| Depósitos | (não existia) | Tela |
-| Compras | FLUXO_PAGAR (parcial) | Tela de lançamento |
-| Vendas | FLUXO_RECEBER (parcial) | Tela de lançamento completa |
+| Estoque | (não existia na planilha) | Completo (saldo, movimentação, depósitos, custo médio) |
+| Compras | FLUXO_PAGAR (parcial) | Completo (lançamento, aprovação, recebimento, cancelamento) |
+| Vendas | FLUXO_RECEBER (parcial) | Completo (lançamento, aprovação com baixa de estoque, cancelamento) |
 
 ### Não iniciado
 | Módulo | Abas | Tamanho |
@@ -187,8 +182,6 @@ distinto do código interno e do código de barras. **Falta no sistema atual.**
 | 1 | Campo REF (referência do fabricante) no produto | CAD_PRODUTO | Baixa |
 | 2 | Setor (usado em RH e produção) | CAD_FUNCAO | Junto com RH |
 | 3 | Dashboard com dados reais (hoje são números fixos) | DASHBOARD* | Média |
-| 4 | Telas de Estoque, Depósitos, Compras | — | **Alta** |
-| 5 | Tela de Vendas completa | — | **Alta** |
 
 ---
 

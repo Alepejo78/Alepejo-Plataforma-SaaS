@@ -4,4 +4,6 @@ export interface TopBarProps {
   onMobileNavigationToggle: () => void;
   userName?: string;
   workspaceLabel?: string;
+  /** false no layout horizontal: a sidebar lateral não existe para abrir. */
+  showMobileNavigationToggle?: boolean;
 }

@@ -55,6 +55,7 @@ export class ProductCategoriesRepository {
 
     const where: Prisma.ProductCategoryWhereInput = {
       companyId,
+      active: true,
 
       ...(search && {
         OR: [
@@ -118,6 +119,31 @@ export class ProductCategoriesRepository {
       where: { id },
       data: {
         active: false,
+      },
+    });
+  }
+
+  /** Quantos produtos usam esta categoria. */
+  async countProducts(categoryId: string): Promise<number> {
+    return this.prisma.product.count({
+      where: { categoryId },
+    });
+  }
+
+  /**
+   * Reativa uma categoria excluída (soft delete) com o mesmo nome,
+   * em vez de criar uma linha nova (o índice único de companyId+name
+   * não exclui categorias inativas, então um create() colidiria).
+   */
+  async restore(
+    id: string,
+    data: CreateProductCategoryDto,
+  ): Promise<ProductCategory> {
+    return this.prisma.productCategory.update({
+      where: { id },
+      data: {
+        ...data,
+        active: true,
       },
     });
   }

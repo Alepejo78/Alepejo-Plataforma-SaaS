@@ -12,11 +12,23 @@ export interface AuthModule {
   expiresAt: string | null;
 }
 
+export type SidebarLayout = "vertical" | "horizontal";
+
 export interface AuthCompany {
   id: string;
   code: string;
   legalName: string;
   tradeName: string;
+  /** Personalização (módulo BRANDING) — null quando não configurada. */
+  logo: string | null;
+  logoDark: string | null;
+  systemName: string | null;
+  /** Cada item só vale se o módulo BRANDING estiver licenciado. */
+  brandingLogoLightEnabled: boolean;
+  brandingLogoDarkEnabled: boolean;
+  brandingSystemNameEnabled: boolean;
+  brandingThemeToggleEnabled: boolean;
+  sidebarLayout: SidebarLayout;
 }
 
 /**
@@ -28,6 +40,9 @@ export interface AuthUser {
   email: string;
   name: string;
   status: string;
+  /** Foto de perfil (autoatendimento) — null quando não enviada. */
+  avatar: string | null;
+  avatarEnabled: boolean;
   permissions: AuthPermission[];
   modules: AuthModule[];
   company: AuthCompany;

@@ -28,7 +28,7 @@ import {
           createUnitOfMeasureDto.code,
         );
 
-      if (codeExists) {
+      if (codeExists?.active) {
         throw new BadRequestException(
           'Já existe uma unidade de medida cadastrada com este código.',
         );
@@ -40,9 +40,19 @@ import {
           createUnitOfMeasureDto.description,
         );
 
-      if (descriptionExists) {
+      if (
+        descriptionExists?.active &&
+        descriptionExists.id !== codeExists?.id
+      ) {
         throw new BadRequestException(
           'Já existe uma unidade de medida cadastrada com esta descrição.',
+        );
+      }
+
+      if (codeExists && !codeExists.active) {
+        return this.unitsOfMeasureRepository.restore(
+          codeExists.id,
+          createUnitOfMeasureDto,
         );
       }
 
@@ -124,6 +134,15 @@ import {
       id: string,
     ): Promise<void> {
       await this.findById(companyId, id);
+
+      const inUse =
+        await this.unitsOfMeasureRepository.countProducts(id);
+
+      if (inUse > 0) {
+        throw new BadRequestException(
+          'Esta unidade de medida está vinculada a produtos e não pode ser excluída.',
+        );
+      }
 
       await this.unitsOfMeasureRepository.delete(id);
     }

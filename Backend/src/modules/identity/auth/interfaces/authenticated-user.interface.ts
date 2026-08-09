@@ -19,6 +19,14 @@ export interface AuthenticatedCompany {
   code: string;
   legalName: string;
   tradeName: string;
+  logo: string | null;
+  logoDark: string | null;
+  systemName: string | null;
+  brandingLogoLightEnabled: boolean;
+  brandingLogoDarkEnabled: boolean;
+  brandingSystemNameEnabled: boolean;
+  brandingThemeToggleEnabled: boolean;
+  sidebarLayout: string;
 }
 
 export interface AuthenticatedUser {
@@ -31,6 +39,10 @@ export interface AuthenticatedUser {
   name: string;
 
   status: string;
+
+  avatar: string | null;
+
+  avatarEnabled: boolean;
 
   permissions: AuthenticatedPermission[];
 

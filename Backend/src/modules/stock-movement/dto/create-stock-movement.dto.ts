@@ -43,4 +43,14 @@ export class CreateStockMovementDto {
   @IsString()
   @MaxLength(255)
   observation?: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Documento que originou a movimentação (ex.: "Nota Fiscal nº 55501").',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  documentNumber?: string;
 }

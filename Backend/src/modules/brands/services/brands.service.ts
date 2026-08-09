@@ -28,8 +28,15 @@ import {
       );
 
       if (exists) {
-        throw new BadRequestException(
-          'Já existe uma marca cadastrada com este nome.',
+        if (exists.active) {
+          throw new BadRequestException(
+            'Já existe uma marca cadastrada com este nome.',
+          );
+        }
+
+        return this.brandsRepository.restore(
+          exists.id,
+          createBrandDto,
         );
       }
 
@@ -80,6 +87,14 @@ import {
 
     async remove(companyId: string, id: string): Promise<void> {
       await this.findById(companyId, id);
+
+      const inUse = await this.brandsRepository.countProducts(id);
+
+      if (inUse > 0) {
+        throw new BadRequestException(
+          'Esta marca está vinculada a produtos e não pode ser excluída.',
+        );
+      }
 
       await this.brandsRepository.delete(id);
     }

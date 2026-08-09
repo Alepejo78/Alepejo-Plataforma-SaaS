@@ -7,6 +7,7 @@ import { maskDocument, maskPhone } from "@/lib/masks";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
+import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { PartnerForm } from "@/components/partners/PartnerForm";
 
 import {
@@ -150,72 +151,76 @@ export default function ParceirosPage() {
 
   return (
     <AppShell workspaceLabel="Parceiros">
-      <div className="space-y-6">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-              Parceiros
-            </h1>
+      <ListPageLayout
+        header={
+          <>
+            <header className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+                  Parceiros
+                </h1>
 
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Clientes, fornecedores, transportadoras e
-              representantes em um cadastro único.
-            </p>
-          </div>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  Clientes, fornecedores, transportadoras e
+                  representantes em um cadastro único.
+                </p>
+              </div>
 
-          <Can permission="partner.create">
-            <button
-              type="button"
-              onClick={openCreate}
-              className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-            >
-              <Plus size={18} />
-              Novo parceiro
-            </button>
-          </Can>
-        </header>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.map((item) => {
-              const active = role === item.role;
-
-              return (
+              <Can permission="partner.create">
                 <button
-                  key={item.label}
                   type="button"
-                  onClick={() => setRole(item.role)}
-                  className={`
-                    rounded-xl border px-3 py-2 text-sm font-medium transition-colors
-                    ${
-                      active
-                        ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
-                        : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                    }
-                  `}
+                  onClick={openCreate}
+                  className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
                 >
-                  {item.label}
+                  <Plus size={18} />
+                  Novo parceiro
                 </button>
-              );
-            })}
-          </div>
+              </Can>
+            </header>
 
-          <input
-            placeholder="Buscar por nome, documento ou e-mail"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-11 min-w-64 flex-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
-          />
-        </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap gap-2">
+                {FILTERS.map((item) => {
+                  const active = role === item.role;
 
-        {listError && (
-          <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-            {listError}
-          </div>
-        )}
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => setRole(item.role)}
+                      className={`
+                        rounded-xl border px-3 py-2 text-sm font-medium transition-colors
+                        ${
+                          active
+                            ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
+                            : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                        }
+                      `}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
 
+              <input
+                placeholder="Buscar por nome, documento ou e-mail"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-11 min-w-64 flex-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
+              />
+            </div>
+
+            {listError && (
+              <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                {listError}
+              </div>
+            )}
+          </>
+        }
+      >
         {loading ? (
-          <div className="space-y-2">
+          <div className="space-y-2 p-4">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={index}
@@ -224,7 +229,7 @@ export default function ParceirosPage() {
             ))}
           </div>
         ) : partners.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[var(--border-strong)] p-12 text-center">
+          <div className="p-12 text-center">
             <p className="font-medium text-[var(--text-primary)]">
               Nenhum parceiro encontrado
             </p>
@@ -235,9 +240,9 @@ export default function ParceirosPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+              <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">
                     Nome
@@ -351,11 +356,11 @@ export default function ParceirosPage() {
             </table>
           </div>
         )}
-      </div>
+      </ListPageLayout>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--primary)]/50 p-4">
-          <div className="my-8 w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+          <div className="my-8 w-full max-w-6xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
                 {editing

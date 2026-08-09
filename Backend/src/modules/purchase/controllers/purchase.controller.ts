@@ -22,6 +22,7 @@ import { PurchaseService } from '../services/purchase.service';
 
 import { CreatePurchaseDto } from '../dto/create-purchase.dto';
 import { PurchaseFilterDto } from '../dto/purchase-filter.dto';
+import { ReceivePurchaseDto } from '../dto/receive-purchase.dto';
 
 @ApiTags('Purchases')
 @Controller('purchases')
@@ -99,8 +100,25 @@ export class PurchaseController {
   receive(
     @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
+    @Body() dto: ReceivePurchaseDto,
   ) {
     return this.service.receive(
+      companyId,
+      id,
+      dto,
+    );
+  }
+
+  @Patch(':id/unreceive')
+  @Permissions('purchase.receive')
+  @ApiOperation({
+    summary: 'Estornar recebimento da compra',
+  })
+  unreceive(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.unreceive(
       companyId,
       id,
     );

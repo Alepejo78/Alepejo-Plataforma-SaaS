@@ -280,7 +280,7 @@ export function PartnerForm({
 
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <label className={labelClass} htmlFor="personType">
             Tipo de pessoa
@@ -437,7 +437,7 @@ export function PartnerForm({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className={labelClass} htmlFor="email">
             E-mail

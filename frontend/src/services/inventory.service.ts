@@ -19,6 +19,7 @@ export interface Warehouse {
   code: string;
   description: string;
   active: boolean;
+  [key: string]: unknown;
 }
 
 export interface InventoryItem {
@@ -27,6 +28,10 @@ export interface InventoryItem {
   warehouseId: string;
   quantity: string | number;
   averageCost: string | number;
+  blockedQuantity: string | number;
+  reservedQuantity: string | number;
+  quarantineQuantity: string | number;
+  damagedQuantity: string | number;
   active: boolean;
 
   product?: {
@@ -42,13 +47,17 @@ export interface InventoryItem {
     code: string;
     description: string;
   } | null;
+
+  holds?: StockHold[];
 }
 
 export type StockMovementType =
   | "ENTRY"
   | "EXIT"
   | "ADJUSTMENT"
-  | "TRANSFER";
+  | "TRANSFER"
+  | "HOLD"
+  | "RELEASE";
 
 export const MOVEMENT_LABELS: Record<
   StockMovementType,
@@ -58,6 +67,8 @@ export const MOVEMENT_LABELS: Record<
   EXIT: "Saída",
   ADJUSTMENT: "Ajuste",
   TRANSFER: "Transferência",
+  HOLD: "Bloqueio/Retenção",
+  RELEASE: "Liberação",
 };
 
 export interface StockMovement {
@@ -67,6 +78,7 @@ export interface StockMovement {
   quantity: string | number;
   unitCost?: string | number | null;
   observation?: string | null;
+  documentNumber?: string | null;
   createdAt: string;
 
   inventory?: {
@@ -79,6 +91,41 @@ export interface StockMovement {
       code: string;
       description: string;
     } | null;
+  } | null;
+}
+
+export type StockHoldType =
+  | "BLOCKED"
+  | "RESERVED"
+  | "QUARANTINE"
+  | "DAMAGED";
+
+export type StockHoldStatus = "ACTIVE" | "RELEASED";
+
+export const STOCK_HOLD_TYPE_LABELS: Record<
+  StockHoldType,
+  string
+> = {
+  BLOCKED: "Bloqueado",
+  RESERVED: "Reservado",
+  QUARANTINE: "Quarentena",
+  DAMAGED: "Avariado",
+};
+
+export interface StockHold {
+  id: string;
+  inventoryId: string;
+  type: StockHoldType;
+  status: StockHoldStatus;
+  quantity: string | number;
+  reason?: string | null;
+  releasedAt?: string | null;
+  createdAt: string;
+
+  inventory?: {
+    id: string;
+    product?: { code: string; description: string } | null;
+    warehouse?: { code: string; description: string } | null;
   } | null;
 }
 
@@ -171,6 +218,41 @@ export const stockMovementService = {
     const { data } = await api.post<
       ApiEnvelope<StockMovement>
     >("/stock-movements", payload);
+
+    return data.data;
+  },
+};
+
+export const stockHoldService = {
+  async list(filter: {
+    inventoryId?: string;
+    type?: StockHoldType;
+    status?: StockHoldStatus;
+  } = {}): Promise<StockHold[]> {
+    const { data } = await api.get<
+      ApiEnvelope<StockHold[]>
+    >("/stock-holds", { params: filter });
+
+    return data.data ?? [];
+  },
+
+  async create(payload: {
+    inventoryId: string;
+    type: StockHoldType;
+    quantity: number;
+    reason?: string;
+  }): Promise<StockHold> {
+    const { data } = await api.post<
+      ApiEnvelope<StockHold>
+    >("/stock-holds", payload);
+
+    return data.data;
+  },
+
+  async release(id: string): Promise<StockHold> {
+    const { data } = await api.patch<
+      ApiEnvelope<StockHold>
+    >(`/stock-holds/${id}/release`);
 
     return data.data;
   },

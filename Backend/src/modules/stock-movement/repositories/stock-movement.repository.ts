@@ -30,6 +30,7 @@ export class StockMovementRepository {
         quantity: dto.quantity,
         unitCost: dto.unitCost,
         observation: dto.observation,
+        documentNumber: dto.documentNumber,
       },
     });
   }
@@ -44,7 +45,12 @@ export class StockMovementRepository {
         companyId,
       },
       include: {
-        inventory: true,
+        inventory: {
+          include: {
+            product: true,
+            warehouse: true,
+          },
+        },
       },
     });
   }
@@ -53,13 +59,60 @@ export class StockMovementRepository {
     companyId: string,
     filter: StockMovementFilterDto,
   ) {
+    const { inventoryId, type, search } = filter;
+
+    const where: Prisma.StockMovementWhereInput = {
+      companyId,
+      ...(inventoryId && { inventoryId }),
+      ...(type && { type }),
+
+      ...(search && {
+        OR: [
+          {
+            observation: {
+              contains: search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+          {
+            documentNumber: {
+              contains: search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+          {
+            inventory: {
+              product: {
+                OR: [
+                  {
+                    description: {
+                      contains: search,
+                      mode: Prisma.QueryMode.insensitive,
+                    },
+                  },
+                  {
+                    code: {
+                      contains: search,
+                      mode: Prisma.QueryMode.insensitive,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      }),
+    };
+
     return this.prisma.stockMovement.findMany({
-      where: {
-        companyId,
-        ...filter,
-      },
+      where,
       include: {
-        inventory: true,
+        inventory: {
+          include: {
+            product: true,
+            warehouse: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
