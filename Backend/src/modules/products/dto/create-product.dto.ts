@@ -25,7 +25,12 @@ import {
     @IsString()
     @MaxLength(30)
     barcode?: string;
-  
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(50)
+    reference?: string;
+
     @IsString()
     @Length(3, 200)
     description: string;

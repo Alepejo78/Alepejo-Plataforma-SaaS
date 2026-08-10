@@ -155,6 +155,7 @@ model Company {
   chartOfAccounts               ChartOfAccount[]
   chartOfAccountClassifications ChartOfAccountClassification[]
   financialEntries              FinancialEntry[]
+  budgets                       Budget[]
 
   quotes            Quote[]
   salesOrders       SalesOrder[]
@@ -168,6 +169,7 @@ model Company {
   ppeTypes       PpeType[]
   employees      Employee[]
   ppeDeliveries  PpeDelivery[]
+  benefits       Benefit[]
 
   @@map("companies")
 }
@@ -478,6 +480,7 @@ model Product {
   unit                     UnitOfMeasure    @relation(fields: [unitId], references: [id])
   code                     String           @db.VarChar(30)
   barcode                  String?          @db.VarChar(30)
+  reference                String?          @db.VarChar(50)
   description              String           @db.VarChar(200)
   complementaryDescription String?          @db.VarChar(255)
   type                     ProductType      @default(PRODUCT)
@@ -1234,6 +1237,33 @@ model FinancialEntry {
   @@map("financial_entries")
 }
 
+enum BudgetType {
+  RECEITA
+  DESPESA
+}
+
+/// Orçado por mês (aba BUDGET da planilha original). O realizado não é
+/// gravado aqui — é calculado a partir de FinancialEntry (mesma lógica
+/// de FinancialEntriesService.getCashFlow, agrupado por mês/tipo).
+model Budget {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  year  Int
+  month Int
+  type  BudgetType
+
+  plannedAmount Decimal @db.Decimal(18, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, year, month, type])
+  @@index([companyId])
+  @@map("budgets")
+}
+
 model Module {
   id             String           @id @default(cuid())
   code           String           @unique @db.VarChar(50)
@@ -1554,22 +1584,52 @@ model Employee {
   paymentMethod PaymentMethod?
 
   admissionDate       DateTime?
+  /// Estágio atual do período de experiência: 30, 60 ou 90 dias.
+  /// Avança sozinho (30→60→90) conforme o prazo vence — ver
+  /// EmployeesService.reconcileExperience. Ao passar de 90, status
+  /// vira ATIVO (efetivado) automaticamente.
+  experienceStageDays Int?           @default(30)
   experienceEndDate   DateTime?
   contractEndDate     DateTime?
   terminationDate     DateTime?
   status              EmployeeStatus @default(EXPERIENCIA)
 
   // --- Saúde ocupacional ---
-  examDate      DateTime?
-  examCompleted Boolean   @default(false)
-  nextExamDate  DateTime?
-  noticeDays    Int?
-  onLeave       Boolean   @default(false)
+  /// Data do próximo exame pendente — denormalizado a partir do
+  /// último EmployeeExam (ou da admissão, se nunca houve exame).
+  nextExamDate DateTime?
+  noticeDays   Int?
+  onLeave      Boolean   @default(false)
 
-  // --- Benefícios ---
-  transportVoucher Boolean @default(false)
-  lockerKey        String? @db.VarChar(20)
-  lockerNumber     String? @db.VarChar(20)
+  /// Fim do afastamento é sempre calculado no backend (início + dias),
+  /// igual ao vencimento da experiência. Preencher o início marca
+  /// onLeave automaticamente.
+  leaveStartDate DateTime?
+  leaveDays      Int?
+  leaveEndDate   DateTime?
+
+  /// Mesmo padrão do afastamento, para férias.
+  vacationStartDate DateTime?
+  vacationDays      Int?
+  vacationEndDate   DateTime?
+  onVacation        Boolean   @default(false)
+
+  // --- Dados bancários (pagamento de salário) ---
+  bankName        String?          @db.VarChar(100)
+  bankAgency      String?          @db.VarChar(20)
+  bankAccount     String?          @db.VarChar(20)
+  bankAccountType BankAccountType?
+  pixKeyType      PixKeyType?
+  pixKey          String?          @db.VarChar(150)
+
+  // --- Benefícios (catálogo dinâmico, ver model Benefit) ---
+  lockerKey    String? @db.VarChar(20)
+  lockerNumber String? @db.VarChar(20)
+
+  /// Tamanhos de calçado/vestuário — usados na entrega de EPI.
+  shoeSize  String? @db.VarChar(10)
+  shirtSize String? @db.VarChar(10)
+  pantsSize String? @db.VarChar(10)
 
   observation String? @db.VarChar(500)
 
@@ -1577,13 +1637,99 @@ model Employee {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  dependents    EmployeeDependent[]
-  ppeDeliveries PpeDelivery[]
+  dependents       EmployeeDependent[]
+  ppeDeliveries    PpeDelivery[]
+  employeeBenefits EmployeeBenefit[]
+  exams            EmployeeExam[]
 
   @@unique([companyId, cpf])
   @@index([companyId])
   @@index([jobFunctionId])
   @@map("employees")
+}
+
+enum ExamStatus {
+  NO_PRAZO
+  ATRASADO
+}
+
+enum BankAccountType {
+  CORRENTE
+  POUPANCA
+}
+
+enum PixKeyType {
+  CPF
+  CNPJ
+  EMAIL
+  TELEFONE
+  ALEATORIA
+}
+
+/// Histórico de exames ocupacionais realizados. Cada registro é a
+/// data em que um exame de fato aconteceu — o próximo exame
+/// (examDate + 1 ano, dia útil) e o status (a tempo/atrasado, contra
+/// o prazo anterior — ou a admissão, se for o primeiro exame) são
+/// calculados na hora de gravar. Ver EmployeeExamsService.
+model EmployeeExam {
+  id           String     @id @default(cuid())
+  employeeId   String
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  examDate     DateTime
+  nextExamDate DateTime
+  status       ExamStatus
+  createdAt    DateTime   @default(now())
+
+  @@index([employeeId])
+  @@map("employee_exams")
+}
+
+enum BenefitCalculationType {
+  FIXED
+  PERCENTAGE
+}
+
+/// Catálogo de benefícios da empresa (Vale Transporte, Vale Refeição,
+/// Vale Alimentação, etc.) — manutenção própria (criar/editar/
+/// desativar), igual padrão de Setor/Horário/Tipo de EPI.
+model Benefit {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(255)
+  /// FIXED: valor em R$ digitado direto. PERCENTAGE: % sobre o
+  /// salário do colaborador (ex.: Vale Transporte).
+  calculationType BenefitCalculationType @default(FIXED)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employeeBenefits EmployeeBenefit[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("benefits")
+}
+
+/// Benefício concedido a um colaborador. Se o benefício for FIXED,
+/// `value` é o valor em R$ digitado. Se for PERCENTAGE, `percentage`
+/// é o % digitado e o valor em R$ é calculado a partir do salário
+/// atual do colaborador (nunca gravado, pra não ficar desatualizado
+/// se o salário mudar).
+model EmployeeBenefit {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  benefitId  String
+  benefit    Benefit  @relation(fields: [benefitId], references: [id])
+  value      Decimal? @db.Decimal(18, 2)
+  percentage Decimal? @db.Decimal(5, 2)
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, benefitId])
+  @@index([employeeId])
+  @@map("employee_benefits")
 }
 
 model EmployeeDependent {

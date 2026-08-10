@@ -18,6 +18,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
   MOVEMENT_LABELS,
@@ -111,7 +112,7 @@ export default function EstoquePage() {
     productId: "",
     warehouseId: "",
     quantity: "",
-    averageCost: "",
+    averageCost: 0,
   });
 
   // Modal de movimentação
@@ -121,7 +122,7 @@ export default function EstoquePage() {
   const [moveForm, setMoveForm] = useState({
     type: "ENTRY" as StockMovementType,
     quantity: "",
-    unitCost: "",
+    unitCost: 0,
     observation: "",
     documentType: "" as FinancialDocumentType | "",
     documentNumber: "",
@@ -195,7 +196,7 @@ export default function EstoquePage() {
       productId: "",
       warehouseId: warehouses[0]?.id ?? "",
       quantity: "",
-      averageCost: "",
+      averageCost: 0,
     });
     setFormError("");
     setAddOpen(true);
@@ -209,7 +210,7 @@ export default function EstoquePage() {
     setMoveForm({
       type,
       quantity: "",
-      unitCost: "",
+      unitCost: 0,
       observation: "",
       documentType: "",
       documentNumber: "",
@@ -277,7 +278,7 @@ export default function EstoquePage() {
         productId: addForm.productId,
         warehouseId: addForm.warehouseId,
         quantity: decimal(addForm.quantity),
-        averageCost: decimal(addForm.averageCost),
+        averageCost: addForm.averageCost,
       });
 
       setAddOpen(false);
@@ -337,9 +338,7 @@ export default function EstoquePage() {
         inventoryId: moveItem.id,
         type: moveForm.type,
         quantity,
-        unitCost: moveForm.unitCost
-          ? decimal(moveForm.unitCost)
-          : undefined,
+        unitCost: moveForm.unitCost || undefined,
         observation,
         documentNumber,
       });
@@ -857,15 +856,13 @@ export default function EstoquePage() {
                     Custo médio (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={addForm.averageCost}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setAddForm({
                         ...addForm,
-                        averageCost: e.target.value,
+                        averageCost: value,
                       })
                     }
                   />
@@ -957,15 +954,13 @@ export default function EstoquePage() {
                     Custo unitário (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={moveForm.unitCost}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setMoveForm({
                         ...moveForm,
-                        unitCost: e.target.value,
+                        unitCost: value,
                       })
                     }
                   />

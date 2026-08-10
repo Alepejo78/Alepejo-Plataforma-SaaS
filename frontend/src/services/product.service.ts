@@ -60,6 +60,7 @@ export interface Product {
   id: string;
   code: string;
   barcode?: string | null;
+  reference?: string | null;
   description: string;
   complementaryDescription?: string | null;
   type: ProductType;

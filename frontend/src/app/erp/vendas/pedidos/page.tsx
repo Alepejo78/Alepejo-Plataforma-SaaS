@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Edit,
   Eye,
+  FileText,
   Plus,
   Trash2,
   X,
@@ -16,6 +17,7 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
   SALES_ORDER_STATUS_LABELS,
@@ -54,13 +56,6 @@ function money(value: string | number | null | undefined) {
   return num(value).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
-  });
-}
-
-function toInputDecimal(value: string | number | null | undefined) {
-  return num(value).toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
   });
 }
 
@@ -109,7 +104,7 @@ interface ItemForm {
   productId: string;
   productLabel: string;
   quantity: string;
-  unitPrice: string;
+  unitPrice: number;
 }
 
 function emptyItem(): ItemForm {
@@ -117,7 +112,7 @@ function emptyItem(): ItemForm {
     productId: "",
     productLabel: "",
     quantity: "",
-    unitPrice: "",
+    unitPrice: 0,
   };
 }
 
@@ -128,9 +123,9 @@ function emptyForm() {
     warehouseId: "",
     orderDate: "",
     observation: "",
-    discountValue: "",
-    freightValue: "",
-    otherExpenses: "",
+    discountValue: 0,
+    freightValue: 0,
+    otherExpenses: 0,
   };
 }
 
@@ -250,18 +245,9 @@ export default function PedidosDeVendaPage() {
         ? order.orderDate.slice(0, 10)
         : "",
       observation: order.observation ?? "",
-      discountValue:
-        num(order.discountValue) > 0
-          ? toInputDecimal(order.discountValue)
-          : "",
-      freightValue:
-        num(order.freightValue) > 0
-          ? toInputDecimal(order.freightValue)
-          : "",
-      otherExpenses:
-        num(order.otherExpenses) > 0
-          ? toInputDecimal(order.otherExpenses)
-          : "",
+      discountValue: num(order.discountValue),
+      freightValue: num(order.freightValue),
+      otherExpenses: num(order.otherExpenses),
     });
     setItems(
       order.items.map((it) => ({
@@ -270,7 +256,7 @@ export default function PedidosDeVendaPage() {
           ? `${it.product.code} — ${it.product.description}`
           : "",
         quantity: String(num(it.quantity)),
-        unitPrice: toInputDecimal(it.unitPrice),
+        unitPrice: num(it.unitPrice),
       }))
     );
     setFormError("");
@@ -307,16 +293,15 @@ export default function PedidosDeVendaPage() {
   }
 
   const itemsTotal = items.reduce(
-    (sum, it) =>
-      sum + decimal(it.quantity) * decimal(it.unitPrice),
+    (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
     0
   );
 
   const netTotal =
     itemsTotal -
-    decimal(form.discountValue) +
-    decimal(form.freightValue) +
-    decimal(form.otherExpenses);
+    form.discountValue +
+    form.freightValue +
+    form.otherExpenses;
 
   async function saveForm() {
     if (!form.partnerId || !form.warehouseId) {
@@ -345,13 +330,13 @@ export default function PedidosDeVendaPage() {
       warehouseId: form.warehouseId,
       orderDate: form.orderDate || undefined,
       observation: form.observation || undefined,
-      discountValue: decimal(form.discountValue) || undefined,
-      freightValue: decimal(form.freightValue) || undefined,
-      otherExpenses: decimal(form.otherExpenses) || undefined,
+      discountValue: form.discountValue || undefined,
+      freightValue: form.freightValue || undefined,
+      otherExpenses: form.otherExpenses || undefined,
       items: validItems.map((it) => ({
         productId: it.productId,
         quantity: decimal(it.quantity),
-        unitPrice: decimal(it.unitPrice),
+        unitPrice: it.unitPrice,
       })),
     };
 
@@ -426,22 +411,33 @@ export default function PedidosDeVendaPage() {
                   </p>
                 </div>
 
-                <Can permission="sales-order.create">
-                  <button
-                    type="button"
-                    onClick={openCreate}
-                    disabled={semDeposito}
-                    title={
-                      semDeposito
-                        ? "Cadastre um depósito primeiro"
-                        : undefined
-                    }
-                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                <div className="flex gap-2">
+                  <Link
+                    href="/erp/vendas/pedidos/relatorio"
+                    target="_blank"
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                   >
-                    <Plus size={18} />
-                    Novo pedido
-                  </button>
-                </Can>
+                    <FileText size={18} />
+                    Relatório
+                  </Link>
+
+                  <Can permission="sales-order.create">
+                    <button
+                      type="button"
+                      onClick={openCreate}
+                      disabled={semDeposito}
+                      title={
+                        semDeposito
+                          ? "Cadastre um depósito primeiro"
+                          : undefined
+                      }
+                      className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                    >
+                      <Plus size={18} />
+                      Novo pedido
+                    </button>
+                  </Can>
+                </div>
               </div>
             </header>
 
@@ -745,8 +741,7 @@ export default function PedidosDeVendaPage() {
                 <div className="space-y-2">
                   {items.map((it, index) => {
                     const subtotal =
-                      decimal(it.quantity) *
-                      decimal(it.unitPrice);
+                      decimal(it.quantity) * it.unitPrice;
 
                     return (
                       <div
@@ -773,9 +768,7 @@ export default function PedidosDeVendaPage() {
                                   : "",
                                 unitPrice:
                                   p && !it.unitPrice
-                                    ? toInputDecimal(
-                                        p.salePrice
-                                      )
+                                    ? num(p.salePrice)
                                     : it.unitPrice,
                               })
                             }
@@ -794,14 +787,14 @@ export default function PedidosDeVendaPage() {
                           }
                         />
 
-                        <input
-                          inputMode="decimal"
+                        <CurrencyInput
                           placeholder="Preço unit."
-                          className={`${fieldClass} col-span-2`}
+                          wrapperClassName="col-span-2"
+                          className={fieldClass}
                           value={it.unitPrice}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             updateItem(index, {
-                              unitPrice: e.target.value,
+                              unitPrice: value,
                             })
                           }
                         />
@@ -832,15 +825,13 @@ export default function PedidosDeVendaPage() {
                     Desconto (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={form.discountValue}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        discountValue: e.target.value,
+                        discountValue: value,
                       })
                     }
                   />
@@ -851,15 +842,13 @@ export default function PedidosDeVendaPage() {
                     Frete (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={form.freightValue}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        freightValue: e.target.value,
+                        freightValue: value,
                       })
                     }
                   />
@@ -870,15 +859,13 @@ export default function PedidosDeVendaPage() {
                     Outras despesas (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={form.otherExpenses}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        otherExpenses: e.target.value,
+                        otherExpenses: value,
                       })
                     }
                   />

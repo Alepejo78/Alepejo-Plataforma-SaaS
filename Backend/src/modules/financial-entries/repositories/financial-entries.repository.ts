@@ -148,14 +148,21 @@ export class FinancialEntriesRepository {
 
   /** Títulos do ano (não cancelados) para montar o fluxo de caixa mensal. */
   async findForCashFlow(companyId: string, year: number) {
+    const yearStart = new Date(Date.UTC(year, 0, 1));
+    const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
+
     return this.prisma.financialEntry.findMany({
       where: {
         companyId,
         status: { not: FinancialEntryStatus.CANCELLED },
-        dueDate: {
-          gte: new Date(Date.UTC(year, 0, 1)),
-          lt: new Date(Date.UTC(year + 1, 0, 1)),
-        },
+        // Uma baixa antecipada pode cair num mês diferente do
+        // vencimento — busca por vencimento OU data de pagamento
+        // dentro do ano, o service decide em qual balde cada valor
+        // entra (ver FinancialEntriesService.getCashFlow).
+        OR: [
+          { dueDate: { gte: yearStart, lt: yearEnd } },
+          { paymentDate: { gte: yearStart, lt: yearEnd } },
+        ],
       },
       select: {
         type: true,
@@ -163,6 +170,7 @@ export class FinancialEntriesRepository {
         amount: true,
         paidAmount: true,
         dueDate: true,
+        paymentDate: true,
       },
     });
   }

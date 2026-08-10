@@ -12,6 +12,11 @@ import {
   type CashFlowBucket,
 } from "@/services/financial-entry.service";
 
+import {
+  budgetService,
+  type BudgetYear,
+} from "@/services/budget.service";
+
 const MONTH_LABELS = [
   "Jan",
   "Fev",
@@ -63,6 +68,14 @@ interface Row {
   tone: Tone;
   /** Linha "Total ..." que abre o grupo — leva a divisória por cima. */
   groupStart?: boolean;
+  /** Formata como percentual em vez de moeda (linha "% da meta"). */
+  isPercent?: boolean;
+  /**
+   * Para "% da meta": em receita, bater 100%+ é bom (verde). Em
+   * despesa, passar de 100% do orçado é ruim (vira vermelho) — inverte
+   * a cor padrão.
+   */
+  invertPercentTone?: boolean;
 }
 
 function bucketRows(
@@ -90,13 +103,68 @@ function bucketRows(
   ];
 }
 
+function metaRows(
+  months: CashFlow["months"],
+  budgetMonths: BudgetYear["months"],
+  key: "receivable" | "payable",
+  metaLabel: string,
+): Row[] {
+  const meta = budgetMonths.map((m) => m[key].planned);
+  const realizado = months.map((m) => m[key].settled);
+
+  const pct = meta.map((m, i) =>
+    m > 0 ? (realizado[i] / m) * 100 : 0
+  );
+
+  return [
+    { label: metaLabel, values: meta, tone: "neutral" },
+    {
+      label: "% da meta",
+      values: pct,
+      tone: "info",
+      isPercent: true,
+      invertPercentTone: key === "payable",
+    },
+  ];
+}
+
 function sum(values: number[]) {
   return values.reduce((acc, v) => acc + v, 0);
+}
+
+function SectionHeader({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "success" | "warning";
+}) {
+  const bg =
+    tone === "success"
+      ? "bg-[var(--success-soft)]"
+      : "bg-[var(--warning-soft)]";
+
+  const text =
+    tone === "success"
+      ? "text-[var(--success)]"
+      : "text-[var(--warning)]";
+
+  return (
+    <tr>
+      <td
+        colSpan={14}
+        className={`px-4 py-2 text-xs font-bold uppercase tracking-wider ${bg} ${text}`}
+      >
+        {label}
+      </td>
+    </tr>
+  );
 }
 
 export default function FluxoCaixaPage() {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
+  const [budget, setBudget] = useState<BudgetYear | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -105,11 +173,13 @@ export default function FluxoCaixaPage() {
     setError("");
 
     try {
-      const result = await financialEntryService.getCashFlow(
-        targetYear
-      );
+      const [cashFlowResult, budgetResult] = await Promise.all([
+        financialEntryService.getCashFlow(targetYear),
+        budgetService.getYear(targetYear),
+      ]);
 
-      setCashFlow(result);
+      setCashFlow(cashFlowResult);
+      setBudget(budgetResult);
     } catch (err) {
       setError(
         extractMessage(
@@ -126,29 +196,47 @@ export default function FluxoCaixaPage() {
     void load(year);
   }, [year, load]);
 
-  const receivableRows = cashFlow
-    ? bucketRows(
-        cashFlow.months,
-        "receivable",
-        "Total receita",
-        "Recebido",
-        "success",
-        "A receber",
-        "info"
-      )
-    : [];
+  const receivableRows =
+    cashFlow && budget
+      ? [
+          ...bucketRows(
+            cashFlow.months,
+            "receivable",
+            "Total receita",
+            "Recebido",
+            "success",
+            "A receber",
+            "info"
+          ),
+          ...metaRows(
+            cashFlow.months,
+            budget.months,
+            "receivable",
+            "Meta receita"
+          ),
+        ]
+      : [];
 
-  const payableRows = cashFlow
-    ? bucketRows(
-        cashFlow.months,
-        "payable",
-        "Total despesas",
-        "Pago",
-        "success",
-        "A pagar",
-        "warning"
-      )
-    : [];
+  const payableRows =
+    cashFlow && budget
+      ? [
+          ...bucketRows(
+            cashFlow.months,
+            "payable",
+            "Total despesas",
+            "Pago",
+            "success",
+            "A pagar",
+            "warning"
+          ),
+          ...metaRows(
+            cashFlow.months,
+            budget.months,
+            "payable",
+            "Meta despesas"
+          ),
+        ]
+      : [];
 
   const balanceRow: Row | null = cashFlow
     ? {
@@ -252,8 +340,13 @@ export default function FluxoCaixaPage() {
               </thead>
 
               <tbody>
+                <SectionHeader label="Receitas" tone="success" />
+
                 {receivableRows.map((row) => (
-                  <RowLine key={row.label} row={row} />
+                  <RowLine
+                    key={`receivable-${row.label}`}
+                    row={row}
+                  />
                 ))}
 
                 <tr>
@@ -263,8 +356,13 @@ export default function FluxoCaixaPage() {
                   />
                 </tr>
 
+                <SectionHeader label="Despesas" tone="warning" />
+
                 {payableRows.map((row) => (
-                  <RowLine key={row.label} row={row} />
+                  <RowLine
+                    key={`payable-${row.label}`}
+                    row={row}
+                  />
                 ))}
 
                 {balanceRow && (
@@ -292,9 +390,16 @@ export default function FluxoCaixaPage() {
 
 function RowLine({ row }: { row: Row }) {
   const isBalance = row.label.includes("Saldo");
-  const total = row.label === "Saldo acumulado"
-    ? row.values[row.values.length - 1]
-    : sum(row.values);
+  const format = row.isPercent
+    ? (v: number) =>
+        `${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`
+    : money;
+
+  const total = row.isPercent
+    ? null
+    : row.label === "Saldo acumulado"
+      ? row.values[row.values.length - 1]
+      : sum(row.values);
 
   return (
     <tr
@@ -320,25 +425,39 @@ function RowLine({ row }: { row: Row }) {
                 : value > 0
                   ? TONE_CLASS.success
                   : TONE_CLASS.neutral
-              : TONE_CLASS[row.tone]
+              : row.isPercent
+                ? value >= 100
+                  ? TONE_CLASS[
+                      row.invertPercentTone
+                        ? "danger"
+                        : "success"
+                    ]
+                  : TONE_CLASS[
+                      row.invertPercentTone
+                        ? "success"
+                        : "danger"
+                    ]
+                : TONE_CLASS[row.tone]
           }`}
         >
-          {money(value)}
+          {format(value)}
         </td>
       ))}
 
       <td
         className={`whitespace-nowrap border-l border-[var(--border)] px-4 py-2.5 text-right font-bold ${
-          isBalance
-            ? total < 0
-              ? TONE_CLASS.danger
-              : total > 0
-                ? TONE_CLASS.success
-                : TONE_CLASS.neutral
-            : TONE_CLASS[row.tone]
+          total === null
+            ? "text-[var(--text-muted)]"
+            : isBalance
+              ? total < 0
+                ? TONE_CLASS.danger
+                : total > 0
+                  ? TONE_CLASS.success
+                  : TONE_CLASS.neutral
+              : TONE_CLASS[row.tone]
         }`}
       >
-        {money(total)}
+        {total === null ? "—" : format(total)}
       </td>
     </tr>
   );

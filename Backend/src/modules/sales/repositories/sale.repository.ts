@@ -7,6 +7,16 @@ import { calculateDueDate } from '../../../core/utils/business-day.util';
 import { CreateSaleDto } from '../dto/create-sale.dto';
 import { SaleFilterDto } from '../dto/sale-filter.dto';
 
+const includeRelations = {
+  partner: true,
+  warehouse: true,
+  items: {
+    include: {
+      product: true,
+    },
+  },
+} satisfies Prisma.SaleInclude;
+
 @Injectable()
 export class SaleRepository {
   constructor(
@@ -64,15 +74,7 @@ export class SaleRepository {
         },
       },
 
-      include: {
-        partner: true,
-        warehouse: true,
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
+      include: includeRelations,
     });
   }
 
@@ -120,15 +122,7 @@ export class SaleRepository {
     return this.prisma.sale.findMany({
       where,
 
-      include: {
-        partner: true,
-        warehouse: true,
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
+      include: includeRelations,
 
       orderBy: {
         createdAt: 'desc',
@@ -146,15 +140,78 @@ export class SaleRepository {
         companyId,
       },
 
-      include: {
-        partner: true,
-        warehouse: true,
-        items: {
-          include: {
-            product: true,
+      include: includeRelations,
+    });
+  }
+
+  async update(
+    id: string,
+    dto: {
+      partnerId?: string;
+      warehouseId?: string;
+      saleDate?: Date;
+      observation?: string;
+      discountValue?: number;
+      freightValue?: number;
+      otherExpenses?: number;
+      termDays?: number;
+      dueDate?: Date;
+      paymentMethod?: CreateSaleDto['paymentMethod'];
+      totalAmount?: number;
+      netAmount?: number;
+      items?: {
+        productId: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+      }[];
+    },
+  ): Promise<Sale> {
+    return this.prisma.sale.update({
+      where: { id },
+      data: {
+        ...(dto.partnerId && { partnerId: dto.partnerId }),
+        ...(dto.warehouseId && {
+          warehouseId: dto.warehouseId,
+        }),
+        ...(dto.saleDate !== undefined && {
+          saleDate: dto.saleDate,
+        }),
+        ...(dto.observation !== undefined && {
+          observation: dto.observation,
+        }),
+        ...(dto.discountValue !== undefined && {
+          discountValue: dto.discountValue,
+        }),
+        ...(dto.freightValue !== undefined && {
+          freightValue: dto.freightValue,
+        }),
+        ...(dto.otherExpenses !== undefined && {
+          otherExpenses: dto.otherExpenses,
+        }),
+        ...(dto.termDays !== undefined && {
+          termDays: dto.termDays,
+        }),
+        ...(dto.dueDate !== undefined && {
+          dueDate: dto.dueDate,
+        }),
+        ...(dto.paymentMethod !== undefined && {
+          paymentMethod: dto.paymentMethod,
+        }),
+        ...(dto.totalAmount !== undefined && {
+          totalAmount: dto.totalAmount,
+        }),
+        ...(dto.netAmount !== undefined && {
+          netAmount: dto.netAmount,
+        }),
+        ...(dto.items && {
+          items: {
+            deleteMany: {},
+            create: dto.items,
           },
-        },
+        }),
       },
+      include: includeRelations,
     });
   }
 }

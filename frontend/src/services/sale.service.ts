@@ -148,6 +148,18 @@ export const saleService = {
     return data.data;
   },
 
+  async update(
+    id: string,
+    payload: Partial<SalePayload>
+  ): Promise<Sale> {
+    const { data } = await api.patch<ApiEnvelope<Sale>>(
+      `/sales/${id}`,
+      payload
+    );
+
+    return data.data;
+  },
+
   async approve(
     id: string,
     payload: ApproveSalePayload = {}
@@ -160,10 +172,19 @@ export const saleService = {
     return data.data;
   },
 
-  /** Desfaz a aprovação: volta a venda para rascunho e devolve o estoque. */
+  /** Cancela uma venda em rascunho (ainda não aprovada). */
   async cancel(id: string): Promise<Sale> {
     const { data } = await api.patch<ApiEnvelope<Sale>>(
       `/sales/${id}/cancel`
+    );
+
+    return data.data;
+  },
+
+  /** Desfaz a aprovação: volta a venda para rascunho e devolve o estoque. */
+  async undoApproval(id: string): Promise<Sale> {
+    const { data } = await api.patch<ApiEnvelope<Sale>>(
+      `/sales/${id}/undo-approval`
     );
 
     return data.data;

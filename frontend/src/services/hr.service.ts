@@ -75,6 +75,13 @@ export const workScheduleService =
 export const ppeTypeService =
   createAuxiliaryService<AuxiliaryRecord>("ppe-types");
 
+export interface Benefit extends AuxiliaryRecord {
+  calculationType: BenefitCalculationType;
+}
+
+export const benefitService =
+  createAuxiliaryService<Benefit>("benefits");
+
 export interface CboOccupation {
   code: string;
   title: string;
@@ -265,6 +272,31 @@ export const EMPLOYEE_STATUS_LABELS: Record<
   DEMITIDO: "Demitido",
 };
 
+export type BankAccountType = "CORRENTE" | "POUPANCA";
+
+export const BANK_ACCOUNT_TYPE_LABELS: Record<
+  BankAccountType,
+  string
+> = {
+  CORRENTE: "Conta corrente",
+  POUPANCA: "Conta poupança",
+};
+
+export type PixKeyType =
+  | "CPF"
+  | "CNPJ"
+  | "EMAIL"
+  | "TELEFONE"
+  | "ALEATORIA";
+
+export const PIX_KEY_TYPE_LABELS: Record<PixKeyType, string> = {
+  CPF: "CPF",
+  CNPJ: "CNPJ",
+  EMAIL: "E-mail",
+  TELEFONE: "Telefone",
+  ALEATORIA: "Chave aleatória",
+};
+
 export type DependentRelationship =
   | "FILHO"
   | "CONJUGE"
@@ -289,6 +321,27 @@ export interface EmployeeDependent {
   birthDate?: string | null;
   relationship?: DependentRelationship | null;
 }
+
+export interface EmployeeBenefit {
+  benefitId: string;
+  value?: string | number | null;
+  percentage?: string | number | null;
+  benefit?: {
+    id: string;
+    name: string;
+    calculationType?: BenefitCalculationType;
+  } | null;
+}
+
+export type BenefitCalculationType = "FIXED" | "PERCENTAGE";
+
+export const BENEFIT_CALCULATION_TYPE_LABELS: Record<
+  BenefitCalculationType,
+  string
+> = {
+  FIXED: "Valor fixo",
+  PERCENTAGE: "% do salário",
+};
 
 export interface Employee {
   id: string;
@@ -324,20 +377,37 @@ export interface Employee {
   salaryType?: SalaryType | null;
   paymentMethod?: PaymentMethod | null;
   admissionDate?: string | null;
+  experienceStageDays?: number | null;
   experienceEndDate?: string | null;
   contractEndDate?: string | null;
   terminationDate?: string | null;
   status: EmployeeStatus;
 
-  examDate?: string | null;
-  examCompleted: boolean;
+  bankName?: string | null;
+  bankAgency?: string | null;
+  bankAccount?: string | null;
+  bankAccountType?: BankAccountType | null;
+  pixKeyType?: PixKeyType | null;
+  pixKey?: string | null;
+
   nextExamDate?: string | null;
   noticeDays?: number | null;
   onLeave: boolean;
 
-  transportVoucher: boolean;
+  leaveStartDate?: string | null;
+  leaveDays?: number | null;
+  leaveEndDate?: string | null;
+
+  vacationStartDate?: string | null;
+  vacationDays?: number | null;
+  vacationEndDate?: string | null;
+  onVacation: boolean;
+
   lockerKey?: string | null;
   lockerNumber?: string | null;
+  shoeSize?: string | null;
+  shirtSize?: string | null;
+  pantsSize?: string | null;
   observation?: string | null;
 
   active: boolean;
@@ -346,7 +416,25 @@ export interface Employee {
   jobFunction?: JobFunction | null;
   workSchedule?: AuxiliaryRecord | null;
   dependents: EmployeeDependent[];
+  employeeBenefits: EmployeeBenefit[];
 }
+
+export interface EmployeeExam {
+  id: string;
+  employeeId: string;
+  examDate: string;
+  nextExamDate: string;
+  status: "NO_PRAZO" | "ATRASADO";
+  createdAt: string;
+}
+
+export const EXAM_STATUS_LABELS: Record<
+  EmployeeExam["status"],
+  string
+> = {
+  NO_PRAZO: "No prazo",
+  ATRASADO: "Atrasado",
+};
 
 export interface EmployeePayload {
   name: string;
@@ -381,23 +469,44 @@ export interface EmployeePayload {
   salaryType?: SalaryType;
   paymentMethod?: PaymentMethod;
   admissionDate?: string;
+  experienceStageDays?: number;
   experienceEndDate?: string;
   contractEndDate?: string;
   terminationDate?: string;
   status?: EmployeeStatus;
 
-  examDate?: string;
-  examCompleted?: boolean;
-  nextExamDate?: string;
+  bankName?: string;
+  bankAgency?: string;
+  bankAccount?: string;
+  bankAccountType?: BankAccountType;
+  pixKeyType?: PixKeyType;
+  pixKey?: string;
+
   noticeDays?: number;
   onLeave?: boolean;
 
-  transportVoucher?: boolean;
+  leaveStartDate?: string;
+  leaveDays?: number;
+  leaveEndDate?: string;
+
+  vacationStartDate?: string;
+  vacationDays?: number;
+  vacationEndDate?: string;
+  onVacation?: boolean;
+
   lockerKey?: string;
   lockerNumber?: string;
+  shoeSize?: string;
+  shirtSize?: string;
+  pantsSize?: string;
   observation?: string;
 
   dependents?: EmployeeDependent[];
+  benefits?: {
+    benefitId: string;
+    value?: number;
+    percentage?: number;
+  }[];
 }
 
 export interface EmployeeFilter {
@@ -451,6 +560,77 @@ export const employeeService = {
 
   async remove(id: string) {
     await api.delete(`/employees/${id}`);
+  },
+};
+
+// ============================================================
+// Relatórios de RH
+// ============================================================
+
+export interface EmployeeBirthday {
+  id: string;
+  name: string;
+  day: number;
+  birthDate: string;
+  jobFunctionName?: string | null;
+  sectorName?: string | null;
+}
+
+export interface EmployeeIndicatorGroup {
+  count: number;
+}
+
+export interface EmployeeFunctionIndicator
+  extends EmployeeIndicatorGroup {
+  jobFunctionId: string | null;
+  jobFunctionName: string;
+  averageSalary: number;
+}
+
+export interface EmployeeSectorIndicator
+  extends EmployeeIndicatorGroup {
+  sectorId: string | null;
+  sectorName: string;
+}
+
+export interface EmployeeStatusIndicator
+  extends EmployeeIndicatorGroup {
+  status: EmployeeStatus;
+}
+
+export interface EmployeeGenderIndicator
+  extends EmployeeIndicatorGroup {
+  gender: Gender | null;
+}
+
+export interface EmployeeIndicators {
+  totalActive: number;
+  averageSalary: number;
+  byFunction: EmployeeFunctionIndicator[];
+  bySector: EmployeeSectorIndicator[];
+  byStatus: EmployeeStatusIndicator[];
+  byGender: EmployeeGenderIndicator[];
+}
+
+export const employeeReportsService = {
+  async getBirthdays(
+    month?: number
+  ): Promise<EmployeeBirthday[]> {
+    const { data } = await api.get<
+      ApiEnvelope<EmployeeBirthday[]>
+    >("/employees/reports/birthdays", {
+      params: { month },
+    });
+
+    return data.data ?? [];
+  },
+
+  async getIndicators(): Promise<EmployeeIndicators> {
+    const { data } = await api.get<
+      ApiEnvelope<EmployeeIndicators>
+    >("/employees/reports/indicators");
+
+    return data.data;
   },
 };
 
@@ -517,5 +697,33 @@ export const ppeDeliveryService = {
 
   async remove(id: string) {
     await api.delete(`/ppe-deliveries/${id}`);
+  },
+};
+
+export const employeeExamService = {
+  async list(employeeId?: string): Promise<EmployeeExam[]> {
+    const { data } = await api.get<
+      ApiEnvelope<EmployeeExam[]>
+    >("/employee-exams", {
+      params: { employeeId, limit: 200 },
+    });
+
+    return data.data ?? [];
+  },
+
+  async create(payload: {
+    employeeId: string;
+    examDate: string;
+  }): Promise<EmployeeExam> {
+    const { data } = await api.post<ApiEnvelope<EmployeeExam>>(
+      "/employee-exams",
+      payload
+    );
+
+    return data.data;
+  },
+
+  async remove(id: string) {
+    await api.delete(`/employee-exams/${id}`);
   },
 };

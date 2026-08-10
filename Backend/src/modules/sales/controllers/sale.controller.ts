@@ -21,6 +21,7 @@ import { Module } from '../../identity/license/decorators/module.decorator';
 import { SaleService } from '../services/sale.service';
 
 import { CreateSaleDto } from '../dto/create-sale.dto';
+import { UpdateSaleDto } from '../dto/update-sale.dto';
 import { SaleFilterDto } from '../dto/sale-filter.dto';
 import { ApproveSaleDto } from '../dto/approve-sale.dto';
 
@@ -77,6 +78,23 @@ export class SaleController {
     );
   }
 
+  @Patch(':id')
+  @Permissions('sale.update')
+  @ApiOperation({
+    summary: 'Alterar venda (somente rascunho)',
+  })
+  update(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateSaleDto,
+  ) {
+    return this.service.update(
+      companyId,
+      id,
+      dto,
+    );
+  }
+
   @Patch(':id/approve')
   @Permissions('sale.approve')
   @ApiOperation({
@@ -97,13 +115,28 @@ export class SaleController {
   @Patch(':id/cancel')
   @Permissions('sale.cancel')
   @ApiOperation({
-    summary: 'Cancelar aprovação da venda',
+    summary: 'Cancelar venda (somente rascunho)',
   })
-  cancelApproval(
+  cancel(
     @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
   ) {
-    return this.service.cancelApproval(
+    return this.service.cancel(
+      companyId,
+      id,
+    );
+  }
+
+  @Patch(':id/undo-approval')
+  @Permissions('sale.cancel')
+  @ApiOperation({
+    summary: 'Desfazer aprovação da venda (devolve o estoque)',
+  })
+  undoApproval(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.undoApproval(
       companyId,
       id,
     );

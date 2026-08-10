@@ -25,6 +25,7 @@ import { DocumentSequenceService } from '../../../core/document-sequence/documen
 import { PurchaseRepository } from '../repositories/purchase.repository';
 
 import { CreatePurchaseDto } from '../dto/create-purchase.dto';
+import { UpdatePurchaseDto } from '../dto/update-purchase.dto';
 import { PurchaseFilterDto } from '../dto/purchase-filter.dto';
 import { ReceivePurchaseDto } from '../dto/receive-purchase.dto';
 
@@ -173,6 +174,103 @@ export class PurchaseService {
     }
 
     return purchase;
+  }
+
+  async update(
+    companyId: string,
+    id: string,
+    dto: UpdatePurchaseDto,
+  ) {
+    const purchase = await this.findOne(companyId, id);
+
+    if (purchase.status !== PurchaseStatus.DRAFT) {
+      throw new BadRequestException(
+        'Somente compras em rascunho podem ser alteradas.',
+      );
+    }
+
+    if (dto.partnerId) {
+      await this.businessPartnersService.assertHasRole(
+        companyId,
+        dto.partnerId,
+        BusinessPartnerRole.SUPPLIER,
+      );
+    }
+
+    if (dto.warehouseId) {
+      const warehouse = await this.prisma.warehouse.findFirst({
+        where: { id: dto.warehouseId, companyId },
+      });
+
+      if (!warehouse) {
+        throw new NotFoundException(
+          'Almoxarifado não encontrado.',
+        );
+      }
+    }
+
+    let items:
+      | {
+          productId: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+        }[]
+      | undefined;
+
+    let totalAmount = Number(purchase.totalAmount);
+
+    if (dto.items) {
+      totalAmount = 0;
+
+      for (const item of dto.items) {
+        const product = await this.prisma.product.findFirst({
+          where: { id: item.productId, companyId },
+        });
+
+        if (!product) {
+          throw new NotFoundException(
+            `Produto ${item.productId} não encontrado.`,
+          );
+        }
+
+        totalAmount += item.quantity * item.unitPrice;
+      }
+
+      items = dto.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.quantity * item.unitPrice,
+      }));
+    }
+
+    const purchaseDate = dto.purchaseDate
+      ? new Date(dto.purchaseDate)
+      : undefined;
+    const termDays = dto.termDays;
+
+    const dueDate =
+      purchaseDate !== undefined || termDays !== undefined
+        ? calculateDueDate(
+            purchaseDate ??
+              purchase.purchaseDate ??
+              new Date(),
+            termDays ?? purchase.termDays ?? 0,
+          )
+        : undefined;
+
+    return this.repository.update(id, {
+      partnerId: dto.partnerId,
+      warehouseId: dto.warehouseId,
+      purchaseDate,
+      observation: dto.observation,
+      termDays,
+      dueDate,
+      paymentMethod: dto.paymentMethod,
+      totalAmount,
+      items,
+    });
   }
 
   async approve(

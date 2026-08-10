@@ -7,6 +7,7 @@ import { Button, Typography } from "@/components";
 interface DashboardHeaderProps {
   userName?: string;
   companyName?: string;
+  isBirthday?: boolean;
   onRefresh?: () => void;
   onNotifications?: () => void;
 }
@@ -32,6 +33,7 @@ function getCurrentDate(): string {
 export function DashboardHeader({
   userName,
   companyName,
+  isBirthday,
   onRefresh,
   onNotifications,
 }: DashboardHeaderProps) {
@@ -42,6 +44,15 @@ export function DashboardHeader({
           {getGreeting()}
           {userName ? `, ${userName}` : ""} 👋
         </Typography>
+
+        {isBirthday && (
+          <Typography
+            variant="body"
+            className="font-medium text-[var(--primary)]"
+          >
+            🎉 Desejando um feliz aniversário pra você!
+          </Typography>
+        )}
 
         <Typography variant="body">
           {companyName ?? "Bem-vindo ao AlePejo ERP Cloud."}

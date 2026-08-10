@@ -3,24 +3,289 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
-Atualizado em: 09-08-2026 (sessão longa — Estoque, numeração de documentos,
-Orçamento/Pedido de Venda, Cotação/Pedido de Compra, nota fiscal no
-recebimento/aprovação, módulo RH completo até Sprint 3)
+Atualizado em: 10-08-2026 (módulo de **Relatórios completo** — 13
+relatórios com filtro/exportar/imprimir —, e-mail de vencedor de
+cotação implementado de verdade, bug real corrigido no Fluxo de Caixa,
+Dados bancários e Afastamento/Férias no cadastro de Colaborador, menu
+reorganizado)
 
-**Resumo rápido desta sessão:** módulo RH construído do zero em 3 sprints —
-(1) Funções/Cargos com tabela CBO oficial (2.445 ocupações) + Setores/
-Horários/Tipos de EPI; (2) Colaboradores (cadastro completo em 7 abas); (3)
-Ficha de EPI (entrega + ficha impressa assinável). RH já é add-on
-licenciado (`HR`) e habilitado na empresa seed. Próximo: Sprint 4 (última
-do RH) — relatórios (aniversariantes, etiquetas CTPS, indicadores).
+**Resumo desta sessão (10-08-2026):**
 
-**⚠️ Atenção ao assumir a sessão:** havia uma quantidade grande de
-alterações não commitadas no início desta sessão (praticamente o projeto
-inteiro desde o commit `36a8695`) e isso **continua não commitado** — nada
-foi commitado durante esta sessão inteira (não foi pedido). Rode
+- **Backend caiu várias vezes durante a sessão** (morto sem querer ao
+  reiniciar pra aplicar migration, ou sozinho por algum motivo não
+  identificado). Se `alessandro.lourenco@alepejo.com.br` não conseguir
+  logar ("usuário ou senha inválidos" sem motivo aparente), a causa
+  mais comum é essa — checar `netstat -ano | grep ":3001"` antes de
+  qualquer outra investigação, subir com `npm run start:dev` na pasta
+  `Backend` se estiver fechado.
+- **Card Colaboradores (Visão geral)** ganhou dados reais: Ativos, Em
+  experiência, Aniversariantes do mês (agora com **listagem** de quem
+  faz aniversário, não só o número — pedido explícito do usuário), e
+  **Exames a vencer foi movido pro final** da lista (pedido do
+  usuário). Saudação de aniversário: se hoje for aniversário da
+  *pessoa logada*, aparece "🎉 Desejando um feliz aniversário pra
+  você!" embaixo do "Boa tarde, Nome" — **mas isso só funciona se
+  `Employee.email` bater com `User.email`**, ver pendência nova mais
+  abaixo (usuário ainda não decidiu como resolver).
+- **Cadastro de Colaborador**:
+  - Aba Contratuais: Estágio de experiência virou 3 caixas de seleção
+    compactas (30/60/90 dias) em vez dos botões grandes de antes.
+    Salário base/Tipo de salário/Forma de pagamento ficaram alinhados
+    numa linha só, e as 4 datas (admissão/vence experiência/previsão
+    de término/demissão) na linha seguinte.
+  - Aba nova **"Dados bancários"**: banco, agência, conta, tipo de
+    conta (`BankAccountType`: corrente/poupança), tipo de chave Pix
+    (`PixKeyType`), chave Pix — pra ter o necessário pra pagar
+    salário. Migration `add_employee_bank_data`.
+  - Aba Saúde ganhou **Afastamento** (início/dias/fim — fim sempre
+    calculado no backend, início preenchido marca "Afastado" sozinho)
+    e **Férias** (mesmo padrão: início/dias/fim calculado, marca "Em
+    férias" sozinho). Migration `add_employee_leave_vacation`.
+    **Nenhuma lógica de bloqueio de login foi implementada** — usuário
+    pediu só os campos e o cálculo por enquanto, confirmou
+    explicitamente "mais nada irá ser feito agora de bloqueio".
+  - Aba Contato: bug real corrigido na busca de CEP — quando o CEP não
+    existia ou a consulta falhava, a tela ficava muda (sem preencher
+    nada e sem avisar nada). Agora mostra "CEP não encontrado." (ou a
+    mensagem real do erro) embaixo do campo.
+  - Aba Benefícios: campo de % do Vale Transporte (e qualquer
+    benefício `PERCENTAGE`) ficou pequeno de verdade (72px, via
+    `style` inline — mesmo bug de `w-full` vencer classe de largura já
+    documentado antes) e o valor calculado (%×salário) ficou em
+    destaque ao lado.
+- **Menu "Dashboard" ganhou Gráficos** — duas páginas novas usando
+  `recharts` (biblioteca já estava instalada, nunca tinha sido usada):
+  `/erp/rh/graficos-colaboradores` (barra horizontal por função, rosca
+  por setor, barra por sexo) e `/erp/financeiro/graficos-fluxo-caixa`
+  (barras de receita/despesa por mês + linha "Realizado vs. Orçado"
+  com seletor de ano), replicando os gráficos das abas
+  `DASHBOARD_CAD`/`DASHBOARD_FLUXO` da planilha original (inspecionada
+  diretamente do XML do `.xlsm` pra extrair título/tipo/dados de cada
+  gráfico).
+- **Produto ganhou o campo REF** (referência do fabricante) que
+  faltava desde sempre — resolvido como parte do relatório de
+  produtos precisar dele. Migration `add_product_reference`.
+- **Módulo de Relatórios completo** — menu próprio "Relatórios"
+  (último item do menu), 13 relatórios, todos no mesmo padrão: filtros
+  antes de gerar → prévia em tela → **Exportar CSV** → **Imprimir**
+  (paisagem, `@media print`). Utilitário novo
+  `frontend/src/lib/exportCsv.ts` (BOM UTF-8 pra acentuação abrir
+  certo no Excel). Lista completa: Produtos (coluna Custo médio no
+  lugar de Tipo, pedido do usuário), Funções, Parceiros (um relatório
+  só pra Clientes/Fornecedores, com filtro de papel — mesma unificação
+  de sempre), Compras, Recebimentos, Pedidos de Compra, **Cotações**
+  (mostra **todas as propostas** de cada cotação, não só a vencedora —
+  ordenadas por valor, vencedora destacada em verde com 🏆, pra dar
+  pra validar se a escolha foi a melhor — pedido explícito do
+  usuário), Pedidos de Venda, Orçamentos, Contas a Receber/Pagar (1
+  página só, com botão pra trocar entre os dois), Exames (situação
+  calculada a partir do próximo exame: sem exame/atrasado/a vencer em
+  30 dias/no prazo — não existe uma tela de gestão de exames de verdade
+  ainda, só o relatório), Aniversariantes (impressão com seletor de
+  mês). Ficaram de fora (usuário não pediu): Estoque, Movimentações.
+- **E-mail de vencedor de cotação implementado de verdade** —
+  `NotificationsModule` novo (`Backend/src/modules/notifications`),
+  `EmailNotificationsService` com `nodemailer`, best-effort (nunca
+  lança, nunca trava `QuotationService.chooseWinner` — dispara com
+  `void` sem `await` bloqueante). Credenciais SMTP já no `.env` do
+  Backend (`smtp.gmail.com:587`, senha de app do Gmail — **testada de
+  verdade** com um script `transporter.verify()` antes de salvar, as
+  duas senhas que o usuário mandou funcionaram, ficou com a primeira).
+  WhatsApp (Baileys) continua pendente, ver "Próximo na fila".
+- **Bug real corrigido no Fluxo de Caixa**: uma baixa antecipada ou
+  atrasada de um título aparecia no mês do **vencimento**, não no mês
+  em que o pagamento/recebimento **de fato aconteceu** — usuário
+  testou pagando hoje um título vencendo em setembro e viu tudo cair
+  em setembro mesmo assim. Corrigido em
+  `FinancialEntriesService.getCashFlow`: "Total" continua pelo
+  vencimento (visão de compromisso/agenda), mas "Recebido"/"Pago"
+  agora segue a `paymentDate` de verdade. A busca
+  (`findForCashFlow`) também mudou, pra pegar por vencimento OU data
+  de pagamento dentro do ano (uma baixa antecipada perto da virada do
+  ano podia cair fora da busca antiga).
+- **Menu do sistema reorganizado** (pedido explícito do usuário):
+  "Visão geral" saiu de dentro do grupo "Dashboard" e virou o
+  primeiro item isolado do menu (não mais um grupo). Ordem final:
+  Visão geral → Cadastros → Compras → Comercial → Estoque →
+  Financeiro → Recursos Humanos → Produção → Dashboard (agora só com
+  os Gráficos) → Relatórios (por último).
+
+**Resumo rápido da sessão anterior (09-08-2026):** várias frentes,
+todas no mesmo dia.
+
+**Máscara de moeda brasileira em todo campo de valor.** Componente novo
+`frontend/src/components/ui/CurrencyInput.tsx` — máscara "centavos
+primeiro" (digita da direita pra esquerda, tipo app de banco), sempre
+entrega `number` via `onChange` (nunca mais string pra fazer parse com
+`.replace(",", ".")`). Aplicado em **todo** campo de dinheiro do sistema:
+Produtos (custo/preço venda), RH (salário em Colaboradores e Funções),
+Estoque (custo médio, custo unitário na movimentação), Vendas/Pedidos de
+Venda/Orçamentos (preço unitário do item, desconto, frete, outras
+despesas), Compras/Pedidos de Compra/Cotações (preço unitário, preço de
+oferta), Financeiro (valor do título, valor pago na baixa, orçado
+receita/despesas). De quebra, corrigiu o bug de CSS já sinalizado em
+`compras/cotacoes/page.tsx` (input de preço da oferta esticando) — o
+componente separa `className` (visual, vai no `<input>`) de
+`wrapperClassName` (layout/grid, vai no `<div>` que envolve o campo:
+nunca misturar as duas, uma classe de grid no `<input>` não tem efeito
+porque quem é o item do grid é o wrapper). Em todo arquivo tocado, o
+antigo `toInputDecimal()` (duplicado em 6 arquivos) foi removido — não
+faz mais sentido com estado numérico.
+
+**Fluxo de caixa ganhou Meta** (receita **e** despesas — a receita foi
+feita primeiro, o usuário pediu pra completar com despesas). Linhas
+"Meta receita"/"Meta despesas" (vêm do Orçamento) + "% da meta" logo
+abaixo de cada uma. Cor do "% da meta" é invertida entre receita e
+despesa: em receita, bater 100%+ é bom (verde); em despesa, passar de
+100% do orçado é ruim (vermelho) — `Row.invertPercentTone` no
+`fluxo-caixa/page.tsx`. Aproveitou pra separar visualmente Receitas de
+Despesas na tabela (faixa colorida de cabeçalho por seção, pedido do
+usuário pra ficar "mais visível").
+
+**Compras e Vendas ganharam Editar e Cancelar de rascunho** (regra de
+projeto passou a valer para todo o sistema: todo processo/documento tem
+que ter Editar, Cancelar e Estornar — só é aceitável faltar algum
+desses quando existe amarração real com outro processo, ex.: documento
+já virou outro documento final, já tem pagamento/recebimento lançado.
+Pedido explícito do usuário, abrangente, não só para esta tela). Backend:
+`PATCH /purchases/:id` e `PATCH /sales/:id` (guardado a `status: DRAFT`
+via `PurchaseService.update`/`SaleService.update`, reaproveitando os DTOs
+`UpdatePurchaseDto`/`UpdateSaleDto` que já existiam órfãos no código —
+ninguém tinha ligado eles a nada). Permissões novas `purchase.update`/
+`sale.update` (seed.ts). **Bug real corrigido em Vendas**: `SaleStatus.CANCELLED`
+nunca era setado em lugar nenhum do código — uma venda em rascunho não
+tinha como ser cancelada, só existia "desfazer aprovação"
+(`/sales/:id/cancel`, exigia `APPROVED`) mal-chamada de "cancelar" no
+código. Renomeado: `/sales/:id/cancel` agora é o cancelamento de
+verdade (só `DRAFT`, `SaleService.cancel`), e o comportamento antigo
+virou `/sales/:id/undo-approval` (`SaleService.undoApproval`) — mesmo
+efeito de antes (devolve estoque, volta pra rascunho), só o nome certo.
+Frontend: botão "Editar" (lápis) e "Cancelar" novos nas duas listagens,
+visíveis só quando `status === "DRAFT"`; o botão antigo "Desfazer
+aprovação" em Vendas (ícone de desfazer, visível só em `APPROVED`)
+continua igual, só passou a chamar `saleService.undoApproval()` em vez
+do `cancel()` renomeado. Editar reaproveita o mesmo modal de
+criação em modo edição (`editingId` state), igual ao padrão que já
+existia em Pedidos de Compra/Venda e Orçamentos.
+
+**Nota registrada, não implementada:** usuário pediu pra avaliar
+prontidão multi-empresa do SaaS — diagnóstico e o que falta está na
+seção "Próximo na fila" item 4, mais abaixo. Decisão já tomada (1 login,
+várias empresas, tabela N:N nova) — só falta implementar quando o
+usuário pedir, não perguntar de novo qual modelo usar.
+
+**Cadastro de Colaborador — automações (pedido em duas rodadas: 9 itens
+iniciais, depois 4 correções de teste real).** Testar em
+`/erp/rh/colaboradores`, editar um colaborador existente e percorrer as
+abas Contratuais/Saúde/Benefícios/EPI.
+
+- **Estágio de experiência**: 3 caixas clicáveis (30/60/90 dias, não é
+  mais `<select>` — usuário pediu "caixas de seleção" de verdade) na
+  aba Contratuais. Empresa pode escolher qualquer estágio já na
+  contratação. O vencimento ("Vence experiência") é **sempre calculado
+  no backend** (`EmployeesService.applyBusinessRules`, admissão +
+  estágio) — nunca fica em branco, mesmo que o front não mande nada.
+  Reconciliação automática continua rodando a cada leitura
+  (`findAll`/`findOne` → `reconcileExperience`): avança 30→60→90
+  sozinho conforme o prazo vence, e após 90 dias passa `status` pra
+  `ATIVO` (efetivado) sozinho. Interpretação: "efetivado" = status
+  `ATIVO` (não existe um enum novo pra isso, o enum `EmployeeStatus`
+  não mudou).
+- **Saúde e Benefícios agora são abas separadas** (eram uma aba só).
+  Horário de trabalho mostra a descrição com os horários reais abaixo
+  do select (não só o nome do horário).
+- **Exame ocupacional virou histórico de verdade** — model novo
+  `EmployeeExam` (`examDate`, `nextExamDate`, `status`
+  `NO_PRAZO`/`ATRASADO`), tabela `employee_exams`. Os campos antigos
+  `Employee.examDate`/`examCompleted` **foram removidos** (migration
+  `20260809205349_add_employee_exams_and_benefit_percentage` preserva
+  o que existia como um registro de histórico antes de dropar as
+  colunas). `Employee.nextExamDate` continua existindo — é
+  denormalizado, sempre igual ao `nextExamDate` do último
+  `EmployeeExam` registrado (ou `null` se nunca teve exame, aí a
+  referência implícita é a data de admissão). Fluxo na aba Saúde: campo
+  "Data do exame" + botão "Registrar" (só aparece depois de salvar o
+  cadastro — precisa de `employeeId`), grava um `EmployeeExam` novo via
+  `POST /employee-exams`, calcula `status` comparando com o
+  `nextExamDate` anterior (ou a admissão, se for o primeiro exame) e
+  `nextExamDate` novo = data do exame + 1 ano em dia útil
+  (`toNextBusinessDay`). Tabela de histórico abaixo, com botão de
+  remover por linha (`DELETE /employee-exams/:id`, recalcula o
+  `nextExamDate` do colaborador pro do exame anterior, ou `null` se
+  não sobrar nenhum). Módulo novo `Backend/src/modules/employee-exams/`
+  (mesmo padrão do `ppe-deliveries`), reaproveita as permissões
+  `employee.view`/`employee.update` (não criou permissão nova).
+- **Benefícios dinâmicos** — catálogo próprio (model `Benefit`, join
+  `EmployeeBenefit`), manutenção em `/erp/rh/cadastros` (painel
+  "Benefícios" reaproveitando `SimpleCrudPanel`, que ganhou suporte a
+  campo `type: "select"` — antes só tinha texto livre). Cada benefício
+  tem `calculationType`: `FIXED` (valor em R$ digitado direto) ou
+  `PERCENTAGE` (% sobre o salário do colaborador — usado pelo Vale
+  Transporte por padrão no seed). Na aba Benefícios do colaborador, um
+  benefício `PERCENTAGE` mostra campo de % + o valor calculado ao lado
+  (nunca grava o valor em R$ pro percentual, sempre recalcula a partir
+  do salário atual pra nunca ficar desatualizado). Seed cria 3
+  benefícios padrão por empresa: Vale Transporte (`PERCENTAGE`), Vale
+  Refeição e Vale Alimentação (`FIXED`).
+- **Automações menores**: preencher "Dias de aviso" marca "Afastado"
+  sozinho; preencher "Data de demissão" marca status "Demitido"
+  sozinho (os dois na aba Contratuais/Saúde, via `setForm` direto no
+  `onChange`, sem viagem ao backend).
+- **EPI ganhou campos de tamanho** (calçado/camisa/calça,
+  `shoeSize`/`shirtSize`/`pantsSize` em `Employee`) logo abaixo do
+  armário (que também foi movido pra essa aba, no topo, com separador
+  antes da lista de EPIs exigidos pela função).
+- Migrations desta rodada: `20260809200804_add_employee_benefits_automation`
+  (campos novos + `Benefit`/`EmployeeBenefit`, preserva
+  `transportVoucher=true` antigo como benefício "Vale Transporte")
+  e `20260809205349_add_employee_exams_and_benefit_percentage`
+  (`EmployeeExam`, `Benefit.calculationType`,
+  `EmployeeBenefit.percentage`, remove `examDate`/`examCompleted`).
+
+**Frente anterior desta sessão** (RH Sprint 4 + Financeiro Orçamento):
+
+RH Sprint 4 (última do RH) implementada —
+`GET /employees/reports/birthdays?month=` e
+`GET /employees/reports/indicators` (agregação feita em memória no
+`EmployeesService`, a partir de `EmployeesRepository.findActiveForReports`,
+sem novo módulo). Frontend: `/erp/rh/aniversariantes` (seletor de mês),
+`/erp/rh/etiquetas-ctps` (busca colaborador → gera etiqueta imprimível fora
+do `AppShell`, com salário por extenso via novo util
+`frontend/src/lib/currencyToWords.ts`) e `/erp/rh/indicadores` (cards +
+tabelas: por função com média salarial, por setor, por status, por sexo).
+Todas as 3 rotas reaproveitam a permissão `employee.view` (nenhuma
+permissão nova). Menu (`Sidebar/menu.ts`) ganhou os 2 itens novos e o
+"Aniversariantes" (que já existia como placeholder `disabled: true`) foi
+habilitado. **Módulo RH está 100% completo agora** (Sprints 1-4).
+
+Financeiro — **Orçamento** (`/erp/financeiro/orcamento`, item de menu que
+já existia como placeholder `disabled: true`, agora habilitado): novo
+módulo Nest `budgets` (model `Budget`: `companyId`+`year`+`month`+`type`
+único, `type` é o enum novo `BudgetType` RECEITA/DESPESA, migration
+`20260809193904_add_budget`). Só o **orçado** é gravado
+(`PUT /budgets`, upsert); o **realizado** nunca é gravado — vem de
+`GET /budgets?year=`, que reaproveita
+`FinancialEntriesService.getCashFlow()` (mesmo cálculo do Fluxo de Caixa,
+`settled` por mês/tipo) em vez de duplicar a lógica de agregação. Permissões
+novas `budget.view`/`budget.manage` (seed.ts, grupo `BUDGET` — rodar
+`npx ts-node prisma/seed.ts` de novo se algum outro perfil além do
+Administrador precisar delas). Tela é uma tabela estilo Fluxo de Caixa
+(linhas=métricas, colunas=meses+Total): "Receita orçada" e "Despesas
+orçadas" são **editáveis inline** (clique no valor, edita, sai do campo
+salva) — único lugar do sistema com edição direto na célula da tabela, os
+demais fluxos usam modal. Linhas de realizado/% da meta/Lucro-Perda são só
+leitura. Fórmulas replicadas da aba `BUDGET` da planilha original:
+% da meta = (realizado − orçado) ÷ orçado; Lucro/Perda = receita
+realizada − despesas pagas (por mês e no total do ano).
+
+**⚠️ Atenção ao assumir a sessão:** **nada foi commitado ainda** —
+o último commit continua sendo `997412c` (09-08-2026), e desde então
+já são **duas sessões inteiras** de trabalho acumulado (09-08 e
+10-08) sem nenhum commit (não foi pedido em nenhuma das duas). Rode
 `git status` e `git log` antes de qualquer operação destrutiva
-(`checkout`, `reset`, `clean`) e considere sugerir ao usuário que faça um
-commit em algum ponto seguro, já que é bastante trabalho acumulado.
+(`checkout`, `reset`, `clean`) e considere sugerir ao usuário que faça
+um commit em algum ponto seguro — o volume acumulado já é grande o
+bastante pra um `git reset --hard` acidental doer bastante.
 
 ---
 
@@ -252,6 +517,10 @@ novas e ao revisitar as existentes.
   Dashboard (`frontend/src/app/page.tsx`) ganhou 2 cards reais: "A
   pagar/receber" (pendente do mês) e "Fluxo de caixa" (realizado no ano
   até o mês atual).
+- **Financeiro — Orçamento** (`/erp/financeiro/orcamento`): comparativo
+  orçado x realizado por mês, ver resumo da sessão no topo do documento
+  pra detalhes (módulo `budgets`, permissões `budget.view`/
+  `budget.manage`, edição inline na tabela).
 - **Módulo BRANDING (Personalização)** — add-on pago, dá acesso a
   `/erp/configuracoes/personalizacao` (menu Sistema → Personalização,
   ícone de monitor). Dentro dela:
@@ -480,55 +749,84 @@ novas e ao revisitar as existentes.
     ganhou `print:hidden`, senão vazava pro papel em qualquer
     impressão do sistema, não só na ficha de EPI.
 
+- **Módulo RH — Sprint 4 (Relatórios, última do módulo).** Fecha o
+  módulo RH.
+  - **Aniversariantes** (`/erp/rh/aniversariantes`): seletor de mês
+    (setas, padrão mês atual), lista colaboradores ativos com
+    aniversário no mês, ordenada por dia. Endpoint
+    `GET /employees/reports/birthdays?month=`.
+  - **Etiquetas CTPS** (`/erp/rh/etiquetas-ctps`): busca o
+    colaborador (`SearchSelect`) e gera uma etiqueta imprimível
+    (página própria fora do `AppShell`, mesmo padrão da ficha de
+    EPI) com nome da empresa/CNPJ, função, setor, data de admissão,
+    horário de trabalho, CTPS/série, PIS e salário — numeral e por
+    extenso. Não replica o layout exato da aba `REL_ETIQ_CTPS` da
+    planilha original (era um gerador de anotação avulsa via
+    fórmulas/VBA quebradiças, só 1 colaborador por vez, sem grade de
+    62 colunas de verdade) — decisão tomada por conta própria,
+    priorizando os campos que uma anotação de CTPS realmente precisa.
+    Número por extenso: util novo `frontend/src/lib/currencyToWords.ts`
+    (conversor BRL → português, sem dependência externa).
+  - **Indicadores** (`/erp/rh/indicadores`): cards (total de
+    colaboradores ativos, média salarial geral) + tabelas por
+    função (com média salarial da função), por setor, por status,
+    por sexo. Endpoint `GET /employees/reports/indicators`.
+  - As 3 rotas reaproveitam a permissão `employee.view` (nenhuma
+    permissão nova criada). Agregação feita em memória no
+    `EmployeesService` (`getBirthdays`/`getIndicators`), a partir de
+    `EmployeesRepository.findActiveForReports` — sem novo módulo
+    Nest, os endpoints ficam em `EmployeesController` sob
+    `/employees/reports/*` (declarados **antes** da rota `:id` no
+    controller, senão o Nest tentaria casar "reports" como um id).
+
 ### Próximo na fila
-1. **Avisar o fornecedor vencedor da cotação por e-mail e WhatsApp**
-   (`QuotationService.chooseWinner`) — usuário disse que vai usar
-   bastante esse passo. Nada implementado ainda (nem dependência
-   instalada) — **combinado com o usuário, mas credenciais ficaram
-   pendentes**, ele disse "deixar pra depois". Retomar assim que ele
-   quiser, direto pra implementação — as decisões abaixo já estão
-   fechadas, não precisa perguntar de novo:
-   - **E-mail**: SMTP genérico (nodemailer), sem provedor dedicado por
-     enquanto. Host que o usuário passou: `smtp.gmail.com` (ele
-     escreveu "smpt", corrigir) — **mas a porta que ele deu (5787) não
-     existe**, confirmar se é 587 (STARTTLS, o normal) ou 465 (SSL).
-     Login: `ale.lourenco.net@gmail.com`. **A senha que ele passou
-     (`Lita@251378`) parece ser a senha normal da conta — o Gmail não
-     aceita mais isso pra SMTP, precisa gerar uma "Senha de app" de 16
-     caracteres em https://myaccount.google.com/apppasswords (exige
-     verificação em duas etapas ativada). Pedir essa senha de novo,
-     não usar a que já foi passada.** Destinatário do aviso = campo
-     `email` do `BusinessPartner` vencedor (não um endereço fixo).
-     Roadmap dele pra depois do teste: passar a enviar pelo e-mail do
-     usuário logado (a definir se via conta local da máquina dele ou
-     uma configuração em Configurações do sistema / perfil do
-     usuário) — não é pra implementar isso agora, só o SMTP genérico
-     de teste.
-   - **WhatsApp**: confirmado usar **Baileys** (biblioteca não-oficial,
-     grátis, pareia via QR code com um número de WhatsApp normal — ele
-     aceitou o risco de bloqueio do número pela Meta por não ser API
-     oficial; recomendar número de teste/secundário, não o principal
-     da empresa). Precisa: instalar `@whiskeysockets/baileys`, criar
-     um serviço que mantém a sessão pareada (estado de auth persistido
-     em disco), expor alguma forma de mostrar o QR code pro usuário
-     escanear na primeira vez (dá pra usar a ferramenta de Artifact
-     pra renderizar o QR como imagem). Destinatário = campo `mobile`
-     do `BusinessPartner` vencedor.
-   - Desenho recomendado: um `NotificationsModule` com um canal por
-     tipo (email/WhatsApp), cada um checando se está configurado antes
-     de tentar enviar (nunca travar o fluxo principal de
-     `chooseWinner` se o envio falhar — best-effort, tenta e loga erro
-     sem derrubar a resposta da API).
-2. RH — Sprint 4 (última do módulo): relatórios de RH —
-   aniversariantes do mês, etiquetas pra CTPS (layout de impressão,
-   62 colunas na planilha original), indicadores (colaboradores por
-   função/setor, média salarial, distribuição por sexo/status). Ver
-   `07-Escopo-Planilha.md` seção 3.4.
-3. Editar Compra ou Venda desde que estornada, sem nenhuma movimentação
-   ou pagamento realizado.
-4. Relatórios mais completos (módulo geral, fora do RH).
-5. Produção (módulo opcional licenciável, específico de confecção —
+1. ~~Avisar o fornecedor vencedor da cotação por e-mail~~ — **feito em
+   10-08-2026**, ver resumo da sessão no topo do documento.
+   **WhatsApp continua pendente**: confirmado usar **Baileys**
+   (biblioteca não-oficial, grátis, pareia via QR code com um número de
+   WhatsApp normal — usuário aceitou o risco de bloqueio do número pela
+   Meta por não ser API oficial; recomendar número de teste/secundário,
+   não o principal da empresa). Precisa: instalar
+   `@whiskeysockets/baileys`, criar um serviço que mantém a sessão
+   pareada (estado de auth persistido em disco), expor alguma forma de
+   mostrar o QR code pro usuário escanear na primeira vez (dá pra usar
+   a ferramenta de Artifact pra renderizar o QR como imagem).
+   Destinatário = campo `mobile` do `BusinessPartner` vencedor. Mesmo
+   padrão do e-mail: usar `EmailNotificationsService` como referência
+   pra criar um `WhatsAppNotificationsService` dentro do
+   `NotificationsModule` já existente (`Backend/src/modules/notifications`),
+   best-effort, nunca travar `QuotationService.chooseWinner`.
+2. ~~Relatórios mais completos~~ — **feito em 10-08-2026**, 13
+   relatórios dentro do menu "Relatórios", ver resumo da sessão no
+   topo. Ainda dá pra adicionar (usuário não pediu ainda): Estoque,
+   Movimentações (ficaram de fora da lista que ele pediu — só
+   perguntar se ele quiser).
+3. Produção (módulo opcional licenciável, específico de confecção —
    ver `07-Escopo-Planilha.md` seção 4).
+4. **Multi-empresa — decisão tomada, implementação adiada de propósito**
+   (09-08-2026). Diagnóstico: o **isolamento de dados já é sólido** —
+   todo repository filtra por `companyId` vindo do JWT, empresas
+   diferentes já não se veem. A lacuna real é em identidade/login:
+   `User.companyId` é fixo (1 usuário = 1 empresa) e `User.email` é
+   `@unique` **global**.
+   - Cogitou-se só trocar pra `@@unique([companyId, email])`, mas o
+     usuário identificou o problema certo: **como não há domínio por
+     empresa** (login é uma tela única de e-mail+senha, sem subdomínio
+     nem seletor), o sistema não teria como saber sozinho qual empresa
+     escolher se o mesmo e-mail existisse em mais de uma — precisaria
+     pedir empresa na tela de login ou mostrar uma lista de contas
+     batendo.
+   - **Modelo escolhido: 1 login, várias empresas** (mesmo padrão
+     Slack/Notion) — `User.email` continua único no sistema todo (não
+     muda), mas um usuário passa a poder ter vínculo com mais de uma
+     empresa via tabela nova N:N (`UserCompany` ou nome parecido) +
+     seletor de empresa ativa dentro do sistema (não no login). Evita
+     o problema de identificação por completo.
+   - **Adiado de propósito** — usuário pediu pra ficar só registrado
+     aqui, focar primeiro nos ajustes de RH Colaboradores (ver abaixo).
+     Quando for retomado: não implementar o modelo alternativo
+     (e-mail único por empresa + seletor no login), a decisão já foi
+     tomada.
 
 ---
 
@@ -549,31 +847,37 @@ novas e ao revisitar as existentes.
 - `HorizontalNav` (menu horizontal) não tem tratamento específico para
   mobile — em telas estreitas os itens quebram linha (`flex-wrap`), não
   foi pedido nada além disso ainda.
-- Não existe infraestrutura de e-mail nem WhatsApp no backend ainda
-  (ver "Próximo na fila" item 1 pro plano já combinado com o usuário —
-  SMTP + Baileys) — só falta ele voltar com a senha de app do Gmail
-  certa e confirmar a porta.
+- ~~Não existe infraestrutura de e-mail~~ — **feito em 10-08-2026**
+  (`NotificationsModule`/`EmailNotificationsService`, nodemailer, SMTP
+  Gmail já configurado e testado). WhatsApp (Baileys) continua
+  pendente, ver "Próximo na fila" item 1.
+- **Aviso de aniversário do usuário logado** (Visão geral, mensagem
+  "Desejando um feliz aniversário") só funciona se `Employee.email`
+  bater exatamente com `User.email` (login) — são cadastros
+  independentes. No cadastro atual do Alessandro os e-mails são
+  diferentes (`ale.lourenco.net@gmail.com` no Colaborador vs
+  `alessandro.lourenco@alepejo.com.br` no login), então a mensagem não
+  aparece pra ele hoje. Testado forçando os e-mails iguais e funciona
+  certo. **Perguntei ao usuário se quer igualar os e-mails ou linkar
+  por outro campo (ex.: `Employee.userId`) — ele não respondeu ainda,
+  ficou testando outras coisas.** Retomar essa pergunta antes de
+  mexer nisso.
 - Cotação/Pedido de Compra/Orçamento/Pedido de Venda não têm tela de
   edição de item avulsa nem duplicação — só editar tudo de novo
   enquanto DRAFT.
 - Depois de escolher o vencedor de uma cotação, não dá pra trocar de
   ideia (não existe "desfazer decisão") — é definitivo, só cancelar o
   Pedido de Compra gerado se precisar refazer.
-- **Bug de CSS conhecido, não corrigido**: em
-  `frontend/src/app/erp/compras/cotacoes/page.tsx` (~linha 1200), o
-  input de preço da proposta usa `` `${fieldClass} w-40` `` —
-  `fieldClass` já embute `w-full`, e como Tailwind resolve conflito de
-  classes pela ordem no stylesheet gerado (não pela ordem no atributo
-  `class`), o `w-40` pode perder e o campo esticar. Mesmo bug já
-  corrigido em `compras/recebimento/page.tsx` (campo "Qtd." do
-  multiplicador) trocando a classe de largura por
-  `style={{ width: "..." }}` (inline sempre vence classe) — aplicar a
-  mesma correção aqui. Há uma task sinalizada pro usuário sobre isso.
+- ~~Bug de CSS em `compras/cotacoes/page.tsx` (input de preço da
+  proposta esticando)~~ — corrigido junto da máscara de moeda (ver
+  resumo da sessão 09-08-2026 no topo do documento): o novo
+  `CurrencyInput` separa classe visual (`className`, vai no `<input>`)
+  de classe de layout (`wrapperClassName`, vai no `<div>` que envolve o
+  campo), então não tem mais o conflito de `w-full` vs `w-40` que
+  existia antes.
 - Ficha de EPI (`/erp/rh/epi`) não tem edição de entrega, só
   criar/excluir (decisão deliberada — ficha assinada não devia ser
   "editada" depois, só corrigida excluindo e recriando).
-- Relatórios de RH (Sprint 4: aniversariantes, etiquetas CTPS,
-  indicadores) ainda não começaram — é o próximo item da fila.
 
 ---
 

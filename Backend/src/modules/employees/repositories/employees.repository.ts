@@ -11,6 +11,7 @@ const includeRelations = {
   jobFunction: { include: { sector: true, ppeTypes: true } },
   workSchedule: true,
   dependents: true,
+  employeeBenefits: { include: { benefit: true } },
 } satisfies Prisma.EmployeeInclude;
 
 function toDateOrUndefined(value?: string) {
@@ -60,6 +61,7 @@ export class EmployeesRepository {
         salaryType: dto.salaryType,
         paymentMethod: dto.paymentMethod,
         admissionDate: toDateOrUndefined(dto.admissionDate),
+        experienceStageDays: dto.experienceStageDays ?? 30,
         experienceEndDate: toDateOrUndefined(
           dto.experienceEndDate,
         ),
@@ -71,15 +73,35 @@ export class EmployeesRepository {
         ),
         status: dto.status,
 
-        examDate: toDateOrUndefined(dto.examDate),
-        examCompleted: dto.examCompleted ?? false,
+        bankName: dto.bankName,
+        bankAgency: dto.bankAgency,
+        bankAccount: dto.bankAccount,
+        bankAccountType: dto.bankAccountType,
+        pixKeyType: dto.pixKeyType,
+        pixKey: dto.pixKey,
+
         nextExamDate: toDateOrUndefined(dto.nextExamDate),
         noticeDays: dto.noticeDays,
         onLeave: dto.onLeave ?? false,
 
-        transportVoucher: dto.transportVoucher ?? false,
+        leaveStartDate: toDateOrUndefined(dto.leaveStartDate),
+        leaveDays: dto.leaveDays,
+        leaveEndDate: toDateOrUndefined(dto.leaveEndDate),
+
+        vacationStartDate: toDateOrUndefined(
+          dto.vacationStartDate,
+        ),
+        vacationDays: dto.vacationDays,
+        vacationEndDate: toDateOrUndefined(
+          dto.vacationEndDate,
+        ),
+        onVacation: dto.onVacation ?? false,
+
         lockerKey: dto.lockerKey,
         lockerNumber: dto.lockerNumber,
+        shoeSize: dto.shoeSize,
+        shirtSize: dto.shirtSize,
+        pantsSize: dto.pantsSize,
         observation: dto.observation,
 
         active: dto.active ?? true,
@@ -90,6 +112,16 @@ export class EmployeesRepository {
                 name: dep.name,
                 birthDate: toDateOrUndefined(dep.birthDate),
                 relationship: dep.relationship,
+              })),
+            }
+          : undefined,
+
+        employeeBenefits: dto.benefits
+          ? {
+              create: dto.benefits.map((b) => ({
+                benefitId: b.benefitId,
+                value: b.value,
+                percentage: b.percentage,
               })),
             }
           : undefined,
@@ -194,6 +226,7 @@ export class EmployeesRepository {
         salaryType: dto.salaryType,
         paymentMethod: dto.paymentMethod,
         admissionDate: toDateOrUndefined(dto.admissionDate),
+        experienceStageDays: dto.experienceStageDays,
         experienceEndDate: toDateOrUndefined(
           dto.experienceEndDate,
         ),
@@ -205,15 +238,35 @@ export class EmployeesRepository {
         ),
         status: dto.status,
 
-        examDate: toDateOrUndefined(dto.examDate),
-        examCompleted: dto.examCompleted,
+        bankName: dto.bankName,
+        bankAgency: dto.bankAgency,
+        bankAccount: dto.bankAccount,
+        bankAccountType: dto.bankAccountType,
+        pixKeyType: dto.pixKeyType,
+        pixKey: dto.pixKey,
+
         nextExamDate: toDateOrUndefined(dto.nextExamDate),
         noticeDays: dto.noticeDays,
         onLeave: dto.onLeave,
 
-        transportVoucher: dto.transportVoucher,
+        leaveStartDate: toDateOrUndefined(dto.leaveStartDate),
+        leaveDays: dto.leaveDays,
+        leaveEndDate: toDateOrUndefined(dto.leaveEndDate),
+
+        vacationStartDate: toDateOrUndefined(
+          dto.vacationStartDate,
+        ),
+        vacationDays: dto.vacationDays,
+        vacationEndDate: toDateOrUndefined(
+          dto.vacationEndDate,
+        ),
+        onVacation: dto.onVacation,
+
         lockerKey: dto.lockerKey,
         lockerNumber: dto.lockerNumber,
+        shoeSize: dto.shoeSize,
+        shirtSize: dto.shirtSize,
+        pantsSize: dto.pantsSize,
         observation: dto.observation,
         active: dto.active,
 
@@ -230,6 +283,17 @@ export class EmployeesRepository {
             })),
           },
         }),
+
+        ...(dto.benefits !== undefined && {
+          employeeBenefits: {
+            deleteMany: {},
+            create: dto.benefits.map((b) => ({
+              benefitId: b.benefitId,
+              value: b.value,
+              percentage: b.percentage,
+            })),
+          },
+        }),
       },
       include: includeRelations,
     });
@@ -239,6 +303,43 @@ export class EmployeesRepository {
     return this.prisma.employee.update({
       where: { id },
       data: { active: false },
+    });
+  }
+
+  /** Atualização pontual usada pela reconciliação automática do estágio de experiência. */
+  async updateExperienceState(
+    id: string,
+    data: {
+      experienceStageDays: number;
+      experienceEndDate: Date;
+      status?: 'ATIVO';
+    },
+  ): Promise<void> {
+    await this.prisma.employee.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async findActiveForReports(companyId: string) {
+    return this.prisma.employee.findMany({
+      where: { companyId, active: true },
+      select: {
+        id: true,
+        name: true,
+        birthDate: true,
+        gender: true,
+        status: true,
+        baseSalary: true,
+        jobFunction: {
+          select: {
+            id: true,
+            name: true,
+            sector: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
     });
   }
 }

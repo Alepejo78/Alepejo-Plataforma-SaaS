@@ -7,6 +7,7 @@ import { AppShell } from "@/components";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import {
+  benefitService,
   ppeTypeService,
   sectorService,
   workScheduleService,
@@ -26,7 +27,7 @@ export default function CadastrosRhPage() {
           </Link>
 
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            Setores, horários e tipos de EPI
+            Setores, horários, EPI e benefícios
           </h1>
 
           <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -34,7 +35,7 @@ export default function CadastrosRhPage() {
           </p>
         </header>
 
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
           <SimpleCrudPanel
             title="Setores"
             singular="o setor"
@@ -91,6 +92,39 @@ export default function CadastrosRhPage() {
                 key: "description",
                 label: "Descrição",
                 maxLength: 255,
+              },
+            ]}
+          />
+
+          <SimpleCrudPanel
+            title="Benefícios"
+            singular="o benefício"
+            permissionPrefix="benefit"
+            service={benefitService}
+            fields={[
+              {
+                key: "name",
+                label: "Nome (ex.: Vale Refeição)",
+                required: true,
+                maxLength: 120,
+              },
+              {
+                key: "description",
+                label: "Descrição",
+                maxLength: 255,
+              },
+              {
+                key: "calculationType",
+                label: "Cálculo",
+                type: "select",
+                defaultValue: "FIXED",
+                options: [
+                  { value: "FIXED", label: "Valor fixo" },
+                  {
+                    value: "PERCENTAGE",
+                    label: "% do salário",
+                  },
+                ],
               },
             ]}
           />

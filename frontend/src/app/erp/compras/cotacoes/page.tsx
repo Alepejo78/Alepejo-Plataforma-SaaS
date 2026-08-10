@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Award,
   Eye,
+  FileText,
   Plus,
   Trash2,
   X,
@@ -16,6 +17,7 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
   QUOTATION_STATUS_LABELS,
@@ -157,7 +159,7 @@ export default function CotacoesPage() {
     paymentMethod: "" as PaymentMethod | "",
   });
   const [offerPrices, setOfferPrices] = useState<
-    Record<string, string>
+    Record<string, number>
   >({});
   const [offerSaving, setOfferSaving] = useState(false);
   const [offerError, setOfferError] = useState("");
@@ -370,10 +372,10 @@ export default function CotacoesPage() {
       paymentMethod: "",
     });
 
-    const prices: Record<string, string> = {};
+    const prices: Record<string, number> = {};
 
     for (const item of detail.items) {
-      prices[item.productId] = "";
+      prices[item.productId] = 0;
     }
 
     setOfferPrices(prices);
@@ -394,7 +396,7 @@ export default function CotacoesPage() {
 
     const items = detail.items.map((item) => ({
       productId: item.productId,
-      unitPrice: decimal(offerPrices[item.productId] ?? ""),
+      unitPrice: offerPrices[item.productId] ?? 0,
     }));
 
     if (items.some((it) => it.unitPrice <= 0)) {
@@ -515,22 +517,33 @@ export default function CotacoesPage() {
                   </p>
                 </div>
 
-                <Can permission="quotation.create">
-                  <button
-                    type="button"
-                    onClick={openCreate}
-                    disabled={semDeposito}
-                    title={
-                      semDeposito
-                        ? "Cadastre um depósito primeiro"
-                        : undefined
-                    }
-                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                <div className="flex gap-2">
+                  <Link
+                    href="/erp/compras/cotacoes/relatorio"
+                    target="_blank"
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                   >
-                    <Plus size={18} />
-                    Nova cotação
-                  </button>
-                </Can>
+                    <FileText size={18} />
+                    Relatório
+                  </Link>
+
+                  <Can permission="quotation.create">
+                    <button
+                      type="button"
+                      onClick={openCreate}
+                      disabled={semDeposito}
+                      title={
+                        semDeposito
+                          ? "Cadastre um depósito primeiro"
+                          : undefined
+                      }
+                      className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                    >
+                      <Plus size={18} />
+                      Nova cotação
+                    </button>
+                  </Can>
+                </div>
               </div>
             </header>
 
@@ -1194,18 +1207,15 @@ export default function CotacoesPage() {
                         {item.product?.unit?.code})
                       </span>
 
-                      <input
-                        inputMode="decimal"
+                      <CurrencyInput
                         placeholder="Preço unit."
-                        className={`${fieldClass} w-40`}
-                        value={
-                          offerPrices[item.productId] ?? ""
-                        }
-                        onChange={(e) =>
+                        wrapperClassName="w-40 shrink-0"
+                        className={fieldClass}
+                        value={offerPrices[item.productId]}
+                        onChange={(value) =>
                           setOfferPrices({
                             ...offerPrices,
-                            [item.productId]:
-                              e.target.value,
+                            [item.productId]: value,
                           })
                         }
                       />

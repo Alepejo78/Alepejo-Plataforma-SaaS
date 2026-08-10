@@ -1,11 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  BankAccountType,
   EducationLevel,
   EmployeeStatus,
   Gender,
   MaritalStatus,
   PaymentMethod,
+  PixKeyType,
   SalaryType,
 } from '@prisma/client';
 import {
@@ -26,6 +28,7 @@ import {
 } from 'class-validator';
 
 import { EmployeeDependentDto } from './employee-dependent.dto';
+import { EmployeeBenefitDto } from './employee-benefit.dto';
 
 export class CreateEmployeeDto {
   // --- Pessoais ---
@@ -197,7 +200,18 @@ export class CreateEmployeeDto {
   admissionDate?: string;
 
   @ApiPropertyOptional({
-    description: 'Data em que o período de experiência vence.',
+    description:
+      'Estágio do período de experiência em dias (30, 60 ou 90). Avança sozinho conforme o prazo vence.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  experienceStageDays?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Data em que o período de experiência vence — calculada a partir da admissão + estágio, não editável diretamente.',
   })
   @IsOptional()
   @IsDateString()
@@ -220,18 +234,46 @@ export class CreateEmployeeDto {
   @IsEnum(EmployeeStatus)
   status?: EmployeeStatus;
 
+  // --- Dados bancários ---
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  bankName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  bankAgency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  bankAccount?: string;
+
+  @ApiPropertyOptional({ enum: BankAccountType })
+  @IsOptional()
+  @IsEnum(BankAccountType)
+  bankAccountType?: BankAccountType;
+
+  @ApiPropertyOptional({ enum: PixKeyType })
+  @IsOptional()
+  @IsEnum(PixKeyType)
+  pixKeyType?: PixKeyType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  pixKey?: string;
+
   // --- Saúde ocupacional ---
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsDateString()
-  examDate?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  examCompleted?: boolean;
-
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Data do próximo exame pendente — gerenciada pelo módulo de exames (EmployeeExam), não editável direto aqui.',
+  })
   @IsOptional()
   @IsDateString()
   nextExamDate?: string;
@@ -248,11 +290,59 @@ export class CreateEmployeeDto {
   @IsBoolean()
   onLeave?: boolean;
 
-  // --- Benefícios ---
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  leaveStartDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  leaveDays?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Fim do afastamento — calculado no backend (início + dias), não editável direto aqui.',
+  })
+  @IsOptional()
+  @IsDateString()
+  leaveEndDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  vacationStartDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  vacationDays?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Fim das férias — calculado no backend (início + dias), não editável direto aqui.',
+  })
+  @IsOptional()
+  @IsDateString()
+  vacationEndDate?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
-  transportVoucher?: boolean;
+  onVacation?: boolean;
+
+  // --- Benefícios (catálogo dinâmico) ---
+  @ApiPropertyOptional({ type: [EmployeeBenefitDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => EmployeeBenefitDto)
+  benefits?: EmployeeBenefitDto[];
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -265,6 +355,24 @@ export class CreateEmployeeDto {
   @IsString()
   @MaxLength(20)
   lockerNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  shoeSize?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  shirtSize?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  pantsSize?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

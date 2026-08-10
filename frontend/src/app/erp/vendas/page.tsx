@@ -4,16 +4,19 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Check,
   Eye,
+  Pencil,
   Plus,
   Trash2,
   Undo2,
   X,
+  XCircle,
 } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
   SALE_STATUS_LABELS,
@@ -87,13 +90,6 @@ function money(value: string | number | null | undefined) {
   });
 }
 
-function toInputDecimal(value: string | number | null | undefined) {
-  return num(value).toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 function date(value: string | null | undefined) {
   if (!value) {
     return "—";
@@ -138,7 +134,7 @@ interface ItemForm {
   productId: string;
   productLabel: string;
   quantity: string;
-  unitPrice: string;
+  unitPrice: number;
 }
 
 function emptyItem(): ItemForm {
@@ -146,7 +142,7 @@ function emptyItem(): ItemForm {
     productId: "",
     productLabel: "",
     quantity: "",
-    unitPrice: "",
+    unitPrice: 0,
   };
 }
 
@@ -163,17 +159,20 @@ export default function VendasPage() {
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
 
-  // Modal de nova venda
+  // Modal de nova venda / edição (rascunho)
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(
+    null
+  );
   const [form, setForm] = useState({
     partnerId: "",
     partnerLabel: "",
     warehouseId: "",
     saleDate: "",
     observation: "",
-    discountValue: "",
-    freightValue: "",
-    otherExpenses: "",
+    discountValue: 0,
+    freightValue: 0,
+    otherExpenses: 0,
     termDays: "",
     paymentMethod: "" as PaymentMethod | "",
   });
@@ -280,19 +279,59 @@ export default function VendasPage() {
   }, [searchInput]);
 
   function openCreate() {
+    setEditingId(null);
     setForm({
       partnerId: "",
       partnerLabel: "",
       warehouseId: warehouses[0]?.id ?? "",
       saleDate: "",
       observation: "",
-      discountValue: "",
-      freightValue: "",
-      otherExpenses: "",
+      discountValue: 0,
+      freightValue: 0,
+      otherExpenses: 0,
       termDays: "",
       paymentMethod: "",
     });
     setItems([emptyItem()]);
+    setBarcodeInput("");
+    setBarcodeError("");
+    setSourceType("");
+    setSourceId("");
+    setSourceLabel("");
+    setSourceError("");
+    setFormError("");
+    setCreateOpen(true);
+  }
+
+  function openEdit(sale: Sale) {
+    setEditingId(sale.id);
+    setForm({
+      partnerId: sale.partnerId,
+      partnerLabel:
+        sale.partner?.tradeName ??
+        sale.partner?.legalName ??
+        "",
+      warehouseId: sale.warehouseId,
+      saleDate: sale.saleDate
+        ? sale.saleDate.slice(0, 10)
+        : "",
+      observation: sale.observation ?? "",
+      discountValue: num(sale.discountValue),
+      freightValue: num(sale.freightValue),
+      otherExpenses: num(sale.otherExpenses),
+      termDays: sale.termDays ? String(sale.termDays) : "",
+      paymentMethod: sale.paymentMethod ?? "",
+    });
+    setItems(
+      sale.items.map((it) => ({
+        productId: it.productId,
+        productLabel: it.product
+          ? `${it.product.code} — ${it.product.description}`
+          : "",
+        quantity: String(num(it.quantity)),
+        unitPrice: num(it.unitPrice),
+      }))
+    );
     setBarcodeInput("");
     setBarcodeError("");
     setSourceType("");
@@ -379,7 +418,7 @@ export default function VendasPage() {
           productId: product.id,
           productLabel: `${product.code} — ${product.description}`,
           quantity: "1",
-          unitPrice: toInputDecimal(product.salePrice),
+          unitPrice: num(product.salePrice),
         };
 
         const emptyIndex = prev.findIndex(
@@ -506,18 +545,9 @@ export default function VendasPage() {
         doc.partner?.legalName ??
         "",
       warehouseId: doc.warehouseId,
-      discountValue:
-        num(doc.discountValue) > 0
-          ? toInputDecimal(doc.discountValue)
-          : "",
-      freightValue:
-        num(doc.freightValue) > 0
-          ? toInputDecimal(doc.freightValue)
-          : "",
-      otherExpenses:
-        num(doc.otherExpenses) > 0
-          ? toInputDecimal(doc.otherExpenses)
-          : "",
+      discountValue: num(doc.discountValue),
+      freightValue: num(doc.freightValue),
+      otherExpenses: num(doc.otherExpenses),
     }));
 
     setItems(
@@ -527,7 +557,7 @@ export default function VendasPage() {
           ? `${it.product.code} — ${it.product.description}`
           : "",
         quantity: String(num(it.quantity)),
-        unitPrice: toInputDecimal(it.unitPrice),
+        unitPrice: num(it.unitPrice),
       }))
     );
   }
@@ -539,16 +569,15 @@ export default function VendasPage() {
   }
 
   const itemsTotal = items.reduce(
-    (sum, it) =>
-      sum + decimal(it.quantity) * decimal(it.unitPrice),
+    (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
     0
   );
 
   const netTotal =
     itemsTotal -
-    decimal(form.discountValue) +
-    decimal(form.freightValue) +
-    decimal(form.otherExpenses);
+    form.discountValue +
+    form.freightValue +
+    form.otherExpenses;
 
   async function saveCreate(): Promise<boolean> {
     if (!form.partnerId || !form.warehouseId) {
@@ -572,31 +601,37 @@ export default function VendasPage() {
     setSaving(true);
     setFormError("");
 
+    const payload = {
+      partnerId: form.partnerId,
+      warehouseId: form.warehouseId,
+      saleDate: form.saleDate || undefined,
+      observation: form.observation || undefined,
+      discountValue: form.discountValue || undefined,
+      freightValue: form.freightValue || undefined,
+      otherExpenses: form.otherExpenses || undefined,
+      termDays: form.termDays ? Number(form.termDays) : undefined,
+      paymentMethod: form.paymentMethod || undefined,
+      quoteId:
+        sourceType === "quote" && sourceId
+          ? sourceId
+          : undefined,
+      salesOrderId:
+        sourceType === "salesOrder" && sourceId
+          ? sourceId
+          : undefined,
+      items: validItems.map((it) => ({
+        productId: it.productId,
+        quantity: decimal(it.quantity),
+        unitPrice: it.unitPrice,
+      })),
+    };
+
     try {
-      await saleService.create({
-        partnerId: form.partnerId,
-        warehouseId: form.warehouseId,
-        saleDate: form.saleDate || undefined,
-        observation: form.observation || undefined,
-        discountValue: decimal(form.discountValue) || undefined,
-        freightValue: decimal(form.freightValue) || undefined,
-        otherExpenses: decimal(form.otherExpenses) || undefined,
-        termDays: form.termDays ? Number(form.termDays) : undefined,
-        paymentMethod: form.paymentMethod || undefined,
-        quoteId:
-          sourceType === "quote" && sourceId
-            ? sourceId
-            : undefined,
-        salesOrderId:
-          sourceType === "salesOrder" && sourceId
-            ? sourceId
-            : undefined,
-        items: validItems.map((it) => ({
-          productId: it.productId,
-          quantity: decimal(it.quantity),
-          unitPrice: decimal(it.unitPrice),
-        })),
-      });
+      if (editingId) {
+        await saleService.update(editingId, payload);
+      } else {
+        await saleService.create(payload);
+      }
 
       setCreateOpen(false);
 
@@ -607,7 +642,9 @@ export default function VendasPage() {
       setFormError(
         extractMessage(
           err,
-          "Não foi possível cadastrar a venda."
+          editingId
+            ? "Não foi possível salvar as alterações."
+            : "Não foi possível cadastrar a venda."
         )
       );
 
@@ -617,12 +654,19 @@ export default function VendasPage() {
     }
   }
 
-  async function runAction(id: string, action: "cancel") {
+  async function runAction(
+    id: string,
+    action: "cancel" | "undoApproval"
+  ) {
     setActionId(id);
     setActionError("");
 
     try {
-      await saleService.cancel(id);
+      if (action === "undoApproval") {
+        await saleService.undoApproval(id);
+      } else {
+        await saleService.cancel(id);
+      }
 
       await load();
     } catch (err) {
@@ -980,6 +1024,20 @@ export default function VendasPage() {
                           </button>
 
                           {s.status === "DRAFT" && (
+                            <Can permission="sale.update">
+                              <button
+                                type="button"
+                                onClick={() => openEdit(s)}
+                                title="Editar"
+                                aria-label="Editar"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {s.status === "DRAFT" && (
                             <Can permission="sale.approve">
                               <button
                                 type="button"
@@ -994,7 +1052,7 @@ export default function VendasPage() {
                             </Can>
                           )}
 
-                          {s.status === "APPROVED" && (
+                          {s.status === "DRAFT" && (
                             <Can permission="sale.cancel">
                               <button
                                 type="button"
@@ -1003,6 +1061,26 @@ export default function VendasPage() {
                                   void runAction(
                                     s.id,
                                     "cancel"
+                                  )
+                                }
+                                title="Cancelar"
+                                aria-label="Cancelar"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {s.status === "APPROVED" && (
+                            <Can permission="sale.cancel">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void runAction(
+                                    s.id,
+                                    "undoApproval"
                                   )
                                 }
                                 title="Desfazer aprovação (volta para rascunho e devolve o estoque; só se ainda não houver recebimento no financeiro)"
@@ -1030,7 +1108,7 @@ export default function VendasPage() {
           <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                Nova venda
+                {editingId ? "Editar venda" : "Nova venda"}
               </h2>
 
               <button
@@ -1278,8 +1356,7 @@ export default function VendasPage() {
                 <div className="space-y-2">
                   {items.map((it, index) => {
                     const subtotal =
-                      decimal(it.quantity) *
-                      decimal(it.unitPrice);
+                      decimal(it.quantity) * it.unitPrice;
 
                     return (
                       <div
@@ -1306,9 +1383,7 @@ export default function VendasPage() {
                                   : "",
                                 unitPrice:
                                   p && !it.unitPrice
-                                    ? toInputDecimal(
-                                        p.salePrice
-                                      )
+                                    ? num(p.salePrice)
                                     : it.unitPrice,
                               })
                             }
@@ -1327,14 +1402,14 @@ export default function VendasPage() {
                           }
                         />
 
-                        <input
-                          inputMode="decimal"
+                        <CurrencyInput
                           placeholder="Preço unit."
-                          className={`${fieldClass} col-span-2`}
+                          wrapperClassName="col-span-2"
+                          className={fieldClass}
                           value={it.unitPrice}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             updateItem(index, {
-                              unitPrice: e.target.value,
+                              unitPrice: value,
                             })
                           }
                         />
@@ -1365,15 +1440,13 @@ export default function VendasPage() {
                     Desconto (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={form.discountValue}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        discountValue: e.target.value,
+                        discountValue: value,
                       })
                     }
                   />
@@ -1384,15 +1457,13 @@ export default function VendasPage() {
                     Frete (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={form.freightValue}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        freightValue: e.target.value,
+                        freightValue: value,
                       })
                     }
                   />
@@ -1403,15 +1474,13 @@ export default function VendasPage() {
                     Outras despesas (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={form.otherExpenses}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        otherExpenses: e.target.value,
+                        otherExpenses: value,
                       })
                     }
                   />
@@ -1518,7 +1587,9 @@ export default function VendasPage() {
                     ? "Salvando..."
                     : confirmChecking
                       ? "Verificando..."
-                      : "Cadastrar"}
+                      : editingId
+                        ? "Salvar alterações"
+                        : "Cadastrar"}
                 </button>
               </div>
             </div>

@@ -42,6 +42,24 @@ export class EmployeesController {
     return this.service.findAll(companyId, filter);
   }
 
+  @Get('reports/birthdays')
+  @Permissions('employee.view')
+  getBirthdays(
+    @CurrentUser('companyId') companyId: string,
+    @Query('month') month?: string,
+  ) {
+    return this.service.getBirthdays(
+      companyId,
+      month ? Number(month) : undefined,
+    );
+  }
+
+  @Get('reports/indicators')
+  @Permissions('employee.view')
+  getIndicators(@CurrentUser('companyId') companyId: string) {
+    return this.service.getIndicators(companyId);
+  }
+
   @Get(':id')
   @Permissions('employee.view')
   findOne(

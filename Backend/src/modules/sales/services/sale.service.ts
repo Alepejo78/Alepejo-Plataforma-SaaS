@@ -24,6 +24,7 @@ import { DocumentSequenceService } from '../../../core/document-sequence/documen
 import { SaleRepository } from '../repositories/sale.repository';
 
 import { CreateSaleDto } from '../dto/create-sale.dto';
+import { UpdateSaleDto } from '../dto/update-sale.dto';
 import { SaleFilterDto } from '../dto/sale-filter.dto';
 import { ApproveSaleDto } from '../dto/approve-sale.dto';
 
@@ -204,6 +205,115 @@ export class SaleService {
     return sale;
   }
 
+  async update(
+    companyId: string,
+    id: string,
+    dto: UpdateSaleDto,
+  ) {
+    const sale = await this.findOne(companyId, id);
+
+    if (sale.status !== 'DRAFT') {
+      throw new BadRequestException(
+        'Somente vendas em rascunho podem ser alteradas.',
+      );
+    }
+
+    if (dto.partnerId) {
+      await this.businessPartnersService.assertHasRole(
+        companyId,
+        dto.partnerId,
+        BusinessPartnerRole.CUSTOMER,
+      );
+    }
+
+    if (dto.warehouseId) {
+      const warehouse = await this.prisma.warehouse.findFirst({
+        where: { id: dto.warehouseId, companyId },
+      });
+
+      if (!warehouse) {
+        throw new NotFoundException(
+          'Almoxarifado não encontrado.',
+        );
+      }
+    }
+
+    let items:
+      | {
+          productId: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+        }[]
+      | undefined;
+
+    let totalAmount = Number(sale.totalAmount);
+
+    if (dto.items) {
+      totalAmount = 0;
+
+      for (const item of dto.items) {
+        const product = await this.prisma.product.findFirst({
+          where: { id: item.productId, companyId },
+        });
+
+        if (!product) {
+          throw new NotFoundException(
+            `Produto ${item.productId} não encontrado.`,
+          );
+        }
+
+        totalAmount += item.quantity * item.unitPrice;
+      }
+
+      items = dto.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.quantity * item.unitPrice,
+      }));
+    }
+
+    const discountValue =
+      dto.discountValue ?? Number(sale.discountValue);
+    const freightValue =
+      dto.freightValue ?? Number(sale.freightValue);
+    const otherExpenses =
+      dto.otherExpenses ?? Number(sale.otherExpenses);
+
+    const netAmount =
+      totalAmount - discountValue + freightValue + otherExpenses;
+
+    const saleDate = dto.saleDate
+      ? new Date(dto.saleDate)
+      : undefined;
+    const termDays = dto.termDays;
+
+    const dueDate =
+      saleDate !== undefined || termDays !== undefined
+        ? calculateDueDate(
+            saleDate ?? sale.saleDate ?? new Date(),
+            termDays ?? sale.termDays ?? 0,
+          )
+        : undefined;
+
+    return this.repository.update(id, {
+      partnerId: dto.partnerId,
+      warehouseId: dto.warehouseId,
+      saleDate,
+      observation: dto.observation,
+      discountValue: dto.discountValue,
+      freightValue: dto.freightValue,
+      otherExpenses: dto.otherExpenses,
+      termDays,
+      dueDate,
+      paymentMethod: dto.paymentMethod,
+      totalAmount,
+      netAmount,
+      items,
+    });
+  }
+
   async approve(
     companyId: string,
     id: string,
@@ -361,7 +471,25 @@ export class SaleService {
     });
   }
 
-  async cancelApproval(
+  async cancel(
+    companyId: string,
+    id: string,
+  ) {
+    const sale = await this.findOne(companyId, id);
+
+    if (sale.status !== 'DRAFT') {
+      throw new BadRequestException(
+        'Somente vendas em rascunho podem ser canceladas — se já foi aprovada, desfaça a aprovação primeiro.',
+      );
+    }
+
+    return this.prisma.sale.update({
+      where: { id },
+      data: { status: 'CANCELLED' },
+    });
+  }
+
+  async undoApproval(
     companyId: string,
     id: string,
   ) {

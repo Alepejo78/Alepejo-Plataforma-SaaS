@@ -10,6 +10,16 @@ import { calculateDueDate } from '../../../core/utils/business-day.util';
 import { CreatePurchaseDto } from '../dto/create-purchase.dto';
 import { PurchaseFilterDto } from '../dto/purchase-filter.dto';
 
+const includeRelations = {
+  partner: true,
+  warehouse: true,
+  items: {
+    include: {
+      product: true,
+    },
+  },
+} satisfies Prisma.PurchaseInclude;
+
 @Injectable()
 export class PurchaseRepository {
   constructor(
@@ -55,15 +65,7 @@ export class PurchaseRepository {
           })),
         },
       },
-      include: {
-        partner: true,
-        warehouse: true,
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
+      include: includeRelations,
     });
   }
 
@@ -110,15 +112,7 @@ export class PurchaseRepository {
 
     return this.prisma.purchase.findMany({
       where,
-      include: {
-        partner: true,
-        warehouse: true,
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
+      include: includeRelations,
       orderBy: {
         createdAt: 'desc',
       },
@@ -134,15 +128,62 @@ export class PurchaseRepository {
         id,
         companyId,
       },
-      include: {
-        partner: true,
-        warehouse: true,
-        items: {
-          include: {
-            product: true,
+      include: includeRelations,
+    });
+  }
+
+  async update(
+    id: string,
+    dto: {
+      partnerId?: string;
+      warehouseId?: string;
+      purchaseDate?: Date;
+      observation?: string;
+      termDays?: number;
+      dueDate?: Date;
+      paymentMethod?: CreatePurchaseDto['paymentMethod'];
+      totalAmount?: number;
+      items?: {
+        productId: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+      }[];
+    },
+  ): Promise<Purchase> {
+    return this.prisma.purchase.update({
+      where: { id },
+      data: {
+        ...(dto.partnerId && { partnerId: dto.partnerId }),
+        ...(dto.warehouseId && {
+          warehouseId: dto.warehouseId,
+        }),
+        ...(dto.purchaseDate !== undefined && {
+          purchaseDate: dto.purchaseDate,
+        }),
+        ...(dto.observation !== undefined && {
+          observation: dto.observation,
+        }),
+        ...(dto.termDays !== undefined && {
+          termDays: dto.termDays,
+        }),
+        ...(dto.dueDate !== undefined && {
+          dueDate: dto.dueDate,
+        }),
+        ...(dto.paymentMethod !== undefined && {
+          paymentMethod: dto.paymentMethod,
+        }),
+        ...(dto.totalAmount !== undefined && {
+          totalAmount: dto.totalAmount,
+        }),
+        ...(dto.items && {
+          items: {
+            deleteMany: {},
+            create: dto.items,
           },
-        },
+        }),
       },
+      include: includeRelations,
     });
   }
 }

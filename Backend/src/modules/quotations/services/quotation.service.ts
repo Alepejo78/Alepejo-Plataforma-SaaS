@@ -7,6 +7,7 @@ import {
 import { BusinessPartnerRole, QuotationStatus } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
@@ -29,6 +30,7 @@ export class QuotationService {
     private readonly prisma: PrismaService,
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly documentSequence: DocumentSequenceService,
+    private readonly emailNotifications: EmailNotificationsService,
   ) {}
 
   async create(companyId: string, dto: CreateQuotationDto) {
@@ -350,6 +352,33 @@ export class QuotationService {
         },
       });
     });
+
+    // Best-effort: aviso por e-mail nunca deve derrubar a resposta
+    // desta rota — ver EmailNotificationsService.send.
+    if (offer.partner.email) {
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+      });
+
+      const companyName =
+        company?.tradeName || company?.legalName || 'AlePejo ERP';
+
+      const partnerName =
+        offer.partner.tradeName || offer.partner.legalName;
+
+      const quotationNumber = String(
+        quotation.number,
+      ).padStart(6, '0');
+
+      void this.emailNotifications.send(
+        offer.partner.email,
+        `Você foi selecionado — Cotação COT-${quotationNumber}`,
+        `<p>Olá, ${partnerName},</p>
+<p>Sua proposta foi escolhida como vencedora na cotação <strong>COT-${quotationNumber}</strong> de <strong>${companyName}</strong>.</p>
+<p>Em breve você receberá o Pedido de Compra com os detalhes.</p>
+<p>Atenciosamente,<br/>${companyName}</p>`,
+      );
+    }
 
     return this.findOne(companyId, quotationId);
   }

@@ -142,6 +142,18 @@ export const purchaseService = {
     return data.data;
   },
 
+  async update(
+    id: string,
+    payload: Partial<PurchasePayload>
+  ): Promise<Purchase> {
+    const { data } = await api.patch<ApiEnvelope<Purchase>>(
+      `/purchases/${id}`,
+      payload
+    );
+
+    return data.data;
+  },
+
   async approve(id: string): Promise<Purchase> {
     const { data } = await api.patch<ApiEnvelope<Purchase>>(
       `/purchases/${id}/approve`

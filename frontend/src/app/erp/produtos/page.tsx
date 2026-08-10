@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
+import {
+  FileText,
+  Pencil,
+  Plus,
+  Settings2,
+  Trash2,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 
 import { AppShell } from "@/components";
@@ -197,6 +204,15 @@ export default function ProdutosPage() {
               </div>
 
               <div className="flex gap-2">
+                <Link
+                  href="/erp/produtos/relatorio"
+                  target="_blank"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                >
+                  <FileText size={18} />
+                  Relatório
+                </Link>
+
                 <Link
                   href="/erp/produtos/cadastros"
                   className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"

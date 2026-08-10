@@ -158,6 +158,15 @@ const defaultPpeTypes = [
   "Avental PVC",
 ];
 
+const defaultBenefits: {
+  name: string;
+  calculationType: "FIXED" | "PERCENTAGE";
+}[] = [
+  { name: "Vale Transporte", calculationType: "PERCENTAGE" },
+  { name: "Vale Refeição", calculationType: "FIXED" },
+  { name: "Vale Alimentação", calculationType: "FIXED" },
+];
+
 const defaultJobFunctions: {
   cboCode: string;
   name: string;
@@ -249,6 +258,7 @@ const permissionGroups = [
     permissions: [
       ["sale.view", "Consultar Vendas"],
       ["sale.create", "Criar Vendas"],
+      ["sale.update", "Alterar Vendas"],
       ["sale.approve", "Aprovar Vendas"],
       ["sale.cancel", "Cancelar Vendas"],
       ["quote.view", "Consultar Orçamentos"],
@@ -294,11 +304,20 @@ const permissionGroups = [
     ],
   },
   {
+    code: "BUDGET",
+    name: "Orçamento",
+    permissions: [
+      ["budget.view", "Consultar Orçamento"],
+      ["budget.manage", "Lançar Valores Orçados"],
+    ],
+  },
+  {
     code: "PURCHASE",
     name: "Compras",
     permissions: [
       ["purchase.view", "Consultar Compras"],
       ["purchase.create", "Criar Compras"],
+      ["purchase.update", "Alterar Compras"],
       ["purchase.approve", "Aprovar Compras"],
       ["purchase.receive", "Receber Compras"],
       ["purchase.cancel", "Cancelar Compras"],
@@ -476,6 +495,10 @@ const permissionGroups = [
       ["ppe-delivery.view", "Visualizar Entregas de EPI"],
       ["ppe-delivery.create", "Registrar Entregas de EPI"],
       ["ppe-delivery.delete", "Excluir Entregas de EPI"],
+      ["benefit.view", "Visualizar Benefícios"],
+      ["benefit.create", "Cadastrar Benefícios"],
+      ["benefit.update", "Alterar Benefícios"],
+      ["benefit.delete", "Excluir Benefícios"],
     ],
   },
 ];
@@ -866,6 +889,20 @@ for (const name of defaultPpeTypes) {
   });
 
   ppeTypeIds.set(name, ppe.id);
+}
+
+for (const b of defaultBenefits) {
+  await prisma.benefit.upsert({
+    where: {
+      companyId_name: { companyId: company.id, name: b.name },
+    },
+    update: { calculationType: b.calculationType },
+    create: {
+      companyId: company.id,
+      name: b.name,
+      calculationType: b.calculationType,
+    },
+  });
 }
 
 for (const jf of defaultJobFunctions) {

@@ -19,6 +19,12 @@ import { partnerService } from "@/services/partner.service";
 import { productService } from "@/services/product.service";
 import { inventoryService } from "@/services/inventory.service";
 import { financialEntryService } from "@/services/financial-entry.service";
+import {
+  employeeReportsService,
+  employeeService,
+  type Employee,
+  type EmployeeBirthday,
+} from "@/services/hr.service";
 
 function money(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -111,6 +117,22 @@ export default function HomePage() {
   const [cashFlowLoading, setCashFlowLoading] =
     useState(true);
 
+  const [colaboradoresAtivos, setColaboradoresAtivos] =
+    useState<number | null>(null);
+  const [colaboradoresExperiencia, setColaboradoresExperiencia] =
+    useState<number | null>(null);
+  const [birthdaysMes, setBirthdaysMes] = useState<
+    EmployeeBirthday[]
+  >([]);
+  const [examesAVencer, setExamesAVencer] = useState<
+    number | null
+  >(null);
+  const [hrLoading, setHrLoading] = useState(true);
+  const [colaboradoresList, setColaboradoresList] = useState<
+    Employee[]
+  >([]);
+  const [isUserBirthday, setIsUserBirthday] = useState(false);
+
   useEffect(() => {
     Promise.all([
       partnerService.list({ limit: 1 }),
@@ -170,7 +192,67 @@ export default function HomePage() {
         // Sem licença do Financeiro ou sem dados: cartão mostra "—".
       })
       .finally(() => setCashFlowLoading(false));
+
+    const daqui30Dias = new Date(
+      now.getTime() + 30 * 24 * 60 * 60 * 1000
+    );
+
+    Promise.all([
+      employeeReportsService.getIndicators(),
+      employeeReportsService.getBirthdays(now.getMonth() + 1),
+      employeeService.list({ limit: 100 }),
+    ])
+      .then(([indicators, birthdays, colaboradores]) => {
+        setColaboradoresAtivos(
+          indicators.byStatus.find((s) => s.status === "ATIVO")
+            ?.count ?? 0
+        );
+
+        setColaboradoresExperiencia(
+          indicators.byStatus.find(
+            (s) => s.status === "EXPERIENCIA"
+          )?.count ?? 0
+        );
+
+        setBirthdaysMes(birthdays);
+        setColaboradoresList(colaboradores);
+
+        setExamesAVencer(
+          colaboradores.filter(
+            (c) =>
+              c.nextExamDate &&
+              new Date(c.nextExamDate) <= daqui30Dias
+          ).length
+        );
+      })
+      .catch(() => {
+        // Sem licença do RH ou sem dados: cartão mostra "—".
+      })
+      .finally(() => setHrLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!user?.email || colaboradoresList.length === 0) {
+      return;
+    }
+
+    const meuCadastro = colaboradoresList.find(
+      (c) =>
+        c.email?.toLowerCase() === user.email.toLowerCase()
+    );
+
+    if (!meuCadastro?.birthDate) {
+      return;
+    }
+
+    const nascimento = new Date(meuCadastro.birthDate);
+    const hoje = new Date();
+
+    setIsUserBirthday(
+      nascimento.getUTCMonth() === hoje.getMonth() &&
+        nascimento.getUTCDate() === hoje.getDate()
+    );
+  }, [user, colaboradoresList]);
 
   return (
     <AppShell workspaceLabel="Visão geral">
@@ -178,6 +260,7 @@ export default function HomePage() {
         <DashboardHeader
           userName={user?.name?.split(" ")[0]}
           companyName={user?.company?.tradeName}
+          isBirthday={isUserBirthday}
         />
 
         <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -344,10 +427,15 @@ export default function HomePage() {
 
             <div className="space-y-3">
               {[
-                { label: "Ativos", value: "—" },
-                { label: "Em experiência", value: "—" },
-                { label: "Aniversariantes do mês", value: "—" },
-                { label: "Exames a vencer", value: "—" },
+                { label: "Ativos", value: colaboradoresAtivos },
+                {
+                  label: "Em experiência",
+                  value: colaboradoresExperiencia,
+                },
+                {
+                  label: "Aniversariantes do mês",
+                  value: birthdaysMes.length,
+                },
               ].map((linha) => (
                 <div
                   key={linha.label}
@@ -357,16 +445,60 @@ export default function HomePage() {
                     {linha.label}
                   </span>
 
-                  <span className="font-medium text-[var(--text-primary)]">
-                    {linha.value}
-                  </span>
+                  {hrLoading ? (
+                    <span className="h-5 w-8 animate-pulse rounded bg-[var(--surface-hover)]" />
+                  ) : (
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {linha.value !== null
+                        ? String(linha.value)
+                        : "—"}
+                    </span>
+                  )}
                 </div>
               ))}
+
+              {!hrLoading && birthdaysMes.length > 0 && (
+                <div className="space-y-1.5 border-b border-[var(--border)] pb-2">
+                  {birthdaysMes.map((b) => (
+                    <div
+                      key={b.id}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="text-[var(--text-secondary)]">
+                        {b.name}
+                      </span>
+
+                      <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                        dia {b.day}
+                        <span className="text-base leading-none">
+                          🎉
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pb-2">
+                <span className="text-sm text-[var(--text-secondary)]">
+                  Exames a vencer
+                </span>
+
+                {hrLoading ? (
+                  <span className="h-5 w-8 animate-pulse rounded bg-[var(--surface-hover)]" />
+                ) : (
+                  <span className="font-medium text-[var(--text-primary)]">
+                    {examesAVencer !== null
+                      ? String(examesAVencer)
+                      : "—"}
+                  </span>
+                )}
+              </div>
             </div>
 
             <p className="mt-4 text-xs text-[var(--text-muted)]">
-              Os valores serão preenchidos quando o módulo
-              de RH estiver disponível.
+              Exames com vencimento nos próximos 30 dias
+              (inclui atrasados).
             </p>
           </div>
         </section>

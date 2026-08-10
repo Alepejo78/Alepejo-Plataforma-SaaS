@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
+
 import {
   INVENTORY_CONTROL_LABELS,
   PRODUCT_TYPE_LABELS,
@@ -25,6 +27,7 @@ const labelClass =
 interface FormState {
   code: string;
   barcode: string;
+  reference: string;
   description: string;
   complementaryDescription: string;
   type: ProductType;
@@ -32,8 +35,8 @@ interface FormState {
   categoryId: string;
   brandId: string;
   unitId: string;
-  cost: string;
-  salePrice: string;
+  cost: number;
+  salePrice: number;
   minimumStock: string;
   status: "ACTIVE" | "INACTIVE";
 }
@@ -41,6 +44,7 @@ interface FormState {
 const emptyForm: FormState = {
   code: "",
   barcode: "",
+  reference: "",
   description: "",
   complementaryDescription: "",
   type: "PRODUCT",
@@ -48,8 +52,8 @@ const emptyForm: FormState = {
   categoryId: "",
   brandId: "",
   unitId: "",
-  cost: "",
-  salePrice: "",
+  cost: 0,
+  salePrice: 0,
   minimumStock: "",
   status: "ACTIVE",
 };
@@ -82,6 +86,7 @@ export function ProductForm({
       setForm({
         code: product.code ?? "",
         barcode: product.barcode ?? "",
+        reference: product.reference ?? "",
         description: product.description ?? "",
         complementaryDescription:
           product.complementaryDescription ?? "",
@@ -90,8 +95,8 @@ export function ProductForm({
         categoryId: product.categoryId ?? "",
         brandId: product.brandId ?? "",
         unitId: product.unitId ?? "",
-        cost: String(product.cost ?? ""),
-        salePrice: String(product.salePrice ?? ""),
+        cost: Number(product.cost ?? 0),
+        salePrice: Number(product.salePrice ?? 0),
         minimumStock:
           product.minimumStock !== null &&
           product.minimumStock !== undefined
@@ -106,9 +111,9 @@ export function ProductForm({
 
   const isService = form.type === "SERVICE";
 
-  function setField(
-    field: keyof FormState,
-    value: string
+  function setField<K extends keyof FormState>(
+    field: K,
+    value: FormState[K]
   ) {
     setForm((previous) => ({
       ...previous,
@@ -138,6 +143,7 @@ export function ProductForm({
     onSubmit({
       code: form.code.trim(),
       barcode: text(form.barcode),
+      reference: text(form.reference),
       description: form.description.trim(),
       complementaryDescription: text(
         form.complementaryDescription
@@ -150,8 +156,8 @@ export function ProductForm({
       categoryId: text(form.categoryId),
       brandId: text(form.brandId),
       unitId: form.unitId,
-      cost: decimal(form.cost),
-      salePrice: decimal(form.salePrice),
+      cost: form.cost,
+      salePrice: form.salePrice,
       minimumStock: isService
         ? undefined
         : form.minimumStock
@@ -195,6 +201,21 @@ export function ProductForm({
         </div>
 
         <div>
+          <label className={labelClass} htmlFor="reference">
+            REF (fabricante)
+          </label>
+
+          <input
+            id="reference"
+            className={fieldClass}
+            value={form.reference}
+            onChange={(e) =>
+              setField("reference", e.target.value)
+            }
+          />
+        </div>
+
+        <div>
           <label className={labelClass} htmlFor="type">
             Tipo
           </label>
@@ -204,7 +225,7 @@ export function ProductForm({
             className={fieldClass}
             value={form.type}
             onChange={(e) =>
-              setField("type", e.target.value)
+              setField("type", e.target.value as ProductType)
             }
           >
             {Object.entries(PRODUCT_TYPE_LABELS).map(
@@ -227,7 +248,10 @@ export function ProductForm({
             className={fieldClass}
             value={form.status}
             onChange={(e) =>
-              setField("status", e.target.value)
+              setField(
+                "status",
+                e.target.value as "ACTIVE" | "INACTIVE"
+              )
             }
           >
             <option value="ACTIVE">Ativo</option>
@@ -351,15 +375,11 @@ export function ProductForm({
             <span className="text-[var(--danger)]">*</span>
           </label>
 
-          <input
+          <CurrencyInput
             id="cost"
-            inputMode="decimal"
-            placeholder="0,00"
             className={fieldClass}
             value={form.cost}
-            onChange={(e) =>
-              setField("cost", e.target.value)
-            }
+            onChange={(value) => setField("cost", value)}
           />
         </div>
 
@@ -369,15 +389,11 @@ export function ProductForm({
             <span className="text-[var(--danger)]">*</span>
           </label>
 
-          <input
+          <CurrencyInput
             id="salePrice"
-            inputMode="decimal"
-            placeholder="0,00"
             className={fieldClass}
             value={form.salePrice}
-            onChange={(e) =>
-              setField("salePrice", e.target.value)
-            }
+            onChange={(value) => setField("salePrice", value)}
           />
         </div>
 
@@ -398,7 +414,7 @@ export function ProductForm({
                 onChange={(e) =>
                   setField(
                     "inventoryControl",
-                    e.target.value
+                    e.target.value as InventoryControl
                   )
                 }
               >

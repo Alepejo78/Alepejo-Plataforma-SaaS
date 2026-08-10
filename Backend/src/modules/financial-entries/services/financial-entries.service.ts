@@ -270,24 +270,46 @@ export class FinancialEntriesService {
       cumulativeBalance: 0,
     }));
 
-    for (const entry of entries) {
-      const bucket =
-        months[entry.dueDate.getUTCMonth()][
-          entry.type === FinancialEntryType.RECEIVABLE
-            ? 'receivable'
-            : 'payable'
-        ];
+    const inYear = (d: Date) => d.getUTCFullYear() === year;
+    const kind =
+      (type: FinancialEntryType) =>
+      (m: (typeof months)[number]) =>
+        type === FinancialEntryType.RECEIVABLE
+          ? m.receivable
+          : m.payable;
 
+    for (const entry of entries) {
+      const bucketOf = kind(entry.type);
       const amount = Number(entry.amount);
 
-      bucket.total += amount;
+      // "Total/aberto/atrasado" seguem o vencimento (visão de
+      // compromisso). "Recebido/pago" segue a data em que o dinheiro
+      // de fato entrou/saiu — uma baixa antecipada ou atrasada cai no
+      // mês em que ela aconteceu, não no mês do vencimento.
+      if (inYear(entry.dueDate)) {
+        const bucket = bucketOf(months[entry.dueDate.getUTCMonth()]);
 
-      if (entry.status === FinancialEntryStatus.PAID) {
+        bucket.total += amount;
+
+        if (entry.status !== FinancialEntryStatus.PAID) {
+          if (entry.dueDate < today) {
+            bucket.overdue += amount;
+          } else {
+            bucket.open += amount;
+          }
+        }
+      }
+
+      if (
+        entry.status === FinancialEntryStatus.PAID &&
+        entry.paymentDate &&
+        inYear(entry.paymentDate)
+      ) {
+        const bucket = bucketOf(
+          months[entry.paymentDate.getUTCMonth()],
+        );
+
         bucket.settled += Number(entry.paidAmount);
-      } else if (entry.dueDate < today) {
-        bucket.overdue += amount;
-      } else {
-        bucket.open += amount;
       }
     }
 

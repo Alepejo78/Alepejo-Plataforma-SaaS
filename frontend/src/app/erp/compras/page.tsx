@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Check,
   Eye,
+  FileText,
   PackageCheck,
+  Pencil,
   Plus,
   Trash2,
   X,
@@ -16,6 +19,7 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
   PURCHASE_STATUS_LABELS,
@@ -70,13 +74,6 @@ function money(value: string | number | null | undefined) {
   });
 }
 
-function toInputDecimal(value: string | number | null | undefined) {
-  return num(value).toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 function date(value: string | null | undefined) {
   if (!value) {
     return "—";
@@ -120,7 +117,7 @@ interface ItemForm {
   productId: string;
   productLabel: string;
   quantity: string;
-  unitPrice: string;
+  unitPrice: number;
 }
 
 function emptyItem(): ItemForm {
@@ -128,7 +125,7 @@ function emptyItem(): ItemForm {
     productId: "",
     productLabel: "",
     quantity: "",
-    unitPrice: "",
+    unitPrice: 0,
   };
 }
 
@@ -146,8 +143,11 @@ export default function ComprasPage() {
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
 
-  // Modal de nova compra
+  // Modal de nova compra / edição (rascunho)
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(
+    null
+  );
   const [form, setForm] = useState({
     partnerId: "",
     partnerLabel: "",
@@ -265,7 +265,7 @@ export default function ComprasPage() {
           ? `${it.product.code} — ${it.product.description}`
           : "",
         quantity: String(num(it.quantity)),
-        unitPrice: toInputDecimal(it.unitPrice),
+        unitPrice: num(it.unitPrice),
       }))
     );
   }
@@ -314,6 +314,7 @@ export default function ComprasPage() {
   }, [searchInput]);
 
   function openCreate() {
+    setEditingId(null);
     setForm({
       partnerId: "",
       partnerLabel: "",
@@ -324,6 +325,41 @@ export default function ComprasPage() {
       paymentMethod: "",
     });
     setItems([emptyItem()]);
+    setBarcodeInput("");
+    setBarcodeError("");
+    clearSourceOrder();
+    setFormError("");
+    setCreateOpen(true);
+  }
+
+  function openEdit(purchase: Purchase) {
+    setEditingId(purchase.id);
+    setForm({
+      partnerId: purchase.partnerId,
+      partnerLabel:
+        purchase.partner?.tradeName ??
+        purchase.partner?.legalName ??
+        "",
+      warehouseId: purchase.warehouseId,
+      purchaseDate: purchase.purchaseDate
+        ? purchase.purchaseDate.slice(0, 10)
+        : "",
+      observation: purchase.observation ?? "",
+      termDays: purchase.termDays
+        ? String(purchase.termDays)
+        : "",
+      paymentMethod: purchase.paymentMethod ?? "",
+    });
+    setItems(
+      purchase.items.map((it) => ({
+        productId: it.productId,
+        productLabel: it.product
+          ? `${it.product.code} — ${it.product.description}`
+          : "",
+        quantity: String(num(it.quantity)),
+        unitPrice: num(it.unitPrice),
+      }))
+    );
     setBarcodeInput("");
     setBarcodeError("");
     clearSourceOrder();
@@ -403,7 +439,7 @@ export default function ComprasPage() {
           productId: product.id,
           productLabel: `${product.code} — ${product.description}`,
           quantity: "1",
-          unitPrice: toInputDecimal(product.cost),
+          unitPrice: num(product.cost),
         };
 
         const emptyIndex = prev.findIndex(
@@ -435,8 +471,7 @@ export default function ComprasPage() {
   }
 
   const itemsTotal = items.reduce(
-    (sum, it) =>
-      sum + decimal(it.quantity) * decimal(it.unitPrice),
+    (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
     0
   );
 
@@ -462,21 +497,27 @@ export default function ComprasPage() {
     setSaving(true);
     setFormError("");
 
+    const payload = {
+      partnerId: form.partnerId,
+      warehouseId: form.warehouseId,
+      purchaseDate: form.purchaseDate || undefined,
+      observation: form.observation || undefined,
+      termDays: form.termDays ? Number(form.termDays) : undefined,
+      paymentMethod: form.paymentMethod || undefined,
+      purchaseOrderId: sourceOrderId || undefined,
+      items: validItems.map((it) => ({
+        productId: it.productId,
+        quantity: decimal(it.quantity),
+        unitPrice: it.unitPrice,
+      })),
+    };
+
     try {
-      await purchaseService.create({
-        partnerId: form.partnerId,
-        warehouseId: form.warehouseId,
-        purchaseDate: form.purchaseDate || undefined,
-        observation: form.observation || undefined,
-        termDays: form.termDays ? Number(form.termDays) : undefined,
-        paymentMethod: form.paymentMethod || undefined,
-        purchaseOrderId: sourceOrderId || undefined,
-        items: validItems.map((it) => ({
-          productId: it.productId,
-          quantity: decimal(it.quantity),
-          unitPrice: decimal(it.unitPrice),
-        })),
-      });
+      if (editingId) {
+        await purchaseService.update(editingId, payload);
+      } else {
+        await purchaseService.create(payload);
+      }
 
       setCreateOpen(false);
 
@@ -485,7 +526,9 @@ export default function ComprasPage() {
       setFormError(
         extractMessage(
           err,
-          "Não foi possível cadastrar a compra."
+          editingId
+            ? "Não foi possível salvar as alterações."
+            : "Não foi possível cadastrar a compra."
         )
       );
     } finally {
@@ -538,22 +581,33 @@ export default function ComprasPage() {
                 </p>
               </div>
 
-              <Can permission="purchase.create">
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  disabled={semDeposito}
-                  title={
-                    semDeposito
-                      ? "Cadastre um depósito primeiro"
-                      : undefined
-                  }
-                  className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+              <div className="flex gap-2">
+                <Link
+                  href="/erp/compras/relatorio"
+                  target="_blank"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                 >
-                  <Plus size={18} />
-                  Nova compra
-                </button>
-              </Can>
+                  <FileText size={18} />
+                  Relatório
+                </Link>
+
+                <Can permission="purchase.create">
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    disabled={semDeposito}
+                    title={
+                      semDeposito
+                        ? "Cadastre um depósito primeiro"
+                        : undefined
+                    }
+                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                  >
+                    <Plus size={18} />
+                    Nova compra
+                  </button>
+                </Can>
+              </div>
             </header>
 
             <div className="flex flex-wrap gap-3">
@@ -728,6 +782,20 @@ export default function ComprasPage() {
                           </button>
 
                           {p.status === "DRAFT" && (
+                            <Can permission="purchase.update">
+                              <button
+                                type="button"
+                                onClick={() => openEdit(p)}
+                                title="Editar"
+                                aria-label="Editar"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {p.status === "DRAFT" && (
                             <Can permission="purchase.approve">
                               <button
                                 type="button"
@@ -803,7 +871,7 @@ export default function ComprasPage() {
           <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                Nova compra
+                {editingId ? "Editar compra" : "Nova compra"}
               </h2>
 
               <button
@@ -1053,8 +1121,7 @@ export default function ComprasPage() {
                 <div className="space-y-2">
                   {items.map((it, index) => {
                     const subtotal =
-                      decimal(it.quantity) *
-                      decimal(it.unitPrice);
+                      decimal(it.quantity) * it.unitPrice;
 
                     return (
                       <div
@@ -1081,7 +1148,7 @@ export default function ComprasPage() {
                                   : "",
                                 unitPrice:
                                   p && !it.unitPrice
-                                    ? toInputDecimal(p.cost)
+                                    ? num(p.cost)
                                     : it.unitPrice,
                               })
                             }
@@ -1100,14 +1167,14 @@ export default function ComprasPage() {
                           }
                         />
 
-                        <input
-                          inputMode="decimal"
+                        <CurrencyInput
                           placeholder="Preço unit."
-                          className={`${fieldClass} col-span-2`}
+                          wrapperClassName="col-span-2"
+                          className={fieldClass}
                           value={it.unitPrice}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             updateItem(index, {
-                              unitPrice: e.target.value,
+                              unitPrice: value,
                             })
                           }
                         />
@@ -1157,7 +1224,11 @@ export default function ComprasPage() {
                   onClick={() => void saveCreate()}
                   className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
                 >
-                  {saving ? "Salvando..." : "Cadastrar"}
+                  {saving
+                    ? "Salvando..."
+                    : editingId
+                      ? "Salvar alterações"
+                      : "Cadastrar"}
                 </button>
               </div>
             </div>

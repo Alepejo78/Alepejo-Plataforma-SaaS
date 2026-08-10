@@ -84,6 +84,12 @@ export class ProductsRepository {
               mode: 'insensitive',
             },
           },
+          {
+            reference: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
         ],
       }),
 

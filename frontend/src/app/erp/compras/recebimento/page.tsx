@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   CheckCircle2,
+  FileText,
   PackageCheck,
   ScanBarcode,
   Undo2,
@@ -363,6 +365,15 @@ export default function RecebimentoPage() {
                   barras.
                 </p>
               </div>
+
+              <Link
+                href="/erp/compras/recebimento/relatorio"
+                target="_blank"
+                className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+              >
+                <FileText size={18} />
+                Relatório
+              </Link>
             </header>
 
             <div className="flex flex-wrap gap-3">

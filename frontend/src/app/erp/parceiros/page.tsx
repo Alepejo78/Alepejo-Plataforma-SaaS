@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { FileText, Pencil, Plus, Trash2, X } from "lucide-react";
+import Link from "next/link";
 
 import { maskDocument, maskPhone } from "@/lib/masks";
 
@@ -166,16 +167,27 @@ export default function ParceirosPage() {
                 </p>
               </div>
 
-              <Can permission="partner.create">
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+              <div className="flex gap-2">
+                <Link
+                  href="/erp/parceiros/relatorio"
+                  target="_blank"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                 >
-                  <Plus size={18} />
-                  Novo parceiro
-                </button>
-              </Can>
+                  <FileText size={18} />
+                  Relatório
+                </Link>
+
+                <Can permission="partner.create">
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                  >
+                    <Plus size={18} />
+                    Novo parceiro
+                  </button>
+                </Can>
+              </div>
             </header>
 
             <div className="flex flex-wrap items-center gap-3">

@@ -15,26 +15,36 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
+  BANK_ACCOUNT_TYPE_LABELS,
   DEPENDENT_RELATIONSHIP_LABELS,
   EDUCATION_LEVEL_LABELS,
   EMPLOYEE_STATUS_LABELS,
+  EXAM_STATUS_LABELS,
   GENDER_LABELS,
   MARITAL_STATUS_LABELS,
+  PIX_KEY_TYPE_LABELS,
   SALARY_TYPE_LABELS,
+  benefitService,
+  employeeExamService,
   employeeService,
   jobFunctionService,
   workScheduleService,
   type AuxiliaryRecord,
+  type BankAccountType,
+  type Benefit,
   type DependentRelationship,
   type EducationLevel,
   type Employee,
   type EmployeeDependent,
+  type EmployeeExam,
   type EmployeeStatus,
   type Gender,
   type JobFunction,
   type MaritalStatus,
+  type PixKeyType,
   type SalaryType,
 } from "@/services/hr.service";
 
@@ -77,6 +87,17 @@ function toDateInput(value: string | null | undefined) {
   return value ? value.slice(0, 10) : "";
 }
 
+function addDays(dateStr: string, days: number) {
+  if (!dateStr) {
+    return "";
+  }
+
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+
+  return d.toISOString().slice(0, 10);
+}
+
 function extractMessage(err: unknown, fallback: string) {
   const message = (
     err as { response?: { data?: { message?: unknown } } }
@@ -110,7 +131,9 @@ const TABS = [
   "Documentos",
   "Contato",
   "Contratuais",
-  "Saúde e benefícios",
+  "Dados bancários",
+  "Saúde",
+  "Benefícios",
   "EPI",
   "Dependentes",
 ] as const;
@@ -147,24 +170,45 @@ interface FormState {
   jobFunctionId: string;
   jobFunctionLabel: string;
   workScheduleId: string;
-  baseSalary: string;
+  baseSalary: number;
   salaryType: SalaryType | "";
   paymentMethod: PaymentMethod | "";
   admissionDate: string;
+  experienceStageDays: number;
   experienceEndDate: string;
   contractEndDate: string;
   terminationDate: string;
   status: EmployeeStatus;
 
-  examDate: string;
-  examCompleted: boolean;
+  bankName: string;
+  bankAgency: string;
+  bankAccount: string;
+  bankAccountType: BankAccountType | "";
+  pixKeyType: PixKeyType | "";
+  pixKey: string;
+
   nextExamDate: string;
   noticeDays: string;
   onLeave: boolean;
 
-  transportVoucher: boolean;
+  leaveStartDate: string;
+  leaveDays: string;
+  leaveEndDate: string;
+
+  vacationStartDate: string;
+  vacationDays: string;
+  vacationEndDate: string;
+  onVacation: boolean;
+
+  benefitValues: Record<
+    string,
+    { checked: boolean; value: number; percentage: number }
+  >;
   lockerKey: string;
   lockerNumber: string;
+  shoeSize: string;
+  shirtSize: string;
+  pantsSize: string;
   observation: string;
 }
 
@@ -199,24 +243,42 @@ function emptyForm(): FormState {
     jobFunctionId: "",
     jobFunctionLabel: "",
     workScheduleId: "",
-    baseSalary: "",
+    baseSalary: 0,
     salaryType: "",
     paymentMethod: "",
     admissionDate: "",
+    experienceStageDays: 30,
     experienceEndDate: "",
     contractEndDate: "",
     terminationDate: "",
     status: "EXPERIENCIA",
 
-    examDate: "",
-    examCompleted: false,
+    bankName: "",
+    bankAgency: "",
+    bankAccount: "",
+    bankAccountType: "",
+    pixKeyType: "",
+    pixKey: "",
+
     nextExamDate: "",
     noticeDays: "",
     onLeave: false,
 
-    transportVoucher: false,
+    leaveStartDate: "",
+    leaveDays: "",
+    leaveEndDate: "",
+
+    vacationStartDate: "",
+    vacationDays: "",
+    vacationEndDate: "",
+    onVacation: false,
+
+    benefitValues: {},
     lockerKey: "",
     lockerNumber: "",
+    shoeSize: "",
+    shirtSize: "",
+    pantsSize: "",
     observation: "",
   };
 }
@@ -226,6 +288,9 @@ export default function ColaboradoresPage() {
   const [schedules, setSchedules] = useState<AuxiliaryRecord[]>(
     []
   );
+  const [benefitCatalog, setBenefitCatalog] = useState<
+    Benefit[]
+  >([]);
 
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -243,6 +308,14 @@ export default function ColaboradoresPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [loadingCep, setLoadingCep] = useState(false);
+  const [cepError, setCepError] = useState("");
+
+  const [examHistory, setExamHistory] = useState<
+    EmployeeExam[]
+  >([]);
+  const [newExamDate, setNewExamDate] = useState("");
+  const [examSaving, setExamSaving] = useState(false);
+  const [examError, setExamError] = useState("");
 
   const [actionError, setActionError] = useState("");
 
@@ -279,6 +352,11 @@ export default function ColaboradoresPage() {
       .list()
       .then((r) => setSchedules(r.data))
       .catch(() => {});
+
+    benefitService
+      .list()
+      .then((r) => setBenefitCatalog(r.data))
+      .catch(() => {});
   }, []);
 
   const searchJobFunctions = useCallback(
@@ -291,17 +369,34 @@ export default function ColaboradoresPage() {
     []
   );
 
+  async function loadExamHistory(employeeId: string) {
+    try {
+      const result = await employeeExamService.list(
+        employeeId
+      );
+
+      setExamHistory(result);
+    } catch {
+      setExamHistory([]);
+    }
+  }
+
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm());
     setDependents([]);
+    setExamHistory([]);
+    setNewExamDate("");
     setActiveTab("Pessoais");
     setFormError("");
+    setCepError("");
     setFormOpen(true);
   }
 
   function openEdit(item: Employee) {
     setEditingId(item.id);
+    setNewExamDate("");
+    void loadExamHistory(item.id);
     setForm({
       name: item.name,
       fatherName: item.fatherName ?? "",
@@ -332,28 +427,56 @@ export default function ColaboradoresPage() {
       jobFunctionId: item.jobFunctionId ?? "",
       jobFunctionLabel: item.jobFunction?.name ?? "",
       workScheduleId: item.workScheduleId ?? "",
-      baseSalary:
-        item.baseSalary != null
-          ? String(num(item.baseSalary))
-          : "",
+      baseSalary: num(item.baseSalary),
       salaryType: item.salaryType ?? "",
       paymentMethod: item.paymentMethod ?? "",
       admissionDate: toDateInput(item.admissionDate),
+      experienceStageDays: item.experienceStageDays ?? 30,
       experienceEndDate: toDateInput(item.experienceEndDate),
       contractEndDate: toDateInput(item.contractEndDate),
       terminationDate: toDateInput(item.terminationDate),
       status: item.status,
 
-      examDate: toDateInput(item.examDate),
-      examCompleted: item.examCompleted,
+      bankName: item.bankName ?? "",
+      bankAgency: item.bankAgency ?? "",
+      bankAccount: item.bankAccount ?? "",
+      bankAccountType: item.bankAccountType ?? "",
+      pixKeyType: item.pixKeyType ?? "",
+      pixKey: item.pixKey ?? "",
+
       nextExamDate: toDateInput(item.nextExamDate),
       noticeDays:
         item.noticeDays != null ? String(item.noticeDays) : "",
       onLeave: item.onLeave,
 
-      transportVoucher: item.transportVoucher,
+      leaveStartDate: toDateInput(item.leaveStartDate),
+      leaveDays:
+        item.leaveDays != null ? String(item.leaveDays) : "",
+      leaveEndDate: toDateInput(item.leaveEndDate),
+
+      vacationStartDate: toDateInput(item.vacationStartDate),
+      vacationDays:
+        item.vacationDays != null
+          ? String(item.vacationDays)
+          : "",
+      vacationEndDate: toDateInput(item.vacationEndDate),
+      onVacation: item.onVacation,
+
+      benefitValues: Object.fromEntries(
+        item.employeeBenefits.map((eb) => [
+          eb.benefitId,
+          {
+            checked: true,
+            value: num(eb.value),
+            percentage: num(eb.percentage),
+          },
+        ])
+      ),
       lockerKey: item.lockerKey ?? "",
       lockerNumber: item.lockerNumber ?? "",
+      shoeSize: item.shoeSize ?? "",
+      shirtSize: item.shirtSize ?? "",
+      pantsSize: item.pantsSize ?? "",
       observation: item.observation ?? "",
     });
     setDependents(
@@ -364,6 +487,7 @@ export default function ColaboradoresPage() {
     );
     setActiveTab("Pessoais");
     setFormError("");
+    setCepError("");
     setFormOpen(true);
   }
 
@@ -373,6 +497,7 @@ export default function ColaboradoresPage() {
     }
 
     setLoadingCep(true);
+    setCepError("");
 
     try {
       const data = await lookupService.cep(value);
@@ -384,9 +509,12 @@ export default function ColaboradoresPage() {
         city: data.city ?? prev.city,
         state: data.state ?? prev.state,
       }));
-    } catch {
-      // Silencioso — CEP inválido/não encontrado não deve travar o
-      // preenchimento manual do endereço.
+    } catch (err) {
+      setCepError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível consultar o CEP."
+      );
     } finally {
       setLoadingCep(false);
     }
@@ -456,28 +584,63 @@ export default function ColaboradoresPage() {
 
       jobFunctionId: form.jobFunctionId || undefined,
       workScheduleId: form.workScheduleId || undefined,
-      baseSalary: form.baseSalary
-        ? Number(form.baseSalary.replace(",", "."))
-        : undefined,
+      baseSalary: form.baseSalary || undefined,
       salaryType: form.salaryType || undefined,
       paymentMethod: form.paymentMethod || undefined,
       admissionDate: form.admissionDate || undefined,
+      experienceStageDays: form.experienceStageDays,
       experienceEndDate: form.experienceEndDate || undefined,
       contractEndDate: form.contractEndDate || undefined,
       terminationDate: form.terminationDate || undefined,
       status: form.status,
 
-      examDate: form.examDate || undefined,
-      examCompleted: form.examCompleted,
-      nextExamDate: form.nextExamDate || undefined,
+      bankName: form.bankName.trim() || undefined,
+      bankAgency: form.bankAgency.trim() || undefined,
+      bankAccount: form.bankAccount.trim() || undefined,
+      bankAccountType: form.bankAccountType || undefined,
+      pixKeyType: form.pixKeyType || undefined,
+      pixKey: form.pixKey.trim() || undefined,
+
       noticeDays: form.noticeDays
         ? Number(form.noticeDays)
         : undefined,
       onLeave: form.onLeave,
 
-      transportVoucher: form.transportVoucher,
+      leaveStartDate: form.leaveStartDate || undefined,
+      leaveDays: form.leaveDays
+        ? Number(form.leaveDays)
+        : undefined,
+      leaveEndDate: form.leaveEndDate || undefined,
+
+      vacationStartDate: form.vacationStartDate || undefined,
+      vacationDays: form.vacationDays
+        ? Number(form.vacationDays)
+        : undefined,
+      vacationEndDate: form.vacationEndDate || undefined,
+      onVacation: form.onVacation,
+
+      benefits: Object.entries(form.benefitValues)
+        .filter(([, v]) => v.checked)
+        .map(([benefitId, v]) => {
+          const isPercentage =
+            benefitCatalog.find((b) => b.id === benefitId)
+              ?.calculationType === "PERCENTAGE";
+
+          return {
+            benefitId,
+            value: isPercentage
+              ? undefined
+              : v.value || undefined,
+            percentage: isPercentage
+              ? v.percentage || undefined
+              : undefined,
+          };
+        }),
       lockerKey: form.lockerKey.trim() || undefined,
       lockerNumber: form.lockerNumber.trim() || undefined,
+      shoeSize: form.shoeSize.trim() || undefined,
+      shirtSize: form.shirtSize.trim() || undefined,
+      pantsSize: form.pantsSize.trim() || undefined,
       observation: form.observation.trim() || undefined,
 
       dependents: dependents
@@ -508,6 +671,75 @@ export default function ColaboradoresPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function registerExam() {
+    if (!editingId || !newExamDate) {
+      return;
+    }
+
+    setExamSaving(true);
+    setExamError("");
+
+    try {
+      const exam = await employeeExamService.create({
+        employeeId: editingId,
+        examDate: newExamDate,
+      });
+
+      setNewExamDate("");
+      setForm((prev) => ({
+        ...prev,
+        nextExamDate: toDateInput(exam.nextExamDate),
+      }));
+
+      await loadExamHistory(editingId);
+    } catch (err) {
+      setExamError(
+        extractMessage(
+          err,
+          "Não foi possível registrar o exame."
+        )
+      );
+    } finally {
+      setExamSaving(false);
+    }
+  }
+
+  async function removeExam(exam: EmployeeExam) {
+    if (!editingId) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Remover o registro do exame de ${date(exam.examDate)}?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await employeeExamService.remove(exam.id);
+
+      await loadExamHistory(editingId);
+
+      const updated = await employeeService.getById(
+        editingId
+      );
+
+      setForm((prev) => ({
+        ...prev,
+        nextExamDate: toDateInput(updated.nextExamDate),
+      }));
+    } catch (err) {
+      setExamError(
+        extractMessage(
+          err,
+          "Não foi possível remover o exame."
+        )
+      );
     }
   }
 
@@ -1060,6 +1292,7 @@ export default function ColaboradoresPage() {
                             ...form,
                             zipCode: masked,
                           });
+                          setCepError("");
 
                           if (isValidCEPLength(masked)) {
                             void handleCepLookup(masked);
@@ -1074,6 +1307,12 @@ export default function ColaboradoresPage() {
                         />
                       )}
                     </div>
+
+                    {cepError && (
+                      <p className="mt-1 text-xs text-[var(--warning)]">
+                        {cepError}
+                      </p>
+                    )}
                   </div>
 
                   <div className="lg:col-span-2">
@@ -1242,7 +1481,7 @@ export default function ColaboradoresPage() {
                           // como sugestão inicial, editável.
                           baseSalary:
                             f && !form.baseSalary
-                              ? String(num(f.baseSalary))
+                              ? num(f.baseSalary)
                               : form.baseSalary,
                           salaryType:
                             f && !form.salaryType
@@ -1280,6 +1519,15 @@ export default function ColaboradoresPage() {
                         </option>
                       ))}
                     </select>
+
+                    {form.workScheduleId && (
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        {schedules.find(
+                          (s) => s.id === form.workScheduleId
+                        )?.description ||
+                          "Sem horário detalhado cadastrado."}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -1310,18 +1558,55 @@ export default function ColaboradoresPage() {
 
                   <div>
                     <label className={labelClass}>
+                      Estágio de experiência
+                    </label>
+
+                    <div className="flex h-11 items-center gap-3">
+                      {[30, 60, 90].map((stage) => (
+                        <label
+                          key={stage}
+                          className="flex items-center gap-1.5 text-sm text-[var(--text-primary)] cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              form.experienceStageDays === stage
+                            }
+                            onChange={() =>
+                              setForm({
+                                ...form,
+                                experienceStageDays: stage,
+                                experienceEndDate: addDays(
+                                  form.admissionDate,
+                                  stage
+                                ),
+                              })
+                            }
+                            className="h-4 w-4 rounded border-[var(--border)] accent-[var(--primary)]"
+                          />
+                          {stage} dias
+                        </label>
+                      ))}
+                    </div>
+
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Avança sozinho (30→60→90) e efetiva após
+                      90 dias, se não mexer.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
                       Salário base (R$)
                     </label>
 
-                    <input
-                      inputMode="decimal"
-                      placeholder="0,00"
+                    <CurrencyInput
                       className={fieldClass}
                       value={form.baseSalary}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setForm({
                           ...form,
-                          baseSalary: e.target.value,
+                          baseSalary: value,
                         })
                       }
                     />
@@ -1396,6 +1681,10 @@ export default function ColaboradoresPage() {
                         setForm({
                           ...form,
                           admissionDate: e.target.value,
+                          experienceEndDate: addDays(
+                            e.target.value,
+                            form.experienceStageDays
+                          ),
                         })
                       }
                     />
@@ -1408,16 +1697,15 @@ export default function ColaboradoresPage() {
 
                     <input
                       type="date"
-                      className={fieldClass}
+                      disabled
+                      className={`${fieldClass} opacity-70`}
                       value={form.experienceEndDate}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          experienceEndDate:
-                            e.target.value,
-                        })
-                      }
+                      readOnly
                     />
+
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Calculado — admissão + estágio.
+                    </p>
                   </div>
 
                   <div>
@@ -1451,6 +1739,9 @@ export default function ColaboradoresPage() {
                         setForm({
                           ...form,
                           terminationDate: e.target.value,
+                          status: e.target.value
+                            ? "DEMITIDO"
+                            : form.status,
                         })
                       }
                     />
@@ -1458,7 +1749,142 @@ export default function ColaboradoresPage() {
                 </div>
               )}
 
-              {activeTab === "Saúde e benefícios" && (
+              {activeTab === "Dados bancários" && (
+                <div className="space-y-4">
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Usados para pagamento de salário por
+                    transferência ou Pix.
+                  </p>
+
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="lg:col-span-2">
+                      <label className={labelClass}>
+                        Banco
+                      </label>
+
+                      <input
+                        className={fieldClass}
+                        value={form.bankName}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            bankName: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>
+                        Agência
+                      </label>
+
+                      <input
+                        className={fieldClass}
+                        value={form.bankAgency}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            bankAgency: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>
+                        Conta
+                      </label>
+
+                      <input
+                        className={fieldClass}
+                        value={form.bankAccount}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            bankAccount: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>
+                        Tipo de conta
+                      </label>
+
+                      <select
+                        className={fieldClass}
+                        value={form.bankAccountType}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            bankAccountType: e.target
+                              .value as BankAccountType | "",
+                          })
+                        }
+                      >
+                        <option value="">Selecione...</option>
+
+                        {Object.entries(
+                          BANK_ACCOUNT_TYPE_LABELS
+                        ).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>
+                        Tipo de chave Pix
+                      </label>
+
+                      <select
+                        className={fieldClass}
+                        value={form.pixKeyType}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            pixKeyType: e.target
+                              .value as PixKeyType | "",
+                          })
+                        }
+                      >
+                        <option value="">Selecione...</option>
+
+                        {Object.entries(
+                          PIX_KEY_TYPE_LABELS
+                        ).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="lg:col-span-2">
+                      <label className={labelClass}>
+                        Chave Pix
+                      </label>
+
+                      <input
+                        className={fieldClass}
+                        value={form.pixKey}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            pixKey: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "Saúde" && (
                 <div className="space-y-6">
                   <div>
                     <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
@@ -1468,38 +1894,22 @@ export default function ColaboradoresPage() {
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       <div>
                         <label className={labelClass}>
-                          Data do exame
+                          Próximo exame pendente
                         </label>
 
                         <input
                           type="date"
-                          className={fieldClass}
-                          value={form.examDate}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              examDate: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      <div>
-                        <label className={labelClass}>
-                          Próximo exame (periódico)
-                        </label>
-
-                        <input
-                          type="date"
-                          className={fieldClass}
+                          disabled
+                          readOnly
+                          className={`${fieldClass} opacity-70`}
                           value={form.nextExamDate}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              nextExamDate: e.target.value,
-                            })
-                          }
                         />
+
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          {form.nextExamDate
+                            ? "Calculado a partir do último exame registrado."
+                            : "Sem exame registrado ainda — a referência é a data de admissão."}
+                        </p>
                       </div>
 
                       <div>
@@ -1516,27 +1926,87 @@ export default function ColaboradoresPage() {
                             setForm({
                               ...form,
                               noticeDays: e.target.value,
+                              onLeave: Number(
+                                e.target.value
+                              )
+                                ? true
+                                : form.onLeave,
                             })
                           }
                         />
                       </div>
 
-                      <div className="flex items-end gap-4 pb-2">
-                        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                          <input
-                            type="checkbox"
-                            checked={form.examCompleted}
-                            onChange={(e) =>
-                              setForm({
-                                ...form,
-                                examCompleted:
-                                  e.target.checked,
-                              })
-                            }
-                          />
-                          Exame concluído
+                      <div className="lg:border-l lg:border-[var(--border)] lg:pl-4">
+                        <label className={labelClass}>
+                          Início do afastamento
                         </label>
 
+                        <input
+                          type="date"
+                          className={fieldClass}
+                          value={form.leaveStartDate}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              leaveStartDate: e.target.value,
+                              leaveEndDate: e.target.value
+                                ? addDays(
+                                    e.target.value,
+                                    Number(form.leaveDays) || 0
+                                  )
+                                : "",
+                              onLeave: e.target.value
+                                ? true
+                                : form.onLeave,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>
+                          Dias afastado
+                        </label>
+
+                        <input
+                          type="number"
+                          min={0}
+                          className={fieldClass}
+                          value={form.leaveDays}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              leaveDays: e.target.value,
+                              leaveEndDate: form.leaveStartDate
+                                ? addDays(
+                                    form.leaveStartDate,
+                                    Number(e.target.value) || 0
+                                  )
+                                : "",
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>
+                          Fim do afastamento
+                        </label>
+
+                        <input
+                          type="date"
+                          disabled
+                          readOnly
+                          className={`${fieldClass} opacity-70`}
+                          value={form.leaveEndDate}
+                        />
+
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Calculado — início + dias.
+                        </p>
+                      </div>
+
+                      <div className="flex items-end pb-2">
                         <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                           <input
                             type="checkbox"
@@ -1554,29 +2024,398 @@ export default function ColaboradoresPage() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="border-t border-[var(--border)] pt-6">
                     <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
-                      Benefícios e armário
+                      Férias
                     </p>
 
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <label className={labelClass}>
+                          Início das férias
+                        </label>
+
+                        <input
+                          type="date"
+                          className={fieldClass}
+                          value={form.vacationStartDate}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              vacationStartDate: e.target.value,
+                              vacationEndDate: e.target.value
+                                ? addDays(
+                                    e.target.value,
+                                    Number(form.vacationDays) ||
+                                      0
+                                  )
+                                : "",
+                              onVacation: e.target.value
+                                ? true
+                                : form.onVacation,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>
+                          Dias de férias
+                        </label>
+
+                        <input
+                          type="number"
+                          min={0}
+                          className={fieldClass}
+                          value={form.vacationDays}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              vacationDays: e.target.value,
+                              vacationEndDate:
+                                form.vacationStartDate
+                                  ? addDays(
+                                      form.vacationStartDate,
+                                      Number(e.target.value) ||
+                                        0
+                                    )
+                                  : "",
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>
+                          Fim das férias
+                        </label>
+
+                        <input
+                          type="date"
+                          disabled
+                          readOnly
+                          className={`${fieldClass} opacity-70`}
+                          value={form.vacationEndDate}
+                        />
+
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Calculado — início + dias.
+                        </p>
+                      </div>
+
                       <div className="flex items-end pb-2">
                         <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                           <input
                             type="checkbox"
-                            checked={form.transportVoucher}
+                            checked={form.onVacation}
                             onChange={(e) =>
                               setForm({
                                 ...form,
-                                transportVoucher:
-                                  e.target.checked,
+                                onVacation: e.target.checked,
                               })
                             }
                           />
-                          Vale transporte
+                          Em férias
                         </label>
                       </div>
+                    </div>
+                  </div>
 
+                  <div className="border-t border-[var(--border)] pt-6">
+                    <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+                      Registrar exame realizado
+                    </p>
+
+                    {!editingId ? (
+                      <p className="text-sm text-[var(--text-muted)]">
+                        Salve o cadastro primeiro para
+                        registrar exames.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-end gap-3">
+                          <div>
+                            <label className={labelClass}>
+                              Data do exame
+                            </label>
+
+                            <input
+                              type="date"
+                              className={fieldClass}
+                              value={newExamDate}
+                              onChange={(e) =>
+                                setNewExamDate(
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={
+                              examSaving || !newExamDate
+                            }
+                            onClick={() =>
+                              void registerExam()
+                            }
+                            className="h-11 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
+                          >
+                            {examSaving
+                              ? "Registrando..."
+                              : "Registrar"}
+                          </button>
+                        </div>
+
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Ao registrar, o próximo exame é
+                          calculado automaticamente para 1 ano
+                          depois, em dia útil.
+                        </p>
+
+                        {examError && (
+                          <div className="mt-2 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                            {examError}
+                          </div>
+                        )}
+
+                        {examHistory.length > 0 && (
+                          <div className="mt-4 overflow-x-auto rounded-xl border border-[var(--border)]">
+                            <table className="w-full text-left text-sm">
+                              <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+                                <tr>
+                                  <th className="px-4 py-2 font-semibold">
+                                    Data do exame
+                                  </th>
+                                  <th className="px-4 py-2 font-semibold">
+                                    Próximo exame
+                                  </th>
+                                  <th className="px-4 py-2 font-semibold">
+                                    Status
+                                  </th>
+                                  <th className="px-4 py-2" />
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {examHistory.map((exam) => (
+                                  <tr
+                                    key={exam.id}
+                                    className="border-t border-[var(--border)]"
+                                  >
+                                    <td className="px-4 py-2 text-[var(--text-primary)]">
+                                      {date(exam.examDate)}
+                                    </td>
+                                    <td className="px-4 py-2 text-[var(--text-secondary)]">
+                                      {date(
+                                        exam.nextExamDate
+                                      )}
+                                    </td>
+                                    <td
+                                      className={`px-4 py-2 font-medium ${
+                                        exam.status ===
+                                        "ATRASADO"
+                                          ? "text-[var(--danger)]"
+                                          : "text-[var(--success)]"
+                                      }`}
+                                    >
+                                      {
+                                        EXAM_STATUS_LABELS[
+                                          exam.status
+                                        ]
+                                      }
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void removeExam(
+                                            exam
+                                          )
+                                        }
+                                        title="Remover"
+                                        aria-label="Remover"
+                                        className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Observações
+                    </label>
+
+                    <input
+                      className={fieldClass}
+                      value={form.observation}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          observation: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "Benefícios" && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      Benefícios
+                    </p>
+
+                    <Link
+                      href="/erp/rh/cadastros"
+                      className="text-xs font-medium text-[var(--primary)] hover:underline"
+                    >
+                      Manutenção de benefícios
+                    </Link>
+                  </div>
+
+                  {benefitCatalog.length === 0 ? (
+                    <p className="text-sm text-[var(--text-muted)]">
+                      Nenhum benefício cadastrado.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {benefitCatalog.map((b) => {
+                        const current = form.benefitValues[
+                          b.id
+                        ] ?? {
+                          checked: false,
+                          value: 0,
+                          percentage: 0,
+                        };
+                        const isPercentage =
+                          b.calculationType === "PERCENTAGE";
+                        const computed =
+                          (form.baseSalary *
+                            current.percentage) /
+                          100;
+
+                        return (
+                          <div
+                            key={b.id}
+                            className="grid grid-cols-1 items-center gap-3 rounded-xl border border-[var(--border)] p-3 sm:grid-cols-3"
+                          >
+                            <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                              <input
+                                type="checkbox"
+                                checked={current.checked}
+                                onChange={(e) =>
+                                  setForm({
+                                    ...form,
+                                    benefitValues: {
+                                      ...form.benefitValues,
+                                      [b.id]: {
+                                        ...current,
+                                        checked:
+                                          e.target.checked,
+                                      },
+                                    },
+                                  })
+                                }
+                              />
+                              {b.name}
+                            </label>
+
+                            {isPercentage ? (
+                              <div className="sm:col-span-2">
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    disabled={
+                                      !current.checked
+                                    }
+                                    className={`${fieldClass} text-center`}
+                                    style={{ width: "4.5rem" }}
+                                    value={
+                                      current.percentage || ""
+                                    }
+                                    onChange={(e) =>
+                                      setForm({
+                                        ...form,
+                                        benefitValues: {
+                                          ...form.benefitValues,
+                                          [b.id]: {
+                                            ...current,
+                                            checked: true,
+                                            percentage: Number(
+                                              e.target.value
+                                            ),
+                                          },
+                                        },
+                                      })
+                                    }
+                                  />
+                                  <span className="text-sm text-[var(--text-secondary)]">
+                                    % do salário
+                                  </span>
+                                  {current.checked && (
+                                    <span className="text-sm font-semibold text-[var(--text-primary)]">
+                                      ={" "}
+                                      {computed.toLocaleString(
+                                        "pt-BR",
+                                        {
+                                          style: "currency",
+                                          currency: "BRL",
+                                        }
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="sm:col-span-2">
+                                <CurrencyInput
+                                  className={fieldClass}
+                                  value={current.value}
+                                  disabled={!current.checked}
+                                  onChange={(value) =>
+                                    setForm({
+                                      ...form,
+                                      benefitValues: {
+                                        ...form.benefitValues,
+                                        [b.id]: {
+                                          ...current,
+                                          checked: true,
+                                          value,
+                                        },
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "EPI" && (
+                <div className="space-y-6">
+                  <div>
+                    <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+                      Armário
+                    </p>
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       <div>
                         <label className={labelClass}>
                           Chave do armário
@@ -1614,44 +2453,93 @@ export default function ColaboradoresPage() {
                   </div>
 
                   <div>
-                    <label className={labelClass}>
-                      Observações
-                    </label>
-
-                    <input
-                      className={fieldClass}
-                      value={form.observation}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          observation: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "EPI" && (
-                <div className="rounded-xl border border-[var(--border)] p-4">
-                  {!form.jobFunctionId ? (
-                    <p className="text-sm text-[var(--text-muted)]">
-                      Selecione a função do colaborador na aba
-                      &quot;Contratuais&quot; para ver os EPIs
-                      exigidos.
+                    <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+                      Tamanhos
                     </p>
-                  ) : (
-                    <FunctionPpeSummary
-                      jobFunctionId={form.jobFunctionId}
-                    />
-                  )}
 
-                  <p className="mt-3 text-xs text-[var(--text-muted)]">
-                    O controle de entrega de EPI (ficha
-                    assinada, data, quantidade) será uma tela
-                    própria em breve — por ora, isso só mostra
-                    o que a função exige.
-                  </p>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <label className={labelClass}>
+                          Calçado
+                        </label>
+
+                        <input
+                          placeholder="Ex.: 40"
+                          className={fieldClass}
+                          value={form.shoeSize}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              shoeSize: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>
+                          Camisa
+                        </label>
+
+                        <input
+                          placeholder="Ex.: M"
+                          className={fieldClass}
+                          value={form.shirtSize}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              shirtSize: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>
+                          Calça
+                        </label>
+
+                        <input
+                          placeholder="Ex.: 42"
+                          className={fieldClass}
+                          value={form.pantsSize}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              pantsSize: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[var(--border)] pt-6">
+                    <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+                      EPIs exigidos pela função
+                    </p>
+
+                    <div className="rounded-xl border border-[var(--border)] p-4">
+                      {!form.jobFunctionId ? (
+                        <p className="text-sm text-[var(--text-muted)]">
+                          Selecione a função do colaborador na
+                          aba &quot;Contratuais&quot; para ver
+                          os EPIs exigidos.
+                        </p>
+                      ) : (
+                        <FunctionPpeSummary
+                          jobFunctionId={form.jobFunctionId}
+                        />
+                      )}
+
+                      <p className="mt-3 text-xs text-[var(--text-muted)]">
+                        O controle de entrega de EPI (ficha
+                        assinada, data, quantidade) fica na
+                        tela própria de Ficha de EPI — por ora,
+                        isso só mostra o que a função exige.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 

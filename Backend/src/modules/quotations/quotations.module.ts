@@ -4,6 +4,7 @@ import { PrismaModule } from '../../core/prisma/prisma.module';
 import { LicenseModule } from '../identity/license/license.module';
 import { BusinessPartnersModule } from '../business-partners/business-partners.module';
 import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { QuotationController } from './controllers/quotation.controller';
 import { QuotationRepository } from './repositories/quotation.repository';
@@ -15,6 +16,7 @@ import { QuotationService } from './services/quotation.service';
     LicenseModule,
     BusinessPartnersModule,
     DocumentSequenceModule,
+    NotificationsModule,
   ],
 
   controllers: [QuotationController],

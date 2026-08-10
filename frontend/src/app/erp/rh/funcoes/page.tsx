@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  FileText,
   Pencil,
   Plus,
   Settings2,
@@ -14,6 +15,7 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
   SALARY_TYPE_LABELS,
@@ -67,7 +69,7 @@ interface FormState {
   cboLabel: string;
   sectorId: string;
   workScheduleId: string;
-  baseSalary: string;
+  baseSalary: number;
   salaryType: SalaryType | "";
   requiresPpe: boolean;
   ppeTypeIds: string[];
@@ -81,7 +83,7 @@ function emptyForm(): FormState {
     cboLabel: "",
     sectorId: "",
     workScheduleId: "",
-    baseSalary: "",
+    baseSalary: 0,
     salaryType: "",
     requiresPpe: false,
     ppeTypeIds: [],
@@ -175,8 +177,7 @@ export default function FuncoesPage() {
           : "",
       sectorId: item.sectorId ?? "",
       workScheduleId: item.workScheduleId ?? "",
-      baseSalary:
-        item.baseSalary != null ? String(num(item.baseSalary)) : "",
+      baseSalary: num(item.baseSalary),
       salaryType: item.salaryType ?? "",
       requiresPpe: item.requiresPpe,
       ppeTypeIds: item.ppeTypes.map((p) => p.id),
@@ -210,9 +211,7 @@ export default function FuncoesPage() {
       cboCode: form.cboCode || undefined,
       sectorId: form.sectorId || undefined,
       workScheduleId: form.workScheduleId || undefined,
-      baseSalary: form.baseSalary
-        ? Number(form.baseSalary.replace(",", "."))
-        : undefined,
+      baseSalary: form.baseSalary || undefined,
       salaryType: form.salaryType || undefined,
       requiresPpe: form.requiresPpe,
       ppeTypeIds: form.requiresPpe ? form.ppeTypeIds : [],
@@ -281,6 +280,15 @@ export default function FuncoesPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <Link
+                  href="/erp/rh/funcoes/relatorio"
+                  target="_blank"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                >
+                  <FileText size={18} />
+                  Relatório
+                </Link>
+
                 <Link
                   href="/erp/rh/cadastros"
                   className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
@@ -580,15 +588,13 @@ export default function FuncoesPage() {
                     Salário base (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={form.baseSalary}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        baseSalary: e.target.value,
+                        baseSalary: value,
                       })
                     }
                   />

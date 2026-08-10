@@ -21,6 +21,7 @@ import { Module } from '../../identity/license/decorators/module.decorator';
 import { PurchaseService } from '../services/purchase.service';
 
 import { CreatePurchaseDto } from '../dto/create-purchase.dto';
+import { UpdatePurchaseDto } from '../dto/update-purchase.dto';
 import { PurchaseFilterDto } from '../dto/purchase-filter.dto';
 import { ReceivePurchaseDto } from '../dto/receive-purchase.dto';
 
@@ -74,6 +75,23 @@ export class PurchaseController {
     return this.service.findOne(
       companyId,
       id,
+    );
+  }
+
+  @Patch(':id')
+  @Permissions('purchase.update')
+  @ApiOperation({
+    summary: 'Alterar compra (somente rascunho)',
+  })
+  update(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdatePurchaseDto,
+  ) {
+    return this.service.update(
+      companyId,
+      id,
+      dto,
     );
   }
 

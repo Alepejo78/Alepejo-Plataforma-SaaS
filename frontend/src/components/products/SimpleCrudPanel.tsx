@@ -26,6 +26,9 @@ interface FieldDef {
   required?: boolean;
   maxLength?: number;
   width?: string;
+  type?: "text" | "select";
+  options?: { value: string; label: string }[];
+  defaultValue?: string;
 }
 
 interface CrudService<T> {
@@ -102,8 +105,16 @@ export function SimpleCrudPanel<T extends SimpleRecord>({
   }, [load]);
 
   function startCreate() {
+    const initial: Record<string, string> = {};
+
+    fields.forEach((field) => {
+      if (field.defaultValue) {
+        initial[field.key] = field.defaultValue;
+      }
+    });
+
     setEditingId("new");
-    setDraft({});
+    setDraft(initial);
     setError("");
   }
 
@@ -242,26 +253,46 @@ export function SimpleCrudPanel<T extends SimpleRecord>({
         <div className="space-y-2">
           {editingId === "new" && (
             <div className="flex items-center gap-2 rounded-lg border border-[var(--primary)] p-2">
-              {fields.map((field) => (
-                <input
-                  key={field.key}
-                  autoFocus={field === fields[0]}
-                  placeholder={field.label}
-                  maxLength={field.maxLength}
-                  className={`${inputClass} ${field.width ?? ""}`}
-                  value={draft[field.key] ?? ""}
-                  onChange={(e) =>
-                    setDraft((previous) => ({
-                      ...previous,
-                      [field.key]: e.target.value,
-                    }))
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void save();
-                    if (e.key === "Escape") cancel();
-                  }}
-                />
-              ))}
+              {fields.map((field) =>
+                field.type === "select" ? (
+                  <select
+                    key={field.key}
+                    className={`${inputClass} ${field.width ?? ""}`}
+                    value={draft[field.key] ?? ""}
+                    onChange={(e) =>
+                      setDraft((previous) => ({
+                        ...previous,
+                        [field.key]: e.target.value,
+                      }))
+                    }
+                  >
+                    {(field.options ?? []).map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    key={field.key}
+                    autoFocus={field === fields[0]}
+                    placeholder={field.label}
+                    maxLength={field.maxLength}
+                    className={`${inputClass} ${field.width ?? ""}`}
+                    value={draft[field.key] ?? ""}
+                    onChange={(e) =>
+                      setDraft((previous) => ({
+                        ...previous,
+                        [field.key]: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void save();
+                      if (e.key === "Escape") cancel();
+                    }}
+                  />
+                )
+              )}
 
               <button
                 type="button"
@@ -295,25 +326,48 @@ export function SimpleCrudPanel<T extends SimpleRecord>({
                   key={item.id}
                   className="flex items-center gap-2 rounded-lg border border-[var(--primary)] p-2"
                 >
-                  {fields.map((field) => (
-                    <input
-                      key={field.key}
-                      placeholder={field.label}
-                      maxLength={field.maxLength}
-                      className={`${inputClass} ${field.width ?? ""}`}
-                      value={draft[field.key] ?? ""}
-                      onChange={(e) =>
-                        setDraft((previous) => ({
-                          ...previous,
-                          [field.key]: e.target.value,
-                        }))
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") void save();
-                        if (e.key === "Escape") cancel();
-                      }}
-                    />
-                  ))}
+                  {fields.map((field) =>
+                    field.type === "select" ? (
+                      <select
+                        key={field.key}
+                        className={`${inputClass} ${field.width ?? ""}`}
+                        value={draft[field.key] ?? ""}
+                        onChange={(e) =>
+                          setDraft((previous) => ({
+                            ...previous,
+                            [field.key]: e.target.value,
+                          }))
+                        }
+                      >
+                        {(field.options ?? []).map((opt) => (
+                          <option
+                            key={opt.value}
+                            value={opt.value}
+                          >
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        key={field.key}
+                        placeholder={field.label}
+                        maxLength={field.maxLength}
+                        className={`${inputClass} ${field.width ?? ""}`}
+                        value={draft[field.key] ?? ""}
+                        onChange={(e) =>
+                          setDraft((previous) => ({
+                            ...previous,
+                            [field.key]: e.target.value,
+                          }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void save();
+                          if (e.key === "Escape") cancel();
+                        }}
+                      />
+                    )
+                  )}
 
                   <button
                     type="button"

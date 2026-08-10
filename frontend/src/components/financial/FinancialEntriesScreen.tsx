@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   Check,
+  FileText,
   Pencil,
   Plus,
   RotateCcw,
@@ -16,6 +18,7 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
   DOCUMENT_TYPE_LABELS,
@@ -51,12 +54,6 @@ function money(value: string | number | null | undefined) {
   });
 }
 
-function toInputDecimal(value: string | number | null | undefined) {
-  return num(value).toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 function date(value: string | null | undefined) {
   if (!value) {
@@ -117,7 +114,7 @@ interface Form {
   dueDate: string;
   documentNumber: string;
   documentType: FinancialDocumentType | "";
-  amount: string;
+  amount: number;
   observation: string;
 }
 
@@ -134,7 +131,7 @@ function emptyForm(): Form {
     dueDate: today,
     documentNumber: "",
     documentType: "",
-    amount: "",
+    amount: 0,
     observation: "",
   };
 }
@@ -175,7 +172,7 @@ export function FinancialEntriesScreen({
   const [settleForm, setSettleForm] = useState({
     paymentDate: todayIso(),
     paymentMethod: "" as PaymentMethod | "",
-    paidAmount: "",
+    paidAmount: 0,
   });
   const [settling, setSettling] = useState(false);
   const [settleError, setSettleError] = useState("");
@@ -243,16 +240,6 @@ export function FinancialEntriesScreen({
     []
   );
 
-  const decimal = (value: string) => {
-    const normalized = value
-      .replace(/\./g, "")
-      .replace(",", ".");
-
-    const parsed = Number(normalized);
-
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm());
@@ -277,7 +264,7 @@ export function FinancialEntriesScreen({
       dueDate: entry.dueDate.slice(0, 10),
       documentNumber: entry.documentNumber ?? "",
       documentType: entry.documentType ?? "",
-      amount: toInputDecimal(entry.amount),
+      amount: num(entry.amount),
       observation: entry.observation ?? "",
     });
     setFormError("");
@@ -302,7 +289,7 @@ export function FinancialEntriesScreen({
       !form.partnerId ||
       !form.issueDate ||
       !form.dueDate ||
-      decimal(form.amount) <= 0
+      form.amount <= 0
     ) {
       setFormError(
         `Selecione ${partnerLabel.toLowerCase()}, as datas e um valor maior que zero.`
@@ -326,7 +313,7 @@ export function FinancialEntriesScreen({
         dueDate: form.dueDate,
         documentNumber: form.documentNumber || undefined,
         documentType: form.documentType || undefined,
-        amount: decimal(form.amount),
+        amount: form.amount,
         observation: form.observation || undefined,
       };
 
@@ -357,9 +344,7 @@ export function FinancialEntriesScreen({
     setSettleForm({
       paymentDate: todayIso(),
       paymentMethod: "",
-      paidAmount: toInputDecimal(
-        num(entry.amount) - num(entry.paidAmount)
-      ),
+      paidAmount: num(entry.amount) - num(entry.paidAmount),
     });
     setSettleError("");
   }
@@ -376,9 +361,7 @@ export function FinancialEntriesScreen({
       await financialEntryService.settle(settleTarget.id, {
         paymentDate: settleForm.paymentDate || undefined,
         paymentMethod: settleForm.paymentMethod || undefined,
-        paidAmount: settleForm.paidAmount
-          ? decimal(settleForm.paidAmount)
-          : undefined,
+        paidAmount: settleForm.paidAmount || undefined,
       });
 
       setSettleTarget(null);
@@ -445,16 +428,27 @@ export function FinancialEntriesScreen({
                 </p>
               </div>
 
-              <Can permission="financial-entry.create">
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+              <div className="flex gap-2">
+                <Link
+                  href={`/erp/financeiro/contas/relatorio?type=${type}`}
+                  target="_blank"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                 >
-                  <Plus size={18} />
-                  Novo título
-                </button>
-              </Can>
+                  <FileText size={18} />
+                  Relatório
+                </Link>
+
+                <Can permission="financial-entry.create">
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                  >
+                    <Plus size={18} />
+                    Novo título
+                  </button>
+                </Can>
+              </div>
             </header>
 
             <div className="flex flex-wrap gap-3">
@@ -887,15 +881,13 @@ export function FinancialEntriesScreen({
                     Valor (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
-                    placeholder="0,00"
+                  <CurrencyInput
                     className={fieldClass}
                     value={form.amount}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        amount: e.target.value,
+                        amount: value,
                       })
                     }
                   />
@@ -1032,14 +1024,13 @@ export function FinancialEntriesScreen({
                     Valor (R$)
                   </label>
 
-                  <input
-                    inputMode="decimal"
+                  <CurrencyInput
                     className={fieldClass}
                     value={settleForm.paidAmount}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setSettleForm({
                         ...settleForm,
-                        paidAmount: e.target.value,
+                        paidAmount: value,
                       })
                     }
                   />

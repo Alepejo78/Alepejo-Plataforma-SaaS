@@ -32,14 +32,17 @@ import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.
 import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-accounts.module';
 import { ChartOfAccountClassificationsModule } from './modules/chart-of-account-classifications/chart-of-account-classifications.module';
 import { FinancialEntriesModule } from './modules/financial-entries/financial-entries.module';
+import { BudgetsModule } from './modules/budgets/budgets.module';
 
 import { SectorsModule } from './modules/sectors/sectors.module';
 import { WorkSchedulesModule } from './modules/work-schedules/work-schedules.module';
 import { PpeTypesModule } from './modules/ppe-types/ppe-types.module';
+import { BenefitsModule } from './modules/benefits/benefits.module';
 import { JobFunctionsModule } from './modules/job-functions/job-functions.module';
 import { CboModule } from './modules/cbo/cbo.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { PpeDeliveriesModule } from './modules/ppe-deliveries/ppe-deliveries.module';
+import { EmployeeExamsModule } from './modules/employee-exams/employee-exams.module';
 
 @Module({
   imports: [
@@ -67,14 +70,17 @@ import { PpeDeliveriesModule } from './modules/ppe-deliveries/ppe-deliveries.mod
     ChartOfAccountsModule,
     ChartOfAccountClassificationsModule,
     FinancialEntriesModule,
+    BudgetsModule,
 
     SectorsModule,
     WorkSchedulesModule,
     PpeTypesModule,
+    BenefitsModule,
     JobFunctionsModule,
     CboModule,
     EmployeesModule,
     PpeDeliveriesModule,
+    EmployeeExamsModule,
   ],
   controllers: [AppController],
   providers: [
