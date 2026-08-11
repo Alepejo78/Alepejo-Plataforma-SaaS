@@ -25,7 +25,7 @@ export class PurchaseOrderRepository {
     number: number,
     dto: CreatePurchaseOrderDto,
     totalAmount: number,
-  ): Promise<PurchaseOrder> {
+  ) {
     return tx.purchaseOrder.create({
       data: {
         companyId,

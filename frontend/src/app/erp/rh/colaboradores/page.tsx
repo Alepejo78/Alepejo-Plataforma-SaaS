@@ -189,6 +189,7 @@ interface FormState {
 
   nextExamDate: string;
   noticeDays: string;
+  examReminderDays: string;
   onLeave: boolean;
 
   leaveStartDate: string;
@@ -262,6 +263,7 @@ function emptyForm(): FormState {
 
     nextExamDate: "",
     noticeDays: "",
+    examReminderDays: "7",
     onLeave: false,
 
     leaveStartDate: "",
@@ -447,6 +449,10 @@ export default function ColaboradoresPage() {
       nextExamDate: toDateInput(item.nextExamDate),
       noticeDays:
         item.noticeDays != null ? String(item.noticeDays) : "",
+      examReminderDays:
+        item.examReminderDays != null
+          ? String(item.examReminderDays)
+          : "7",
       onLeave: item.onLeave,
 
       leaveStartDate: toDateInput(item.leaveStartDate),
@@ -603,6 +609,9 @@ export default function ColaboradoresPage() {
 
       noticeDays: form.noticeDays
         ? Number(form.noticeDays)
+        : undefined,
+      examReminderDays: form.examReminderDays
+        ? Number(form.examReminderDays)
         : undefined,
       onLeave: form.onLeave,
 
@@ -1914,7 +1923,31 @@ export default function ColaboradoresPage() {
 
                       <div>
                         <label className={labelClass}>
-                          Dias de aviso
+                          Avisar exame com quantos dias
+                        </label>
+
+                        <input
+                          type="number"
+                          min={0}
+                          className={fieldClass}
+                          value={form.examReminderDays}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              examReminderDays: e.target.value,
+                            })
+                          }
+                        />
+
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Recebe também aviso fixo 3 dias antes e no
+                          dia do exame, por e-mail/WhatsApp.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>
+                          Dias de aviso (afastamento)
                         </label>
 
                         <input

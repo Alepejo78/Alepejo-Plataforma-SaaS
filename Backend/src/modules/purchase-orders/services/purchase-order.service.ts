@@ -10,6 +10,8 @@ import {
 } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
+import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
@@ -29,6 +31,8 @@ export class PurchaseOrderService {
     private readonly prisma: PrismaService,
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly documentSequence: DocumentSequenceService,
+    private readonly emailNotifications: EmailNotificationsService,
+    private readonly whatsappNotifications: WhatsappNotificationsService,
   ) {}
 
   async create(companyId: string, dto: CreatePurchaseOrderDto) {
@@ -87,7 +91,7 @@ export class PurchaseOrderService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const order = await this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
         tx,
         companyId,
@@ -102,6 +106,54 @@ export class PurchaseOrderService {
         totalAmount,
       );
     });
+
+    void this.notifyPartner(companyId, order);
+
+    return order;
+  }
+
+  /**
+   * Best-effort: avisa o fornecedor por e-mail/WhatsApp que o pedido
+   * de compra foi gerado, pedindo pra informar o número na observação
+   * da nota fiscal (facilita o rastreamento no recebimento). Nunca
+   * lança — ver EmailNotificationsService.send/WhatsappNotificationsService.send.
+   */
+  private async notifyPartner(
+    companyId: string,
+    order: Awaited<ReturnType<PurchaseOrderRepository['create']>>,
+  ) {
+    const partner = order.partner;
+
+    if (!partner.email && !partner.mobile) {
+      return;
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    const companyName =
+      company?.tradeName || company?.legalName || 'AlePejo ERP';
+    const partnerName = partner.tradeName || partner.legalName;
+    const orderNumber = `PC-${String(order.number).padStart(6, '0')}`;
+
+    if (partner.email) {
+      void this.emailNotifications.send(
+        partner.email,
+        `Pedido de Compra ${orderNumber} — ${companyName}`,
+        `<p>Olá, ${partnerName},</p>
+<p>Segue nosso Pedido de Compra <strong>${orderNumber}</strong> de <strong>${companyName}</strong>.</p>
+<p>Por favor, informe o número <strong>${orderNumber}</strong> na observação da nota fiscal — isso facilita o rastreamento no recebimento.</p>
+<p>Atenciosamente,<br/>${companyName}</p>`,
+      );
+    }
+
+    if (partner.mobile) {
+      void this.whatsappNotifications.send(
+        partner.mobile,
+        `Olá, ${partnerName}! Segue nosso Pedido de Compra ${orderNumber} de ${companyName}. Por favor, informe esse número (${orderNumber}) na observação da nota fiscal — isso facilita o rastreamento no recebimento.`,
+      );
+    }
   }
 
   async findAll(

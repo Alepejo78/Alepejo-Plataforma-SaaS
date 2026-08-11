@@ -11,18 +11,20 @@ import {
   } from '@prisma/client';
   
   import { PrismaService } from '../../../core/prisma/prisma.service';
-  
+  import { ProductionOrdersService } from '../../production/services/production-orders.service';
+
   import { CreateStockMovementDto } from '../dto/create-stock-movement.dto';
   import { StockMovementFilterDto } from '../dto/stock-movement-filter.dto';
   import { StockMovementRepository } from '../repositories/stock-movement.repository';
-  
+
   @Injectable()
   export class StockMovementService {
     constructor(
       private readonly repository: StockMovementRepository,
       private readonly prisma: PrismaService,
+      private readonly productionOrdersService: ProductionOrdersService,
     ) {}
-  
+
     async create(
       companyId: string,
       dto: CreateStockMovementDto,
@@ -33,22 +35,38 @@ import {
           companyId,
         },
       });
-  
+
       if (!inventory) {
         throw new NotFoundException(
           'Registro de estoque não encontrado.',
         );
       }
-  
+
       await this.updateInventoryBalance(
         inventory,
         dto,
       );
-  
-      return this.repository.create(
+
+      const movement = await this.repository.create(
         companyId,
         dto,
       );
+
+      // Best-effort: saída/ajuste que reduz saldo pode ter derrubado
+      // o produto pro mínimo — ver
+      // ProductionOrdersService.autoGenerateForLowStock.
+      if (
+        dto.type === StockMovementType.EXIT ||
+        dto.type === StockMovementType.ADJUSTMENT
+      ) {
+        void this.productionOrdersService.autoGenerateForLowStock(
+          companyId,
+          inventory.productId,
+          inventory.warehouseId,
+        );
+      }
+
+      return movement;
     }
   
     async findAll(

@@ -392,6 +392,7 @@ export interface Employee {
 
   nextExamDate?: string | null;
   noticeDays?: number | null;
+  examReminderDays?: number | null;
   onLeave: boolean;
 
   leaveStartDate?: string | null;
@@ -483,6 +484,7 @@ export interface EmployeePayload {
   pixKey?: string;
 
   noticeDays?: number;
+  examReminderDays?: number;
   onLeave?: boolean;
 
   leaveStartDate?: string;

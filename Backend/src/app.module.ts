@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -33,6 +34,7 @@ import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-acco
 import { ChartOfAccountClassificationsModule } from './modules/chart-of-account-classifications/chart-of-account-classifications.module';
 import { FinancialEntriesModule } from './modules/financial-entries/financial-entries.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 import { SectorsModule } from './modules/sectors/sectors.module';
 import { WorkSchedulesModule } from './modules/work-schedules/work-schedules.module';
@@ -43,11 +45,14 @@ import { CboModule } from './modules/cbo/cbo.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { PpeDeliveriesModule } from './modules/ppe-deliveries/ppe-deliveries.module';
 import { EmployeeExamsModule } from './modules/employee-exams/employee-exams.module';
+import { ScheduledNotificationsModule } from './modules/scheduled-notifications/scheduled-notifications.module';
+import { ProductionModule } from './modules/production/production.module';
 
 @Module({
   imports: [
     PrismaModule,
     SecurityModule,
+    ScheduleModule.forRoot(),
 
     IdentityModule,
     PlatformModule,
@@ -71,6 +76,7 @@ import { EmployeeExamsModule } from './modules/employee-exams/employee-exams.mod
     ChartOfAccountClassificationsModule,
     FinancialEntriesModule,
     BudgetsModule,
+    NotificationsModule,
 
     SectorsModule,
     WorkSchedulesModule,
@@ -81,6 +87,8 @@ import { EmployeeExamsModule } from './modules/employee-exams/employee-exams.mod
     EmployeesModule,
     PpeDeliveriesModule,
     EmployeeExamsModule,
+    ScheduledNotificationsModule,
+    ProductionModule,
   ],
   controllers: [AppController],
   providers: [

@@ -10,6 +10,9 @@ import {
 } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
+import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
+import { ProductionOrdersService } from '../../production/services/production-orders.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
@@ -29,6 +32,9 @@ export class SalesOrderService {
     private readonly prisma: PrismaService,
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly documentSequence: DocumentSequenceService,
+    private readonly emailNotifications: EmailNotificationsService,
+    private readonly whatsappNotifications: WhatsappNotificationsService,
+    private readonly productionOrdersService: ProductionOrdersService,
   ) {}
 
   async create(companyId: string, dto: CreateSalesOrderDto) {
@@ -70,7 +76,7 @@ export class SalesOrderService {
       (dto.freightValue ?? 0) +
       (dto.otherExpenses ?? 0);
 
-    return this.prisma.$transaction(async (tx) => {
+    const order = await this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
         tx,
         companyId,
@@ -86,6 +92,73 @@ export class SalesOrderService {
         netAmount,
       );
     });
+
+    void this.notifyPartner(companyId, order);
+
+    // Best-effort: gera ordem de produção sozinha se algum item pedir
+    // mais do que o saldo disponível — ver
+    // ProductionOrdersService.autoGenerateForSalesOrderItem (só age
+    // se a empresa tiver o módulo PRODUCTION licenciado).
+    for (const item of order.items) {
+      void this.productionOrdersService.autoGenerateForSalesOrderItem(
+        companyId,
+        {
+          productId: item.productId,
+          warehouseId: order.warehouseId,
+          requestedQuantity: Number(item.quantity),
+          salesOrderId: order.id,
+        },
+      );
+    }
+
+    return order;
+  }
+
+  /**
+   * Best-effort: envia o pedido de venda gerado ao cliente por
+   * e-mail/WhatsApp. Nunca lança — ver EmailNotificationsService.send/
+   * WhatsappNotificationsService.send.
+   */
+  private async notifyPartner(
+    companyId: string,
+    order: Awaited<ReturnType<SalesOrderRepository['create']>>,
+  ) {
+    const partner = order.partner;
+
+    if (!partner.email && !partner.mobile) {
+      return;
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    const companyName =
+      company?.tradeName || company?.legalName || 'AlePejo ERP';
+    const partnerName = partner.tradeName || partner.legalName;
+    const orderNumber = `PV-${String(order.number).padStart(6, '0')}`;
+    const value = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(Number(order.netAmount));
+
+    if (partner.email) {
+      void this.emailNotifications.send(
+        partner.email,
+        `Pedido de Venda ${orderNumber} — ${companyName}`,
+        `<p>Olá, ${partnerName},</p>
+<p>Segue nosso Pedido de Venda <strong>${orderNumber}</strong> de <strong>${companyName}</strong>, no valor de <strong>${value}</strong>.</p>
+<p>Qualquer dúvida, estamos à disposição.</p>
+<p>Atenciosamente,<br/>${companyName}</p>`,
+      );
+    }
+
+    if (partner.mobile) {
+      void this.whatsappNotifications.send(
+        partner.mobile,
+        `Olá, ${partnerName}! Segue nosso Pedido de Venda ${orderNumber} de ${companyName}, no valor de ${value}. Qualquer dúvida, estamos à disposição.`,
+      );
+    }
   }
 
   async findAll(

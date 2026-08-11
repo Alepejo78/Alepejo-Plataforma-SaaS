@@ -3,13 +3,201 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
-Atualizado em: 10-08-2026 (módulo de **Relatórios completo** — 13
-relatórios com filtro/exportar/imprimir —, e-mail de vencedor de
-cotação implementado de verdade, bug real corrigido no Fluxo de Caixa,
-Dados bancários e Afastamento/Férias no cadastro de Colaborador, menu
-reorganizado)
+Atualizado em: 11-08-2026 (**módulo de Produção iniciado** — ordens
+de produção com geração automática por pedido de venda/estoque
+mínimo —, avisos automáticos por e-mail/WhatsApp em Pedido de
+Compra, Orçamento, Pedido de Venda, exame ocupacional e aniversário,
+som do login corrigido pra tocar uma vez)
 
-**Resumo desta sessão (10-08-2026):**
+**⚠️ Nada commitado ainda desta sessão (11-08-2026)** — o último
+commit continua sendo `aa41b10` (10-08-2026, "duas sessões acumuladas
+finalmente commitadas"). Ainda **não foi dado push** desse commit
+para o remoto — perguntar ao usuário antes de empurrar.
+
+**Resumo desta sessão (11-08-2026):** WhatsApp e e-mail já estavam
+funcionando (sessão anterior) — pedido foi estender pra mais eventos.
+
+- **Pedido de Compra gerado** → avisa o fornecedor por e-mail/WhatsApp
+  pedindo pra informar o número do pedido na observação da nota
+  fiscal (rastreamento no recebimento). Vale tanto pro pedido criado
+  manualmente (`PurchaseOrderService.create`) quanto pro gerado
+  automaticamente ao escolher vencedor de cotação
+  (`QuotationService.chooseWinner` — a mensagem de "você foi
+  selecionado" ganhou o número do PC junto, uma mensagem só).
+- **Orçamento gerado** (`QuoteService.create`) → envia o orçamento ao
+  cliente por e-mail/WhatsApp, com o valor.
+- **Pedido de Venda gerado** (`SalesOrderService.create`) → envia o
+  pedido ao cliente por e-mail/WhatsApp, com o valor.
+- Nos três casos: dispara automaticamente ao **criar** o documento
+  (não é um botão separado), best-effort (nunca trava a criação),
+  reaproveitando `EmailNotificationsService`/`WhatsappNotificationsService`
+  já existentes. Repositories (`purchase-order`/`quote`/`sales-order`)
+  tiveram o tipo de retorno do `create()` destravado (removida a
+  anotação `Promise<X>` explícita) pra incluir `partner` de verdade no
+  tipo — sem isso o TypeScript não deixava acessar `order.partner`.
+- **Aviso de exame ocupacional** — campo novo **"Avisar exame com
+  quantos dias"** (`Employee.examReminderDays`, default 7, migration
+  `20260811120425_add_employee_exam_reminder_days`) na aba Saúde,
+  ao lado de "Próximo exame pendente". O campo antigo "Dias de aviso"
+  (que na verdade só marca "Afastado", nada a ver com exame — bug de
+  nomenclatura de sessão anterior) foi rotulado **"Dias de aviso
+  (afastamento)"** pra não confundir os dois, mas **não teve o
+  comportamento alterado**.
+- **Módulo novo `Backend/src/modules/scheduled-notifications/`** —
+  `ScheduledNotificationsService`, cron diário às 8h
+  (`America/Sao_Paulo`, pacote novo `@nestjs/schedule`,
+  `ScheduleModule.forRoot()` no `app.module.ts`) que roda pra
+  **todas as empresas do sistema** (não é escopado por companyId,
+  não nasce de requisição):
+  - Exame: avisa X dias antes (`examReminderDays` de cada
+    colaborador), **e também sempre** 3 dias antes e no próprio dia
+    ("Você tem exame hoje"), best-effort, e-mail + WhatsApp.
+  - Aniversário: manda parabéns pro(s) aniversariante(s) do dia.
+  - **Endpoint de disparo manual** `POST /scheduled-notifications/run`
+    (permissão nova `scheduled-notifications.manage`, seed.ts, grupo
+    `SCHEDULED_NOTIFICATIONS`) — roda os dois avisos na hora, sem
+    esperar 8h. Fica disponível pra sempre (não é só de teste), útil
+    pra forçar uma checagem manual.
+  - **Testado de verdade**: rodei o disparo manual com os dados reais
+    (sem falso positivo — 0 aniversariante e 0 exame vencendo hoje) e
+    depois simulando `nextExamDate` = hoje num colaborador (revertido
+    depois do teste) — as duas vezes sem erro no log.
+- **Som do login corrigido** (`frontend/src/components/auth/LoginPage.tsx`)
+  — tocava em loop depois de ativado o som. Removido `loop` do
+  `<video>`; toca uma vez (ao abrir, ou ao clicar na imagem — que
+  agora reinicia do zero com som) e para sozinho no fim, sem repetir.
+- **`.claude/launch.json` criado** (não existia) — dois servidores
+  (`backend`/`frontend`) pra abrir com o preview do Claude Code sem
+  precisar de terminal manual. Backend e frontend tinham caído
+  (nenhum processo Node rodando) no meio desta sessão — sintoma já
+  visto antes, ver aviso mais abaixo sobre quedas do backend.
+
+**Módulo de Produção iniciado** (`Backend/src/modules/production/`)
+— add-on licenciável novo (`PRODUCTION`, mesmo padrão de
+`BRANDING`/`HR`, habilitado na empresa seed ALEPEJO pra teste), menu
+"Produção" (já existia como placeholder desabilitado — "Ordens de
+produção" e "Configurações" habilitados agora, "Acompanhamento"
+segue desabilitado, fora do escopo pedido). **Genérico, não
+específico de confecção** — a planilha original tinha OS de produção
+sob encomenda pra marcas terceiras (ver `07-Escopo-Planilha.md` seção
+4), mas o pedido desta sessão foi outra coisa: reposição de estoque
+próprio, então o modelo é novo, não uma migração da planilha.
+
+- **Ordem de produção** (`ProductionOrder`, `/erp/producao/ordens`,
+  numeração `OP-000001`): produto + depósito + quantidade (um produto
+  por ordem, sem lista de itens — mais simples que Compras/Vendas de
+  propósito, sem BOM/ficha técnica nesta rodada). 3 status: Rascunho
+  → Concluída (gera **entrada de estoque**, custo médio ponderado) ou
+  Cancelada. Concluída pode ser **Estornada** (volta pra Rascunho,
+  desfaz a entrada — trava se o saldo produzido já foi usado/vendido
+  depois). Editar/Cancelar só em Rascunho — mesmo padrão
+  Editar/Cancelar/Estornar de sempre.
+- **Nasce manual ou sozinha em 2 gatilhos** (best-effort, nunca travam
+  quem chama, e só agem se a empresa tiver o módulo `PRODUCTION`
+  licenciado — `LicenseService.hasModule`):
+  1. **Pedido de venda pedindo mais do que o saldo disponível** no
+     depósito escolhido → `SalesOrderService.create` chama
+     `ProductionOrdersService.autoGenerateForSalesOrderItem` por item,
+     gera a ordem pela diferença (origem "Pedido de venda", vinculada
+     ao pedido).
+  2. **Saldo de um produto chegando ao mínimo cadastrado**
+     (`Product.minimumStock`, somando todos os depósitos) → chamado
+     depois de qualquer baixa real de estoque: `SaleService.approve`
+     (aprovação de venda) e `StockMovementService.create` (saída/
+     ajuste manual). Origem "Estoque mínimo".
+  - **Não duplica**: se já existe uma ordem em aberto (rascunho) pro
+    mesmo produto, os gatilhos não geram outra — simplificação
+    deliberada (não soma/ajusta a existente).
+- **Configurações** (`ProductionSettings`, um registro por empresa,
+  `/erp/producao/configuracoes`): **lote mínimo** por ordem gerada
+  sozinha (nunca gera menos que isso, evita ordem de 1 unidade —
+  `Product.minProductionBatch` pode sobrepor por produto, campo já
+  existe no schema mas **ainda sem campo na tela de cadastro de
+  Produto** — pendência conhecida, dá pra setar via API/Prisma Studio
+  por enquanto) e 2 liga/desliga (gerar por pedido de venda / gerar
+  por estoque mínimo, cada um independente).
+- **Custo da entrada de estoque = custo médio atual do produto**
+  (não `Product.cost`) — ajuste feito a pedido do usuário no meio da
+  sessão ("a produção deve movimentar estoque pelo preço médio").
+  Produzir não é uma compra com nota/preço; entrar pelo próprio custo
+  médio mantém o custo médio do estoque estável (só cai no
+  `Product.cost` cadastrado quando não existe nenhum saldo/custo
+  médio anterior pro produto+depósito, ou seja, primeira produção
+  daquele item).
+- **Testado de verdade, ponta a ponta**: ordem manual → concluir
+  (estoque 49→64, custo médio ficou igual, 4,7786→4,7786) → estornar
+  (voltou 64→49, status voltou pra Rascunho); gatilho de pedido de
+  venda (pedido de 60 un. com saldo de 49 → gerou ordem de 11 un.
+  sozinha); gatilho de estoque mínimo (saída manual levando o saldo a
+  9, mínimo cadastrado 10 → gerou ordem de 1 un. sozinha); dedupe
+  (não gerou uma segunda ordem enquanto a primeira estava aberta).
+  Dados de teste revertidos depois (ordens canceladas, estoque
+  restaurado a 49, pedido de venda de teste cancelado).
+- **Pendência conhecida**: `ProductionOrdersService.undoComplete` não
+  reverte o custo médio ao estornar (só a quantidade) — como a
+  entrada agora é sempre pelo próprio custo médio (ver acima), isso
+  raramente importa na prática (completar normalmente **não muda** o
+  custo médio), mas fica registrado.
+
+**WhatsApp (Baileys) implementado** — item 1 da fila anterior,
+completando o aviso automático ao fornecedor vencedor de cotação
+(e-mail + WhatsApp agora, os dois best-effort).
+- `@whiskeysockets/baileys` (pacote ESM puro — o Backend compila para
+  CommonJS, então o import é **dinâmico** dentro do serviço,
+  `await import(...)`; um import estático daria `ERR_REQUIRE_ESM` em
+  runtime) + `qrcode` (gera o QR como data URL pro frontend) + `pino`
+  (logger exigido pelo Baileys). Serviço novo
+  `Backend/src/modules/notifications/services/whatsapp-notifications.service.ts`,
+  mesmo padrão do `EmailNotificationsService`: **sessão única, global
+  ao sistema** (não é por empresa), `send()` nunca lança.
+- Sessão salva em `Backend/whatsapp-auth/` (gitignored — tem
+  credenciais). No boot, só reconecta sozinho se já existir sessão
+  pareada (`creds.json` no disco); pareamento novo só começa quando o
+  usuário clica "Conectar" na tela.
+- Tela nova `/erp/configuracoes/whatsapp` (menu do usuário → avatar,
+  junto de Licenciamento/Personalização): status da conexão
+  (Desconectado/Conectando/Aguardando QR/Conectado, com polling a cada
+  3s enquanto não conectado) + QR code pra escanear + botão
+  Desconectar (apaga a sessão pareada). Permissões novas
+  `whatsapp.view`/`whatsapp.manage` (seed.ts, grupo `WHATSAPP` — rodar
+  `npx ts-node prisma/seed.ts` de novo se algum outro perfil além do
+  Administrador precisar delas).
+- Endpoints: `GET /notifications/whatsapp/status`,
+  `POST /notifications/whatsapp/connect`,
+  `POST /notifications/whatsapp/logout`,
+  `POST /notifications/whatsapp/test` (`{ phone, message? }` →
+  `{ sent, error? }`, motivo real da falha quando não envia).
+- **Campo "Enviar mensagem de teste"** na própria tela
+  (`WhatsappNotificationsService.sendVerbose`), pra diagnosticar sem
+  precisar mexer numa cotação de verdade.
+- **Achado real de teste**: primeiros testes (mandando pro próprio
+  número pareado, depois pra outro número) pareciam não chegar mesmo
+  com `sent: true` (sem erro, número confirmado existente no WhatsApp
+  via `sock.onWhatsApp` — checagem adicionada em `sendVerbose` antes
+  de enviar). Hipótese na hora: sessão recém-pareada fica "sombreada"
+  pelo WhatsApp por um tempo (comportamento conhecido contra
+  automação não-oficial). **Confirmado depois**: era só demora mesmo
+  — esperando um pouco com a sessão conectada, as mensagens passaram
+  a chegar normalmente, **inclusive mandando pro próprio número
+  pareado** (não é regra que autoenvio nunca notifique, como cheguei
+  a supor antes — funcionou aqui). Se voltar a falhar num número novo
+  pareado, vale testar de novo depois de um tempo antes de assumir
+  bloqueio definitivo.
+- **Testado de verdade** nesta sessão: cliquei Conectar, QR real
+  apareceu na tela (conexão de verdade com os servidores do
+  WhatsApp), cliquei Desconectar, sessão limpa do disco. **Não foi
+  pareado com um número real** — só validado que o fluxo técnico
+  funciona ponta a ponta. Usuário ainda precisa escanear o QR com um
+  número de teste/secundário pra ativar de verdade (risco de bloqueio
+  do número pela Meta por não ser API oficial, já aceito antes).
+- `QuotationService.chooseWinner` agora dispara e-mail **e** WhatsApp
+  pro fornecedor vencedor (campo `BusinessPartner.mobile`), os dois em
+  paralelo, best-effort, nenhum trava o outro nem a resposta da rota.
+- Não fica ligado por padrão sozinho no boot enquanto não for pareado
+  pela primeira vez — evita ficar segurando uma conexão com o WhatsApp
+  à toa se ninguém for usar a função.
+
+**Resumo da sessão anterior (10-08-2026, antes do commit):**
 
 - **Backend caiu várias vezes durante a sessão** (morto sem querer ao
   reiniciar pra aplicar migration, ou sozinho por algum motivo não
@@ -782,27 +970,23 @@ novas e ao revisitar as existentes.
 ### Próximo na fila
 1. ~~Avisar o fornecedor vencedor da cotação por e-mail~~ — **feito em
    10-08-2026**, ver resumo da sessão no topo do documento.
-   **WhatsApp continua pendente**: confirmado usar **Baileys**
-   (biblioteca não-oficial, grátis, pareia via QR code com um número de
-   WhatsApp normal — usuário aceitou o risco de bloqueio do número pela
-   Meta por não ser API oficial; recomendar número de teste/secundário,
-   não o principal da empresa). Precisa: instalar
-   `@whiskeysockets/baileys`, criar um serviço que mantém a sessão
-   pareada (estado de auth persistido em disco), expor alguma forma de
-   mostrar o QR code pro usuário escanear na primeira vez (dá pra usar
-   a ferramenta de Artifact pra renderizar o QR como imagem).
-   Destinatário = campo `mobile` do `BusinessPartner` vencedor. Mesmo
-   padrão do e-mail: usar `EmailNotificationsService` como referência
-   pra criar um `WhatsAppNotificationsService` dentro do
-   `NotificationsModule` já existente (`Backend/src/modules/notifications`),
-   best-effort, nunca travar `QuotationService.chooseWinner`.
+   ~~WhatsApp~~ — **feito em 10-08-2026** (Baileys), ver resumo da
+   sessão no topo. **Falta só o usuário parear de verdade** com um
+   número de teste/secundário em `/erp/configuracoes/whatsapp` (clicar
+   Conectar, escanear o QR) — o código já está testado e funcionando.
 2. ~~Relatórios mais completos~~ — **feito em 10-08-2026**, 13
    relatórios dentro do menu "Relatórios", ver resumo da sessão no
    topo. Ainda dá pra adicionar (usuário não pediu ainda): Estoque,
    Movimentações (ficaram de fora da lista que ele pediu — só
    perguntar se ele quiser).
-3. Produção (módulo opcional licenciável, específico de confecção —
-   ver `07-Escopo-Planilha.md` seção 4).
+3. ~~Produção~~ — **iniciado em 11-08-2026**: Ordem de Produção com
+   geração automática (pedido de venda maior que o saldo, estoque no
+   mínimo) e configurações, ver resumo da sessão no topo do
+   documento. **Ainda faltam** (não pedido nesta rodada): ficha
+   técnica/BOM (consumo de matéria-prima), apontamento por etapa
+   (tela "Acompanhamento", segue desabilitada no menu), campo de
+   lote mínimo por produto na tela de cadastro de Produtos (o campo
+   já existe no banco, só falta a tela).
 4. **Multi-empresa — decisão tomada, implementação adiada de propósito**
    (09-08-2026). Diagnóstico: o **isolamento de dados já é sólido** —
    todo repository filtra por `companyId` vindo do JWT, empresas

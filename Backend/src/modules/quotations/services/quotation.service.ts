@@ -8,6 +8,7 @@ import { BusinessPartnerRole, QuotationStatus } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
+import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
@@ -31,6 +32,7 @@ export class QuotationService {
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly documentSequence: DocumentSequenceService,
     private readonly emailNotifications: EmailNotificationsService,
+    private readonly whatsappNotifications: WhatsappNotificationsService,
   ) {}
 
   async create(companyId: string, dto: CreateQuotationDto) {
@@ -305,6 +307,8 @@ export class QuotationService {
       );
     }
 
+    let purchaseOrderNumber = 0;
+
     await this.prisma.$transaction(async (tx) => {
       await tx.quotationOffer.updateMany({
         where: { quotationId },
@@ -328,6 +332,8 @@ export class QuotationService {
         companyId,
         PURCHASE_ORDER_SEQUENCE_TYPE,
       );
+
+      purchaseOrderNumber = number;
 
       await tx.purchaseOrder.create({
         data: {
@@ -353,9 +359,10 @@ export class QuotationService {
       });
     });
 
-    // Best-effort: aviso por e-mail nunca deve derrubar a resposta
-    // desta rota — ver EmailNotificationsService.send.
-    if (offer.partner.email) {
+    // Best-effort: avisos por e-mail/WhatsApp nunca devem derrubar a
+    // resposta desta rota — ver EmailNotificationsService.send e
+    // WhatsappNotificationsService.send.
+    if (offer.partner.email || offer.partner.mobile) {
       const company = await this.prisma.company.findUnique({
         where: { id: companyId },
       });
@@ -369,15 +376,28 @@ export class QuotationService {
       const quotationNumber = String(
         quotation.number,
       ).padStart(6, '0');
+      const orderNumber = `PC-${String(
+        purchaseOrderNumber,
+      ).padStart(6, '0')}`;
 
-      void this.emailNotifications.send(
-        offer.partner.email,
-        `Você foi selecionado — Cotação COT-${quotationNumber}`,
-        `<p>Olá, ${partnerName},</p>
+      if (offer.partner.email) {
+        void this.emailNotifications.send(
+          offer.partner.email,
+          `Você foi selecionado — Cotação COT-${quotationNumber}`,
+          `<p>Olá, ${partnerName},</p>
 <p>Sua proposta foi escolhida como vencedora na cotação <strong>COT-${quotationNumber}</strong> de <strong>${companyName}</strong>.</p>
-<p>Em breve você receberá o Pedido de Compra com os detalhes.</p>
+<p>Segue o Pedido de Compra <strong>${orderNumber}</strong> gerado a partir dela.</p>
+<p>Por favor, informe o número <strong>${orderNumber}</strong> na observação da nota fiscal — isso facilita o rastreamento no recebimento.</p>
 <p>Atenciosamente,<br/>${companyName}</p>`,
-      );
+        );
+      }
+
+      if (offer.partner.mobile) {
+        void this.whatsappNotifications.send(
+          offer.partner.mobile,
+          `Olá, ${partnerName}! Sua proposta foi escolhida como vencedora na cotação COT-${quotationNumber} de ${companyName}. Segue o Pedido de Compra ${orderNumber} gerado a partir dela. Por favor, informe esse número (${orderNumber}) na observação da nota fiscal — isso facilita o rastreamento no recebimento.`,
+        );
+      }
     }
 
     return this.findOne(companyId, quotationId);

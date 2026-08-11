@@ -4,6 +4,8 @@ import { PrismaModule } from '../../core/prisma/prisma.module';
 import { LicenseModule } from '../identity/license/license.module';
 import { BusinessPartnersModule } from '../business-partners/business-partners.module';
 import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { ProductionModule } from '../production/production.module';
 
 import { SalesOrderController } from './controllers/sales-order.controller';
 import { SalesOrderRepository } from './repositories/sales-order.repository';
@@ -15,6 +17,8 @@ import { SalesOrderService } from './services/sales-order.service';
     LicenseModule,
     BusinessPartnersModule,
     DocumentSequenceModule,
+    NotificationsModule,
+    ProductionModule,
   ],
 
   controllers: [SalesOrderController],

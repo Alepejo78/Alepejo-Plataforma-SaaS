@@ -171,6 +171,9 @@ model Company {
   ppeDeliveries  PpeDelivery[]
   benefits       Benefit[]
 
+  productionOrders   ProductionOrder[]
+  productionSettings ProductionSettings?
+
   @@map("companies")
 }
 
@@ -489,6 +492,9 @@ model Product {
   salePrice                Decimal          @db.Decimal(18, 2)
   minimumStock             Decimal          @default(0) @db.Decimal(18, 3)
   currentStock             Decimal          @default(0) @db.Decimal(18, 3)
+  /// Lote mínimo por ordem de produção — sobrepõe o padrão da
+  /// empresa (ProductionSettings.minBatchSize) quando preenchido.
+  minProductionBatch       Decimal?         @db.Decimal(18, 3)
   status                   ProductStatus    @default(ACTIVE)
   active                   Boolean          @default(true)
   createdAt                DateTime         @default(now())
@@ -502,6 +508,7 @@ model Product {
   quotationItems           QuotationItem[]
   quotationOfferItems      QuotationOfferItem[]
   purchaseOrderItems       PurchaseOrderItem[]
+  productionOrders         ProductionOrder[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -524,6 +531,7 @@ model Warehouse {
   quotations     Quotation[]
   purchaseOrders PurchaseOrder[]
   sales       Sale[]
+  productionOrders ProductionOrder[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1079,6 +1087,8 @@ model SalesOrder {
   items SalesOrderItem[]
   sale  Sale?
 
+  productionOrders ProductionOrder[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1601,6 +1611,12 @@ model Employee {
   noticeDays   Int?
   onLeave      Boolean   @default(false)
 
+  /// Quantos dias antes do próximo exame o colaborador recebe o
+  /// primeiro aviso por e-mail/WhatsApp (ScheduledNotificationsService).
+  /// Sempre recebe também um aviso fixo 3 dias antes e no próprio dia,
+  /// independente deste valor.
+  examReminderDays Int? @default(7)
+
   /// Fim do afastamento é sempre calculado no backend (início + dias),
   /// igual ao vencimento da experiência. Preencher o início marca
   /// onLeave automaticamente.
@@ -1774,4 +1790,92 @@ model PpeDelivery {
   @@index([companyId])
   @@index([employeeId])
   @@map("ppe_deliveries")
+}
+
+enum ProductionOrderStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
+}
+
+/// Motivo que gerou a ordem — MANUAL é criada na mão, as outras duas
+/// nascem sozinhas (ver ProductionOrdersService.autoGenerate*).
+enum ProductionOrderOrigin {
+  MANUAL
+  SALES_ORDER
+  LOW_STOCK
+}
+
+/// Ordem de produção — módulo licenciável opcional (PRODUCTION),
+/// genérico (não específico de confecção, apesar da planilha
+/// original ser de uma fábrica de costura). Nasce manual ou
+/// automaticamente: pedido de venda com quantidade maior que o saldo
+/// disponível, ou saldo de um produto chegando ao mínimo cadastrado
+/// (ver ProductionOrdersService).
+model ProductionOrder {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa (DocumentSequence, tipo PRODUCTION_ORDER).
+  number Int
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  quantity Decimal @db.Decimal(18, 3)
+
+  origin ProductionOrderOrigin @default(MANUAL)
+
+  /// Só preenchido quando origin = SALES_ORDER.
+  salesOrderId String?
+  salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
+
+  status ProductionOrderStatus @default(DRAFT)
+
+  expectedDate DateTime?
+
+  /// Preenchido ao concluir — junto disso, gera entrada de estoque
+  /// da quantidade produzida (ver ProductionOrdersService.complete).
+  completedAt DateTime?
+
+  observation String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@index([productId])
+  @@map("production_orders")
+}
+
+/// Configuração de produção por empresa — um registro só (upsert).
+model ProductionSettings {
+  id String @id @default(cuid())
+
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Lote mínimo padrão de uma ordem de produção gerada automaticamente
+  /// — evita ordem de 1 unidade por causa de uma venda pequena.
+  /// Product.minProductionBatch sobrepõe este valor quando preenchido.
+  minBatchSize Decimal @default(1) @db.Decimal(18, 3)
+
+  /// Gerar ordem de produção sozinha quando um pedido de venda pedir
+  /// mais do que o saldo disponível no almoxarifado do pedido.
+  autoGenerateOnSalesOrder Boolean @default(true)
+
+  /// Gerar ordem de produção sozinha quando o saldo de um produto
+  /// chegar ao mínimo cadastrado (Product.minimumStock).
+  autoGenerateOnLowStock Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("production_settings")
 }

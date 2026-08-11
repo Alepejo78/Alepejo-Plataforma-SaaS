@@ -30,6 +30,7 @@ const erpModules: {
   { code: "FINANCE", name: "Financeiro", route: "/erp/financeiro", sortOrder: 6 },
   { code: "BRANDING", name: "Personalização (Marca Própria)", route: "/erp/configuracoes", sortOrder: 7 },
   { code: "HR", name: "Recursos Humanos", route: "/erp/rh", sortOrder: 8 },
+  { code: "PRODUCTION", name: "Produção", route: "/erp/producao", sortOrder: 9 },
 ];
 
 /**
@@ -37,7 +38,7 @@ const erpModules: {
  * vendidos à parte. Uma empresa nova só tem acesso a eles se forem
  * habilitados individualmente (ver CompanyModule mais abaixo).
  */
-const ADDON_MODULE_CODES = ["BRANDING", "HR"];
+const ADDON_MODULE_CODES = ["BRANDING", "HR", "PRODUCTION"];
 
 /**
  * Plano de contas padrão, migrado da aba CAD_DESPESAS da planilha
@@ -469,6 +470,40 @@ const permissionGroups = [
     ],
   },
   {
+    code: "WHATSAPP",
+    name: "WhatsApp",
+    permissions: [
+      ["whatsapp.view", "Ver Status do WhatsApp"],
+      ["whatsapp.manage", "Gerenciar Pareamento do WhatsApp"],
+    ],
+  },
+  {
+    code: "SCHEDULED_NOTIFICATIONS",
+    name: "Avisos Automáticos",
+    permissions: [
+      [
+        "scheduled-notifications.manage",
+        "Disparar Avisos Automáticos Manualmente",
+      ],
+    ],
+  },
+  {
+    code: "PRODUCTION",
+    name: "Produção",
+    permissions: [
+      ["production-order.view", "Consultar Ordens de Produção"],
+      ["production-order.create", "Cadastrar Ordem de Produção"],
+      ["production-order.update", "Alterar Ordem de Produção"],
+      ["production-order.cancel", "Cancelar Ordem de Produção"],
+      [
+        "production-order.complete",
+        "Concluir/Estornar Ordem de Produção",
+      ],
+      ["production-settings.view", "Consultar Configurações de Produção"],
+      ["production-settings.manage", "Alterar Configurações de Produção"],
+    ],
+  },
+  {
     code: "HR",
     name: "Recursos Humanos",
     permissions: [
@@ -671,6 +706,30 @@ async function main() {
       create: {
         companyId: company.id,
         moduleId: hrModule.id,
+        enabled: true,
+        licensed: true,
+      },
+    });
+  }
+
+  // Mesma lógica para o add-on PRODUCTION, também habilitado na
+  // empresa seed para poder testar o módulo de Produção.
+  const productionModule = allModules.find(
+    (mod) => mod.code === "PRODUCTION",
+  );
+
+  if (productionModule) {
+    await prisma.companyModule.upsert({
+      where: {
+        companyId_moduleId: {
+          companyId: company.id,
+          moduleId: productionModule.id,
+        },
+      },
+      update: { enabled: true, licensed: true },
+      create: {
+        companyId: company.id,
+        moduleId: productionModule.id,
         enabled: true,
         licensed: true,
       },

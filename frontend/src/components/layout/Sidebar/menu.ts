@@ -9,6 +9,7 @@ import {
   FileText,
   HardHat,
   LayoutDashboard,
+  MessageCircle,
   Monitor,
   Package,
   Receipt,
@@ -319,13 +320,23 @@ export const menu: MenuEntry[] = [
     id: "producao",
     title: "Produção",
     icon: Factory,
+    module: "PRODUCTION",
     children: [
       {
         id: "ordens-producao",
         title: "Ordens de produção",
         icon: ClipboardList,
         href: "/erp/producao/ordens",
-        disabled: true,
+        module: "PRODUCTION",
+        permission: "production-order.view",
+      },
+      {
+        id: "producao-configuracoes",
+        title: "Configurações",
+        icon: Settings,
+        href: "/erp/producao/configuracoes",
+        module: "PRODUCTION",
+        permission: "production-settings.view",
       },
       {
         id: "acompanhamento",
@@ -499,5 +510,12 @@ export const systemMenuItems: MenuItem[] = [
     icon: Monitor,
     href: "/erp/configuracoes/personalizacao",
     permission: "company-branding.view",
+  },
+  {
+    id: "whatsapp",
+    title: "WhatsApp",
+    icon: MessageCircle,
+    href: "/erp/configuracoes/whatsapp",
+    permission: "whatsapp.view",
   },
 ];

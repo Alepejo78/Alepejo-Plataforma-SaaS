@@ -82,6 +82,7 @@ export class EmployeesRepository {
 
         nextExamDate: toDateOrUndefined(dto.nextExamDate),
         noticeDays: dto.noticeDays,
+        examReminderDays: dto.examReminderDays,
         onLeave: dto.onLeave ?? false,
 
         leaveStartDate: toDateOrUndefined(dto.leaveStartDate),
@@ -247,6 +248,7 @@ export class EmployeesRepository {
 
         nextExamDate: toDateOrUndefined(dto.nextExamDate),
         noticeDays: dto.noticeDays,
+        examReminderDays: dto.examReminderDays,
         onLeave: dto.onLeave,
 
         leaveStartDate: toDateOrUndefined(dto.leaveStartDate),

@@ -57,6 +57,9 @@ export default function LoginPage() {
       const video = videoRef.current;
 
       if (video) {
+        // Recomeça do início para o som tocar por completo, mesmo
+        // se o vídeo mudo já tiver chegado ao fim antes do clique.
+        video.currentTime = 0;
         video.muted = false;
         void video.play().catch(() => {});
       }
@@ -74,6 +77,20 @@ export default function LoginPage() {
         unlockSound
       );
   }, [soundEnabled]);
+
+  /** Clicar no vídeo sempre recomeça a exibição com som — mesmo depois de já ter tocado antes (sem loop, ver <video>). */
+  function handleVideoClick() {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    video.currentTime = 0;
+    video.muted = false;
+    setSoundEnabled(true);
+    void video.play().catch(() => {});
+  }
 
   async function handleLogin() {
     if (loading) {
@@ -116,11 +133,11 @@ export default function LoginPage() {
             ref={videoRef}
             src={systemConfig.company.loginVideo}
             autoPlay
-            loop
             muted={!soundEnabled}
             playsInline
             preload="auto"
-            className="w-56"
+            onClick={handleVideoClick}
+            className="w-56 cursor-pointer"
           />
 
           {!soundEnabled && (

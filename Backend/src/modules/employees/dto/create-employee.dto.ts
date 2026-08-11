@@ -285,6 +285,16 @@ export class CreateEmployeeDto {
   @Min(0)
   noticeDays?: number;
 
+  @ApiPropertyOptional({
+    description:
+      'Dias de antecedência do aviso de exame por e-mail/WhatsApp (além do aviso fixo de 3 dias e do aviso no dia).',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  examReminderDays?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

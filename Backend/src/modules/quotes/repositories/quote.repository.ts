@@ -28,7 +28,7 @@ export class QuoteRepository {
     dto: CreateQuoteDto,
     totalAmount: number,
     netAmount: number,
-  ): Promise<Quote> {
+  ) {
     return tx.quote.create({
       data: {
         companyId,

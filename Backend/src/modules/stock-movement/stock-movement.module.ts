@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '../../core/prisma/prisma.module';
+import { ProductionModule } from '../production/production.module';
 
 import { StockMovementController } from './controllers/stock-movement.controller';
 
@@ -9,7 +10,7 @@ import { StockMovementRepository } from './repositories/stock-movement.repositor
 import { StockMovementService } from './services/stock-movement.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ProductionModule],
 
   controllers: [
     StockMovementController,

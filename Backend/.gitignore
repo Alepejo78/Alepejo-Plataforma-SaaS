@@ -37,3 +37,6 @@ Thumbs.db
 
 # Arquivos enviados pelos usuários (logos de personalização, etc.)
 uploads/
+
+# Sessão pareada do WhatsApp (Baileys) — contém credenciais, nunca versionar
+whatsapp-auth/

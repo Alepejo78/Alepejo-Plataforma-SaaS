@@ -7,6 +7,8 @@ import {
 import { BusinessPartnerRole, QuoteStatus } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
+import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
@@ -26,6 +28,8 @@ export class QuoteService {
     private readonly prisma: PrismaService,
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly documentSequence: DocumentSequenceService,
+    private readonly emailNotifications: EmailNotificationsService,
+    private readonly whatsappNotifications: WhatsappNotificationsService,
   ) {}
 
   async create(companyId: string, dto: CreateQuoteDto) {
@@ -67,7 +71,7 @@ export class QuoteService {
       (dto.freightValue ?? 0) +
       (dto.otherExpenses ?? 0);
 
-    return this.prisma.$transaction(async (tx) => {
+    const quote = await this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
         tx,
         companyId,
@@ -83,6 +87,57 @@ export class QuoteService {
         netAmount,
       );
     });
+
+    void this.notifyPartner(companyId, quote);
+
+    return quote;
+  }
+
+  /**
+   * Best-effort: envia o orçamento gerado ao cliente por e-mail/
+   * WhatsApp. Nunca lança — ver EmailNotificationsService.send/
+   * WhatsappNotificationsService.send.
+   */
+  private async notifyPartner(
+    companyId: string,
+    quote: Awaited<ReturnType<QuoteRepository['create']>>,
+  ) {
+    const partner = quote.partner;
+
+    if (!partner.email && !partner.mobile) {
+      return;
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    const companyName =
+      company?.tradeName || company?.legalName || 'AlePejo ERP';
+    const partnerName = partner.tradeName || partner.legalName;
+    const quoteNumber = `ORC-${String(quote.number).padStart(6, '0')}`;
+    const value = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(Number(quote.netAmount));
+
+    if (partner.email) {
+      void this.emailNotifications.send(
+        partner.email,
+        `Orçamento ${quoteNumber} — ${companyName}`,
+        `<p>Olá, ${partnerName},</p>
+<p>Segue nosso orçamento <strong>${quoteNumber}</strong> de <strong>${companyName}</strong>, no valor de <strong>${value}</strong>.</p>
+<p>Qualquer dúvida, estamos à disposição.</p>
+<p>Atenciosamente,<br/>${companyName}</p>`,
+      );
+    }
+
+    if (partner.mobile) {
+      void this.whatsappNotifications.send(
+        partner.mobile,
+        `Olá, ${partnerName}! Segue nosso orçamento ${quoteNumber} de ${companyName}, no valor de ${value}. Qualquer dúvida, estamos à disposição.`,
+      );
+    }
   }
 
   async findAll(companyId: string, filter: QuoteFilterDto) {

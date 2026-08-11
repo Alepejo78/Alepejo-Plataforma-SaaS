@@ -15,6 +15,7 @@ import {
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 import { FinancialEntriesService } from '../../financial-entries/services/financial-entries.service';
+import { ProductionOrdersService } from '../../production/services/production-orders.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { calculateAvailableQuantity } from '../../../core/utils/inventory.util';
@@ -51,6 +52,7 @@ export class SaleService {
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly financialEntriesService: FinancialEntriesService,
     private readonly documentSequence: DocumentSequenceService,
+    private readonly productionOrdersService: ProductionOrdersService,
   ) {}
 
   async create(
@@ -342,7 +344,7 @@ export class SaleService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedSale = await this.prisma.$transaction(async (tx) => {
       const documentNumber = formatSaleNumber(sale.number);
 
       // Sem tipo informado, mas com chave de acesso: só pode ser
@@ -469,6 +471,20 @@ export class SaleService {
 
       return updated;
     });
+
+    // Best-effort: confere se algum item ficou no mínimo/abaixo e
+    // gera ordem de produção sozinha — ver
+    // ProductionOrdersService.autoGenerateForLowStock (só age se a
+    // empresa tiver o módulo PRODUCTION licenciado).
+    for (const item of sale.items) {
+      void this.productionOrdersService.autoGenerateForLowStock(
+        companyId,
+        item.productId,
+        sale.warehouseId,
+      );
+    }
+
+    return updatedSale;
   }
 
   async cancel(

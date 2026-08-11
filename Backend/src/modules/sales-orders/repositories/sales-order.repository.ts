@@ -28,7 +28,7 @@ export class SalesOrderRepository {
     dto: CreateSalesOrderDto,
     totalAmount: number,
     netAmount: number,
-  ): Promise<SalesOrder> {
+  ) {
     return tx.salesOrder.create({
       data: {
         companyId,
