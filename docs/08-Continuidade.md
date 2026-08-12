@@ -3,6 +3,46 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🔵 Próxima sessão começa por aqui — desenho de navegação em guias
+
+**Commit e backup feitos em 12-08-2026 de propósito**, antes de começar
+esta frente nova (commit `22fccf9`, zip
+`backup-2026-08-12.zip` na raiz do projeto, ~5,2 MB, código-fonte
+sem `node_modules`/`.next`/`dist`/`.git`) — ponto seguro pra voltar
+se a mudança abaixo não der certo.
+
+**Pedido do usuário**: reestruturar a navegação do sistema pra abrir
+telas em **guias dentro da página** (igual navegador/VS Code), até
+**6 guias abertas ao mesmo tempo**, trocando entre elas sem perder o
+que tava preenchido. Isso é uma mudança de arquitetura grande — mexe
+em como toda tela do sistema abre hoje (hoje é navegação normal do
+Next.js, cada rota troca o conteúdo inteiro). **Ainda não foi
+implementado nada** — o usuário pediu pra **primeiro montar o
+desenho numa sessão nova**, sem mexer em código ainda.
+
+Ideias que o usuário trouxe pra essa conversa de desenho (ainda não
+detalhadas, perguntar mais quando retomar):
+- No menu de navegação, dois "apps" separados: **SISTEMA ERP** (o que
+  já existe) e um **app de "OS"** (provavelmente Ordem de Serviço —
+  não foi detalhado, perguntar o que o usuário tem em mente antes de
+  desenhar).
+- Queria usar como referência visual o portal Infor CloudSuite
+  (`mingle-portal.inforcloudsuite.com`) — **não consegui acessar**
+  (mandou e-mail/senha de login, e entrar com senha em formulário de
+  terceiro é ação que não faço, regra de segurança, não depende de
+  autorização). Se ainda quiser essa referência, precisa entrar ele
+  mesmo e mandar prints/descrição, ou eu pesquiso material público
+  sobre a interface do Infor sem precisar de login.
+
+Perguntas que valem ser feitas antes de desenhar (meu levantamento,
+não decidido ainda): o que acontece ao tentar abrir a 7ª guia
+(bloqueia ou fecha a mais antiga sozinha); as guias sobrevivem a um
+F5 no navegador ou reseta; toda tela do sistema vira guia ou só
+alguns módulos (telas de impressão/etiqueta, por exemplo, hoje abrem
+fora do `AppShell` de propósito — ficam de fora do esquema de guias?).
+
+---
+
 Atualizado em: 12-08-2026 (**Controle de Ponto evoluído pra calcular
 horas normais/extras/compensadas de verdade, comparando contra o
 Horário de trabalho do colaborador — com ajuste manual auditado e
