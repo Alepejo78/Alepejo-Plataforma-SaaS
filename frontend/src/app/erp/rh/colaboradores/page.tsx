@@ -55,6 +55,10 @@ import {
 
 import { lookupService } from "@/services/lookup.service";
 import {
+  userService,
+  type SystemUser,
+} from "@/services/user.service";
+import {
   isValidCEPLength,
   maskCEP,
   maskCPF,
@@ -179,6 +183,8 @@ interface FormState {
   contractEndDate: string;
   terminationDate: string;
   status: EmployeeStatus;
+  badgeCode: string;
+  userId: string;
 
   bankName: string;
   bankAgency: string;
@@ -253,6 +259,8 @@ function emptyForm(): FormState {
     contractEndDate: "",
     terminationDate: "",
     status: "EXPERIENCIA",
+    badgeCode: "",
+    userId: "",
 
     bankName: "",
     bankAgency: "",
@@ -288,6 +296,9 @@ function emptyForm(): FormState {
 export default function ColaboradoresPage() {
   const [items, setItems] = useState<Employee[]>([]);
   const [schedules, setSchedules] = useState<AuxiliaryRecord[]>(
+    []
+  );
+  const [systemUsers, setSystemUsers] = useState<SystemUser[]>(
     []
   );
   const [benefitCatalog, setBenefitCatalog] = useState<
@@ -353,6 +364,11 @@ export default function ColaboradoresPage() {
     workScheduleService
       .list()
       .then((r) => setSchedules(r.data))
+      .catch(() => {});
+
+    userService
+      .list()
+      .then(setSystemUsers)
       .catch(() => {});
 
     benefitService
@@ -438,6 +454,8 @@ export default function ColaboradoresPage() {
       contractEndDate: toDateInput(item.contractEndDate),
       terminationDate: toDateInput(item.terminationDate),
       status: item.status,
+      badgeCode: item.badgeCode ?? "",
+      userId: item.userId ?? "",
 
       bankName: item.bankName ?? "",
       bankAgency: item.bankAgency ?? "",
@@ -599,6 +617,8 @@ export default function ColaboradoresPage() {
       contractEndDate: form.contractEndDate || undefined,
       terminationDate: form.terminationDate || undefined,
       status: form.status,
+      badgeCode: form.badgeCode.trim() || undefined,
+      userId: form.userId || undefined,
 
       bankName: form.bankName.trim() || undefined,
       bankAgency: form.bankAgency.trim() || undefined,
@@ -1469,7 +1489,7 @@ export default function ColaboradoresPage() {
 
               {activeTab === "Contratuais" && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="lg:col-span-2">
+                  <div>
                     <label className={labelClass}>
                       Função
                     </label>
@@ -1539,7 +1559,31 @@ export default function ColaboradoresPage() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="mx-auto w-40">
+                    <label className={labelClass}>
+                      Código para bater ponto
+                    </label>
+
+                    <input
+                      className={fieldClass}
+                      placeholder="Ex.: 0042"
+                      value={form.badgeCode}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          badgeCode: e.target.value,
+                        })
+                      }
+                    />
+
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      O que vai no crachá/QR Code pra registrar ponto
+                      (módulo Ponto). Sem preencher, dá pra usar o id
+                      do colaborador direto.
+                    </p>
+                  </div>
+
+                  <div className="mx-auto w-40">
                     <label className={labelClass}>
                       Status
                     </label>
@@ -1563,6 +1607,39 @@ export default function ColaboradoresPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="mx-auto w-56">
+                    <label className={labelClass}>
+                      Usuário do sistema
+                    </label>
+
+                    <select
+                      className={fieldClass}
+                      value={form.userId}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          userId: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">
+                        Nenhum (sem login vinculado)
+                      </option>
+
+                      {systemUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} — {u.email}
+                        </option>
+                      ))}
+                    </select>
+
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Pra telas de autoatendimento (ex.: Ponto -
+                      Manual) saberem qual colaborador é o usuário
+                      logado.
+                    </p>
                   </div>
 
                   <div>
@@ -1604,7 +1681,7 @@ export default function ColaboradoresPage() {
                     </p>
                   </div>
 
-                  <div>
+                  <div className="mx-auto w-40">
                     <label className={labelClass}>
                       Salário base (R$)
                     </label>
@@ -1649,7 +1726,7 @@ export default function ColaboradoresPage() {
                     </select>
                   </div>
 
-                  <div>
+                  <div className="mx-auto w-44">
                     <label className={labelClass}>
                       Forma de pagamento
                     </label>
@@ -1677,7 +1754,7 @@ export default function ColaboradoresPage() {
                     </select>
                   </div>
 
-                  <div>
+                  <div className="mx-auto w-40">
                     <label className={labelClass}>
                       Data de admissão
                     </label>
@@ -1699,7 +1776,7 @@ export default function ColaboradoresPage() {
                     />
                   </div>
 
-                  <div>
+                  <div className="mx-auto w-40">
                     <label className={labelClass}>
                       Vence experiência
                     </label>
@@ -1735,7 +1812,7 @@ export default function ColaboradoresPage() {
                     />
                   </div>
 
-                  <div>
+                  <div className="mx-auto w-40">
                     <label className={labelClass}>
                       Data de demissão
                     </label>

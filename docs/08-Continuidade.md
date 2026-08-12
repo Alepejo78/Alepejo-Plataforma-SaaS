@@ -3,11 +3,367 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
-Atualizado em: 11-08-2026 (**módulo de Produção iniciado** — ordens
-de produção com geração automática por pedido de venda/estoque
-mínimo —, avisos automáticos por e-mail/WhatsApp em Pedido de
-Compra, Orçamento, Pedido de Venda, exame ocupacional e aniversário,
-som do login corrigido pra tocar uma vez)
+Atualizado em: 12-08-2026 (**Controle de Ponto evoluído pra calcular
+horas normais/extras/compensadas de verdade, comparando contra o
+Horário de trabalho do colaborador — com ajuste manual auditado e
+tela de Acompanhamento de horas nova. Ver seção logo abaixo, é a
+frente mais importante desta sessão**; **"Ponto - Manual" (autoatendimento
+— colaborador lança o próprio dia) criada, com vínculo novo
+Colaborador↔Usuário**; Benefícios virou submenu próprio, separado de
+"Setores, horários e EPI"; sessão anterior:
+Frontend do módulo de Produção atualizado pro fluxo de 3 etapas e
+tela de Acompanhamento criada; tela de gestão de Exames médicos
+criada (RH); ajuste de layout no cadastro de Colaborador; módulo
+LABOR iniciado — Controle de Ponto — batidas manual/API/leitor,
+código de crachá do colaborador, aprovação por dia, faltas e abonos
+—; avisos automáticos por e-mail/WhatsApp em Pedido de Compra,
+Orçamento, Pedido de Venda, exame ocupacional e aniversário; som do
+login corrigido pra tocar uma vez)
+
+## Controle de Ponto — cálculo de horas normais/extras/compensadas (12-08-2026)
+
+Pedido do usuário (com imagem de referência da planilha antiga —
+colunas Início/Intervalo/Fim Intervalo/Fim/Extras/Comp): o Controle
+de Ponto passou a **calcular de verdade** as horas do dia, comparando
+as batidas reais contra o **Horário de trabalho** cadastrado do
+colaborador (antes só somava pares de batidas, sem noção de jornada
+esperada). Levou várias rodadas de perguntas pra fechar o desenho —
+resumo das decisões tomadas com o usuário:
+
+1. **Só as 4 primeiras batidas do dia entram no cálculo** (Início/
+   Início Intervalo/Fim Intervalo/Saída, nessa ordem cronológica) —
+   decisão explícita do usuário depois de eu mostrar que o exemplo da
+   planilha antiga não usava uma 5ª/6ª batida separada pra hora
+   extra: a extra é **sempre calculada** comparando a 4ª batida
+   (Saída real) contra o horário de saída cadastrado, nunca uma
+   batida própria. **"Início Extra"/"Final Extra" como colunas
+   separadas foram descartados** (pedido explícito: "desconsiderar as
+   colunas de início e final de extra") — o resultado é só uma coluna
+   "Extras" com a duração.
+2. **Hora extra, por enquanto, só é calculada e mostrada** (não
+   separa em "horas extras" vs "banco de horas" ainda) — quando a
+   Folha de Pagamento for feita, aí sim entra uma configuração pra
+   decidir o destino. Registrado como decisão consciente, não
+   esquecimento.
+3. **Horário de trabalho ganhou faixas por dia da semana**: um mesmo
+   horário (ex.: "Comercial") pode ter mais de uma faixa (ex.: SEG a
+   SEX um horário, SÁBADO outro sem intervalo — confirmado pelo
+   usuário com esse exemplo específico). **Se a batida cair num dia
+   da semana sem nenhuma faixa cadastrada** (ex.: bateu ponto num
+   sábado e não existe faixa de sábado), **todo o tempo trabalhado
+   naquele dia vira hora extra** (pedido explícito do usuário).
+
+### O que foi feito
+
+- **Schema novo**: enum `Weekday` (SEGUNDA..DOMINGO); model
+  `WorkScheduleShift` (`workScheduleId`, `dayFrom`/`dayTo`,
+  `startTime`/`breakStart`/`breakEnd`/`endTime` em `"HH:MM"`,
+  `lunchBreakMinutes` — fallback usado no cálculo quando
+  início/fim do intervalo não são informados, só a duração); model
+  `TimeEntryAdjustment` (auditoria do ajuste manual — antes/depois
+  dos 4 horários, justificativa, quem ajustou, quando).
+  `TimeEntrySource` ganhou o valor `AJUSTE`. Migration
+  `20260811233352_add_work_schedule_shifts_and_time_entry_adjustments`.
+- **Cálculo novo** (`Backend/src/modules/time-tracking/utils/time-entry.util.ts`,
+  função `calculateDay`): pra cada dia, acha a faixa (`WorkScheduleShift`)
+  que cobre o dia da semana da batida.
+  - Faixa **com** intervalo cadastrado (`breakStart`/`breakEnd`) → 4
+    batidas esperadas, horas normais = (Intervalo Início − Início) +
+    (Saída − Intervalo Fim).
+  - Faixa **sem** intervalo cadastrado (só Início/Saída, como o
+    Sábado do exemplo) → 2 batidas esperadas, horas normais = (Saída
+    − Início) − `lunchBreakMinutes` (se preenchido).
+  - **Sem faixa pro dia da semana** → todas as batidas do dia somadas
+    (pareamento sequencial, mesma lógica antiga) e **tudo vira
+    extra** (`expectedMinutes = 0`).
+  - `extraMinutes = max(0, trabalhado − esperado)`, `compensatedMinutes
+    = max(0, esperado − trabalhado)` (déficit — saiu mais cedo, ou dia
+    sem nenhuma batida mas com jornada esperada).
+  - **Testado contra o exemplo exato da planilha do usuário**: Início
+    08:15/Intervalo 12:00–13:12/Fim 18:50, horário cadastrado até
+    18:00 → deu **Extras 00:50:00**, batendo com a imagem.
+- **Bug real encontrado e corrigido durante a implementação**: o
+  ajuste manual convertia o horário digitado (ex.: "07:30") direto
+  pra UTC sem compensar o fuso do Brasil — ia gravar 3h adiantado.
+  Corrigido com `brazilTimeToUtcDate` (Brasil não tem horário de
+  verão desde 2019, sempre UTC-3). Testado de verdade: ajustei a
+  saída pra "17:30" e o banco gravou `20:30:00.000Z` (= 17:30 BR),
+  confirmado por API antes de mexer na tela.
+- **Ajuste manual** (`PATCH /time-entries/adjust`, permissão
+  `time-entry.update` já existente — não criou permissão nova, o
+  catálogo já tinha "Alterar/Excluir Batida de Ponto"): botão
+  "Ajustar horários" na tela de Ponto abre uma subtela com os 4
+  horários (editáveis, pré-preenchidos com o que já foi batido) +
+  **justificativa obrigatória**. Salvar registra um
+  `TimeEntryAdjustment` (antes/depois + justificativa + quem + quando)
+  e **substitui as batidas do dia inteiras** (apaga e recria, fonte
+  `AJUSTE`) — só permitido se o dia ainda não foi aprovado (mesma
+  regra de sempre). Coluna nova **"Ajustada"** na listagem (Sim/Não);
+  clicar em "Sim" abre um modal de consulta mostrando o antes/depois
+  registrado.
+- **Horários de trabalho ganhou subtela de faixas** — CRUD novo
+  aninhado `work-schedules/:id/shifts` (reaproveita a permissão
+  `work-schedule.update`, sem permissão nova), com **validação de
+  sobreposição** (não deixa cadastrar duas faixas cobrindo o mesmo
+  dia da semana). Frontend: o card "Horários de trabalho" dentro de
+  `/erp/rh/cadastros` deixou de ser o painel genérico
+  (`SimpleCrudPanel`) e virou link pra uma tela própria
+  `/erp/rh/cadastros/horarios` — lista os horários (nome/descrição,
+  CRUD igual antes) e cada um tem um botão "Configurar horários" que
+  abre a subtela com a tabela de faixas (De/Até dia da semana +
+  Início/Intervalo Início/Intervalo Fim/Saída/Intervalo em minutos).
+- **Tela de Ponto redesenhada** (`/erp/rh/ponto`): a coluna única
+  "Batidas" (lista de chips) virou 4 colunas fixas (Início/Int.
+  início/Int. fim/Saída) + coluna "Extras" (só a duração) + coluna
+  "Ajustada". Link novo "Acompanhamento de horas" no topo.
+- **Tela nova "Acompanhamento de horas"**
+  (`/erp/rh/ponto/acompanhamento`, menu habilitado, mesma permissão
+  `time-entry.view`): filtro por colaborador + mês (seletor nativo),
+  junta os dias trabalhados (`GET /time-entries/day-summary`) com
+  **Faltas e abonos aprovados do período** (`GET /absence-records`,
+  que ganhou filtro `from`/`to` novo) — pedido explícito do usuário
+  ("integrar a falta e abono"). Cards de indicador: **Total de horas
+  positivas**, **Total de horas compensadas**, **Saldo geral**
+  (positivas − compensadas, verde/vermelho). Exportar CSV e
+  **Imprimir folha** (layout de assinatura — nome da empresa,
+  colaborador, mês, tabela, duas linhas de assinatura no rodapé —
+  só habilitado com um colaborador selecionado, não dá pra imprimir
+  "todos" numa folha só). **Limitação conhecida, registrada de
+  propósito**: falta/abono sem nenhuma batida no dia aparece listada
+  (pra visibilidade) mas **não entra no cálculo de "horas
+  compensadas"** ainda — só os dias com batida incompleta/precoce
+  entram nesse total. Quantificar puxando a jornada esperada de um
+  dia 100% sem batida ficou de fora desta rodada por tempo, mas o
+  dado (Falta injustificada aprovada, sem batida) já aparece visível
+  na lista pro usuário decidir manualmente por enquanto.
+- **Testado de verdade, ponta a ponta, via API + tela**: cadastrei a
+  faixa SEG-SEX real do horário "Comercial" (07:30–12:00 |
+  13:12–17:30, batendo com a descrição livre que já existia) e uma
+  faixa de SÁBADO sem intervalo só pra testar (removida depois);
+  validei a sobreposição bloqueando faixa duplicada; bati 4 pontos
+  de teste reproduzindo o exemplo da planilha (extras = 50 min
+  batendo exato); ajustei a saída via API confirmando fuso corrigido,
+  auditoria gravada e `hasAdjustment` virando `true`; conferi na tela
+  que os 4 horários, "Extras", "Ajustada" (com o modal de consulta
+  abrindo o antes/depois certo) e o modal de "Ajustar" (pré-
+  preenchido com os horários certos) renderizam certo; aprovei e
+  reabri o dia pela tela; conferi a tela de Acompanhamento com os
+  indicadores batendo (positivas/compensadas/saldo). **Dados de teste
+  revertidos** depois (batidas de teste excluídas, faixa de sábado de
+  teste excluída — a faixa SEG-SEX real ficou, é dado de verdade).
+- **Pendências conhecidas**: banco de horas (destino extra/compensar)
+  ainda não tem UI de configuração — combinado que fica pra quando a
+  Folha de Pagamento avançar; falta/abono sem nenhuma batida não
+  quantifica horas compensadas ainda (só aparece listada); não testei
+  o botão "Exportar CSV"/"Imprimir folha" clicando de verdade na tela
+  (só o cálculo e os dados — o download/impressão em si reaproveita
+  utilitário já usado em outros relatórios do sistema, `exportCsv` e
+  `window.print()`, sem lógica nova arriscada).
+
+## "Ponto - Manual" (autoatendimento) + vínculo Colaborador↔Usuário (12-08-2026)
+
+Pedido do usuário, na sequência do Controle de Ponto: uma tela pro
+próprio colaborador lançar o dia inteiro quando esquece de bater
+ponto — mesmo layout de campos do "Ajustar horários", mas com **data
+editável** e **os 4 horários obrigatórios** (não deixa salvar
+faltando algum, diferente do ajuste que aceita campo vazio).
+
+**Decisão em aberto, avisada mas não resolvida**: o usuário queria um
+"Superusuário" (definido no cadastro de usuário) que pudesse lançar
+**e aprovar** ponto de qualquer colaborador, não só o próprio — ele
+ainda está pensando em como fazer isso e disse que dá retorno depois.
+**Por enquanto o lançamento manual só aceita o próprio colaborador
+logado, sempre** — o endpoint nem aceita `employeeId` no corpo, só
+resolve pelo usuário autenticado, de propósito (sem brecha nenhuma
+pra lançar em nome de outro até essa decisão ser tomada). Quando o
+usuário voltar com a definição de "Superusuário", é só adicionar um
+parâmetro opcional de colaborador nesse mesmo endpoint, checando a
+permissão nova.
+
+**Achado importante no caminho**: não existe hoje nenhuma tela de
+"Cadastro de Usuários" no sistema — só a API (`/api/users`,
+`Backend/src/modules/identity/users/`), sem UI nenhuma, sem tela de
+atribuir papel/role na criação, botão "Criar conta" do login é só
+enfeite (sem `onClick`). O usuário confirmou que isso é um módulo
+maior, pendente, "com várias configurações, de como logar, empresa
+vinculada e muitas outras" — **decisão explícita: não construir esse
+módulo completo agora**, só o mínimo pra destravar o Ponto - Manual
+(ver abaixo). Fica registrado como próximo item grande quando o
+usuário voltar com a definição do Superusuário.
+
+### O que foi feito
+
+- **Vínculo novo `Employee.userId`** (`@unique`, opcional, FK pra
+  `User`) — resolve de vez a pendência antiga do aviso de aniversário
+  do usuário logado (que só funcionava batendo e-mail, e o e-mail do
+  Alessandro no Colaborador é diferente do e-mail de login — **essa
+  pendência específica não foi religada ainda**, só o campo/vínculo
+  em si foi criado; ligar o aviso de aniversário a esse campo novo é
+  trabalho futuro rápido, não feito nesta sessão). Migration
+  `20260812195225_add_employee_user_link_and_self_report_source`
+  (mesma migration também adicionou `TimeEntrySource.AUTOLANCAMENTO`).
+- **Campo "Usuário do sistema"** no cadastro de Colaborador (aba
+  Contratuais, logo abaixo de Status) — `<select>` simples listando
+  `GET /users` (novo `frontend/src/services/user.service.ts`, só
+  leitura, não é a tela de Usuários). Opcional, "Nenhum (sem login
+  vinculado)" por padrão.
+- **`GET /employees/me`** (novo, `EmployeesController`) — retorna o
+  colaborador vinculado ao usuário logado, **sem exigir a permissão
+  `employee.view`** (só autenticação — de propósito, pra qualquer
+  colaborador com login conseguir usar o Ponto - Manual mesmo sem
+  permissão de RH). 404 com mensagem amigável se não tiver vínculo
+  ainda ("peça pro RH vincular no seu cadastro").
+- **`POST /time-entries/self-report`** (permissão `time-entry.create`,
+  já existente): resolve o colaborador SEMPRE pelo usuário logado
+  (`Employee.userId`), nunca por um `employeeId` do corpo da
+  requisição. Regras: bloqueia se o dia já foi aprovado; **bloqueia
+  se já existir qualquer batida naquele dia** (evita sobrescrever
+  batida real — usuário precisa falar com o RH pra corrigir, não dá
+  pra "completar" um dia parcial por aqui). Cria as 4 batidas com
+  `source: AUTOLANCAMENTO`.
+- **Tela `/erp/ponto-manual`** ("Ponto - Manual", menu novo dentro do
+  dropdown do avatar — `systemMenuItems`, junto de Licenciamento/
+  Configurações/Personalização/WhatsApp, permissão `time-entry.create`,
+  módulo `LABOR`): mostra o nome do colaborador vinculado, campo Data
+  + 4 horários (todos obrigatórios, valida no front antes de mandar
+  pro back), mensagem de sucesso confirmando que entrou pendente de
+  aprovação. Sem vínculo ainda, mostra a mensagem de erro do
+  `/employees/me` no lugar do formulário (não deixa tentar lançar).
+- **Tela de Ponto ganhou indicador "Lançamento manual"** — texto
+  pequeno abaixo do badge de Status, quando todas as batidas do dia
+  vieram do autolançamento (campo novo `selfReported` no
+  `DaySummary`, mesmo padrão do `hasAdjustment`).
+- **Testado de verdade, ponta a ponta**: vinculei o usuário do
+  Alessandro ao colaborador dele (antes: `/employees/me` dava 404
+  com a mensagem certa) → abri `/erp/ponto-manual`, tentei salvar
+  vazio (bloqueou, mensagem certa) → lancei um dia de teste completo
+  → mensagem de sucesso → conferi na tela de Ponto: horários batendo,
+  8h48 calculado certo, badge "Lançamento manual" aparecendo →
+  tentei lançar o mesmo dia de novo por API (bloqueou, "já existem
+  batidas") → conferi o campo novo no cadastro de Colaborador
+  mostrando o usuário vinculado selecionado. Dados de teste (as 4
+  batidas do dia de teste) excluídos depois — **o vínculo
+  Colaborador↔Usuário do Alessandro ficou** (é dado real correto, não
+  lixo de teste).
+- **Pendências conhecidas**: decisão do "Superusuário" (quem pode
+  lançar/aprovar de outros) em aberto, usuário vai voltar com a
+  definição; tela completa de "Cadastro de Usuários" não foi feita
+  (decisão explícita, escopo maior, fica pra quando for pedida);
+  aviso de aniversário do usuário logado ainda não foi religado pro
+  `Employee.userId` novo (continua batendo só por e-mail, pendência
+  antiga que virou "resolvível agora" mas não foi mexida).
+
+## RH — tela de gestão de Exames médicos criada
+
+Pendência antiga resolvida: só existia o relatório de exames
+(`/erp/rh/exames/relatorio`, leitura), e registrar um exame exigia
+abrir o cadastro completo do colaborador (aba Saúde). Item de menu
+"Exames médicos" (`/erp/rh/exames`) que estava desabilitado
+("Em breve") agora tem tela própria.
+
+- **`frontend/src/app/erp/rh/exames/page.tsx`** (novo): lista todos
+  os colaboradores com Função/Setor/Próximo exame/Situação (mesmo
+  cálculo do relatório: Sem exame/Atrasado/A vencer em 30 dias/No
+  prazo, com badge colorido), filtros de busca/setor/situação. Botão
+  "Registrar exame" por linha abre um modal só com a data do exame
+  (não precisa mais abrir o cadastro completo) + histórico de exames
+  do colaborador com botão Remover — mesma lógica já usada na aba
+  Saúde do cadastro de Colaborador (`employeeExamService`, endpoints
+  `POST/GET/DELETE /employee-exams` já existiam, não criou nada novo
+  no backend). Link para o relatório fica no topo da tela.
+- **Menu habilitado** em `Sidebar/menu.ts` (`module: "HR"`,
+  `permission: "employee.view"`, mesma permissão do relatório —
+  registrar/remover exame já é protegido por `employee.update` dentro
+  da tela, igual ao cadastro de Colaborador).
+- **Testado de verdade pela tela**: registrei um exame novo pro
+  Alessandro (colaborador de teste) → apareceu no histórico e a
+  "Situação" da lista principal atualizou junto (calculado a partir
+  do `nextExamDate`, denormalizado no `Employee`) → removi o mesmo
+  registro de teste → voltou exatamente ao estado anterior (exame de
+  07/08/2026 → próximo 07/08/2027, "No prazo"), sem deixar dado de
+  teste para trás.
+
+## Cadastro de Colaborador — ajuste de layout (aba Contratuais)
+
+Pedido do usuário: os campos Função, Status, Código para bater ponto,
+Salário base, Forma de pagamento, Data de admissão, Vence experiência
+e Data de demissão estavam largos demais (ocupando a célula inteira
+do grid), o que empurrava algum campo pra fora de ordem ou pra outra
+linha. Pedido também explícito: Código para bater ponto antes de
+Status.
+
+- `frontend/src/app/erp/rh/colaboradores/page.tsx`, aba Contratuais:
+  **Função** perdeu o `lg:col-span-2` (ocupava 2 colunas, agora ocupa
+  1 igual aos demais campos da aba). Os outros 7 campos citados
+  ganharam `mx-auto w-40` (ou `w-44` no caso de Forma de pagamento,
+  rótulos mais longos) no `<div>` que já era a própria célula do
+  grid — encolhe o campo e centraliza ele dentro da coluna, sem
+  precisar mexer no grid em si (`sm:grid-cols-2 lg:grid-cols-4`,
+  inalterado). **Código para bater ponto** foi movido pra antes de
+  **Status** na ordem do formulário (mesma linha, na sequência
+  pedida).
+- **Testado**: medi via JS a posição/largura renderizada de cada
+  campo — todos os 7 caem exatamente centralizados dentro da própria
+  coluna do grid (célula ~232px, campo ~160-176px, sobra igual dos
+  dois lados). Ordem Código → Status conferida na tela. `npx tsc
+  --noEmit` sem erros.
+
+## Módulo de Produção — etapas — frontend concluído nesta sessão
+
+A pendência crítica registrada no início desta sessão (tela de
+Ordens de produção desatualizada em relação ao backend novo de 3
+etapas) **foi resolvida**:
+
+- **`frontend/src/services/production.service.ts` reescrito**: enum
+  `ProductionOrderStatus` novo (`AGUARDANDO_PRODUCAO`/`EM_PRODUCAO`/
+  `FINALIZADA`/`CANCELADA`), `ProductionOrder` ganhou `orderDate`/
+  `productionDays`/`completionObservation`,
+  `ProductionOrderPayload` troca `expectedDate?` por
+  `productionDays` (obrigatório), `ProductionSettings` ganhou
+  `defaultProductionDays`, `start()` novo, `complete()` agora manda
+  `{ completedAt, observation? }` no corpo.
+- **`frontend/src/app/erp/producao/ordens/page.tsx` reescrito**:
+  formulário trocou "Previsão de entrega" manual por "Dias de
+  produção" (número); ao editar uma ordem já existente, mostra "Data
+  de produção" e "Previsão" só leitura (calculadas no backend, não
+  editáveis). Tabela ganhou colunas Data de produção/Dias/Previsão e
+  um **semáforo** (bolinha colorida antes do número): cinza
+  Aguardando, amarelo (`--warning`) Em produção, verde Finalizada,
+  vermelho Cancelada **e vermelho também se a previsão já passou e a
+  ordem ainda não finalizou** (atrasada). Ações por etapa: **Iniciar
+  produção** (Aguardando → Em produção), **Concluir produção** (Em
+  produção → abre modal pedindo data de término + observação →
+  Finalizada), Cancelar (Aguardando/Em produção), **Estornar**
+  (Finalizada → volta Em produção), Editar (só Aguardando) — mesmo
+  padrão Editar/Cancelar/Estornar de sempre.
+- **Tela de Acompanhamento criada**
+  (`frontend/src/app/erp/producao/acompanhamento/page.tsx`, item de
+  menu habilitado em `Sidebar/menu.ts`, módulo `PRODUCTION` +
+  permissão `production-order.view` — nenhuma permissão nova). Mesmo
+  padrão dos outros relatórios (filtro → tabela → Exportar CSV →
+  Imprimir, sem `AppShell`, página própria): filtros por produto/
+  etapa/origem, colunas número, produto, depósito, origem, abertura,
+  dias, previsão, etapa, **"Previsão x hoje"** (dias restantes ou "N
+  dia(s) de atraso", calculado no frontend a partir de
+  `expectedDate`, vazio se já finalizada/cancelada), finalizado em,
+  observação de conclusão. Não criou endpoint novo — reaproveita
+  `GET /production-orders`.
+- **Testado de verdade, ponta a ponta, pela tela** (não só por API):
+  criei uma ordem manual (Camisa alepejo, 15 un., 5 dias de produção)
+  → previsão calculada certa (abertura 11/08 + 5 dias = 16/08) →
+  Iniciar produção (virou "Em produção") → Concluir produção (modal,
+  informei data de término 13/08, diferente de hoje, + observação →
+  virou "Finalizada") → conferi na tela de Acompanhamento que os
+  dados batem (previsão x hoje veio vazio por já estar finalizada,
+  observação de conclusão apareceu certa) → voltei pra Ordens,
+  Estornar (voltou pra "Em produção") → Cancelar (virou "Cancelada",
+  sem ações — terminal). Semáforo conferido via cor computada
+  (vermelho na ordem cancelada). `npx tsc --noEmit` do frontend sem
+  erros.
+- **Não fiz**: nenhuma mudança no backend (já estava pronto e
+  testado da parte anterior desta sessão). Dados de teste ficaram
+  como "Cancelada" (não voltam saldo, não teve efeito líquido no
+  estoque — completou e depois estornou antes de cancelar).
 
 **⚠️ Nada commitado ainda desta sessão (11-08-2026)** — o último
 commit continua sendo `aa41b10` (10-08-2026, "duas sessões acumuladas
@@ -138,6 +494,189 @@ próprio, então o modelo é novo, não uma migração da planilha.
   entrada agora é sempre pelo próprio custo médio (ver acima), isso
   raramente importa na prática (completar normalmente **não muda** o
   custo médio), mas fica registrado.
+
+**Módulo LABOR iniciado — Controle de Ponto**
+(`Backend/src/modules/time-tracking/`) — pedido do usuário: "dentro
+de RH submenu controle de ponto e controle de horas [...] com
+aprovação das horas registradas, api para relógio ponto ou leitura de
+código de barras ou QRCode [...] justificativas de faltas. E
+abonos." O usuário também pediu **Folha de Pagamento** (holerite,
+INSS/IR/FGTS) no mesmo pedido, mas por decisão conjunta (perguntei,
+ele escolheu) **isso ficou pra uma sessão separada** — folha mexe com
+dinheiro de verdade do colaborador, merece pesquisar as tabelas
+atuais com calma antes de desenhar o cálculo, não é o tipo de coisa
+pra apressar. **Decisão tomada com o usuário**: os dois (Ponto e
+Folha, quando vier) vão dividir **uma licença só**, código `LABOR`
+(ele considerou, cotou separar em duas licenças, mas preferiu uma só
+— "Labor").
+
+- **Licenciamento**: add-on novo `LABOR` (mesmo padrão
+  `BRANDING`/`HR`/`PRODUCTION`, habilitado na empresa seed ALEPEJO
+  pra teste). Itens ficam **dentro do menu "Recursos Humanos"**
+  (grupo continua com `module: "HR"` — decisão deliberada: Ponto
+  trabalha em cima de `Employee`, então faz sentido precisar do HR
+  habilitado também; não criei um grupo de menu novo separado pra
+  isso).
+- **Batida de ponto** (`TimeEntry`) — registro bruto (colaborador +
+  horário + origem: Manual/API/Código de barras/QR Code). O dia
+  trabalhado é **calculado juntando as batidas em pares
+  entrada/saída** (`calculateWorkedMinutes`), não gravado — bate
+  sobrando no fim (esqueceu de bater saída) é ignorado no total.
+- **Aprovação por dia** (`TimeSheetApproval`, um registro por
+  colaborador+data): sem aprovação, o dia fica "Pendente" — só existe
+  registro aqui quando alguém aprova. Aprovar tira um retrato
+  (`workedMinutes`) do total calculado na hora. **Dia aprovado
+  trava**: não dá pra registrar nova batida nem excluir batida
+  existente daquele dia até **Reabrir** (volta pra Pendente, sem
+  registro de aprovação).
+- **API para dispositivo externo** (relógio de ponto físico, leitor
+  de QR/código de barras) — `POST /time-clock/punch`, autenticado por
+  **chave de API por empresa** (header `X-Api-Key`), não por login.
+  Só o **hash** (bcrypt, reaproveitando `PasswordService` já
+  existente) fica gravado — o valor puro só aparece uma vez, na hora
+  de gerar (`/erp/rh/ponto/chave-api`), copiar e guardar; se perder,
+  só gerando de novo. `employeeId` é o próprio id do colaborador
+  (cuid) — não criei um campo novo de "matrícula/crachá", o
+  QR/código de barras do colaborador simplesmente codifica esse id.
+  Tela de leitor (`/erp/rh/ponto`, campo "Leitor de código de
+  barras/QR Code") usa o mesmo padrão de leitor-como-teclado já
+  usado no Recebimento de compras (input com foco automático, Enter
+  dispara).
+- **Faltas e abonos** (`AbsenceRecord`, `/erp/rh/faltas`): tipo
+  (Falta justificada/Falta injustificada/Abono) + motivo, com
+  aprovação (Pendente → Aprovado/Rejeitado → dá pra Reabrir).
+  Editar/Excluir só enquanto Pendente.
+- **Bug real corrigido durante o teste**: o filtro "Até" da folha de
+  ponto (`GET /time-entries/day-summary?to=AAAA-MM-DD`) tratava a
+  data como meia-noite UTC — qualquer batida feita à tarde/noite no
+  fuso do Brasil (UTC-3) ficava **fora** do filtro "até hoje" (batida
+  das 15h ficava depois de "hoje 00:00 UTC"). Corrigido em
+  `TimeTrackingService.getDaySummaries` somando 1 dia menos 1ms ao
+  `to` antes de filtrar.
+- **Testado de verdade, ponta a ponta**: batida manual + batida via
+  leitor (simulado com fetch direto, já que o teclado sintético da
+  ferramenta de automação não disparou o evento Enter de verdade —
+  validei a lógica de ponta a ponta do mesmo jeito, o problema era só
+  da ferramenta de teste, não do código) → folha de ponto agregando
+  certo (0h03 entre duas batidas de 3 min de diferença) → aprovar
+  (trava batida nova e exclusão) → reabrir (destrava). Chave de API:
+  gerar, bater ponto **sem cookie de login nenhum** (só a chave) →
+  201, chave errada → 401. Faltas/abonos: criar, aprovar, reabrir,
+  excluir.
+- **Pendências conhecidas**: sem tela de indicadores/relatório de
+  ponto ainda (só a folha bruta); sem geração de QR/etiqueta
+  imprimível por colaborador pro crachá (hoje precisa saber o id
+  cuid do colaborador de outro jeito pra codificar num QR — dá pra
+  reaproveitar o padrão de etiqueta já usado em CTPS/EPI quando for
+  pedido); "Controle de horas" (banco de horas, jornada esperada por
+  colaborador/horário, comparação com o que foi trabalhado) não foi
+  feito — só ponto bruto + total do dia, sem comparar contra jornada.
+- **Próximo (quando o usuário pedir)**: Folha de Pagamento —
+  pesquisar tabelas atuais de INSS/IRRF/FGTS antes de desenhar
+  qualquer cálculo (nada disso foi pesquisado ainda nesta sessão).
+- **Ajustes feitos depois, ainda na mesma sessão** (pedido do
+  usuário, mensagens separadas):
+  - `Employee.badgeCode` (código/crachá pra bater ponto, opcional,
+    único por empresa) — migration
+    `20260811193901_add_employee_badge_code`. Campo novo no cadastro
+    de Colaborador, aba Contratuais, logo abaixo de Status ("Código
+    para bater ponto"). O registro de ponto (`TimeTrackingService.
+    createEntry`, tanto a rota autenticada quanto a API pública de
+    dispositivo) agora aceita **id do colaborador OU badgeCode** no
+    mesmo campo `employeeId` — resolve pelos dois via `OR` na busca,
+    sem precisar de um DTO/rota separada.
+  - Campo do leitor de código de barras/QR na tela de Ponto
+    (`/erp/rh/ponto`) ficou **bem menor** (`h-9 w-40` em vez de
+    `h-11 w-full`) — pedido explícito ("não ocupar tanto espaço na
+    tela"). De quebra, removida uma chamada de API redundante
+    (`employeeService.getById` antes de bater o ponto) — agora usa
+    só a resposta do próprio `POST /time-entries`, que já devolve o
+    nome do colaborador.
+  - **Testado por API direta** (não pela tela, sessão já estava
+    encerrando): `PATCH /employees/:id` com `badgeCode` grava certo,
+    `POST /time-entries` com `employeeId: "0042"` (o badge, não o
+    cuid) resolveu pro colaborador certo.
+
+## Módulo de Produção — etapas (backend e frontend prontos, testados ponta a ponta)
+
+Pedido do usuário (com imagem da aba `CONT_PRODUCAO` da planilha
+original de referência — layout de fábrica de costura, mas os campos
+pedidos foram generalizados, sem campos específicos de confecção tipo
+OS/Marca/Piloto, mantendo a decisão já tomada antes de módulo
+genérico):
+
+1. **Dias de produção** (campo novo, ex.: 10 dias).
+2. **Data de produção** = sempre a data de abertura da ordem (hoje),
+   não editável.
+3. **Previsão** = data de produção + dias de produção, **calculada no
+   backend**, nunca aceita direto do formulário.
+4. **3 etapas em sequência**: Aguardando produção → Em produção →
+   Finalizada (+ Cancelada, terminal, a partir das duas primeiras).
+5. **Semáforo visual** na linha da lista pra bater o olho e saber a
+   etapa.
+6. **Botão de mudança de etapa** (Iniciar produção, separado de
+   Concluir).
+7. **Concluir abre uma subtela/modal** pedindo **data de término** +
+   **observação** (esses dois, "informar a data do término e
+   observação").
+
+### O que já está pronto (backend, compila limpo, testado por API)
+
+- **Enum renomeado**: `ProductionOrderStatus` agora é
+  `AGUARDANDO_PRODUCAO | EM_PRODUCAO | FINALIZADA | CANCELADA` (antes
+  era `DRAFT | COMPLETED | CANCELLED`). Migration
+  `20260811192942_production_order_stages` — como só existiam 3
+  ordens de teste (todas já canceladas) e nenhum dado real, a
+  migração foi feita **apagando as ordens de teste** antes de rodar
+  (não teve dado real pra migrar/perder).
+- **Campos novos em `ProductionOrder`**: `orderDate` (data de
+  abertura, obrigatório, gravado sozinho = hoje na criação),
+  `productionDays` (obrigatório, vem do formulário),
+  `completionObservation` (observação específica da conclusão,
+  separada da `observation` geral da ordem). `expectedDate` continua
+  existindo mas **virou sempre calculado** (orderDate +
+  productionDays) — o DTO de criação **não aceita mais** esse campo
+  direto.
+- **`ProductionSettings.defaultProductionDays`** (padrão 7) — usado
+  quando uma ordem nasce sozinha pelos gatilhos automáticos (eles não
+  têm como saber quanto tempo aquele produto leva pra produzir).
+- **Fluxo de etapas no `ProductionOrdersService`**:
+  - `create`: sempre nasce em `AGUARDANDO_PRODUCAO`, calcula
+    orderDate/expectedDate sozinho.
+  - `start` (**endpoint novo** `PATCH /production-orders/:id/start`):
+    só de `AGUARDANDO_PRODUCAO` → `EM_PRODUCAO`.
+  - `update`: só em `AGUARDANDO_PRODUCAO` (era "rascunho"/DRAFT
+    antes). Mudar `productionDays` recalcula `expectedDate` sozinho a
+    partir do mesmo `orderDate`.
+  - `cancel`: de `AGUARDANDO_PRODUCAO` **ou** `EM_PRODUCAO`.
+  - `complete` (**mudou de assinatura**: agora é
+    `PATCH /production-orders/:id/complete` com **body**
+    `{ completedAt, observation? }`, antes não pedia nada no corpo):
+    só de `EM_PRODUCAO` → `FINALIZADA`. Continua gerando a entrada de
+    estoque pelo custo médio (comportamento da sessão anterior,
+    mantido).
+  - `undoComplete` (Estornar): `FINALIZADA` → volta pra
+    `EM_PRODUCAO` (não pra Aguardando — já tinha começado a
+    produção).
+  - Gatilhos automáticos (`autoGenerateForSalesOrderItem`/
+    `autoGenerateForLowStock`): passaram a preencher
+    orderDate/productionDays (usando o padrão da empresa)/
+    expectedDate também. `findOpenByProduct` (usado pra não duplicar
+    geração automática) agora considera aberto = `AGUARDANDO_PRODUCAO`
+    **ou** `EM_PRODUCAO` (antes só DRAFT).
+- **DTOs**: `CreateProductionOrderDto` trocou `expectedDate?` por
+  `productionDays` (obrigatório). `UpdateProductionOrderDto` idem
+  (parcial). DTO novo `CompleteProductionOrderDto`
+  (`completedAt` obrigatório, `observation?`).
+  `UpsertProductionSettingsDto` ganhou `defaultProductionDays?`.
+
+### Frontend — feito nesta sessão
+
+`production.service.ts`, `/erp/producao/ordens` e
+`/erp/producao/acompanhamento` reescritos/criados, item de menu
+Acompanhamento habilitado. Testado ponta a ponta pela tela (não só
+por API) — ver resumo no topo do documento. Nenhuma pendência
+conhecida neste fluxo.
 
 **WhatsApp (Baileys) implementado** — item 1 da fila anterior,
 completando o aviso automático ao fornecedor vencedor de cotação
@@ -979,14 +1518,28 @@ novas e ao revisitar as existentes.
    topo. Ainda dá pra adicionar (usuário não pediu ainda): Estoque,
    Movimentações (ficaram de fora da lista que ele pediu — só
    perguntar se ele quiser).
-3. ~~Produção~~ — **iniciado em 11-08-2026**: Ordem de Produção com
-   geração automática (pedido de venda maior que o saldo, estoque no
-   mínimo) e configurações, ver resumo da sessão no topo do
-   documento. **Ainda faltam** (não pedido nesta rodada): ficha
-   técnica/BOM (consumo de matéria-prima), apontamento por etapa
-   (tela "Acompanhamento", segue desabilitada no menu), campo de
-   lote mínimo por produto na tela de cadastro de Produtos (o campo
-   já existe no banco, só falta a tela).
+3. ~~Produção — fluxo de 3 etapas~~ — **feito em 11-08-2026**
+   (backend e frontend, incluindo tela de Acompanhamento), ver
+   "Módulo de Produção — etapas" no topo do documento. Fora do
+   pedido desta rodada, ainda em aberto: ficha técnica/BOM (consumo
+   de matéria-prima), campo de lote mínimo por produto na tela de
+   cadastro de Produtos (o campo já existe no banco, só falta a
+   tela).
+3.1. ~~Controle de Ponto (módulo LABOR)~~ — **iniciado em
+   11-08-2026**: batidas (manual/API/leitor), aprovação por dia,
+   faltas/abonos, ver resumo da sessão no topo. **Falta**: banco de
+   horas/jornada esperada (só tem total bruto do dia hoje), relatório/
+   indicadores de ponto, geração de QR/etiqueta de crachá por
+   colaborador.
+3.2. **Folha de Pagamento (mesmo módulo LABOR) — não iniciada,
+   decisão explícita do usuário de deixar pra uma sessão separada**
+   (11-08-2026, ver resumo da sessão no topo). Holerite, cálculo com
+   INSS/IRRF/FGTS e o que mais precisar. **Nada foi pesquisado
+   ainda** — o primeiro passo de quando for retomado é pesquisar na
+   web as tabelas/percentuais atuais (não existem na planilha
+   original, é tema totalmente novo pro sistema). Retomar com calma,
+   é a área de maior risco (dinheiro real do colaborador) de todo o
+   sistema até agora.
 4. **Multi-empresa — decisão tomada, implementação adiada de propósito**
    (09-08-2026). Diagnóstico: o **isolamento de dados já é sólido** —
    todo repository filtra por `companyId` vindo do JWT, empresas

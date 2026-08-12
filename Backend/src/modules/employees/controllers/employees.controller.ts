@@ -60,6 +60,14 @@ export class EmployeesController {
     return this.service.getIndicators(companyId);
   }
 
+  @Get('me')
+  findMine(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.service.findMine(companyId, userId);
+  }
+
   @Get(':id')
   @Permissions('employee.view')
   findOne(

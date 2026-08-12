@@ -19,6 +19,7 @@ import { ProductionOrdersService } from '../services/production-orders.service';
 import { CreateProductionOrderDto } from '../dto/create-production-order.dto';
 import { UpdateProductionOrderDto } from '../dto/update-production-order.dto';
 import { ProductionOrderFilterDto } from '../dto/production-order-filter.dto';
+import { CompleteProductionOrderDto } from '../dto/complete-production-order.dto';
 
 @ApiTags('Production Orders')
 @Controller('production-orders')
@@ -69,6 +70,18 @@ export class ProductionOrderController {
     return this.service.update(companyId, id, dto);
   }
 
+  @Patch(':id/start')
+  @Permissions('production-order.update')
+  @ApiOperation({
+    summary: 'Iniciar produção (aguardando → em produção)',
+  })
+  start(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.start(companyId, id);
+  }
+
   @Patch(':id/cancel')
   @Permissions('production-order.cancel')
   @ApiOperation({ summary: 'Cancelar ordem de produção' })
@@ -87,8 +100,9 @@ export class ProductionOrderController {
   complete(
     @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,
+    @Body() dto: CompleteProductionOrderDto,
   ) {
-    return this.service.complete(companyId, id);
+    return this.service.complete(companyId, id, dto);
   }
 
   @Patch(':id/undo-complete')

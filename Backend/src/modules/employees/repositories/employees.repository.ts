@@ -72,6 +72,8 @@ export class EmployeesRepository {
           dto.terminationDate,
         ),
         status: dto.status,
+        badgeCode: dto.badgeCode,
+        userId: dto.userId,
 
         bankName: dto.bankName,
         bankAgency: dto.bankAgency,
@@ -137,6 +139,16 @@ export class EmployeesRepository {
   ): Promise<Employee | null> {
     return this.prisma.employee.findFirst({
       where: { id, companyId },
+      include: includeRelations,
+    });
+  }
+
+  async findByUserId(
+    companyId: string,
+    userId: string,
+  ): Promise<Employee | null> {
+    return this.prisma.employee.findFirst({
+      where: { companyId, userId },
       include: includeRelations,
     });
   }
@@ -238,6 +250,8 @@ export class EmployeesRepository {
           dto.terminationDate,
         ),
         status: dto.status,
+        badgeCode: dto.badgeCode,
+        userId: dto.userId,
 
         bankName: dto.bankName,
         bankAgency: dto.bankAgency,

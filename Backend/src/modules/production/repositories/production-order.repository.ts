@@ -26,7 +26,9 @@ export class ProductionOrderRepository {
       productId: string;
       warehouseId: string;
       quantity: number;
-      expectedDate?: Date;
+      orderDate: Date;
+      productionDays: number;
+      expectedDate: Date;
       observation?: string;
       origin?: 'MANUAL' | 'SALES_ORDER' | 'LOW_STOCK';
       salesOrderId?: string;
@@ -39,6 +41,8 @@ export class ProductionOrderRepository {
         productId: data.productId,
         warehouseId: data.warehouseId,
         quantity: data.quantity,
+        orderDate: data.orderDate,
+        productionDays: data.productionDays,
         expectedDate: data.expectedDate,
         observation: data.observation,
         origin: data.origin ?? 'MANUAL',
@@ -76,13 +80,18 @@ export class ProductionOrderRepository {
     });
   }
 
-  /** Ordens ainda abertas (rascunho) pra um produto — usado pra não duplicar geração automática. */
+  /** Ordens ainda abertas (aguardando ou em produção) pra um produto — usado pra não duplicar geração automática. */
   async findOpenByProduct(companyId: string, productId: string) {
     return this.prisma.productionOrder.findFirst({
       where: {
         companyId,
         productId,
-        status: ProductionOrderStatus.DRAFT,
+        status: {
+          in: [
+            ProductionOrderStatus.AGUARDANDO_PRODUCAO,
+            ProductionOrderStatus.EM_PRODUCAO,
+          ],
+        },
       },
     });
   }
@@ -93,6 +102,7 @@ export class ProductionOrderRepository {
       productId?: string;
       warehouseId?: string;
       quantity?: number;
+      productionDays?: number;
       expectedDate?: Date;
       observation?: string;
     },
@@ -107,6 +117,9 @@ export class ProductionOrderRepository {
         ...(dto.quantity !== undefined && {
           quantity: dto.quantity,
         }),
+        ...(dto.productionDays !== undefined && {
+          productionDays: dto.productionDays,
+        }),
         ...(dto.expectedDate !== undefined && {
           expectedDate: dto.expectedDate,
         }),
@@ -118,23 +131,33 @@ export class ProductionOrderRepository {
     });
   }
 
+  async start(id: string) {
+    return this.prisma.productionOrder.update({
+      where: { id },
+      data: { status: ProductionOrderStatus.EM_PRODUCAO },
+      include: includeRelations,
+    });
+  }
+
   async cancel(id: string) {
     return this.prisma.productionOrder.update({
       where: { id },
-      data: { status: ProductionOrderStatus.CANCELLED },
+      data: { status: ProductionOrderStatus.CANCELADA },
     });
   }
 
   async complete(
     id: string,
     completedAt: Date,
+    completionObservation: string | undefined,
     tx?: Prisma.TransactionClient,
   ) {
     return (tx ?? this.prisma).productionOrder.update({
       where: { id },
       data: {
-        status: ProductionOrderStatus.COMPLETED,
+        status: ProductionOrderStatus.FINALIZADA,
         completedAt,
+        completionObservation,
       },
       include: includeRelations,
     });
@@ -144,8 +167,9 @@ export class ProductionOrderRepository {
     return (tx ?? this.prisma).productionOrder.update({
       where: { id },
       data: {
-        status: ProductionOrderStatus.DRAFT,
+        status: ProductionOrderStatus.EM_PRODUCAO,
         completedAt: null,
+        completionObservation: null,
       },
       include: includeRelations,
     });

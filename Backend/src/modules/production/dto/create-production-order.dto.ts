@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsDateString,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -22,10 +22,13 @@ export class CreateProductionOrderDto {
   @Min(0.001)
   quantity: number;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsDateString()
-  expectedDate?: Date;
+  @ApiProperty({
+    description:
+      'Dias de produção — a previsão de entrega é calculada como hoje + esses dias.',
+  })
+  @IsInt()
+  @Min(1)
+  productionDays: number;
 
   @ApiProperty({ required: false, maxLength: 500 })
   @IsOptional()

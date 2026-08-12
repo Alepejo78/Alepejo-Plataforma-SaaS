@@ -7,17 +7,19 @@ interface ApiEnvelope<T> {
 }
 
 export type ProductionOrderStatus =
-  | "DRAFT"
-  | "COMPLETED"
-  | "CANCELLED";
+  | "AGUARDANDO_PRODUCAO"
+  | "EM_PRODUCAO"
+  | "FINALIZADA"
+  | "CANCELADA";
 
 export const PRODUCTION_ORDER_STATUS_LABELS: Record<
   ProductionOrderStatus,
   string
 > = {
-  DRAFT: "Rascunho",
-  COMPLETED: "Concluída",
-  CANCELLED: "Cancelada",
+  AGUARDANDO_PRODUCAO: "Aguardando produção",
+  EM_PRODUCAO: "Em produção",
+  FINALIZADA: "Finalizada",
+  CANCELADA: "Cancelada",
 };
 
 export type ProductionOrderOrigin =
@@ -43,9 +45,12 @@ export interface ProductionOrder {
   origin: ProductionOrderOrigin;
   salesOrderId?: string | null;
   status: ProductionOrderStatus;
+  orderDate: string;
+  productionDays: number;
   expectedDate?: string | null;
   completedAt?: string | null;
   observation?: string | null;
+  completionObservation?: string | null;
   createdAt: string;
 
   product?: {
@@ -68,7 +73,7 @@ export interface ProductionOrderPayload {
   productId: string;
   warehouseId: string;
   quantity: number;
-  expectedDate?: string;
+  productionDays: number;
   observation?: string;
 }
 
@@ -79,16 +84,23 @@ export interface ProductionOrderFilter {
   origin?: ProductionOrderOrigin;
 }
 
+export interface CompleteProductionOrderPayload {
+  completedAt: string;
+  observation?: string;
+}
+
 export interface ProductionSettings {
   id: string;
   companyId: string;
   minBatchSize: string | number;
+  defaultProductionDays: number;
   autoGenerateOnSalesOrder: boolean;
   autoGenerateOnLowStock: boolean;
 }
 
 export interface ProductionSettingsPayload {
   minBatchSize?: number;
+  defaultProductionDays?: number;
   autoGenerateOnSalesOrder?: boolean;
   autoGenerateOnLowStock?: boolean;
 }
@@ -137,6 +149,14 @@ export const productionOrderService = {
     return data.data;
   },
 
+  async start(id: string): Promise<ProductionOrder> {
+    const { data } = await api.patch<
+      ApiEnvelope<ProductionOrder>
+    >(`/production-orders/${id}/start`);
+
+    return data.data;
+  },
+
   async cancel(id: string): Promise<ProductionOrder> {
     const { data } = await api.patch<
       ApiEnvelope<ProductionOrder>
@@ -145,10 +165,13 @@ export const productionOrderService = {
     return data.data;
   },
 
-  async complete(id: string): Promise<ProductionOrder> {
+  async complete(
+    id: string,
+    payload: CompleteProductionOrderPayload
+  ): Promise<ProductionOrder> {
     const { data } = await api.patch<
       ApiEnvelope<ProductionOrder>
-    >(`/production-orders/${id}/complete`);
+    >(`/production-orders/${id}/complete`, payload);
 
     return data.data;
   },

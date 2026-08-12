@@ -17,11 +17,22 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export class EmployeesService {
   constructor(private readonly repository: EmployeesRepository) {}
 
-  private handleUniqueCpf(err: unknown): never {
+  private handleUniqueConstraint(err: unknown): never {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === 'P2002'
     ) {
+      const target = err.meta?.target;
+      const targetStr = Array.isArray(target)
+        ? target.join(',')
+        : String(target ?? '');
+
+      if (targetStr.includes('userId')) {
+        throw new ConflictException(
+          'Esse usuário já está vinculado a outro colaborador.',
+        );
+      }
+
       throw new ConflictException(
         'Já existe um colaborador cadastrado com este CPF.',
       );
@@ -185,7 +196,7 @@ export class EmployeesService {
     try {
       return await this.repository.create(companyId, dto);
     } catch (err) {
-      this.handleUniqueCpf(err);
+      this.handleUniqueConstraint(err);
     }
   }
 
@@ -217,6 +228,24 @@ export class EmployeesService {
     return employee;
   }
 
+  /** Colaborador vinculado ao usuário logado (autoatendimento — ex.: Ponto - Manual). */
+  async findMine(companyId: string, userId: string) {
+    const employee = await this.repository.findByUserId(
+      companyId,
+      userId,
+    );
+
+    if (!employee) {
+      throw new NotFoundException(
+        'Seu usuário ainda não está vinculado a um colaborador — peça pro RH vincular no seu cadastro.',
+      );
+    }
+
+    await this.reconcileExperience([employee]);
+
+    return employee;
+  }
+
   async update(
     companyId: string,
     id: string,
@@ -229,7 +258,7 @@ export class EmployeesService {
     try {
       return await this.repository.update(id, dto);
     } catch (err) {
-      this.handleUniqueCpf(err);
+      this.handleUniqueConstraint(err);
     }
   }
 

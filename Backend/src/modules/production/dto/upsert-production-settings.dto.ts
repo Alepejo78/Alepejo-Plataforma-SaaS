@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export class UpsertProductionSettingsDto {
   @ApiProperty({ required: false })
@@ -7,6 +13,15 @@ export class UpsertProductionSettingsDto {
   @IsNumber()
   @Min(0.001)
   minBatchSize?: number;
+
+  @ApiProperty({
+    required: false,
+    description: 'Dias de produção padrão usados quando uma ordem nasce sozinha.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  defaultProductionDays?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -72,6 +72,96 @@ export const sectorService =
 export const workScheduleService =
   createAuxiliaryService<AuxiliaryRecord>("work-schedules");
 
+export type Weekday =
+  | "SEGUNDA"
+  | "TERCA"
+  | "QUARTA"
+  | "QUINTA"
+  | "SEXTA"
+  | "SABADO"
+  | "DOMINGO";
+
+export const WEEKDAY_LABELS: Record<Weekday, string> = {
+  SEGUNDA: "Segunda",
+  TERCA: "Terça",
+  QUARTA: "Quarta",
+  QUINTA: "Quinta",
+  SEXTA: "Sexta",
+  SABADO: "Sábado",
+  DOMINGO: "Domingo",
+};
+
+export const WEEKDAY_ORDER: Weekday[] = [
+  "SEGUNDA",
+  "TERCA",
+  "QUARTA",
+  "QUINTA",
+  "SEXTA",
+  "SABADO",
+  "DOMINGO",
+];
+
+export interface WorkScheduleShift {
+  id: string;
+  workScheduleId: string;
+  dayFrom: Weekday;
+  dayTo: Weekday;
+  startTime: string;
+  breakStart?: string | null;
+  breakEnd?: string | null;
+  endTime: string;
+  lunchBreakMinutes?: number | null;
+}
+
+export interface WorkScheduleShiftPayload {
+  dayFrom: Weekday;
+  dayTo: Weekday;
+  startTime: string;
+  breakStart?: string;
+  breakEnd?: string;
+  endTime: string;
+  lunchBreakMinutes?: number;
+}
+
+export const workScheduleShiftService = {
+  async list(workScheduleId: string): Promise<WorkScheduleShift[]> {
+    const { data } = await api.get<
+      ApiEnvelope<WorkScheduleShift[]>
+    >(`/work-schedules/${workScheduleId}/shifts`);
+
+    return data.data ?? [];
+  },
+
+  async create(
+    workScheduleId: string,
+    payload: WorkScheduleShiftPayload
+  ): Promise<WorkScheduleShift> {
+    const { data } = await api.post<
+      ApiEnvelope<WorkScheduleShift>
+    >(`/work-schedules/${workScheduleId}/shifts`, payload);
+
+    return data.data;
+  },
+
+  async update(
+    workScheduleId: string,
+    id: string,
+    payload: Partial<WorkScheduleShiftPayload>
+  ): Promise<WorkScheduleShift> {
+    const { data } = await api.patch<
+      ApiEnvelope<WorkScheduleShift>
+    >(`/work-schedules/${workScheduleId}/shifts/${id}`, payload);
+
+    return data.data;
+  },
+
+  async remove(workScheduleId: string, id: string) {
+    await api.delete(
+      `/work-schedules/${workScheduleId}/shifts/${id}`
+    );
+  },
+};
+
 export const ppeTypeService =
   createAuxiliaryService<AuxiliaryRecord>("ppe-types");
 
@@ -382,6 +472,8 @@ export interface Employee {
   contractEndDate?: string | null;
   terminationDate?: string | null;
   status: EmployeeStatus;
+  badgeCode?: string | null;
+  userId?: string | null;
 
   bankName?: string | null;
   bankAgency?: string | null;
@@ -475,6 +567,8 @@ export interface EmployeePayload {
   contractEndDate?: string;
   terminationDate?: string;
   status?: EmployeeStatus;
+  badgeCode?: string;
+  userId?: string;
 
   bankName?: string;
   bankAgency?: string;
@@ -534,6 +628,15 @@ export const employeeService = {
   async getById(id: string): Promise<Employee> {
     const { data } = await api.get<ApiEnvelope<Employee>>(
       `/employees/${id}`
+    );
+
+    return data.data;
+  },
+
+  /** Colaborador vinculado ao usuário logado (autoatendimento). */
+  async getMine(): Promise<Employee> {
+    const { data } = await api.get<ApiEnvelope<Employee>>(
+      "/employees/me"
     );
 
     return data.data;

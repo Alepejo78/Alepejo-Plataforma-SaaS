@@ -31,6 +31,7 @@ const erpModules: {
   { code: "BRANDING", name: "Personalização (Marca Própria)", route: "/erp/configuracoes", sortOrder: 7 },
   { code: "HR", name: "Recursos Humanos", route: "/erp/rh", sortOrder: 8 },
   { code: "PRODUCTION", name: "Produção", route: "/erp/producao", sortOrder: 9 },
+  { code: "LABOR", name: "Ponto e Folha de Pagamento", route: "/erp/rh/ponto", sortOrder: 10 },
 ];
 
 /**
@@ -38,7 +39,7 @@ const erpModules: {
  * vendidos à parte. Uma empresa nova só tem acesso a eles se forem
  * habilitados individualmente (ver CompanyModule mais abaixo).
  */
-const ADDON_MODULE_CODES = ["BRANDING", "HR", "PRODUCTION"];
+const ADDON_MODULE_CODES = ["BRANDING", "HR", "PRODUCTION", "LABOR"];
 
 /**
  * Plano de contas padrão, migrado da aba CAD_DESPESAS da planilha
@@ -504,6 +505,24 @@ const permissionGroups = [
     ],
   },
   {
+    code: "LABOR",
+    name: "Ponto e Folha de Pagamento",
+    permissions: [
+      ["time-entry.view", "Consultar Ponto"],
+      ["time-entry.create", "Registrar Ponto"],
+      ["time-entry.update", "Alterar/Excluir Batida de Ponto"],
+      ["time-entry.approve", "Aprovar/Reabrir Dia de Ponto"],
+      ["absence-record.view", "Consultar Faltas e Abonos"],
+      ["absence-record.create", "Registrar Falta/Abono"],
+      ["absence-record.update", "Alterar/Excluir Falta/Abono"],
+      ["absence-record.approve", "Aprovar/Rejeitar Falta/Abono"],
+      [
+        "time-clock.manage-api-key",
+        "Gerenciar Chave de API do Relógio de Ponto",
+      ],
+    ],
+  },
+  {
     code: "HR",
     name: "Recursos Humanos",
     permissions: [
@@ -730,6 +749,30 @@ async function main() {
       create: {
         companyId: company.id,
         moduleId: productionModule.id,
+        enabled: true,
+        licensed: true,
+      },
+    });
+  }
+
+  // Mesma lógica para o add-on LABOR (Ponto e Folha de Pagamento),
+  // também habilitado na empresa seed para poder testar.
+  const laborModule = allModules.find(
+    (mod) => mod.code === "LABOR",
+  );
+
+  if (laborModule) {
+    await prisma.companyModule.upsert({
+      where: {
+        companyId_moduleId: {
+          companyId: company.id,
+          moduleId: laborModule.id,
+        },
+      },
+      update: { enabled: true, licensed: true },
+      create: {
+        companyId: company.id,
+        moduleId: laborModule.id,
         enabled: true,
         licensed: true,
       },

@@ -234,6 +234,23 @@ export class CreateEmployeeDto {
   @IsEnum(EmployeeStatus)
   status?: EmployeeStatus;
 
+  @ApiPropertyOptional({
+    description:
+      'Código/crachá pra bater ponto (módulo LABOR) — o que vai no QR/código de barras do colaborador.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  badgeCode?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Usuário de login vinculado a este colaborador (autoatendimento — ex.: Ponto - Manual).',
+  })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
   // --- Dados bancários ---
   @ApiPropertyOptional()
   @IsOptional()

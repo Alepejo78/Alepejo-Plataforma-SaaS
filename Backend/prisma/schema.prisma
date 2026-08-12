@@ -166,6 +166,7 @@ model Company {
   sectors        Sector[]
   jobFunctions   JobFunction[]
   workSchedules  WorkSchedule[]
+  workScheduleShifts WorkScheduleShift[]
   ppeTypes       PpeType[]
   employees      Employee[]
   ppeDeliveries  PpeDelivery[]
@@ -173,6 +174,19 @@ model Company {
 
   productionOrders   ProductionOrder[]
   productionSettings ProductionSettings?
+
+  timeEntries          TimeEntry[]
+  timeSheetApprovals   TimeSheetApproval[]
+  timeEntryAdjustments TimeEntryAdjustment[]
+  absenceRecords       AbsenceRecord[]
+
+  /// Chave de API para dispositivos externos baterem ponto (relógio de
+  /// ponto, leitor de QR/código de barras) sem login — hash (bcrypt),
+  /// nunca gravamos o valor puro. Mostrado por inteiro só uma vez, na
+  /// hora de gerar/regenerar (ver TimeClockApiKeyService).
+  timeClockApiKeyHash   String?   @db.VarChar(255)
+  timeClockApiKeyPrefix String?   @db.VarChar(12)
+  timeClockApiKeyCreatedAt DateTime?
 
   @@map("companies")
 }
@@ -294,6 +308,11 @@ model User {
   avatarEnabled Boolean @default(false)
 
   roles UserRole[]
+
+  /// Colaborador (RH) vinculado a este login — usado por telas de
+  /// autoatendimento (ex.: Ponto - Manual) pra saber "quem é o
+  /// colaborador do usuário logado" sem depender de bater e-mail.
+  employee Employee?
 
   createdAt DateTime @default(now())
 
@@ -1428,12 +1447,57 @@ model WorkSchedule {
   active       Boolean       @default(true)
   jobFunctions JobFunction[]
   employees    Employee[]
+  shifts       WorkScheduleShift[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   @@unique([companyId, name])
   @@index([companyId])
   @@map("work_schedules")
+}
+
+enum Weekday {
+  SEGUNDA
+  TERCA
+  QUARTA
+  QUINTA
+  SEXTA
+  SABADO
+  DOMINGO
+}
+
+/// Faixa de dias + horários dentro de um Horário de trabalho, usada
+/// pro cálculo de horas normais/extras no Controle de Ponto. Um
+/// mesmo horário pode ter mais de uma faixa (ex.: SEG a SEX um
+/// horário, SÁBADO outro sem intervalo) — cada dia da semana deve
+/// cair em no máximo uma faixa.
+model WorkScheduleShift {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  workScheduleId String
+  workSchedule   WorkSchedule @relation(fields: [workScheduleId], references: [id], onDelete: Cascade)
+
+  dayFrom Weekday
+  dayTo   Weekday
+
+  /// Horários no formato "HH:MM".
+  startTime  String  @db.VarChar(5)
+  breakStart String? @db.VarChar(5)
+  breakEnd   String? @db.VarChar(5)
+  endTime    String  @db.VarChar(5)
+
+  /// Minutos de intervalo usados no cálculo quando breakStart/breakEnd
+  /// não são informados (só duração, sem horário de relógio).
+  lunchBreakMinutes Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([workScheduleId])
+  @@map("work_schedule_shifts")
 }
 
 /// Cadastro de tipos de EPI (equipamento de proteção individual) —
@@ -1582,6 +1646,12 @@ model Employee {
   mobile   String? @db.VarChar(20)
   email    String? @db.VarChar(150)
 
+  /// Usuário de login vinculado a este colaborador (autoatendimento —
+  /// ex.: Ponto - Manual). Opcional, um usuário só pode estar
+  /// vinculado a um colaborador por vez (`@unique`).
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
+
   // --- Contratuais ---
   jobFunctionId String?
   jobFunction   JobFunction? @relation(fields: [jobFunctionId], references: [id])
@@ -1603,6 +1673,12 @@ model Employee {
   contractEndDate     DateTime?
   terminationDate     DateTime?
   status              EmployeeStatus @default(EXPERIENCIA)
+
+  /// Código/crachá pra bater ponto (módulo LABOR) — o que vai
+  /// codificado no QR/código de barras do colaborador. Único por
+  /// empresa quando preenchido; sem ele, ainda dá pra bater ponto
+  /// usando o id interno do colaborador.
+  badgeCode String? @db.VarChar(30)
 
   // --- Saúde ocupacional ---
   /// Data do próximo exame pendente — denormalizado a partir do
@@ -1657,8 +1733,13 @@ model Employee {
   ppeDeliveries    PpeDelivery[]
   employeeBenefits EmployeeBenefit[]
   exams            EmployeeExam[]
+  timeEntries          TimeEntry[]
+  timeSheetApprovals   TimeSheetApproval[]
+  timeEntryAdjustments TimeEntryAdjustment[]
+  absenceRecords       AbsenceRecord[]
 
   @@unique([companyId, cpf])
+  @@unique([companyId, badgeCode])
   @@index([companyId])
   @@index([jobFunctionId])
   @@map("employees")
@@ -1792,10 +1873,13 @@ model PpeDelivery {
   @@map("ppe_deliveries")
 }
 
+/// Etapas em sequência: aguardando -> em produção -> finalizada.
+/// Cancelada é terminal, só a partir de aguardando/em produção.
 enum ProductionOrderStatus {
-  DRAFT
-  COMPLETED
-  CANCELLED
+  AGUARDANDO_PRODUCAO
+  EM_PRODUCAO
+  FINALIZADA
+  CANCELADA
 }
 
 /// Motivo que gerou a ordem — MANUAL é criada na mão, as outras duas
@@ -1835,13 +1919,28 @@ model ProductionOrder {
   salesOrderId String?
   salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
 
-  status ProductionOrderStatus @default(DRAFT)
+  status ProductionOrderStatus @default(AGUARDANDO_PRODUCAO)
 
-  expectedDate DateTime?
+  /// Data de abertura da ordem — sempre o dia em que foi criada, não
+  /// editável (distinta de `createdAt`, que é o timestamp técnico).
+  orderDate DateTime
 
-  /// Preenchido ao concluir — junto disso, gera entrada de estoque
-  /// da quantidade produzida (ver ProductionOrdersService.complete).
+  /// Quantos dias a produção deve levar — junto com `orderDate`,
+  /// calcula `expectedDate` (previsão) automaticamente.
+  productionDays Int
+
+  /// Previsão de entrega = orderDate + productionDays, sempre
+  /// recalculada no backend (nunca aceita direto do formulário).
+  expectedDate DateTime
+
+  /// Preenchido ao concluir (informado pelo usuário, não é sempre
+  /// "agora" — pode ser uma data passada) — junto disso, gera entrada
+  /// de estoque da quantidade produzida (ver ProductionOrdersService.complete).
   completedAt DateTime?
+
+  /// Observação da conclusão (data + observação, pedidas juntas na
+  /// hora de concluir) — separada da observação geral da ordem.
+  completionObservation String? @db.VarChar(500)
 
   observation String? @db.VarChar(500)
 
@@ -1866,6 +1965,10 @@ model ProductionSettings {
   /// Product.minProductionBatch sobrepõe este valor quando preenchido.
   minBatchSize Decimal @default(1) @db.Decimal(18, 3)
 
+  /// Dias de produção padrão usados quando uma ordem nasce sozinha
+  /// (o gatilho não tem como saber quanto tempo aquele produto leva).
+  defaultProductionDays Int @default(7)
+
   /// Gerar ordem de produção sozinha quando um pedido de venda pedir
   /// mais do que o saldo disponível no almoxarifado do pedido.
   autoGenerateOnSalesOrder Boolean @default(true)
@@ -1878,4 +1981,146 @@ model ProductionSettings {
   updatedAt DateTime @updatedAt
 
   @@map("production_settings")
+}
+
+enum TimeEntrySource {
+  MANUAL
+  API
+  BARCODE
+  QRCODE
+  AJUSTE
+  AUTOLANCAMENTO
+}
+
+/// Registro bruto de ponto (uma batida). O dia trabalhado é calculado
+/// juntando as batidas de um mesmo colaborador+data em pares
+/// entrada/saída — ver TimeTrackingService.getDaySummary.
+model TimeEntry {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  timestamp DateTime
+
+  source TimeEntrySource @default(MANUAL)
+
+  observation String? @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([employeeId, timestamp])
+  @@map("time_entries")
+}
+
+/// Aprovação do dia trabalhado — um registro por colaborador+data.
+/// Sem registro aqui, o dia é considerado pendente. `workedMinutes` é
+/// um retrato do total calculado no momento da aprovação (não
+/// recalcula sozinho se novas batidas daquele dia aparecerem depois).
+model TimeSheetApproval {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  /// Só a data (meia-noite UTC), sem hora — mesmo padrão de outras
+  /// datas "de calendário" no sistema.
+  date DateTime
+
+  workedMinutes Int
+
+  approvedByUserId String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, employeeId, date])
+  @@index([companyId])
+  @@map("time_sheet_approvals")
+}
+
+/// Auditoria de ajuste manual de ponto (botão "Ajustar" na tela de
+/// Controle de Ponto) — grava o antes/depois dos 4 horários do dia
+/// (Início/Início Intervalo/Fim Intervalo/Saída) e a justificativa,
+/// pra dar pra consultar depois quem alterou, quando e por quê.
+model TimeEntryAdjustment {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  /// Só a data (meia-noite UTC) do dia ajustado.
+  date DateTime
+
+  beforeStart      DateTime?
+  beforeBreakStart DateTime?
+  beforeBreakEnd   DateTime?
+  beforeEnd        DateTime?
+
+  afterStart      DateTime?
+  afterBreakStart DateTime?
+  afterBreakEnd   DateTime?
+  afterEnd        DateTime?
+
+  justification String @db.VarChar(500)
+
+  adjustedByUserId String
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([employeeId, date])
+  @@map("time_entry_adjustments")
+}
+
+enum AbsenceType {
+  FALTA_JUSTIFICADA
+  FALTA_INJUSTIFICADA
+  ABONO
+}
+
+enum AbsenceStatus {
+  PENDENTE
+  APROVADO
+  REJEITADO
+}
+
+/// Falta (justificada/injustificada) ou abono, com aprovação —
+/// mesma regra Editar/Cancelar/Estornar: Editar só Pendente,
+/// Aprovar/Rejeitar decide, e dá pra reabrir (volta pra Pendente).
+model AbsenceRecord {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  date DateTime
+
+  type AbsenceType
+
+  reason String? @db.VarChar(500)
+
+  status AbsenceStatus @default(PENDENTE)
+
+  approvedByUserId String?
+  approvedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([employeeId, date])
+  @@map("absence_records")
 }

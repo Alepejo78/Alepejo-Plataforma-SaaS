@@ -47,6 +47,7 @@ import { PpeDeliveriesModule } from './modules/ppe-deliveries/ppe-deliveries.mod
 import { EmployeeExamsModule } from './modules/employee-exams/employee-exams.module';
 import { ScheduledNotificationsModule } from './modules/scheduled-notifications/scheduled-notifications.module';
 import { ProductionModule } from './modules/production/production.module';
+import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { ProductionModule } from './modules/production/production.module';
     EmployeeExamsModule,
     ScheduledNotificationsModule,
     ProductionModule,
+    TimeTrackingModule,
   ],
   controllers: [AppController],
   providers: [

@@ -18,8 +18,28 @@ import { ProductionSettingsRepository } from '../repositories/production-setting
 import { CreateProductionOrderDto } from '../dto/create-production-order.dto';
 import { UpdateProductionOrderDto } from '../dto/update-production-order.dto';
 import { ProductionOrderFilterDto } from '../dto/production-order-filter.dto';
+import { CompleteProductionOrderDto } from '../dto/complete-production-order.dto';
 
 const SEQUENCE_TYPE = 'PRODUCTION_ORDER';
+
+/** Meia-noite UTC do dia — mesmo padrão de "data de calendário" usado no resto do sistema. */
+function utcMidnight(date: Date): Date {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+    ),
+  );
+}
+
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+
+  result.setUTCDate(result.getUTCDate() + days);
+
+  return result;
+}
 
 /**
  * Ordem de produção — módulo genérico (não específico de confecção).
@@ -53,6 +73,9 @@ export class ProductionOrdersService {
       dto.warehouseId,
     );
 
+    const orderDate = utcMidnight(new Date());
+    const expectedDate = addDays(orderDate, dto.productionDays);
+
     return this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
         tx,
@@ -64,9 +87,9 @@ export class ProductionOrdersService {
         productId: dto.productId,
         warehouseId: dto.warehouseId,
         quantity: dto.quantity,
-        expectedDate: dto.expectedDate
-          ? new Date(dto.expectedDate)
-          : undefined,
+        orderDate,
+        productionDays: dto.productionDays,
+        expectedDate,
         observation: dto.observation,
         origin: 'MANUAL',
       });
@@ -99,9 +122,9 @@ export class ProductionOrdersService {
   ) {
     const order = await this.findOne(companyId, id);
 
-    if (order.status !== 'DRAFT') {
+    if (order.status !== 'AGUARDANDO_PRODUCAO') {
       throw new BadRequestException(
-        'Somente ordens em rascunho podem ser alteradas.',
+        'Somente ordens aguardando produção podem ser alteradas.',
       );
     }
 
@@ -113,23 +136,44 @@ export class ProductionOrdersService {
       );
     }
 
+    // Mudar os dias de produção recalcula a previsão a partir da
+    // mesma data de abertura — nunca aceita a previsão direto.
+    const expectedDate =
+      dto.productionDays !== undefined
+        ? addDays(order.orderDate, dto.productionDays)
+        : undefined;
+
     return this.repository.update(id, {
       productId: dto.productId,
       warehouseId: dto.warehouseId,
       quantity: dto.quantity,
-      expectedDate: dto.expectedDate
-        ? new Date(dto.expectedDate)
-        : undefined,
+      productionDays: dto.productionDays,
+      expectedDate,
       observation: dto.observation,
     });
+  }
+
+  async start(companyId: string, id: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (order.status !== 'AGUARDANDO_PRODUCAO') {
+      throw new BadRequestException(
+        'Somente ordens aguardando produção podem ser iniciadas.',
+      );
+    }
+
+    return this.repository.start(id);
   }
 
   async cancel(companyId: string, id: string) {
     const order = await this.findOne(companyId, id);
 
-    if (order.status !== 'DRAFT') {
+    if (
+      order.status !== 'AGUARDANDO_PRODUCAO' &&
+      order.status !== 'EM_PRODUCAO'
+    ) {
       throw new BadRequestException(
-        'Somente ordens em rascunho podem ser canceladas.',
+        'Somente ordens aguardando produção ou em produção podem ser canceladas.',
       );
     }
 
@@ -141,12 +185,16 @@ export class ProductionOrdersService {
    * produzida (custo médio ponderado, mesmo cálculo do recebimento
    * de compra — ver PurchaseService.receive).
    */
-  async complete(companyId: string, id: string) {
+  async complete(
+    companyId: string,
+    id: string,
+    dto: CompleteProductionOrderDto,
+  ) {
     const order = await this.findOne(companyId, id);
 
-    if (order.status !== 'DRAFT') {
+    if (order.status !== 'EM_PRODUCAO') {
       throw new BadRequestException(
-        'Somente ordens em rascunho podem ser concluídas.',
+        'Somente ordens em produção podem ser concluídas.',
       );
     }
 
@@ -210,7 +258,12 @@ export class ProductionOrdersService {
         },
       });
 
-      return this.repository.complete(id, new Date(), tx);
+      return this.repository.complete(
+        id,
+        new Date(dto.completedAt),
+        dto.observation,
+        tx,
+      );
     });
   }
 
@@ -218,9 +271,9 @@ export class ProductionOrdersService {
   async undoComplete(companyId: string, id: string) {
     const order = await this.findOne(companyId, id);
 
-    if (order.status !== 'COMPLETED') {
+    if (order.status !== 'FINALIZADA') {
       throw new BadRequestException(
-        'Somente ordens concluídas podem ser estornadas.',
+        'Somente ordens finalizadas podem ser estornadas.',
       );
     }
 
@@ -416,7 +469,10 @@ export class ProductionOrdersService {
       shortfall: number;
       origin: 'SALES_ORDER' | 'LOW_STOCK';
       salesOrderId?: string;
-      settings: { minBatchSize: Prisma.Decimal | number };
+      settings: {
+        minBatchSize: Prisma.Decimal | number;
+        defaultProductionDays: number;
+      };
     },
   ) {
     // Já existe ordem em aberto pra esse produto — não duplica.
@@ -441,6 +497,10 @@ export class ProductionOrdersService {
 
     const quantity = Math.max(params.shortfall, minBatch);
 
+    const orderDate = utcMidnight(new Date());
+    const productionDays = params.settings.defaultProductionDays;
+    const expectedDate = addDays(orderDate, productionDays);
+
     await this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
         tx,
@@ -452,6 +512,9 @@ export class ProductionOrdersService {
         productId: params.productId,
         warehouseId: params.warehouseId,
         quantity,
+        orderDate,
+        productionDays,
+        expectedDate,
         origin: params.origin,
         salesOrderId: params.salesOrderId,
         observation:
