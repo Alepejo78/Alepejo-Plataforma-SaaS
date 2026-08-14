@@ -97,6 +97,42 @@ export class CreateCompanyDto {
   @MaxLength(200)
   website?: string;
 
+  @ApiPropertyOptional({ example: '86813334' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  zipCode?: string;
+
+  @ApiPropertyOptional({ example: 'Rua Gratidão' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  street?: string;
+
+  @ApiPropertyOptional({ example: '468' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  number?: string;
+
+  @ApiPropertyOptional({ example: 'Jardim Esperança' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  district?: string;
+
+  @ApiPropertyOptional({ example: 'Cambé' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @ApiPropertyOptional({ example: 'PR' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  state?: string;
+
   @ApiPropertyOptional({
     example: '/uploads/logo.png',
   })

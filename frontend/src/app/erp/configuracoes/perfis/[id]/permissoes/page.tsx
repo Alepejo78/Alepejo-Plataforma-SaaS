@@ -32,6 +32,7 @@ const GENERIC_COLUMNS: { key: string; label: string }[] = [
   { key: "update", label: "Editar" },
   { key: "delete", label: "Excluir" },
   { key: "view", label: "Consultar" },
+  { key: "report", label: "Relatório" },
 ];
 
 // Colunas de ação de negócio: casam por código exato (ou lista de

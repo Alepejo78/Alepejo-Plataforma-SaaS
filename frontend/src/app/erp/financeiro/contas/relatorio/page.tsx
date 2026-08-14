@@ -1,5 +1,6 @@
 "use client";
 
+import { ReportAccessGuard } from "@/components/reports/ReportAccessGuard";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -46,7 +47,7 @@ const fieldClass = `
 const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
-export default function RelatorioContasPage() {
+function RelatorioContasPageInner() {
   return (
     <Suspense fallback={null}>
       <RelatorioContasContent />
@@ -396,5 +397,13 @@ function RelatorioContasContent() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function RelatorioContasPage() {
+  return (
+    <ReportAccessGuard permission="financial-entry.report">
+      <RelatorioContasPageInner />
+    </ReportAccessGuard>
   );
 }

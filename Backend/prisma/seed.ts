@@ -273,6 +273,7 @@ const permissionGroups = [
       ["sales-order.update", "Alterar Pedidos de Venda"],
       ["sales-order.cancel", "Cancelar Pedidos de Venda"],
       ["sale.reverse", "Estornar Vendas"],
+      ["sale.report", "Ver Relatórios de Vendas"],
     ],
   },
   {
@@ -305,6 +306,7 @@ const permissionGroups = [
       ["financial-entry.settle", "Baixar Títulos"],
       ["financial-entry.cancel", "Cancelar Títulos"],
       ["financial-entry.delete", "Excluir Títulos"],
+      ["financial-entry.report", "Ver Relatórios Financeiros"],
     ],
   },
   {
@@ -335,6 +337,7 @@ const permissionGroups = [
       ["purchase-order.update", "Alterar Pedidos de Compra"],
       ["purchase-order.cancel", "Cancelar Pedidos de Compra"],
       ["purchase.reverse", "Estornar Compras"],
+      ["purchase.report", "Ver Relatórios de Compras"],
     ],
   },
   {
@@ -361,6 +364,7 @@ const permissionGroups = [
       ["partner.create", "Cadastrar Parceiros"],
       ["partner.update", "Alterar Parceiros"],
       ["partner.delete", "Excluir Parceiros"],
+      ["partner.report", "Ver Relatório de Parceiros"],
     ],
   },
   {
@@ -371,6 +375,7 @@ const permissionGroups = [
       ["product.create", "Cadastrar Produtos"],
       ["product.update", "Alterar Produtos"],
       ["product.delete", "Excluir Produtos"],
+      ["product.report", "Ver Relatório de Produtos"],
     ],
   },
   {
@@ -564,6 +569,10 @@ const permissionGroups = [
       ["benefit.create", "Cadastrar Benefícios"],
       ["benefit.update", "Alterar Benefícios"],
       ["benefit.delete", "Excluir Benefícios"],
+      [
+        "employee.report",
+        "Ver Relatórios de RH (Funções, Exames, Aniversariantes)",
+      ],
     ],
   },
 ];

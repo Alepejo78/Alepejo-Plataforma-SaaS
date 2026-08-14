@@ -1,5 +1,6 @@
 "use client";
 
+import { ReportAccessGuard } from "@/components/reports/ReportAccessGuard";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Printer } from "lucide-react";
@@ -22,7 +23,7 @@ const fieldClass = `
 const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
-export default function RelatorioFuncoesPage() {
+function RelatorioFuncoesPageInner() {
   const [sectors, setSectors] = useState<AuxiliaryRecord[]>(
     []
   );
@@ -276,5 +277,13 @@ export default function RelatorioFuncoesPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function RelatorioFuncoesPage() {
+  return (
+    <ReportAccessGuard permission="employee.report">
+      <RelatorioFuncoesPageInner />
+    </ReportAccessGuard>
   );
 }

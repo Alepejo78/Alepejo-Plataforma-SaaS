@@ -368,7 +368,7 @@ export const menu: MenuEntry[] = [
         icon: Package,
         href: "/erp/produtos/relatorio",
         module: "PRODUCTS",
-        permission: "product.view",
+        permission: "product.report",
       },
       {
         id: "relatorio-funcoes",
@@ -376,7 +376,7 @@ export const menu: MenuEntry[] = [
         icon: ClipboardList,
         href: "/erp/rh/funcoes/relatorio",
         module: "HR",
-        permission: "job-function.view",
+        permission: "employee.report",
       },
       {
         id: "relatorio-parceiros",
@@ -384,7 +384,7 @@ export const menu: MenuEntry[] = [
         icon: Users,
         href: "/erp/parceiros/relatorio",
         module: "BPS",
-        permission: "partner.view",
+        permission: "partner.report",
       },
       {
         id: "relatorio-compras",
@@ -392,7 +392,7 @@ export const menu: MenuEntry[] = [
         icon: Truck,
         href: "/erp/compras/relatorio",
         module: "PURCHASE",
-        permission: "purchase.view",
+        permission: "purchase.report",
       },
       {
         id: "relatorio-recebimentos",
@@ -400,7 +400,7 @@ export const menu: MenuEntry[] = [
         icon: Boxes,
         href: "/erp/compras/recebimento/relatorio",
         module: "PURCHASE",
-        permission: "purchase.receive",
+        permission: "purchase.report",
       },
       {
         id: "relatorio-pedidos-compra",
@@ -408,7 +408,7 @@ export const menu: MenuEntry[] = [
         icon: FileText,
         href: "/erp/compras/pedidos/relatorio",
         module: "PURCHASE",
-        permission: "purchase-order.view",
+        permission: "purchase.report",
       },
       {
         id: "relatorio-cotacoes",
@@ -416,7 +416,7 @@ export const menu: MenuEntry[] = [
         icon: FileText,
         href: "/erp/compras/cotacoes/relatorio",
         module: "PURCHASE",
-        permission: "quotation.view",
+        permission: "purchase.report",
       },
       {
         id: "relatorio-pedidos-venda",
@@ -424,7 +424,7 @@ export const menu: MenuEntry[] = [
         icon: FileText,
         href: "/erp/vendas/pedidos/relatorio",
         module: "SALES",
-        permission: "sales-order.view",
+        permission: "sale.report",
       },
       {
         id: "relatorio-orcamentos",
@@ -432,7 +432,7 @@ export const menu: MenuEntry[] = [
         icon: FileText,
         href: "/erp/vendas/orcamentos/relatorio",
         module: "SALES",
-        permission: "quote.view",
+        permission: "sale.report",
       },
       {
         id: "relatorio-contas-receber",
@@ -440,7 +440,7 @@ export const menu: MenuEntry[] = [
         icon: Banknote,
         href: "/erp/financeiro/contas/relatorio?type=RECEIVABLE",
         module: "FINANCE",
-        permission: "financial-entry.view",
+        permission: "financial-entry.report",
       },
       {
         id: "relatorio-contas-pagar",
@@ -448,7 +448,7 @@ export const menu: MenuEntry[] = [
         icon: Receipt,
         href: "/erp/financeiro/contas/relatorio?type=PAYABLE",
         module: "FINANCE",
-        permission: "financial-entry.view",
+        permission: "financial-entry.report",
       },
       {
         id: "relatorio-exames",
@@ -456,7 +456,7 @@ export const menu: MenuEntry[] = [
         icon: Stethoscope,
         href: "/erp/rh/exames/relatorio",
         module: "HR",
-        permission: "employee.view",
+        permission: "employee.report",
       },
       {
         id: "relatorio-aniversariantes",
@@ -464,7 +464,7 @@ export const menu: MenuEntry[] = [
         icon: CalendarHeart,
         href: "/erp/rh/aniversariantes/relatorio",
         module: "HR",
-        permission: "employee.view",
+        permission: "employee.report",
       },
     ],
   },

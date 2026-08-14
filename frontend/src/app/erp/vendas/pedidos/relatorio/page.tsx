@@ -1,5 +1,6 @@
 "use client";
 
+import { ReportAccessGuard } from "@/components/reports/ReportAccessGuard";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Printer } from "lucide-react";
@@ -47,7 +48,7 @@ const fieldClass = `
 const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
-export default function RelatorioPedidosVendaPage() {
+function RelatorioPedidosVendaPageInner() {
   const [companyName, setCompanyName] = useState("");
 
   const [search, setSearch] = useState("");
@@ -339,5 +340,13 @@ export default function RelatorioPedidosVendaPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function RelatorioPedidosVendaPage() {
+  return (
+    <ReportAccessGuard permission="sale.report">
+      <RelatorioPedidosVendaPageInner />
+    </ReportAccessGuard>
   );
 }

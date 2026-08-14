@@ -13,6 +13,12 @@ export interface Company {
   document: string;
   email?: string | null;
   phone?: string | null;
+  zipCode?: string | null;
+  street?: string | null;
+  number?: string | null;
+  district?: string | null;
+  city?: string | null;
+  state?: string | null;
   active: boolean;
   rootCompanyId?: string | null;
 }
@@ -22,6 +28,12 @@ export type CompanyUpdatePayload = Partial<{
   tradeName: string;
   email: string;
   phone: string;
+  zipCode: string;
+  street: string;
+  number: string;
+  district: string;
+  city: string;
+  state: string;
   active: boolean;
 }>;
 

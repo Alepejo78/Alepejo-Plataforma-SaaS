@@ -1,5 +1,6 @@
 "use client";
 
+import { ReportAccessGuard } from "@/components/reports/ReportAccessGuard";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Printer } from "lucide-react";
@@ -53,7 +54,7 @@ function winnerOf(q: Quotation) {
   return q.offers.find((o) => o.isWinner) ?? null;
 }
 
-export default function RelatorioCotacoesPage() {
+function RelatorioCotacoesPageInner() {
   const [companyName, setCompanyName] = useState("");
 
   const [search, setSearch] = useState("");
@@ -475,5 +476,13 @@ export default function RelatorioCotacoesPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function RelatorioCotacoesPage() {
+  return (
+    <ReportAccessGuard permission="purchase.report">
+      <RelatorioCotacoesPageInner />
+    </ReportAccessGuard>
   );
 }

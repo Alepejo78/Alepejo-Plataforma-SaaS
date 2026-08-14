@@ -90,6 +90,14 @@ model Company {
 
   website String? @db.VarChar(200)
 
+  /// Endereço — mesmo conjunto de campos já usado em Employee.
+  zipCode  String? @db.VarChar(10)
+  street   String? @db.VarChar(200)
+  number   String? @db.VarChar(20)
+  district String? @db.VarChar(100)
+  city     String? @db.VarChar(100)
+  state    String? @db.VarChar(2)
+
   /// Logo para o tema claro. Padrão do sistema se vazio.
   logo String? @db.VarChar(255)
 

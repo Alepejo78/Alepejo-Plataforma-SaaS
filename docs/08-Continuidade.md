@@ -3,6 +3,142 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🔵 Endereço da empresa + relatórios com permissão própria (14-08-2026, sessão seguinte à do "Interprise") — LER ANTES DE CONTINUAR
+
+Continuação da lista de pendências (itens 2 e 3 do backlog registrado
+na sessão anterior, ver seção "Cadastro de empresa com CPF..." logo
+abaixo). Os dois servidores dev (frontend `:3000` e backend `:3001`)
+caíram no meio da sessão e precisaram ser religados; depois disso,
+**tanto "endereço da empresa" quanto "relatórios com permissão" foram
+testados pela tela e confirmados funcionando ponta a ponta** (ver
+detalhe no item 8/2 abaixo, incluindo um achado importante sobre como
+permissão é agregada entre empresas do mesmo grupo).
+
+### Item 2 do backlog — Endereço da empresa (CONCLUÍDO E TESTADO)
+
+- **`Company` ganhou os mesmos 6 campos de endereço que `Employee` já
+  tinha** (migration `20260814140924_company_address`): `zipCode`,
+  `street`, `number`, `district`, `city`, `state`. `CreateCompanyDto`/
+  `UpdateCompanyDto` atualizados; `Prisma.CompanyCreateInput`/
+  `UpdateInput` já cobrem sozinhos (repository é pass-through, não
+  precisou mudar).
+- **Componente novo `AddressFields`** (dentro do próprio
+  `frontend/src/app/erp/configuracoes/page.tsx`, reaproveitado por
+  `MyCompanySection` e `EditCompanyModal`) — busca automática por CEP
+  no ViaCEP (`lookupService.cep`, já existia, usado antes só no
+  cadastro de Parceiro) com foco automático no campo "Número" depois
+  de achar (mesmo padrão copiado de `PartnerForm.tsx`).
+- **Tabela "Empresas do grupo"** ganhou colunas E-mail e Telefone
+  (pedido explícito do usuário).
+- **Testado de verdade pela tela**: CEP inválido mostrou "CEP não
+  encontrado" corretamente; CEP real (Avenida Paulista, SP) preencheu
+  Rua/Bairro/Cidade/UF automaticamente e o foco pulou pro campo
+  Número; tabela "Empresas do grupo" mostrando e-mail/telefone reais
+  das duas empresas do grupo ALEPEJO.
+- **Frontend `company.service.ts`**: `Company`/`CompanyUpdatePayload`
+  ganharam os 6 campos novos.
+
+### Item 8/2 do backlog — Relatórios com permissão própria (CONCLUÍDO E TESTADO)
+
+Achado importante ao investigar: **relatórios não têm endpoint próprio
+no backend** — cada tela de relatório chama a mesma API já usada pela
+tela normal (ex.: relatório de Produtos chama a mesma `GET /products`
+que a lista usa). Isso significa que a permissão nova de "Relatório"
+só controla a CAMADA de UI (menu + tela do relatório), não é uma
+proteção de dado adicional — o dado continua protegido pela permissão
+`.view` de sempre. Isso é **consistente de propósito com o resto do
+sistema**: o componente `Can` (`frontend/src/components/auth/Can.tsx`)
+já documenta isso explicitamente ("ajusta interface... não é pra
+proteger dados: autorização real é do backend") — não criei 13
+endpoints de relatório novos no backend porque seria desproporcional
+ao que já existe.
+
+**Decisão de granularidade** (não perguntei antes, mas é bem
+fundamentada — ver raciocínio completo se precisar reabrir): em vez de
+13 permissões novas (uma por item de relatório no menu), criei **6,
+uma por PermissionGroup que tem pelo menos um relatório** —
+`product.report`, `partner.report`, `purchase.report` (cobre
+Compras/Recebimentos/Pedidos de compra/Cotações — os 4 já são do mesmo
+grupo PURCHASE), `sale.report` (Pedidos de venda/Orçamentos, grupo
+SALES), `financial-entry.report` (Contas a receber/pagar, grupo
+FINANCIAL_ENTRY — aliás essas duas JÁ compartilhavam a mesma permissão
+`.view` antes, não é novidade compartilhar), `employee.report`
+(Funções/Exames/Aniversariantes, grupo HR). Isso bate com o desenho da
+matriz (1 linha por grupo — não dava pra mostrar 4 toggles distintos
+de "Compras" na mesma linha sem redesenhar a tela inteira) e segue o
+precedente que o próprio catálogo já tinha antes desta sessão.
+
+- **`Backend/prisma/seed.ts`**: as 6 permissões novas adicionadas nos
+  grupos certos (PRODUCT/PARTNER/PURCHASE/SALES/FINANCIAL_ENTRY/HR) —
+  vale pra banco novo/recriado do zero.
+- **`Backend/prisma/scripts/add-report-permissions.ts`** (novo, rodado
+  uma vez nesta sessão contra o banco atual): insere as 6 permissões
+  (upsert, idempotente) e concede cada uma pra todo Role com
+  `code: 'ADMIN'` — sem isso, toda empresa já existente perderia
+  acesso aos relatórios até alguém entrar na matriz e marcar na mão
+  (Administrador é descrito como "acesso total ao sistema", ganhar
+  permissão nova automaticamente é o comportamento esperado). **Já
+  rodado com sucesso**: 6 permissões criadas, 2 perfis Administrador
+  encontrados (grupo ALEPEJO), 12 vínculos garantidos. Idempotente,
+  pode rodar de novo sem duplicar se precisar (`npx ts-node
+  prisma/scripts/add-report-permissions.ts` dentro de `Backend/`).
+- **Matriz de permissões**: `GENERIC_COLUMNS` (`permissoes/page.tsx`)
+  ganhou `{ key: "report", label: "Relatório" }` — funciona sozinho
+  porque os 6 códigos novos terminam em `.report`, mesmo mecanismo de
+  sufixo que já resolve Consultar/Cadastrar/Editar/Excluir, não
+  precisou de coluna especial tipo `BUSINESS_COLUMNS`.
+- **`menu.ts`**: os 13 itens dentro do grupo "Relatórios" trocaram o
+  `permission:` da permissão de dado (`product.view`,
+  `purchase-order.view` etc.) pro código `.report` correspondente.
+- **`ReportAccessGuard`** novo
+  (`frontend/src/components/reports/ReportAccessGuard.tsx`) — mostra
+  "Sem permissão" em vez do relatório se `can(permission)` for falso.
+  Aplicado nas 12 páginas de relatório (13 itens de menu, mas
+  Contas a Receber/Pagar são a mesma página com querystring
+  diferente): cada `export default function XyzPage()` foi renomeado
+  pra `XyzPageInner` (sem export) e um novo `export default` embrulha
+  com `<ReportAccessGuard permission="...">`. Página de Financeiro
+  (`financeiro/contas/relatorio/page.tsx`) tinha um `<Suspense>`
+  interno (por causa de `useSearchParams`) — o guard ficou por FORA do
+  Suspense, estrutura conferida manualmente, sem quebrar.
+- **`npx tsc --noEmit` limpo** (Backend e frontend) depois de todas as
+  mudanças. `eslint` nos 12 arquivos de relatório + matriz só acusou o
+  padrão pré-existente de `void load()` dentro de `useEffect` (mesmo
+  erro já visto em dezenas de outros arquivos neste projeto, não é
+  regressão).
+- **✅ Testado pela tela e confirmado**: coluna "Relatório" aparece na
+  matriz; desmarcar `product.report` no perfil Administrador certo e
+  recarregar a tela `/erp/produtos/relatorio` mostra "Sem permissão /
+  Você não tem permissão para ver este relatório." (não só esconde do
+  menu — bloqueia a tela de verdade); marcar de novo restaura o
+  relatório. Confirmado via rede: `DELETE .../role-permissions/:id →
+  200` ao desmarcar, `POST .../role-permissions → 201` ao marcar.
+
+- **⚠️ Achado importante durante o teste — permissão é agregada entre
+  TODAS as empresas do usuário, não só a empresa ativa no momento**:
+  `AuthService.buildPermissions()`
+  (`Backend/src/modules/identity/auth/services/auth.service.ts`, ~linha
+  98) faz `user.roles.flatMap(...)` sobre TODOS os `UserRole` do
+  usuário, sem filtrar pela empresa atualmente selecionada (login
+  cruzado). Ou seja: se um usuário tem papel de Administrador só na
+  empresa raiz do grupo, revogar uma permissão no perfil de uma empresa
+  filha **não afeta nada** — o perfil que importa é sempre o vinculado
+  ao `UserRole` real do usuário, não necessariamente o perfil visível
+  "enquanto logado" numa empresa via troca de empresa. Isso já existia
+  antes desta sessão (não é regressão), mas não estava documentado.
+  **Implicação pra qualquer teste futuro de permissão**: antes de
+  revogar/conceder pra testar, confirme em qual perfil o `UserRole` do
+  usuário de teste está de fato vinculado (não assuma que é o perfil da
+  empresa mostrada no topo da tela).
+
+### Pendência conhecida desta frente
+
+- Item 3 do backlog (Orçamento ganhar aprovação → gerar Pedido de
+  Venda automático, opção "gerar por pedido" em Vendas) **ainda não
+  começado** — precisa de mais detalhe do usuário sobre como o fluxo
+  deve funcionar antes de desenhar/implementar (registrado como
+  pendência já na sessão anterior, ver backlog abaixo).
+
 ## 🔵 "Interprise": cadastros de grupo compartilhados entre empresas (14-08-2026) — LER ANTES DE CONTINUAR
 
 Implementação do item 1 do backlog anotado na sessão anterior (ver seção
