@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -23,12 +24,21 @@ export class CompanyAdditionalDto {
   @ApiProperty({
     example: '12345678000280',
     description:
-      'Precisa ter a mesma raiz (8 primeiros dígitos) do CNPJ da empresa que já tem a licença.',
+      'CNPJ (14 dígitos) ou CPF (11 dígitos). CNPJ precisa ter a mesma raiz (8 primeiros dígitos) da empresa que já tem a licença; CPF não tem essa raiz, exige `isGroupCompany`.',
   })
-  @IsString({ message: 'O CNPJ deve ser um texto.' })
-  @IsNotEmpty({ message: 'O CNPJ é obrigatório.' })
+  @IsString({ message: 'O documento deve ser um texto.' })
+  @IsNotEmpty({ message: 'O documento é obrigatório.' })
   @MaxLength(20)
   document: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Confirmação manual de que é empresa do grupo — obrigatório quando o documento é CPF, que não tem raiz pra conferir automaticamente como o CNPJ.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isGroupCompany?: boolean;
 
   @ApiPropertyOptional({ example: 'contato@filial.com.br' })
   @IsOptional()

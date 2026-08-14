@@ -301,9 +301,6 @@ export default function ProdutosPage() {
                     Tipo
                   </th>
                   <th className="px-4 py-3 text-right font-semibold">
-                    Custo
-                  </th>
-                  <th className="px-4 py-3 text-right font-semibold">
                     Venda
                   </th>
                   <th className="px-4 py-3" />
@@ -343,10 +340,6 @@ export default function ProdutosPage() {
 
                     <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
                       {PRODUCT_TYPE_LABELS[product.type]}
-                    </td>
-
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                      {money(product.cost)}
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">

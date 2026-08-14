@@ -19,6 +19,7 @@ import { CreateJobFunctionDto } from '../dto/create-job-function.dto';
 import { UpdateJobFunctionDto } from '../dto/update-job-function.dto';
 import { JobFunctionFilterDto } from '../dto/job-function-filter.dto';
 
+/** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
 @Controller('job-functions')
 @Module('HR')
 export class JobFunctionsController {
@@ -27,7 +28,7 @@ export class JobFunctionsController {
   @Post()
   @Permissions('job-function.create')
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Body() dto: CreateJobFunctionDto,
   ) {
     return this.service.create(companyId, dto);
@@ -36,7 +37,7 @@ export class JobFunctionsController {
   @Get()
   @Permissions('job-function.view')
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Query() filter: JobFunctionFilterDto,
   ) {
     return this.service.findAll(companyId, filter);
@@ -45,7 +46,7 @@ export class JobFunctionsController {
   @Get(':id')
   @Permissions('job-function.view')
   findOne(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.findOne(companyId, id);
@@ -54,7 +55,7 @@ export class JobFunctionsController {
   @Patch(':id')
   @Permissions('job-function.update')
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
     @Body() dto: UpdateJobFunctionDto,
   ) {
@@ -64,7 +65,7 @@ export class JobFunctionsController {
   @Delete(':id')
   @Permissions('job-function.delete')
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.remove(companyId, id);

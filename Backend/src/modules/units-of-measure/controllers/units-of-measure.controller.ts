@@ -18,6 +18,7 @@ import {
   import { UpdateUnitOfMeasureDto } from '../dto/update-unit-of-measure.dto';
   import { UnitOfMeasureFilterDto } from '../dto/unit-of-measure-filter.dto';
 
+  /** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
   @Controller('units-of-measure')
   export class UnitsOfMeasureController {
     constructor(
@@ -27,7 +28,7 @@ import {
     @Post()
     @Permissions('unit-of-measure.create')
     async create(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Body()
       createUnitOfMeasureDto: CreateUnitOfMeasureDto,
     ) {
@@ -40,7 +41,7 @@ import {
     @Get()
     @Permissions('unit-of-measure.view')
     async findAll(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Query()
       filter: UnitOfMeasureFilterDto,
     ) {
@@ -53,7 +54,7 @@ import {
     @Get(':id')
     @Permissions('unit-of-measure.view')
     async findById(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id')
       id: string,
     ) {
@@ -66,7 +67,7 @@ import {
     @Patch(':id')
     @Permissions('unit-of-measure.update')
     async update(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id')
       id: string,
 
@@ -83,7 +84,7 @@ import {
     @Delete(':id')
     @Permissions('unit-of-measure.delete')
     async remove(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id')
       id: string,
     ) {

@@ -34,6 +34,17 @@ export const companyService = {
     return data.data;
   },
 
+  async updateMine(
+    payload: CompanyUpdatePayload
+  ): Promise<Company> {
+    const { data } = await api.patch<ApiEnvelope<Company>>(
+      "/companies/me",
+      payload
+    );
+
+    return data.data;
+  },
+
   /** Empresas que o login atual pode acessar (login cruzado). */
   async myCompanies(): Promise<Company[]> {
     const { data } = await api.get<ApiEnvelope<Company[]>>(

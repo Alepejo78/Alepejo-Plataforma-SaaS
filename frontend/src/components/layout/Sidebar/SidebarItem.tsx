@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
@@ -152,6 +153,15 @@ function GroupItem({
   );
 
   const [open, setOpen] = useState(hasActiveChild);
+  const [flyoutOpen, setFlyoutOpen] = useState(false);
+  const [flyoutPosition, setFlyoutPosition] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const flyoutRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (hasActiveChild) {
@@ -159,21 +169,106 @@ function GroupItem({
     }
   }, [hasActiveChild]);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!flyoutOpen) {
+      return;
+    }
+
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+
+      if (
+        buttonRef.current?.contains(target) ||
+        flyoutRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setFlyoutOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () =>
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+  }, [flyoutOpen]);
+
   const Icon = entry.icon;
 
-  // Recolhida, a barra não tem espaço para submenu: os filhos
-  // aparecem como ícones diretos.
+  // Recolhida, a barra só mostra o ícone do menu — clicar abre um
+  // submenu flutuante (portal, pra não ser cortado pelo scroll da
+  // nav) com os filhos; escolher um item ou clicar fora fecha de novo.
   if (collapsed) {
+    function toggleFlyout() {
+      if (!flyoutOpen && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+
+        setFlyoutPosition({
+          top: rect.top,
+          left: rect.right + 8,
+        });
+      }
+
+      setFlyoutOpen((previous) => !previous);
+    }
+
     return (
-      <div className="space-y-1 border-b border-[var(--border)] pb-2 last:border-0">
-        {entry.children.map((child) => (
-          <LeafItem
-            key={child.id}
-            item={child}
-            collapsed
-            onNavigate={onNavigate}
-          />
-        ))}
+      <div>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={toggleFlyout}
+          title={entry.title}
+          aria-label={entry.title}
+          aria-expanded={flyoutOpen}
+          className={cn(
+            sidebarStyles.navigationItem,
+            "w-full justify-center px-0",
+            (hasActiveChild || flyoutOpen) &&
+              "text-[var(--text-primary)]"
+          )}
+        >
+          <Icon size={20} className="shrink-0" />
+        </button>
+
+        {mounted &&
+          flyoutOpen &&
+          createPortal(
+            <div
+              ref={flyoutRef}
+              style={{
+                position: "fixed",
+                top: flyoutPosition.top,
+                left: flyoutPosition.left,
+              }}
+              className="z-50 w-56 space-y-0.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-lg"
+            >
+              <p className="px-3 pb-1 pt-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                {entry.title}
+              </p>
+
+              {entry.children.map((child) => (
+                <LeafItem
+                  key={child.id}
+                  item={child}
+                  collapsed={false}
+                  nested
+                  onNavigate={() => {
+                    setFlyoutOpen(false);
+                    onNavigate?.();
+                  }}
+                />
+              ))}
+            </div>,
+            document.body
+          )}
       </div>
     );
   }

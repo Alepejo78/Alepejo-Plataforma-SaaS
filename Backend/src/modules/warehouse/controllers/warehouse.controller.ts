@@ -24,6 +24,13 @@ import { CreateWarehouseDto } from '../dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from '../dto/update-warehouse.dto';
 import { WarehouseFilterDto } from '../dto/warehouse-filter.dto';
 
+/**
+ * Depósito é cadastro de grupo ("Interprise") — `companyId` aqui é
+ * sempre a raiz do grupo (`rootCompanyId`), não a empresa ativa da
+ * sessão, pra todas as empresas do mesmo grupo enxergarem os mesmos
+ * depósitos. Service/repository não mudam: continuam recebendo um
+ * `companyId` normal, só a origem do valor é diferente.
+ */
 @ApiTags('Warehouses')
 @Controller('warehouses')
 @Module('INVENTORY')
@@ -38,7 +45,7 @@ export class WarehouseController {
     summary: 'Cadastrar depósito',
   })
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Body() dto: CreateWarehouseDto,
   ) {
     return this.warehouseService.create(
@@ -53,7 +60,7 @@ export class WarehouseController {
     summary: 'Listar depósitos',
   })
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Query() filter: WarehouseFilterDto,
   ) {
     return this.warehouseService.findAll(
@@ -68,7 +75,7 @@ export class WarehouseController {
     summary: 'Buscar depósito',
   })
   findOne(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.warehouseService.findOne(
@@ -83,7 +90,7 @@ export class WarehouseController {
     summary: 'Alterar depósito',
   })
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
     @Body() dto: UpdateWarehouseDto,
   ) {
@@ -100,7 +107,7 @@ export class WarehouseController {
     summary: 'Excluir depósito',
   })
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.warehouseService.remove(

@@ -18,6 +18,7 @@ import {
   import { UpdateBrandDto } from '../dto/update-brand.dto';
   import { BrandFilterDto } from '../dto/brand-filter.dto';
 
+  /** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
   @Controller('brands')
   export class BrandsController {
     constructor(
@@ -27,7 +28,7 @@ import {
     @Post()
     @Permissions('brand.create')
     async create(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Body() createBrandDto: CreateBrandDto,
     ) {
       return this.brandsService.create(companyId, createBrandDto);
@@ -36,7 +37,7 @@ import {
     @Get()
     @Permissions('brand.view')
     async findAll(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Query() filter: BrandFilterDto,
     ) {
       return this.brandsService.findAll(companyId, filter);
@@ -45,7 +46,7 @@ import {
     @Get(':id')
     @Permissions('brand.view')
     async findById(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id') id: string,
     ) {
       return this.brandsService.findById(companyId, id);
@@ -54,7 +55,7 @@ import {
     @Patch(':id')
     @Permissions('brand.update')
     async update(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id') id: string,
       @Body() updateBrandDto: UpdateBrandDto,
     ) {
@@ -68,7 +69,7 @@ import {
     @Delete(':id')
     @Permissions('brand.delete')
     async remove(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id') id: string,
     ) {
       await this.brandsService.remove(companyId, id);

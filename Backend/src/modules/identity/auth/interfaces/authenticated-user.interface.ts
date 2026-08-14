@@ -34,6 +34,9 @@ export interface AuthenticatedUser {
 
   companyId: string;
 
+  /** Raiz do grupo (Company.rootCompanyId ?? companyId) — dono dos cadastros compartilhados do grupo ("Interprise"). */
+  rootCompanyId: string;
+
   email: string;
 
   name: string;

@@ -27,6 +27,14 @@ export interface MenuItem {
    * navegar para lugar nenhum.
    */
   disabled?: boolean;
+
+  /**
+   * Bloco da sidebar (frente "Interprise"): "interprise" = cadastro
+   * compartilhado por todas as empresas do grupo (Parceiros, Produtos,
+   * Colaboradores, cadastros de apoio). Ausente = "empresa" (padrão,
+   * tudo que já existia antes).
+   */
+  section?: "interprise" | "empresa";
 }
 
 /**
@@ -40,6 +48,9 @@ export interface MenuGroup {
   /** Mesmas regras de licença/permissão dos itens. */
   module?: string;
   permission?: string;
+
+  /** Ver MenuItem.section — mesma regra, ausente = "empresa". */
+  section?: "interprise" | "empresa";
 
   children: MenuItem[];
 }

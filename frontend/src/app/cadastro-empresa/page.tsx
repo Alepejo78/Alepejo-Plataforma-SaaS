@@ -32,6 +32,7 @@ const labelClass =
 const emptyForm = {
   legalName: "",
   tradeName: "",
+  personType: "COMPANY" as "COMPANY" | "INDIVIDUAL",
   document: "",
   email: "",
   phone: "",
@@ -44,7 +45,12 @@ export default function CadastroEmpresaPage() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
-  function setField(field: keyof typeof emptyForm, value: string) {
+  const isCompany = form.personType === "COMPANY";
+
+  function setField(
+    field: Exclude<keyof typeof emptyForm, "personType">,
+    value: string
+  ) {
     setForm((previous) => ({ ...previous, [field]: value }));
   }
 
@@ -144,21 +150,55 @@ export default function CadastroEmpresaPage() {
               </div>
 
               <div>
+                <label className={labelClass} htmlFor="personType">
+                  Tipo de documento
+                </label>
+
+                <select
+                  id="personType"
+                  className={fieldClass}
+                  value={form.personType}
+                  onChange={(e) => {
+                    const personType = e.target.value as
+                      | "COMPANY"
+                      | "INDIVIDUAL";
+
+                    setForm((previous) => ({
+                      ...previous,
+                      personType,
+                      // Reaplica a máscara certa ao trocar o tipo.
+                      document: maskDocument(
+                        previous.document,
+                        personType
+                      ),
+                    }));
+                  }}
+                >
+                  <option value="COMPANY">CNPJ</option>
+                  <option value="INDIVIDUAL">CPF</option>
+                </select>
+              </div>
+
+              <div>
                 <label className={labelClass} htmlFor="document">
-                  CNPJ{" "}
+                  {isCompany ? "CNPJ" : "CPF"}{" "}
                   <span className="text-[var(--danger)]">*</span>
                 </label>
 
                 <input
                   id="document"
                   inputMode="numeric"
-                  placeholder="00.000.000/0000-00"
+                  placeholder={
+                    isCompany
+                      ? "00.000.000/0000-00"
+                      : "000.000.000-00"
+                  }
                   className={fieldClass}
                   value={form.document}
                   onChange={(e) =>
                     setField(
                       "document",
-                      maskDocument(e.target.value, "COMPANY")
+                      maskDocument(e.target.value, form.personType)
                     )
                   }
                 />

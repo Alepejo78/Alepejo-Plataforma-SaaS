@@ -143,6 +143,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       id: user.id,
       companyId: user.companyId,
+      // Raiz do grupo (empresas ligadas por Company.rootCompanyId) —
+      // dono físico dos cadastros compartilhados do grupo (ver
+      // docs/08-Continuidade.md, frente "Interprise"). Recalculado a
+      // cada request, nunca guardado no JWT, mesmo padrão de
+      // companyId — evita ficar stale se a topologia do grupo mudar.
+      rootCompanyId: user.company.rootCompanyId ?? user.company.id,
       email: user.email,
       name: user.name,
       status: user.status,

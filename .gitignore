@@ -35,5 +35,8 @@ Thumbs.db
 **/prisma/dev.db
 **/prisma/dev.db-journal
 
+# Log de consolidação de cadastros de grupo (dado real de cliente, não versionado)
+Backend/prisma/scripts/output/
+
 # Backups locais (zip da pasta inteira, não versionado)
 backup-*.zip

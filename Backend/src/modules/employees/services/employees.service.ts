@@ -1,9 +1,12 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Employee, Prisma } from '@prisma/client';
+
+import { PrismaService } from '../../../core/prisma/prisma.service';
 
 import { EmployeesRepository } from '../repositories/employees.repository';
 
@@ -15,7 +18,45 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class EmployeesService {
-  constructor(private readonly repository: EmployeesRepository) {}
+  constructor(
+    private readonly repository: EmployeesRepository,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  /**
+   * Resolve em qual empresa o colaborador é criado: a da sessão por
+   * padrão, ou outra do mesmo grupo se `requestedCompanyId` vier
+   * preenchido (seletor de empresa da tela "Interprise → Colaboradores").
+   * Nunca confia no valor cru — sempre confere que pertence ao grupo.
+   */
+  private async resolveTargetCompany(
+    sessionCompanyId: string,
+    rootCompanyId: string,
+    requestedCompanyId?: string,
+  ): Promise<string> {
+    if (
+      !requestedCompanyId ||
+      requestedCompanyId === sessionCompanyId
+    ) {
+      return sessionCompanyId;
+    }
+
+    const target = await this.prisma.company.findFirst({
+      where: {
+        id: requestedCompanyId,
+        OR: [{ id: rootCompanyId }, { rootCompanyId }],
+      },
+      select: { id: true },
+    });
+
+    if (!target) {
+      throw new BadRequestException(
+        'A empresa informada não pertence ao seu grupo.',
+      );
+    }
+
+    return target.id;
+  }
 
   private handleUniqueConstraint(err: unknown): never {
     if (
@@ -190,11 +231,21 @@ export class EmployeesService {
     );
   }
 
-  async create(companyId: string, dto: CreateEmployeeDto) {
+  async create(
+    companyId: string,
+    rootCompanyId: string,
+    dto: CreateEmployeeDto,
+  ) {
+    const targetCompanyId = await this.resolveTargetCompany(
+      companyId,
+      rootCompanyId,
+      dto.companyId,
+    );
+
     this.applyBusinessRules(dto);
 
     try {
-      return await this.repository.create(companyId, dto);
+      return await this.repository.create(targetCompanyId, dto);
     } catch (err) {
       this.handleUniqueConstraint(err);
     }
@@ -203,6 +254,21 @@ export class EmployeesService {
   async findAll(companyId: string, filter: EmployeeFilterDto) {
     const result = await this.repository.findAll(
       companyId,
+      filter,
+    );
+
+    await this.reconcileExperience(result.data);
+
+    return result;
+  }
+
+  /** Colaboradores de todas as empresas do grupo — tela "Interprise → Colaboradores". */
+  async findAllInGroup(
+    rootCompanyId: string,
+    filter: EmployeeFilterDto,
+  ) {
+    const result = await this.repository.findAllInGroup(
+      rootCompanyId,
       filter,
     );
 

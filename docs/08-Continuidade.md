@@ -3,7 +3,364 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
-## 🔵 Logo movido pro topo + menu horizontal com o mesmo esquema hambúrguer (13-08-2026, mesma sessão nova)
+## 🔵 "Interprise": cadastros de grupo compartilhados entre empresas (14-08-2026) — LER ANTES DE CONTINUAR
+
+Implementação do item 1 do backlog anotado na sessão anterior (ver seção
+logo abaixo, "Cadastro de empresa com CPF..."). Usuário confirmou de
+manhã: **todos** os cadastros de apoio abaixo viram registro único
+compartilhado por todas as empresas do mesmo grupo (mesmo cliente,
+`Company.rootCompanyId`) — inclusive Depósito, que na mensagem anterior
+tinha sido citado como exceção ("analisando melhor poderá ficar sim em
+registro único" — contradição com o que ficou registrado ontem,
+sinalizada ao usuário e resolvida a favor da mensagem de hoje).
+
+**Plano completo desenhado e aprovado antes de codar** — arquivo salvo
+em `C:\Users\alelo\.claude\plans\unified-shimmying-wadler.md` (fora do
+repo, só nesta máquina) tem todo o raciocínio técnico. Resumo do que
+foi construído e testado, fase por fase:
+
+### Fase 0 — mecanismo central (sem isso, nada mais funciona)
+
+`JwtStrategy.validate()` (`Backend/.../auth/strategies/jwt.strategy.ts`)
+já buscava `user.company` inteiro a cada request, só não expunha
+`rootCompanyId` no `AuthenticatedUser` retornado — só faltava copiar o
+campo. Agora `AuthenticatedUser.rootCompanyId` existe sempre (raiz do
+grupo, nunca null), recalculado a cada request como o `companyId` já
+era (nunca vai pro JWT assinado, evita ficar stale). Com isso,
+`@CurrentUser('rootCompanyId')` já funciona sozinho em qualquer
+controller — o decorator já indexava dinamicamente por chave.
+
+### Fase 1+2 — os 12 cadastros "simples" viram grupo
+
+**Achado que simplificou tudo**: em nenhum desses módulos o
+`companyId` era resolvido dentro do repository — sempre chegava como
+parâmetro do controller. Então a mudança inteira virou **trocar
+`@CurrentUser('companyId')` por `@CurrentUser('rootCompanyId')`** nos
+5 endpoints de cada controller, mantendo o nome da variável local
+`companyId` — **zero mudança em service/repository**, e os
+`@@unique([companyId, code])`/`@@unique([companyId, name])` do schema
+continuam corretos sem migration nenhuma (só existe 1 `companyId` — o
+da raiz — criando registros nessas tabelas por grupo agora).
+
+Módulos migrados (piloto primeiro: Depósitos, testado sozinho antes de
+replicar pros outros 11): `warehouse`, `chart-of-account-classifications`,
+`sectors`, `ppe-types`, `product-categories`, `brands`,
+`units-of-measure`, `chart-of-accounts`, `work-schedules` (+
+`work-schedule-shifts`, caso especial — não tem `@@unique` próprio, só
+espelha o `companyId` que o horário pai já tiver), `business-partners`,
+`job-functions`, `products` (caso especial, ver abaixo).
+
+**Script de consolidação de dados existentes**:
+`Backend/prisma/scripts/consolidate-group-catalogs.ts` (rodar com
+`npm run migrate:group-catalogs -- --dry-run` primeiro, sempre — só
+gera log, não grava nada). Nunca apaga nem mescla: repontar pra raiz
+quando não bate `@@unique`, ou repontar E sufixar o valor
+(`"(duplicado - revisar)"`) quando já existe uma linha da raiz com o
+mesmo código/nome, deixando pra revisão humana depois. Log fica em
+`Backend/prisma/scripts/output/*.json` (gitignored, tem dado real de
+cliente). **Testado nesta sessão, dry-run em todas as 11 tabelas**:
+0 linhas pra reconciliar (o grupo ALEPEJO/Alessandro Lourenco não tinha
+cadastro duplicado entre as duas empresas ainda) — o mecanismo em si
+foi confirmado funcionando (testei criando uma empresa de teste por
+CPF e conferindo o `Depósitos` compartilhado entre as duas empresas
+reais do grupo, ver "Testado de verdade" abaixo).
+
+### Fase 3 — Produtos (caso especial)
+
+`Product.cost`/`Product.currentStock` eram digitados manualmente no
+cadastro e **não eram sincronizados com `Inventory`** (achado real ao
+investigar — só `Inventory.quantity`/`averageCost`, atualizados via
+`StockMovement`, são a fonte de verdade de saldo/custo, e isso já é
+por empresa E por depósito, `@@unique([companyId, productId,
+warehouseId])`). Com Produto virando cadastro único do grupo, esses
+dois campos deixaram de fazer sentido no cadastro:
+- **`cost`**: tirado do formulário/DTO de criar/editar, ganhou
+  `@default(0)` no schema (migration
+  `20260814123555_product_cost_default_zero`) — antes era obrigatório
+  sem default, quebraria o create sem o campo.
+- **`currentStock`**: tirado do formulário/DTO (já tinha
+  `@default(0)`, sem migration).
+- **`salePrice`/`minimumStock`**: continuam no cadastro,
+  compartilhados pelo grupo (preço de tabela único por SKU, estoque
+  mínimo sugerido único — decisão consciente, não lacuna).
+- **Coluna "Custo" sumiu da listagem de Produtos** (mostraria sempre
+  R$ 0,00, enganoso). Nota no formulário: "Custo e saldo em estoque
+  ficam em Estoque (são por depósito, não do cadastro do produto)" —
+  a tela `/erp/estoque` já existe e já mostra isso de verdade, não
+  precisou endpoint novo.
+
+### Fase 4 — Colaboradores (caso à parte, não vira registro único)
+
+Diferente dos outros 12: colaborador **continua vinculado a UMA
+empresa específica** (`companyId` de verdade, questão trabalhista/CNPJ
+no Brasil) — o que muda é a TELA, que passa a listar/gerenciar
+colaboradores de **todas** as empresas do grupo num lugar só, com
+opção de escolher em qual empresa cadastrar.
+
+- **`Employee.photo`** campo novo (migration
+  `20260814124416_employee_photo`) — não existia nenhum campo de foto
+  antes, confirmado.
+- **`EmployeePhotoService`** novo (`Backend/src/modules/employees/
+  services/employee-photo.service.ts`), copiado do padrão já pronto de
+  `ProfileService` (avatar do usuário) — Multer + diskStorage, filtro
+  de mimetype PNG/JPEG/WEBP, limite 2MB. Diferença: a pasta é por
+  `employeeId` (vem do param de rota `:id`), não de `req.user`, porque
+  quem faz upload é o RH mexendo no cadastro de outra pessoa. Endpoint
+  `POST employees/:id/photo`, confere que o colaborador pertence ao
+  grupo antes de gravar (se não pertencer, apaga o arquivo que o
+  multer já tinha salvo em disco e retorna 404).
+- **`GET /employees/group`** novo — mesmo filtro de `GET /employees`,
+  troca `companyId` exato por `company: { OR: [{id: rootCompanyId},
+  {rootCompanyId}] } }` (JOIN, sem query extra pra enumerar empresas
+  do grupo). Registrado ANTES de `GET /employees/:id` na ordem das
+  rotas (senão o Nest trataria "group" como um `:id`).
+  `CreateEmployeeDto` ganhou `companyId?: string` opcional — ausente
+  usa a empresa da sessão (igual antes), presente confere que pertence
+  ao mesmo grupo antes de aceitar (`EmployeesService.resolveTargetCompany`).
+- **Reaproveitei a tela existente `/erp/rh/colaboradores`** (2831
+  linhas, formulário gigante) em vez de duplicar um arquivo novo —
+  decisão pragmática tomada ao ver o tamanho real do arquivo. A lista
+  agora chama `GET /employees/group` (mostra todas as empresas do
+  grupo, com o nome da empresa como subtítulo de cada linha). O
+  formulário ganhou, no topo da aba "Pessoais": foto (upload +
+  preview, só habilitado editando — "salve primeiro" pra novos,
+  mesmo padrão já usado pra exames) e seletor de "Empresa" (só
+  aparece quando o grupo tem mais de 1 empresa).
+- **Item do menu RH "Colaboradores" foi removido** (apontava pra essa
+  mesma URL) — existe só uma vez agora, dentro do novo grupo
+  "Colaboradores" da seção Interprise, apontando pra mesma
+  `/erp/rh/colaboradores`. Evita duplicar entrada de menu pra mesma
+  tela.
+
+### Sidebar: seção Interprise/Empresa
+
+- `Sidebar.types.ts`: `section?: "interprise" | "empresa"` novo em
+  `MenuItem`/`MenuGroup` (default implícito "empresa", nada quebra sem
+  marcar).
+- `menu.ts`: grupo "Cadastros" (Parceiros/Produtos) e o novo grupo
+  "Colaboradores" (→ `/erp/rh/colaboradores`) marcados
+  `section: "interprise"`.
+- `Sidebar.tsx`: `nav` virou dois blocos (rótulo "INTERPRISE" em cima,
+  divisor, rótulo "EMPRESA" embaixo) — só a Sidebar VERTICAL, não o
+  `HorizontalNav` (layout ribbon, ativado em Personalização com módulo
+  BRANDING). **Pendência conhecida**: `HorizontalNav.tsx` continua
+  mostrando tudo numa faixa só, sem a separação Interprise/Empresa —
+  não é bug de segurança (o dado compartilhado funciona igual, é só
+  questão visual/organização do menu), mas fica faltando se algum
+  cliente usar layout horizontal e quiser essa mesma separação lá.
+  Não resolvido nesta sessão — fica pra quando pedido.
+- Os 6 cadastros de apoio que já viviam em `/os/configuracoes/*`
+  (Categorias/Marcas/Unidades, Plano de Contas, Depósitos,
+  Classificações) **não precisaram de mudança de menu** — já vivem no
+  app OS, que segundo o próprio usuário também é escopo "registro
+  único" ("tudo que for feito em interprise e em OS, vira registro
+  único"), só a REGRA DE DADO (Fase 1+2 acima) precisava mudar, a
+  navegação já estava no lugar certo.
+
+### Testado de verdade, ponta a ponta, pela tela
+
+Login como Alessandro (empresa raiz ALEPEJO) e como a empresa filha do
+mesmo grupo ("Alessandro Lourenco") — **Depósito "AL01" cadastrado na
+raiz aparece igual pras duas empresas** (prova de compartilhamento
+real, sem precisar rodar o script de consolidação porque já não havia
+duplicata). Sidebar mostrando "INTERPRISE" (Cadastros, Colaboradores)
+e "EMPRESA" (resto) corretamente separados com divisor. Tela de
+Colaboradores: lista mostrando o colaborador com "AlePejo" como
+subtítulo, formulário de edição mostrando "Sem foto"/"Enviar foto" e o
+seletor "Empresa" com as duas opções do grupo. Produto: criei um
+produto de teste sem informar custo (campo nem existe mais no form),
+`POST /products` retornou `201 Created` — confirma que o
+`@default(0)` do schema resolveu a obrigatoriedade antiga — **produto
+de teste removido depois**. `npx tsc --noEmit` limpo (Backend e
+frontend) em todas as fases.
+
+### Nota técnica: `prisma generate` travou no Windows
+
+Nas duas migrations desta sessão (`product_cost_default_zero`,
+`employee_photo`), o `prisma migrate dev` aplicou a migration no banco
+com sucesso ("Your database is now in sync with your schema") mas
+falhou ao regenerar o Prisma Client nativo
+(`EPERM: operation not permitted` tentando trocar o
+`query_engine-windows.dll.node`) — **causa conhecida**: algum processo
+backend (nodemon/ts-node em watch mode) está com o `.dll` antigo
+carregado em memória, e o Windows não deixa substituir arquivo em uso
+(mesmo sintoma já registrado antes neste doc, sessão de 12-08). Não
+bloqueou nada: os tipos TypeScript (`.d.ts`) são gerados à parte do
+binário nativo e atualizaram normalmente (`tsc` ficou limpo
+confirmando `cost`/`photo` reconhecidos certos). Se algo parecer usar
+schema desatualizado numa sessão futura, `taskkill` no processo órfão
+de backend + `npx prisma generate` de novo resolve (mesma receita já
+usada antes).
+
+### Pendências conhecidas desta frente
+
+- `HorizontalNav` sem a separação Interprise/Empresa (ver acima).
+- Script de consolidação nunca testado com duplicata de verdade (dry
+  -run sempre deu 0 linhas nesta sessão) — a lógica de sufixo/log
+  existe mas não foi validada com um caso real de conflito. Testar se
+  algum cliente futuro tiver cadastro duplicado entre filiais antes de
+  confiar cegamente.
+- Coluna "Custo" sumiu da tela de Produtos sem substituto direto ali
+  mesmo (só a explicação "vai pra Estoque") — se o usuário sentir
+  falta de ver custo rápido na listagem, dá pra pensar num link
+  "Ver estoque" por produto depois.
+
+## 🔵 Cadastro de empresa com CPF, código interno de grupo, matriz de permissões em APP/ERP (13-08-2026, mesma sessão maratona) — LER ANTES DE CONTINUAR
+
+Sessão foi interrompida pelo usuário indo dormir, com uma lista grande
+de pedidos novos só **anotados, não construídos ainda** (ver seção
+"Backlog anotado pelo usuário" logo abaixo) — não comece nada daquela
+lista sem confirmar o entendimento com o usuário primeiro, principalmente
+o item 1 (Enterprise x Empresa), que muda modelo de dados.
+
+### O que foi feito e testado nesta parte
+
+- **Cadastro de empresa aceita CPF, não só CNPJ** — `signup`
+  (`/cadastro-empresa`, cliente novo) e `additional` (empresa adicional
+  do grupo, agora dentro da tela **Empresa**, ver abaixo) ganharam
+  seletor "Tipo de documento" (CNPJ/CPF), reaproveitando `maskDocument`
+  que já existia (usado em Parceiros). Backend
+  (`CompanyOnboardingService`) valida 11 ou 14 dígitos, rejeita o resto.
+- **Empresa adicional por CPF exige confirmação manual**: CNPJ continua
+  validando a raiz (8 primeiros dígitos) automaticamente contra a
+  empresa que já tem a licença; CPF não tem essa raiz, então o
+  formulário mostra uma caixa "Esta é uma empresa do mesmo grupo" —
+  obrigatória, `CompanyAdditionalDto.isGroupCompany`, validada nos dois
+  lados.
+- **Código interno de grupo** (o `Company.code` já existente, não é
+  campo novo): cliente novo (raiz) ganha o próximo número livre a
+  partir de 1000 (`nextRootGroupCode`, olha só raízes com código
+  numérico ≥ 1000, ignora códigos manuais tipo "ALEPEJO"); empresa
+  adicional ganha `{códigoDaRaiz}_{sequência}` (`nextGroupCode`, conta
+  quantas já existem no grupo e soma 1) — ex.: raiz "ALEPEJO", próxima
+  adicional fica "ALEPEJO_2". **Testado de verdade**: criei empresa de
+  teste por CPF vinculada ao grupo ALEPEJO pela tela, conferi no banco
+  o código saindo `ALEPEJO_2`, removi os dados de teste depois (usuário
+  admin da empresa de teste + a empresa em si).
+- **Tela "Empresa" (`/erp/configuracoes`, card do app OS) deixou de
+  ser vazia** — pedido do usuário, decidido junto com ele entre 3
+  opções: formulário com os dados da própria empresa (Razão
+  social/Nome fantasia editáveis, CNPJ/CPF fixo, E-mail/Telefone) +
+  botão "Cadastrar empresa" + tabela "Empresas do grupo", **que saíram
+  de Licenciamento** (Licenciamento ficou só com Plano/Módulos). Coluna
+  da tabela que era "CNPJ" virou "Documento" (mostra CPF ou CNPJ
+  conforme o tamanho). `companyService.updateMine()` novo
+  (`PATCH /companies/me`, endpoint já existia, só faltava o método no
+  frontend).
+- **Matriz de permissões (Perfis → Configurar permissões) separada em
+  duas seções**: "APP — Administração e integrações" (Sistema, Empresa,
+  Usuários, Perfis, Licenciamento, Personalização de Marca, WhatsApp,
+  E-mail, Avisos Automáticos, Permissões/Vínculos de plataforma, e os
+  cadastros de apoio que já tinham saído do menu ERP pra OS →
+  Configurações: Categorias, Marcas, Unidades, Depósitos, Plano de
+  Contas, Classificações) e "ERP — Operação do dia a dia" (o resto:
+  Parceiros, Produtos, Estoque, Compras, Vendas, Financeiro, RH,
+  Produção, CRM). **É só visual, mapa fica em
+  `GROUP_SCOPE` dentro da própria página** (`.../perfis/[id]/permissoes/page.tsx`)
+  — grupo de permissão novo que não estiver no mapa cai em "ERP" por
+  padrão, então nunca fica invisível, só mal classificado até alguém
+  adicionar a entrada. **Testado de verdade pela tela** (login,
+  Perfis → Administrador → Configurar permissões, conferi as duas
+  seções e a ordem alfabética dentro de cada uma).
+- **Achado ao auditar o catálogo pro pedido "acrescentar tudo de novo
+  que foi criado"**: comparando `seed.ts` com o banco, **não falta
+  nada** (31 grupos do seed todos presentes) — mas o banco tem **2
+  grupos a mais que não existem mais no seed.ts**: `CLIENT` ("Clientes",
+  8 permissões) e `SUPPLIER` ("Fornecedores", 4 permissões), claramente
+  substituídos em algum momento pelo grupo unificado `PARTNER`
+  ("Parceiros (Clientes/Fornecedores)") mas nunca removidos do banco
+  (seed só faz upsert, nunca delete). Aparecem na matriz como linhas
+  extras/redundantes em ERP. **Não mexi** — apagar grupo de permissão é
+  destrutivo (cascade em `RolePermission`) e eu não sabia se algum
+  perfil real depende delas; fica pra confirmar com o usuário antes de
+  limpar.
+
+### Backlog anotado pelo usuário (13-08-2026, fim da sessão) — nada disso foi construído ainda
+
+O usuário listou os itens abaixo antes de dormir, pedindo pra ficarem
+registrados. **Não comecei nenhum** — o item 1 sozinho é uma mudança de
+modelo de dados grande o bastante pra merecer confirmação de escopo
+antes de mexer (ver dúvidas que registrei junto de cada item).
+
+1. **Separar "Interprise" (nível grupo/todas as empresas logadas) de
+   "Empresa" (nível empresa única)** — ideia do usuário: Parceiros,
+   Produtos e Cadastro de Colaboradores passariam a ser geridos no
+   nível "Interprise" (cadastro único, visível/compartilhado entre
+   todas as empresas do grupo?), não mais por empresa isolada.
+   Colaborador ganharia campo pra marcar a qual empresa pertence +
+   opção de inserir/atualizar foto. Sugestão de menu do próprio
+   usuário: sidebar com dois blocos separados por um divisor —
+   **Interprise** (Cadastro → Parceiros, Cadastro → Produtos,
+   Colaboradores → Cadastro de colaboradores) e **Empresa** (menus que
+   já existem hoje, sem mudança). Visão geral continua sendo a home.
+   **Item 5 (mensagem separada, mesma sessão)**: de todos os cadastros
+   que virariam "Interprise", **Depósito é a exceção — continua em
+   nível de Empresa**, não vai para o Interprise.
+   ⚠️ **Não construído — dúvida grande a esclarecer antes de mexer**:
+   hoje `BusinessPartner`, `Product` e `Employee` têm `companyId`
+   obrigatório (dado isolado por empresa, é a base de todo o
+   multi-tenant do sistema). "Nível Interprise" significa (a) um
+   cadastro FÍSICO único, mesmo registro visível/editável em todas as
+   empresas do grupo (mudaria o modelo de dados — `companyId` viraria
+   opcional ou o dado moveria pra pertencer ao `rootCompanyId`), ou (b)
+   cada empresa continua com seu próprio dado, só a
+   NAVEGAÇÃO/sidebar muda de lugar (Parceiros/Produtos/Colaboradores
+   saem do menu "Empresa" e entram num menu "Interprise", mas o dado
+   isolado por empresa continua do jeito que é hoje, só o rótulo/menu
+   muda)? São implementações muito diferentes (uma mexe em schema e
+   nas regras de isolamento entre empresas, a outra é só UI) — confirmar
+   com o usuário antes de tocar em código.
+2. **Cadastro de empresa**: adicionar campos de endereço (CEP com
+   buscador automático — provavelmente ViaCEP ou similar —, foco
+   automático no campo "Número" depois de buscar o CEP, Cidade,
+   Estado). Schema `Company` hoje não tem nenhum campo de endereço
+   (confirmado lendo `schema.prisma` — só tem os campos de contato:
+   email/phone/mobile/website). Vai precisar de migration. **Tabela
+   "Empresas do grupo"** (na tela Empresa, ver acima): mostrar também
+   E-mail e Telefone nas colunas (hoje só mostra Empresa/Documento/
+   Situação).
+3. **Orçamento (Vendas) ganhar fluxo de aprovação que gera Pedido de
+   Venda automaticamente** ao aprovar — e, na tela de Vendas, opção de
+   "gerar por pedido" (não detalhado ainda o que muda ali exatamente,
+   perguntar mais quando retomar).
+4. Pedido de permissão de leitura de arquivo: usar sempre "permitir
+   sempre" quando pedir acesso pra ler algo — repassado, mas devo
+   deixar registrado que **eu não controlo o modo de permissão da
+   sessão** (isso é configuração do ambiente/CLI do usuário, não algo
+   que eu troco a partir do chat); só posso seguir pedindo quando a
+   ferramenta exigir aprovação.
+5. Ver item 1 acima (Depósito fica de fora do "Interprise").
+6. Pedido: se bater limite de uso, continuar sozinho assim que liberar,
+   sem pedir confirmação de novo — **fora do meu controle**, é o
+   produto/plataforma que gerencia limite de uso, eu não tenho como
+   programar isso.
+7. Pedido: se a janela de contexto acabar, abrir um chat novo e
+   continuar sozinho — **não é algo que eu consigo fazer**: não tenho
+   como abrir uma conversa nova por conta própria. O que já existe (e
+   funciona diferente disso) é compressão automática do histórico
+   dentro da MESMA conversa quando ela fica muito longa — a conversa
+   em si não fecha nem precisa ser recomeçada à mão.
+8. **Relatórios precisam de permissão própria na matriz** — "tudo tem
+   que estar em permissões". Conferido: hoje os itens dentro do grupo
+   de menu "Relatórios" (`menu.ts`, ex.: Relatório de Produtos,
+   Relatório de Funções, e vários outros por módulo) **reaproveitam a
+   mesma permissão `.view` do módulo base** (ex.: o relatório de
+   Produtos usa `product.view`, a mesma que já libera a tela normal de
+   Produtos) — não existe hoje um código de permissão próprio pra
+   "pode ver o relatório de X" separado de "pode ver X". Pra atender o
+   pedido, precisa: (a) permission code novo por relatório (ou um
+   sufixo genérico tipo `.report.view` reaproveitando o mesmo grupo),
+   (b) seed com os códigos novos, (c) trocar o `permission:` de cada
+   item de relatório em `menu.ts` pro código novo, (d) refletir na
+   matriz (`permissoes/page.tsx`) — como são MUITOS relatórios
+   espalhados por vários módulos, vale mapear a lista completa antes
+   de começar (não levantei a lista completa ainda, só confirmei o
+   padrão atual com Produtos/Funções).
+
+### Pendência conhecida (achado nesta sessão, não resolvida)
+
+- Grupos de permissão órfãos `CLIENT`/`SUPPLIER` no banco (ver acima)
+  — candidatos a limpeza, não removidos por segurança.
 
 Dois ajustes pedidos em sequência, logo depois do overlay→inline/push
 (seção abaixo): (1) tirar logo/nome da empresa de dentro do menu — fica

@@ -22,6 +22,7 @@ import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { ProductFilterDto } from '../dto/product-filter.dto';
 
+/** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
 @Controller('products')
 @Module(ERP_MODULES.PRODUCTS)
 export class ProductsController {
@@ -32,7 +33,7 @@ export class ProductsController {
   @Post()
   @Permissions('product.create')
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Body() createProductDto: CreateProductDto,
   ) {
     return this.productsService.create(
@@ -44,7 +45,7 @@ export class ProductsController {
   @Get()
   @Permissions('product.view')
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Query() filter: ProductFilterDto,
   ) {
     return this.productsService.findAll(
@@ -56,7 +57,7 @@ export class ProductsController {
   @Get(':id')
   @Permissions('product.view')
   findOne(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.productsService.findOne(
@@ -68,7 +69,7 @@ export class ProductsController {
   @Patch(':id')
   @Permissions('product.update')
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
   ) {
@@ -82,7 +83,7 @@ export class ProductsController {
   @Delete(':id')
   @Permissions('product.delete')
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.productsService.remove(

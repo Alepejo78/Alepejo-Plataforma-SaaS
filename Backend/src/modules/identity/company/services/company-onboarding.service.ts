@@ -15,8 +15,26 @@ import { CompanyAdditionalDto } from '../dto/company-additional.dto';
 
 const DEFAULT_PLAN_CODE = 'ENTERPRISE';
 
+/** Menor código raiz gerado pra cliente novo — os manuais (ex.: "ALEPEJO") ficam fora dessa faixa. */
+const GROUP_CODE_BASE = 1000;
+
 function cnpjRoot(document: string): string {
   return document.replace(/\D/g, '').slice(0, 8);
+}
+
+/** CNPJ (14 dígitos) ou CPF (11) — null se não bater com nenhum dos dois. */
+function documentType(document: string): 'CNPJ' | 'CPF' | null {
+  const digits = document.replace(/\D/g, '');
+
+  if (digits.length === 14) {
+    return 'CNPJ';
+  }
+
+  if (digits.length === 11) {
+    return 'CPF';
+  }
+
+  return null;
 }
 
 /**
@@ -37,6 +55,12 @@ export class CompanyOnboardingService {
 
   /** Cliente novo, sem login prévio — a própria empresa nasce raiz. */
   async signup(dto: CompanySignupDto) {
+    if (!documentType(dto.document)) {
+      throw new BadRequestException(
+        'Documento inválido — informe um CPF (11 dígitos) ou CNPJ (14 dígitos).',
+      );
+    }
+
     const companyExists = await this.companyRepository.findByDocument(
       dto.document,
     );
@@ -48,7 +72,7 @@ export class CompanyOnboardingService {
     }
 
     const company = await this.companyRepository.create({
-      code: cnpjRoot(dto.document) || dto.document.slice(0, 20),
+      code: await this.nextRootGroupCode(),
       legalName: dto.legalName,
       tradeName: dto.tradeName,
       document: dto.document,
@@ -70,10 +94,12 @@ export class CompanyOnboardingService {
   }
 
   /**
-   * Cliente já licenciado cadastrando outra empresa dele — só
-   * permitido se o CNPJ tiver a mesma raiz (8 primeiros dígitos) do
-   * CNPJ da empresa que já tem a licença. A empresa nova herda o
-   * mesmo plano/módulos da raiz, não precisa comprar de novo.
+   * Cliente já licenciado cadastrando outra empresa dele. Com CNPJ, só
+   * permitido se a raiz (8 primeiros dígitos) bater com a da empresa
+   * que já tem a licença — checagem automática. CPF não tem esse
+   * rastro de raiz, então exige a confirmação manual
+   * (`dto.isGroupCompany`) em vez disso. A empresa nova herda o mesmo
+   * plano/módulos da raiz, não precisa comprar de novo.
    */
   async createAdditional(
     requesterCompanyId: string,
@@ -81,6 +107,14 @@ export class CompanyOnboardingService {
     requesterEmail: string,
     dto: CompanyAdditionalDto,
   ) {
+    const docType = documentType(dto.document);
+
+    if (!docType) {
+      throw new BadRequestException(
+        'Documento inválido — informe um CPF (11 dígitos) ou CNPJ (14 dígitos).',
+      );
+    }
+
     const companyExists = await this.companyRepository.findByDocument(
       dto.document,
     );
@@ -109,14 +143,20 @@ export class CompanyOnboardingService {
       throw new BadRequestException('Empresa raiz não encontrada.');
     }
 
-    if (cnpjRoot(dto.document) !== cnpjRoot(rootCompany.document)) {
+    if (docType === 'CNPJ') {
+      if (cnpjRoot(dto.document) !== cnpjRoot(rootCompany.document)) {
+        throw new BadRequestException(
+          'O CNPJ precisa ter a mesma raiz (8 primeiros dígitos) do CNPJ da empresa que já tem a licença.',
+        );
+      }
+    } else if (!dto.isGroupCompany) {
       throw new BadRequestException(
-        'O CNPJ precisa ter a mesma raiz (8 primeiros dígitos) do CNPJ da empresa que já tem a licença.',
+        'CPF não tem raiz pra conferir automaticamente — confirme que esta é uma empresa do grupo.',
       );
     }
 
     const company = await this.companyRepository.create({
-      code: `${cnpjRoot(dto.document)}-${Date.now().toString().slice(-4)}`,
+      code: await this.nextGroupCode(rootCompany.id, rootCompany.code),
       legalName: dto.legalName,
       tradeName: dto.tradeName,
       document: dto.document,
@@ -171,6 +211,47 @@ export class CompanyOnboardingService {
     }
 
     return { companyId: company.id };
+  }
+
+  /**
+   * Código interno pra amarrar empresas do mesmo grupo sem se
+   * misturar com as de outro cliente: cada cliente novo (raiz) ganha
+   * o próximo número livre a partir de 1000 (1000, 1001, ...) — os
+   * códigos manuais (ex.: "ALEPEJO", cadastrados direto no seed) não
+   * entram nessa faixa, então nunca colidem nem afetam a contagem.
+   */
+  private async nextRootGroupCode(): Promise<string> {
+    const roots = await this.prisma.company.findMany({
+      where: { rootCompanyId: null },
+      select: { code: true },
+    });
+
+    const used = roots
+      .map((root) => Number(root.code))
+      .filter((n) => Number.isInteger(n) && n >= GROUP_CODE_BASE);
+
+    const next =
+      used.length > 0 ? Math.max(...used) + 1 : GROUP_CODE_BASE;
+
+    return String(next);
+  }
+
+  /**
+   * Código de uma empresa adicional dentro do grupo: sufixo sequencial
+   * em cima do código da raiz (raiz "1000" → primeira adicional
+   * "1000_1", segunda "1000_2", ...) — conta quantas empresas já
+   * existem hoje nesse `rootCompanyId` e soma 1, não reaproveita
+   * "buracos" de empresas excluídas.
+   */
+  private async nextGroupCode(
+    rootCompanyId: string,
+    rootCode: string,
+  ): Promise<string> {
+    const siblingsCount = await this.prisma.company.count({
+      where: { rootCompanyId },
+    });
+
+    return `${rootCode}_${siblingsCount + 1}`;
   }
 
   private async provisionPlan(companyId: string) {

@@ -31,6 +31,14 @@ import { EmployeeDependentDto } from './employee-dependent.dto';
 import { EmployeeBenefitDto } from './employee-benefit.dto';
 
 export class CreateEmployeeDto {
+  @ApiPropertyOptional({
+    description:
+      'Empresa do grupo a que este colaborador pertence — ausente usa a empresa ativa da sessão. Precisa pertencer ao mesmo grupo de quem está cadastrando.',
+  })
+  @IsOptional()
+  @IsString()
+  companyId?: string;
+
   // --- Pessoais ---
   @IsString()
   @IsNotEmpty()

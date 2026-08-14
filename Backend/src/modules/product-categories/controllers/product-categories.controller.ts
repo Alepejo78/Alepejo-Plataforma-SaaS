@@ -18,6 +18,7 @@ import {
   import { UpdateProductCategoryDto } from '../dto/update-product-category.dto';
   import { ProductCategoryFilterDto } from '../dto/product-category-filter.dto';
 
+  /** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
   @Controller('product-categories')
   export class ProductCategoriesController {
     constructor(
@@ -27,7 +28,7 @@ import {
     @Post()
     @Permissions('product-category.create')
     create(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Body() createProductCategoryDto: CreateProductCategoryDto,
     ) {
       return this.productCategoriesService.create(
@@ -39,7 +40,7 @@ import {
     @Get()
     @Permissions('product-category.view')
     findAll(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Query() filter: ProductCategoryFilterDto,
     ) {
       return this.productCategoriesService.findAll(companyId, filter);
@@ -48,7 +49,7 @@ import {
     @Get(':id')
     @Permissions('product-category.view')
     findOne(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id') id: string,
     ) {
       return this.productCategoriesService.findOne(companyId, id);
@@ -57,7 +58,7 @@ import {
     @Patch(':id')
     @Permissions('product-category.update')
     update(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id') id: string,
       @Body() updateProductCategoryDto: UpdateProductCategoryDto,
     ) {
@@ -71,7 +72,7 @@ import {
     @Delete(':id')
     @Permissions('product-category.delete')
     remove(
-      @CurrentUser('companyId') companyId: string,
+      @CurrentUser('rootCompanyId') companyId: string,
       @Param('id') id: string,
     ) {
       return this.productCategoriesService.remove(companyId, id);

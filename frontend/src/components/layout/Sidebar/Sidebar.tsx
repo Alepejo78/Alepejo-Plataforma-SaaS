@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  ChevronDown,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -35,15 +36,42 @@ export function Sidebar({
 } = {}) {
   const [collapsed, setCollapsed] = useState(false);
 
+  // Seções "Interprise"/"Empresa" começam ocultas — clicar no rótulo
+  // expande/recolhe, deixa o menu mais limpo (pedido do usuário).
+  const [openSections, setOpenSections] = useState<{
+    interprise: boolean;
+    empresa: boolean;
+  }>({ interprise: false, empresa: false });
+
   const { user, logout, loading } = useAuth();
 
   const menuItems = useMenu();
+
+  const interpriseItems = menuItems.filter(
+    (item) => item.section === "interprise"
+  );
+
+  const empresaItems = menuItems.filter(
+    (item) => item.section !== "interprise"
+  );
 
   useEffect(() => {
     const value = localStorage.getItem("sidebar-collapsed");
 
     if (value) {
       setCollapsed(value === "true");
+    }
+
+    const storedSections = localStorage.getItem(
+      "sidebar-open-sections"
+    );
+
+    if (storedSections) {
+      try {
+        setOpenSections(JSON.parse(storedSections));
+      } catch {
+        // Valor corrompido — mantém o padrão (ambas ocultas).
+      }
     }
   }, []);
 
@@ -53,6 +81,22 @@ export function Sidebar({
     setCollapsed(value);
 
     localStorage.setItem("sidebar-collapsed", String(value));
+  }
+
+  function toggleSection(section: "interprise" | "empresa") {
+    setOpenSections((previous) => {
+      const next = {
+        ...previous,
+        [section]: !previous[section],
+      };
+
+      localStorage.setItem(
+        "sidebar-open-sections",
+        JSON.stringify(next)
+      );
+
+      return next;
+    });
   }
 
   return (
@@ -91,14 +135,94 @@ export function Sidebar({
             ))}
           </div>
         ) : (
-          menuItems.map((item) => (
-            <SidebarItem
-              key={item.id}
-              item={item}
-              collapsed={collapsed}
-              onNavigate={onNavigate}
-            />
-          ))
+          <>
+            {interpriseItems.length > 0 && (
+              <>
+                {collapsed ? (
+                  interpriseItems.map((item) => (
+                    <SidebarItem
+                      key={item.id}
+                      item={item}
+                      collapsed={collapsed}
+                      onNavigate={onNavigate}
+                    />
+                  ))
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection("interprise")}
+                      aria-expanded={openSections.interprise}
+                      className="flex w-full items-center justify-between px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)]"
+                    >
+                      Interprise
+
+                      <ChevronDown
+                        size={14}
+                        className={`shrink-0 transition-transform duration-200 ${
+                          openSections.interprise
+                            ? "rotate-180"
+                            : ""
+                        }`}
+                      />
+                    </button>
+
+                    {openSections.interprise &&
+                      interpriseItems.map((item) => (
+                        <SidebarItem
+                          key={item.id}
+                          item={item}
+                          collapsed={collapsed}
+                          onNavigate={onNavigate}
+                        />
+                      ))}
+                  </>
+                )}
+
+                <div className="my-2 border-t border-[var(--border)]" />
+              </>
+            )}
+
+            {empresaItems.length > 0 &&
+              (collapsed ? (
+                empresaItems.map((item) => (
+                  <SidebarItem
+                    key={item.id}
+                    item={item}
+                    collapsed={collapsed}
+                    onNavigate={onNavigate}
+                  />
+                ))
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection("empresa")}
+                    aria-expanded={openSections.empresa}
+                    className="flex w-full items-center justify-between px-4 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)]"
+                  >
+                    Empresa
+
+                    <ChevronDown
+                      size={14}
+                      className={`shrink-0 transition-transform duration-200 ${
+                        openSections.empresa ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {openSections.empresa &&
+                    empresaItems.map((item) => (
+                      <SidebarItem
+                        key={item.id}
+                        item={item}
+                        collapsed={collapsed}
+                        onNavigate={onNavigate}
+                      />
+                    ))}
+                </>
+              ))}
+          </>
         )}
       </nav>
 

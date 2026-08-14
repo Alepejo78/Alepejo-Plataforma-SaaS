@@ -58,10 +58,50 @@ const ADMIN_PERMISSION_CODE = "system.admin";
 // permissão de baixar, financial-entry.settle).
 const REVERSE_EQUIVALENT_CODES = ["financial-entry.settle"];
 
+/**
+ * Separa as linhas da matriz em duas seções — "APP" (administração/
+ * integrações do app OS: Segurança, Empresa, Licenciamento,
+ * Personalização, APIs, cadastros de apoio movidos pra
+ * Configurações) e "ERP" (operação do dia a dia: Parceiros, Produtos,
+ * Estoque, Compras, Vendas, Financeiro, RH, Produção). Só existe aqui
+ * (não no banco) — é puramente visual, então grupo novo sem entrada
+ * aqui cai em "ERP" por padrão (ver fallback em `scopeOf`).
+ */
+const GROUP_SCOPE: Record<string, "APP" | "ERP"> = {
+  SYSTEM: "APP",
+  COMPANY: "APP",
+  USER: "APP",
+  ROLE: "APP",
+  PERMISSION: "APP",
+  ROLE_PERMISSION: "APP",
+  USER_ROLE: "APP",
+  LICENSE: "APP",
+  COMPANY_BRANDING: "APP",
+  WHATSAPP: "APP",
+  EMAIL: "APP",
+  SCHEDULED_NOTIFICATIONS: "APP",
+  PRODUCT_CATEGORY: "APP",
+  BRAND: "APP",
+  UNIT_OF_MEASURE: "APP",
+  WAREHOUSE: "APP",
+  CHART_OF_ACCOUNT: "APP",
+  CHART_OF_ACCOUNT_CLASSIFICATION: "APP",
+};
+
+const SCOPE_LABEL: Record<"APP" | "ERP", string> = {
+  APP: "APP — Administração e integrações",
+  ERP: "ERP — Operação do dia a dia",
+};
+
 interface GroupRow {
   groupId: string;
+  groupCode: string;
   groupName: string;
   permissions: Permission[];
+}
+
+function scopeOf(row: GroupRow): "APP" | "ERP" {
+  return GROUP_SCOPE[row.groupCode] ?? "ERP";
 }
 
 export default function ConfigurarPerfilPage() {
@@ -129,6 +169,7 @@ export default function ConfigurarPerfilPage() {
       } else {
         byGroup.set(permission.groupId, {
           groupId: permission.groupId,
+          groupCode: permission.group.code,
           groupName: permission.group.name,
           permissions: [permission],
         });
@@ -141,6 +182,16 @@ export default function ConfigurarPerfilPage() {
       )
       .sort((a, b) => a.groupName.localeCompare(b.groupName));
   }, [permissions, search]);
+
+  const appRows = useMemo(
+    () => rows.filter((row) => scopeOf(row) === "APP"),
+    [rows]
+  );
+
+  const erpRows = useMemo(
+    () => rows.filter((row) => scopeOf(row) === "ERP"),
+    [rows]
+  );
 
   const adminPermission = useMemo(
     () =>
@@ -290,6 +341,73 @@ export default function ConfigurarPerfilPage() {
     }
   }
 
+  const totalColumns =
+    2 + GENERIC_COLUMNS.length + BUSINESS_COLUMNS.length;
+
+  function renderGroupRow(row: GroupRow) {
+    const rowIds = getRowPermissionIds(row);
+    const rowChecked =
+      rowIds.length > 0 && rowIds.every((id) => grants.has(id));
+    const rowPending = rowIds.some((id) => pending.has(id));
+
+    return (
+      <tr key={row.groupId}>
+        <td className="border-t border-[var(--border)] px-4 py-2 font-medium text-[var(--text-primary)]">
+          {row.groupName}
+        </td>
+
+        <td className="border-t border-[var(--border)] px-2 py-2 text-center">
+          {rowIds.length > 0 && (
+            <input
+              type="checkbox"
+              checked={rowChecked}
+              disabled={rowPending}
+              title="Marcar/desmarcar todas as caixas desta linha"
+              onChange={() => void toggle(rowIds)}
+            />
+          )}
+        </td>
+
+        {GENERIC_COLUMNS.map((column) =>
+          renderCell(column.key, findBySuffix(row, column.key))
+        )}
+
+        {BUSINESS_COLUMNS.map((column) => {
+          if (column.key === "reverse") {
+            return renderCell(column.key, findReverse(row));
+          }
+
+          if (column.codes.length > 1) {
+            return renderCell(
+              column.key,
+              findByCodes(row, column.codes)
+            );
+          }
+
+          const match =
+            row.permissions.find(
+              (p) => p.code === column.codes[0]
+            ) ?? null;
+
+          return renderCell(column.key, match);
+        })}
+      </tr>
+    );
+  }
+
+  function renderSectionHeader(scope: "APP" | "ERP") {
+    return (
+      <tr key={`section-${scope}`}>
+        <td
+          colSpan={totalColumns}
+          className="border-t border-[var(--border)] bg-[var(--surface-hover)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]"
+        >
+          {SCOPE_LABEL[scope]}
+        </td>
+      </tr>
+    );
+  }
+
   function renderCell(
     key: string,
     permission: Permission | Permission[] | null
@@ -433,65 +551,19 @@ export default function ConfigurarPerfilPage() {
               </thead>
 
               <tbody>
-                {rows.map((row) => {
-                  const rowIds = getRowPermissionIds(row);
-                  const rowChecked =
-                    rowIds.length > 0 &&
-                    rowIds.every((id) => grants.has(id));
-                  const rowPending = rowIds.some((id) =>
-                    pending.has(id)
-                  );
+                {appRows.length > 0 && (
+                  <>
+                    {renderSectionHeader("APP")}
+                    {appRows.map(renderGroupRow)}
+                  </>
+                )}
 
-                  return (
-                  <tr key={row.groupId}>
-                    <td className="border-t border-[var(--border)] px-4 py-2 font-medium text-[var(--text-primary)]">
-                      {row.groupName}
-                    </td>
-
-                    <td className="border-t border-[var(--border)] px-2 py-2 text-center">
-                      {rowIds.length > 0 && (
-                        <input
-                          type="checkbox"
-                          checked={rowChecked}
-                          disabled={rowPending}
-                          title="Marcar/desmarcar todas as caixas desta linha"
-                          onChange={() => void toggle(rowIds)}
-                        />
-                      )}
-                    </td>
-
-                    {GENERIC_COLUMNS.map((column) =>
-                      renderCell(
-                        column.key,
-                        findBySuffix(row, column.key)
-                      )
-                    )}
-
-                    {BUSINESS_COLUMNS.map((column) => {
-                      if (column.key === "reverse") {
-                        return renderCell(
-                          column.key,
-                          findReverse(row)
-                        );
-                      }
-
-                      if (column.codes.length > 1) {
-                        return renderCell(
-                          column.key,
-                          findByCodes(row, column.codes)
-                        );
-                      }
-
-                      const match =
-                        row.permissions.find(
-                          (p) => p.code === column.codes[0]
-                        ) ?? null;
-
-                      return renderCell(column.key, match);
-                    })}
-                  </tr>
-                  );
-                })}
+                {erpRows.length > 0 && (
+                  <>
+                    {renderSectionHeader("ERP")}
+                    {erpRows.map(renderGroupRow)}
+                  </>
+                )}
               </tbody>
             </table>
           </div>

@@ -435,6 +435,9 @@ export const BENEFIT_CALCULATION_TYPE_LABELS: Record<
 
 export interface Employee {
   id: string;
+  companyId?: string;
+  company?: { id: string; tradeName?: string | null; legalName: string } | null;
+  photo?: string | null;
   name: string;
   fatherName?: string | null;
   motherName?: string | null;
@@ -530,6 +533,8 @@ export const EXAM_STATUS_LABELS: Record<
 };
 
 export interface EmployeePayload {
+  /** Empresa do grupo a que o colaborador pertence — ausente usa a empresa ativa da sessão. */
+  companyId?: string;
   name: string;
   fatherName?: string;
   motherName?: string;
@@ -625,6 +630,19 @@ export const employeeService = {
     return data.data.data ?? [];
   },
 
+  /** Colaboradores de todas as empresas do grupo (frente "Interprise"). */
+  async listGroup(
+    filter: EmployeeFilter = {}
+  ): Promise<Employee[]> {
+    const { data } = await api.get<
+      ApiEnvelope<Paged<Employee>>
+    >("/employees/group", {
+      params: { ...filter, limit: filter.limit ?? 100 },
+    });
+
+    return data.data.data ?? [];
+  },
+
   async getById(id: string): Promise<Employee> {
     const { data } = await api.get<ApiEnvelope<Employee>>(
       `/employees/${id}`
@@ -665,6 +683,22 @@ export const employeeService = {
 
   async remove(id: string) {
     await api.delete(`/employees/${id}`);
+  },
+
+  async uploadPhoto(
+    id: string,
+    file: File
+  ): Promise<Employee> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const { data } = await api.post<ApiEnvelope<Employee>>(
+      `/employees/${id}/photo`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
+    return data.data;
   },
 };
 

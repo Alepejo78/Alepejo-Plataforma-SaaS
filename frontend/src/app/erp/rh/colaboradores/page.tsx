@@ -59,6 +59,12 @@ import {
   type SystemUser,
 } from "@/services/user.service";
 import {
+  companyService,
+  type Company,
+} from "@/services/company.service";
+import { brandingAssetUrl } from "@/services/company-branding.service";
+import { useAuth } from "@/providers/AuthProvider";
+import {
   isValidCEPLength,
   maskCEP,
   maskCPF,
@@ -145,6 +151,9 @@ const TABS = [
 type Tab = (typeof TABS)[number];
 
 interface FormState {
+  /** Empresa do grupo a que o colaborador pertence (frente "Interprise"). */
+  companyId: string;
+  photo: string;
   name: string;
   fatherName: string;
   motherName: string;
@@ -219,8 +228,10 @@ interface FormState {
   observation: string;
 }
 
-function emptyForm(): FormState {
+function emptyForm(companyId = ""): FormState {
   return {
+    companyId,
+    photo: "",
     name: "",
     fatherName: "",
     motherName: "",
@@ -294,7 +305,12 @@ function emptyForm(): FormState {
 }
 
 export default function ColaboradoresPage() {
+  const { user } = useAuth();
+
   const [items, setItems] = useState<Employee[]>([]);
+  const [groupCompanies, setGroupCompanies] = useState<
+    Company[]
+  >([]);
   const [schedules, setSchedules] = useState<AuxiliaryRecord[]>(
     []
   );
@@ -314,7 +330,9 @@ export default function ColaboradoresPage() {
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
-  const [form, setForm] = useState<FormState>(emptyForm());
+  const [form, setForm] = useState<FormState>(
+    emptyForm(user?.companyId)
+  );
   const [dependents, setDependents] = useState<
     EmployeeDependent[]
   >([]);
@@ -322,6 +340,8 @@ export default function ColaboradoresPage() {
   const [formError, setFormError] = useState("");
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState("");
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
 
   const [examHistory, setExamHistory] = useState<
     EmployeeExam[]
@@ -337,7 +357,9 @@ export default function ColaboradoresPage() {
     setListError("");
 
     try {
-      const result = await employeeService.list({
+      // Cadastro de grupo ("Interprise") — lista colaboradores de
+      // todas as empresas do grupo, não só a da sessão.
+      const result = await employeeService.listGroup({
         search: search || undefined,
       });
 
@@ -375,6 +397,11 @@ export default function ColaboradoresPage() {
       .list()
       .then((r) => setBenefitCatalog(r.data))
       .catch(() => {});
+
+    companyService
+      .listGroup()
+      .then(setGroupCompanies)
+      .catch(() => {});
   }, []);
 
   const searchJobFunctions = useCallback(
@@ -401,7 +428,7 @@ export default function ColaboradoresPage() {
 
   function openCreate() {
     setEditingId(null);
-    setForm(emptyForm());
+    setForm(emptyForm(user?.companyId));
     setDependents([]);
     setExamHistory([]);
     setNewExamDate("");
@@ -416,6 +443,8 @@ export default function ColaboradoresPage() {
     setNewExamDate("");
     void loadExamHistory(item.id);
     setForm({
+      companyId: item.companyId ?? user?.companyId ?? "",
+      photo: item.photo ?? "",
       name: item.name,
       fatherName: item.fatherName ?? "",
       motherName: item.motherName ?? "",
@@ -568,6 +597,44 @@ export default function ColaboradoresPage() {
     );
   }
 
+  async function handlePhotoUpload(file: File | undefined) {
+    if (!file || !editingId) {
+      return;
+    }
+
+    setPhotoUploading(true);
+    setPhotoError("");
+
+    try {
+      const updated = await employeeService.uploadPhoto(
+        editingId,
+        file
+      );
+
+      setForm((prev) => ({
+        ...prev,
+        photo: updated.photo ?? "",
+      }));
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === editingId
+            ? { ...item, photo: updated.photo }
+            : item
+        )
+      );
+    } catch (err) {
+      setPhotoError(
+        extractMessage(
+          err,
+          "Não foi possível enviar a foto."
+        )
+      );
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
   async function save() {
     if (!form.name.trim()) {
       setActiveTab("Pessoais");
@@ -580,6 +647,7 @@ export default function ColaboradoresPage() {
     setFormError("");
 
     const payload = {
+      companyId: form.companyId || undefined,
       name: form.name.trim(),
       fatherName: form.fatherName.trim() || undefined,
       motherName: form.motherName.trim() || undefined,
@@ -917,11 +985,15 @@ export default function ColaboradoresPage() {
                         {item.name}
                       </p>
 
-                      {item.email && (
-                        <p className="text-xs text-[var(--text-muted)]">
-                          {item.email}
-                        </p>
-                      )}
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {[
+                          item.company?.tradeName ??
+                            item.company?.legalName,
+                          item.email,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
                     </td>
 
                     <td className="px-4 py-3 text-[var(--text-secondary)]">
@@ -1026,6 +1098,86 @@ export default function ColaboradoresPage() {
             <div className="space-y-4">
               {activeTab === "Pessoais" && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-4 border-b border-[var(--border)] pb-4">
+                    <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-hover)]">
+                      {form.photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={brandingAssetUrl(form.photo) ?? ""}
+                          alt={form.name || "Foto"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs text-[var(--text-muted)]">
+                          Sem foto
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      {editingId ? (
+                        <>
+                          <label className="inline-block cursor-pointer rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]">
+                            {photoUploading
+                              ? "Enviando..."
+                              : "Enviar foto"}
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp"
+                              className="hidden"
+                              disabled={photoUploading}
+                              onChange={(e) =>
+                                void handlePhotoUpload(
+                                  e.target.files?.[0]
+                                )
+                              }
+                            />
+                          </label>
+
+                          {photoError && (
+                            <p className="mt-1 text-xs text-[var(--danger)]">
+                              {photoError}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-[var(--text-muted)]">
+                          Salve o cadastro primeiro para
+                          enviar a foto.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {groupCompanies.length > 1 && (
+                    <div className="sm:col-span-2 lg:col-span-4">
+                      <label className={labelClass}>
+                        Empresa
+                      </label>
+
+                      <select
+                        className={fieldClass}
+                        value={form.companyId}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            companyId: e.target.value,
+                          })
+                        }
+                      >
+                        {groupCompanies.map((company) => (
+                          <option
+                            key={company.id}
+                            value={company.id}
+                          >
+                            {company.tradeName ??
+                              company.legalName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="sm:col-span-2 lg:col-span-2">
                     <label className={labelClass}>
                       Nome completo

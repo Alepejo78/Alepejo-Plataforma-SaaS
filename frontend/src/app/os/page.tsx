@@ -44,7 +44,7 @@ export default function OsHomePage() {
     },
     {
       title: "Empresa",
-      description: "Dados da empresa",
+      description: "Dados da empresa e empresas do grupo",
       href: "/erp/configuracoes",
       icon: Building2,
       visible: can("company.view"),
@@ -72,7 +72,7 @@ export default function OsHomePage() {
     },
     {
       title: "Licenciamento",
-      description: "Plano, módulos e empresas do grupo",
+      description: "Plano e módulos contratados",
       href: "/erp/licenciamento",
       icon: BadgeCheck,
       visible: can("license.view"),

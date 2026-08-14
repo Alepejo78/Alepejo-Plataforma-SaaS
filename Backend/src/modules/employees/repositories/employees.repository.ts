@@ -200,6 +200,64 @@ export class EmployeesRepository {
     };
   }
 
+  /**
+   * Colaboradores de TODAS as empresas do grupo (frente "Interprise")
+   * — mesmo filtro de `findAll`, só troca `companyId` exato por um
+   * JOIN via `company.rootCompanyId`. Não substitui `findAll`: telas
+   * de folha/ponto continuam escopadas pela empresa real da sessão.
+   */
+  async findAllInGroup(
+    rootCompanyId: string,
+    filter: EmployeeFilterDto,
+  ) {
+    const {
+      search,
+      jobFunctionId,
+      status,
+      page,
+      limit,
+      orderBy,
+      order,
+    } = filter;
+
+    const where: Prisma.EmployeeWhereInput = {
+      company: {
+        OR: [{ id: rootCompanyId }, { rootCompanyId }],
+      },
+      active: true,
+      ...(jobFunctionId && { jobFunctionId }),
+      ...(status && { status }),
+
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { cpf: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.employee.findMany({
+        where,
+        include: { ...includeRelations, company: true },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { [orderBy]: order },
+      }),
+
+      this.prisma.employee.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    };
+  }
+
   async update(
     id: string,
     dto: UpdateEmployeeDto,

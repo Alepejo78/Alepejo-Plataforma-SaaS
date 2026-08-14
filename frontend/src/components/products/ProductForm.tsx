@@ -35,7 +35,6 @@ interface FormState {
   categoryId: string;
   brandId: string;
   unitId: string;
-  cost: number;
   salePrice: number;
   minimumStock: string;
   status: "ACTIVE" | "INACTIVE";
@@ -52,7 +51,6 @@ const emptyForm: FormState = {
   categoryId: "",
   brandId: "",
   unitId: "",
-  cost: 0,
   salePrice: 0,
   minimumStock: "",
   status: "ACTIVE",
@@ -95,7 +93,6 @@ export function ProductForm({
         categoryId: product.categoryId ?? "",
         brandId: product.brandId ?? "",
         unitId: product.unitId ?? "",
-        cost: Number(product.cost ?? 0),
         salePrice: Number(product.salePrice ?? 0),
         minimumStock:
           product.minimumStock !== null &&
@@ -156,7 +153,6 @@ export function ProductForm({
       categoryId: text(form.categoryId),
       brandId: text(form.brandId),
       unitId: form.unitId,
-      cost: form.cost,
       salePrice: form.salePrice,
       minimumStock: isService
         ? undefined
@@ -370,20 +366,6 @@ export function ProductForm({
 
       <section className="grid gap-4 md:grid-cols-4">
         <div>
-          <label className={labelClass} htmlFor="cost">
-            Custo (R$){" "}
-            <span className="text-[var(--danger)]">*</span>
-          </label>
-
-          <CurrencyInput
-            id="cost"
-            className={fieldClass}
-            value={form.cost}
-            onChange={(value) => setField("cost", value)}
-          />
-        </div>
-
-        <div>
           <label className={labelClass} htmlFor="salePrice">
             Preço venda (R$){" "}
             <span className="text-[var(--danger)]">*</span>
@@ -395,6 +377,11 @@ export function ProductForm({
             value={form.salePrice}
             onChange={(value) => setField("salePrice", value)}
           />
+
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            Custo e saldo em estoque ficam em Estoque (são por
+            depósito, não do cadastro do produto).
+          </p>
         </div>
 
         {!isService && (

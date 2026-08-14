@@ -19,6 +19,7 @@ import { CreateChartOfAccountClassificationDto } from '../dto/create-chart-of-ac
 import { UpdateChartOfAccountClassificationDto } from '../dto/update-chart-of-account-classification.dto';
 import { ChartOfAccountClassificationFilterDto } from '../dto/chart-of-account-classification-filter.dto';
 
+/** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
 @Controller('chart-of-account-classifications')
 @Module('FINANCE')
 export class ChartOfAccountClassificationsController {
@@ -29,7 +30,7 @@ export class ChartOfAccountClassificationsController {
   @Post()
   @Permissions('chart-of-account-classification.create')
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Body() dto: CreateChartOfAccountClassificationDto,
   ) {
     return this.service.create(companyId, dto);
@@ -38,7 +39,7 @@ export class ChartOfAccountClassificationsController {
   @Get()
   @Permissions('chart-of-account-classification.view')
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Query() filter: ChartOfAccountClassificationFilterDto,
   ) {
     return this.service.findAll(companyId, filter);
@@ -47,7 +48,7 @@ export class ChartOfAccountClassificationsController {
   @Get(':id')
   @Permissions('chart-of-account-classification.view')
   findOne(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.findOne(companyId, id);
@@ -56,7 +57,7 @@ export class ChartOfAccountClassificationsController {
   @Patch(':id')
   @Permissions('chart-of-account-classification.update')
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
     @Body() dto: UpdateChartOfAccountClassificationDto,
   ) {
@@ -66,7 +67,7 @@ export class ChartOfAccountClassificationsController {
   @Delete(':id')
   @Permissions('chart-of-account-classification.delete')
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.remove(companyId, id);

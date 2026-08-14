@@ -23,6 +23,7 @@ import { CreateBusinessPartnerDto } from '../dto/create-business-partner.dto';
 import { UpdateBusinessPartnerDto } from '../dto/update-business-partner.dto';
 import { BusinessPartnerFilterDto } from '../dto/business-partner-filter.dto';
 
+/** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
 @ApiTags('Business Partners')
 @Controller('business-partners')
 @Module('BPS')
@@ -37,7 +38,7 @@ export class BusinessPartnersController {
     summary: 'Cadastrar parceiro (cliente/fornecedor/etc.)',
   })
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Body() dto: CreateBusinessPartnerDto,
   ) {
     return this.service.create(companyId, dto);
@@ -49,7 +50,7 @@ export class BusinessPartnersController {
     summary: 'Listar parceiros (filtro opcional por papel)',
   })
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Query() filter: BusinessPartnerFilterDto,
   ) {
     return this.service.findAll(companyId, filter);
@@ -59,7 +60,7 @@ export class BusinessPartnersController {
   @Permissions('partner.view')
   @ApiOperation({ summary: 'Buscar parceiro' })
   findOne(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.findOne(companyId, id);
@@ -69,7 +70,7 @@ export class BusinessPartnersController {
   @Permissions('partner.update')
   @ApiOperation({ summary: 'Alterar parceiro' })
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
     @Body() dto: UpdateBusinessPartnerDto,
   ) {
@@ -80,7 +81,7 @@ export class BusinessPartnersController {
   @Permissions('partner.delete')
   @ApiOperation({ summary: 'Excluir parceiro' })
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.remove(companyId, id);

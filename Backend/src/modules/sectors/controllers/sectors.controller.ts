@@ -19,6 +19,7 @@ import { CreateSectorDto } from '../dto/create-sector.dto';
 import { UpdateSectorDto } from '../dto/update-sector.dto';
 import { SectorFilterDto } from '../dto/sector-filter.dto';
 
+/** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
 @Controller('sectors')
 @Module('HR')
 export class SectorsController {
@@ -27,7 +28,7 @@ export class SectorsController {
   @Post()
   @Permissions('sector.create')
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Body() dto: CreateSectorDto,
   ) {
     return this.service.create(companyId, dto);
@@ -36,7 +37,7 @@ export class SectorsController {
   @Get()
   @Permissions('sector.view')
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Query() filter: SectorFilterDto,
   ) {
     return this.service.findAll(companyId, filter);
@@ -45,7 +46,7 @@ export class SectorsController {
   @Get(':id')
   @Permissions('sector.view')
   findOne(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.findOne(companyId, id);
@@ -54,7 +55,7 @@ export class SectorsController {
   @Patch(':id')
   @Permissions('sector.update')
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
     @Body() dto: UpdateSectorDto,
   ) {
@@ -64,7 +65,7 @@ export class SectorsController {
   @Delete(':id')
   @Permissions('sector.delete')
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.remove(companyId, id);

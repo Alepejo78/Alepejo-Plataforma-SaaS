@@ -19,6 +19,8 @@ export type CompanyAdditionalPayload = {
   legalName: string;
   tradeName?: string;
   document: string;
+  /** Obrigatório quando `document` é CPF — não tem raiz pra conferir automaticamente como o CNPJ. */
+  isGroupCompany?: boolean;
   email?: string;
   phone?: string;
   adminName: string;

@@ -578,7 +578,11 @@ model Product {
   complementaryDescription String?          @db.VarChar(255)
   type                     ProductType      @default(PRODUCT)
   inventoryControl         InventoryControl @default(SIMPLE)
-  cost                     Decimal          @db.Decimal(18, 2)
+  /// Congelado (frente "Interprise") — Product virou cadastro de
+  /// grupo, custo real passou a ser Inventory.averageCost (por
+  /// empresa/depósito). Default só pra não quebrar create() sem o
+  /// campo, não é mais preenchido pela tela.
+  cost                     Decimal          @default(0) @db.Decimal(18, 2)
   salePrice                Decimal          @db.Decimal(18, 2)
   minimumStock             Decimal          @default(0) @db.Decimal(18, 3)
   currentStock             Decimal          @default(0) @db.Decimal(18, 3)
@@ -1698,6 +1702,9 @@ model Employee {
   birthState    String? @db.VarChar(2)
   maritalStatus MaritalStatus?
   educationLevel EducationLevel?
+
+  /// Foto do colaborador (frente "Interprise" — cadastro de grupo).
+  photo String? @db.VarChar(255)
 
   // --- Documentos ---
   cpf            String? @db.VarChar(14)

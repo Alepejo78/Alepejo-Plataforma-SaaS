@@ -19,6 +19,7 @@ import { CreatePpeTypeDto } from '../dto/create-ppe-type.dto';
 import { UpdatePpeTypeDto } from '../dto/update-ppe-type.dto';
 import { PpeTypeFilterDto } from '../dto/ppe-type-filter.dto';
 
+/** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
 @Controller('ppe-types')
 @Module('HR')
 export class PpeTypesController {
@@ -27,7 +28,7 @@ export class PpeTypesController {
   @Post()
   @Permissions('ppe-type.create')
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Body() dto: CreatePpeTypeDto,
   ) {
     return this.service.create(companyId, dto);
@@ -36,7 +37,7 @@ export class PpeTypesController {
   @Get()
   @Permissions('ppe-type.view')
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Query() filter: PpeTypeFilterDto,
   ) {
     return this.service.findAll(companyId, filter);
@@ -45,7 +46,7 @@ export class PpeTypesController {
   @Get(':id')
   @Permissions('ppe-type.view')
   findOne(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.findOne(companyId, id);
@@ -54,7 +55,7 @@ export class PpeTypesController {
   @Patch(':id')
   @Permissions('ppe-type.update')
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
     @Body() dto: UpdatePpeTypeDto,
   ) {
@@ -64,7 +65,7 @@ export class PpeTypesController {
   @Delete(':id')
   @Permissions('ppe-type.delete')
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.service.remove(companyId, id);

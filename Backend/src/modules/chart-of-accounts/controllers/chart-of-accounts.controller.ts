@@ -19,6 +19,7 @@ import { CreateChartOfAccountDto } from '../dto/create-chart-of-account.dto';
 import { UpdateChartOfAccountDto } from '../dto/update-chart-of-account.dto';
 import { ChartOfAccountFilterDto } from '../dto/chart-of-account-filter.dto';
 
+/** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
 @Controller('chart-of-accounts')
 @Module('FINANCE')
 export class ChartOfAccountsController {
@@ -29,7 +30,7 @@ export class ChartOfAccountsController {
   @Post()
   @Permissions('chart-of-account.create')
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Body() createChartOfAccountDto: CreateChartOfAccountDto,
   ) {
     return this.chartOfAccountsService.create(
@@ -41,7 +42,7 @@ export class ChartOfAccountsController {
   @Get()
   @Permissions('chart-of-account.view')
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Query() filter: ChartOfAccountFilterDto,
   ) {
     return this.chartOfAccountsService.findAll(companyId, filter);
@@ -50,7 +51,7 @@ export class ChartOfAccountsController {
   @Get(':id')
   @Permissions('chart-of-account.view')
   findOne(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.chartOfAccountsService.findOne(companyId, id);
@@ -59,7 +60,7 @@ export class ChartOfAccountsController {
   @Patch(':id')
   @Permissions('chart-of-account.update')
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
     @Body() updateChartOfAccountDto: UpdateChartOfAccountDto,
   ) {
@@ -73,7 +74,7 @@ export class ChartOfAccountsController {
   @Delete(':id')
   @Permissions('chart-of-account.delete')
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('id') id: string,
   ) {
     return this.chartOfAccountsService.remove(companyId, id);

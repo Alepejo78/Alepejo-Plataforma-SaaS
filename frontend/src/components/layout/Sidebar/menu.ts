@@ -48,6 +48,7 @@ export const menu: MenuEntry[] = [
     id: "cadastros",
     title: "Cadastros",
     icon: Users,
+    section: "interprise",
     children: [
       {
         id: "parceiros",
@@ -64,6 +65,24 @@ export const menu: MenuEntry[] = [
         href: "/erp/produtos",
         module: "PRODUCTS",
         permission: "product.view",
+      },
+    ],
+  },
+
+  {
+    id: "colaboradores-interprise",
+    title: "Colaboradores",
+    icon: UserCog,
+    module: "HR",
+    section: "interprise",
+    children: [
+      {
+        id: "cadastro-colaboradores-interprise",
+        title: "Cadastro de colaboradores",
+        icon: Users,
+        href: "/erp/rh/colaboradores",
+        module: "HR",
+        permission: "employee.view",
       },
     ],
   },
@@ -214,14 +233,6 @@ export const menu: MenuEntry[] = [
     icon: UserCog,
     module: "HR",
     children: [
-      {
-        id: "colaboradores",
-        title: "Colaboradores",
-        icon: Users,
-        href: "/erp/rh/colaboradores",
-        module: "HR",
-        permission: "employee.view",
-      },
       {
         id: "beneficios",
         title: "Benefícios",

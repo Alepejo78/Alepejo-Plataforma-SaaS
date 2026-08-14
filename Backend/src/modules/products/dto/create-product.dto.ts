@@ -56,25 +56,16 @@ import {
   
     @IsString()
     unitId: string;
-  
-    @IsNumber({ maxDecimalPlaces: 2 })
-    @Min(0)
-    cost: number;
-  
+
     @IsNumber({ maxDecimalPlaces: 2 })
     @Min(0)
     salePrice: number;
-  
+
     @IsOptional()
     @IsNumber({ maxDecimalPlaces: 3 })
     @Min(0)
     minimumStock?: number;
-  
-    @IsOptional()
-    @IsNumber({ maxDecimalPlaces: 3 })
-    @Min(0)
-    currentStock?: number;
-  
+
     @IsOptional()
     @IsEnum(ProductStatus)
     status?: ProductStatus;

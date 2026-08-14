@@ -17,6 +17,7 @@ import { WorkScheduleShiftsService } from '../services/work-schedule-shifts.serv
 import { CreateWorkScheduleShiftDto } from '../dto/create-work-schedule-shift.dto';
 import { UpdateWorkScheduleShiftDto } from '../dto/update-work-schedule-shift.dto';
 
+/** Cadastro de grupo ("Interprise") — companyId aqui é sempre a raiz do grupo (rootCompanyId), ver WarehouseController. */
 @Controller('work-schedules/:workScheduleId/shifts')
 @Module('HR')
 export class WorkScheduleShiftsController {
@@ -27,7 +28,7 @@ export class WorkScheduleShiftsController {
   @Post()
   @Permissions('work-schedule.update')
   create(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('workScheduleId') workScheduleId: string,
     @Body() dto: CreateWorkScheduleShiftDto,
   ) {
@@ -37,7 +38,7 @@ export class WorkScheduleShiftsController {
   @Get()
   @Permissions('work-schedule.view')
   findAll(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('workScheduleId') workScheduleId: string,
   ) {
     return this.service.findAll(companyId, workScheduleId);
@@ -46,7 +47,7 @@ export class WorkScheduleShiftsController {
   @Patch(':id')
   @Permissions('work-schedule.update')
   update(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('workScheduleId') workScheduleId: string,
     @Param('id') id: string,
     @Body() dto: UpdateWorkScheduleShiftDto,
@@ -62,7 +63,7 @@ export class WorkScheduleShiftsController {
   @Delete(':id')
   @Permissions('work-schedule.update')
   remove(
-    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') companyId: string,
     @Param('workScheduleId') workScheduleId: string,
     @Param('id') id: string,
   ) {
