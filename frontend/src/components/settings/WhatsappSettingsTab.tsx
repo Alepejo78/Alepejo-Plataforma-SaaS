@@ -9,7 +9,6 @@ import {
   Unplug,
 } from "lucide-react";
 
-import { AppShell } from "@/components";
 import {
   whatsappService,
   type WhatsAppConnectionState,
@@ -144,7 +143,7 @@ function StatusBadge({
   );
 }
 
-export default function WhatsAppPage() {
+export function WhatsappSettingsTab() {
   const [state, setState] = useState<WhatsAppConnectionState | null>(
     null
   );
@@ -227,130 +226,124 @@ export default function WhatsAppPage() {
   }
 
   return (
-    <AppShell workspaceLabel="WhatsApp">
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <MessageCircle
-            size={22}
-            className="text-[var(--text-secondary)]"
-          />
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <MessageCircle
+          size={20}
+          className="text-[var(--text-secondary)]"
+        />
 
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            WhatsApp
-          </h1>
-        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+            Configuração WhatsApp
+          </h2>
 
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-          <p className="mb-4 text-xs text-[var(--text-muted)]">
+          <p className="text-xs text-[var(--text-muted)]">
             Pareia um número de WhatsApp normal com o sistema (via QR
             code, igual ao WhatsApp Web) para avisar automaticamente o
-            fornecedor vencedor de uma cotação. Sessão única do
-            sistema — recomendado usar um número de teste/secundário,
+            fornecedor vencedor de uma cotação. Sessão própria desta
+            empresa — recomendado usar um número de teste/secundário,
             não o principal da empresa.
           </p>
-
-          {loading ? (
-            <div className="h-32 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
-          ) : (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Smartphone
-                    size={18}
-                    className="text-[var(--text-secondary)]"
-                  />
-
-                  <span className="text-sm font-medium text-[var(--text-primary)]">
-                    Status da conexão
-                  </span>
-                </div>
-
-                {state && <StatusBadge status={state.status} />}
-
-                <div className="flex flex-wrap gap-3 pt-2">
-                  {state?.status !== "CONNECTED" && (
-                    <button
-                      type="button"
-                      disabled={
-                        connecting ||
-                        state?.status === "CONNECTING" ||
-                        state?.status === "QR_PENDING"
-                      }
-                      onClick={() => void handleConnect()}
-                      className="h-11 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
-                    >
-                      {connecting
-                        ? "Conectando..."
-                        : "Conectar"}
-                    </button>
-                  )}
-
-                  {(state?.status === "CONNECTED" ||
-                    state?.status === "QR_PENDING" ||
-                    state?.status === "CONNECTING") && (
-                    <button
-                      type="button"
-                      disabled={loggingOut}
-                      onClick={() => void handleLogout()}
-                      className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-60"
-                    >
-                      <Unplug size={16} />
-                      {loggingOut
-                        ? "Desconectando..."
-                        : "Desconectar"}
-                    </button>
-                  )}
-                </div>
-
-                {error && (
-                  <p className="text-xs text-[var(--danger)]">
-                    {error}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] p-6">
-                {state?.status === "QR_PENDING" && state.qr ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={state.qr}
-                      alt="QR code do WhatsApp"
-                      className="h-56 w-56"
-                    />
-
-                    <p className="mt-3 text-center text-xs text-[var(--text-muted)]">
-                      No celular: WhatsApp → Configurações →
-                      Aparelhos conectados → Conectar um aparelho.
-                    </p>
-                  </>
-                ) : state?.status === "CONNECTED" ? (
-                  <div className="flex flex-col items-center gap-2 text-[var(--success)]">
-                    <MessageCircle size={40} />
-                    <p className="text-sm font-medium">
-                      Número pareado e ativo.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
-                    <QrCode size={40} />
-                    <p className="text-center text-sm">
-                      Clique em &quot;Conectar&quot; para gerar o QR
-                      code de pareamento.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {state?.status === "CONNECTED" && (
-            <div className="mt-6">
-              <TestSendSection />
-            </div>
-          )}
-        </section>
+        </div>
       </div>
-    </AppShell>
+
+      {loading ? (
+        <div className="h-32 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Smartphone
+                size={18}
+                className="text-[var(--text-secondary)]"
+              />
+
+              <span className="text-sm font-medium text-[var(--text-primary)]">
+                Status da conexão
+              </span>
+            </div>
+
+            {state && <StatusBadge status={state.status} />}
+
+            <div className="flex flex-wrap gap-3 pt-2">
+              {state?.status !== "CONNECTED" && (
+                <button
+                  type="button"
+                  disabled={
+                    connecting ||
+                    state?.status === "CONNECTING" ||
+                    state?.status === "QR_PENDING"
+                  }
+                  onClick={() => void handleConnect()}
+                  className="h-11 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                >
+                  {connecting ? "Conectando..." : "Conectar"}
+                </button>
+              )}
+
+              {(state?.status === "CONNECTED" ||
+                state?.status === "QR_PENDING" ||
+                state?.status === "CONNECTING") && (
+                <button
+                  type="button"
+                  disabled={loggingOut}
+                  onClick={() => void handleLogout()}
+                  className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-60"
+                >
+                  <Unplug size={16} />
+                  {loggingOut ? "Desconectando..." : "Desconectar"}
+                </button>
+              )}
+            </div>
+
+            {error && (
+              <p className="text-xs text-[var(--danger)]">
+                {error}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] p-6">
+            {state?.status === "QR_PENDING" && state.qr ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={state.qr}
+                  alt="QR code do WhatsApp"
+                  className="h-56 w-56"
+                />
+
+                <p className="mt-3 text-center text-xs text-[var(--text-muted)]">
+                  No celular: WhatsApp → Configurações → Aparelhos
+                  conectados → Conectar um aparelho.
+                </p>
+              </>
+            ) : state?.status === "CONNECTED" ? (
+              <div className="flex flex-col items-center gap-2 text-[var(--success)]">
+                <MessageCircle size={40} />
+                <p className="text-sm font-medium">
+                  Número pareado e ativo.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
+                <QrCode size={40} />
+                <p className="text-center text-sm">
+                  Clique em &quot;Conectar&quot; para gerar o QR code
+                  de pareamento.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {state?.status === "CONNECTED" && (
+        <div className="mt-6">
+          <TestSendSection />
+        </div>
+      )}
+    </div>
   );
 }

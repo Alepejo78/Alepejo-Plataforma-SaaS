@@ -23,11 +23,11 @@ import {
   
     @IsOptional()
     @IsNumberString()
-    page?: number = 1;
-  
+    page?: string = '1';
+
     @IsOptional()
     @IsNumberString()
-    limit?: number = 20;
+    limit?: string = '20';
   
     @IsOptional()
     @IsIn([

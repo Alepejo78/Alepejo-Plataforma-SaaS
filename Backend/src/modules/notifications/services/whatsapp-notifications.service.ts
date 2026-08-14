@@ -11,14 +11,36 @@ export type WhatsAppStatus =
   | 'QR_PENDING'
   | 'CONNECTED';
 
-const AUTH_DIR = path.join(process.cwd(), 'whatsapp-auth');
+const AUTH_BASE_DIR = path.join(process.cwd(), 'whatsapp-auth');
+
+interface SessionState {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sock: any;
+  status: WhatsAppStatus;
+  qrDataUrl: string | null;
+  connecting: boolean;
+}
+
+function emptySession(): SessionState {
+  return {
+    sock: null,
+    status: 'DISCONNECTED',
+    qrDataUrl: null,
+    connecting: false,
+  };
+}
 
 /**
  * Integração com WhatsApp via Baileys (biblioteca não-oficial, pareia
  * via QR code com um número de WhatsApp normal — risco de bloqueio do
  * número pela Meta aceito pelo usuário, ver docs/08-Continuidade.md).
- * Sessão única, global ao sistema (mesmo padrão do
- * EmailNotificationsService: não é por empresa). `send()` é
+ *
+ * Uma sessão POR EMPRESA (cada cliente pareia o próprio número,
+ * independente dos outros — pedido explícito: "quando o cliente
+ * comprar, esses dados vão todos vazio pra eles preencherem, o mesmo
+ * será pro WhatsApp"). Cada empresa tem sua própria pasta de
+ * credenciais em disco (`whatsapp-auth/<companyId>/`) e seu próprio
+ * estado em memória (`sessions`, por companyId). `send()` é
  * best-effort — nunca lança, nunca deve travar quem chama.
  *
  * Baileys é um pacote ESM puro; o Backend compila para CommonJS
@@ -32,33 +54,63 @@ export class WhatsappNotificationsService implements OnModuleInit {
     WhatsappNotificationsService.name,
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private sock: any = null;
-  private status: WhatsAppStatus = 'DISCONNECTED';
-  private qrDataUrl: string | null = null;
-  private connecting = false;
+  private sessions = new Map<string, SessionState>();
+
+  private getSession(companyId: string): SessionState {
+    let session = this.sessions.get(companyId);
+
+    if (!session) {
+      session = emptySession();
+      this.sessions.set(companyId, session);
+    }
+
+    return session;
+  }
+
+  private authDir(companyId: string): string {
+    return path.join(AUTH_BASE_DIR, companyId);
+  }
 
   async onModuleInit() {
-    // Só reconecta sozinho se já existir uma sessão pareada antes
-    // (credenciais salvas em disco) — o primeiro pareamento só
-    // começa quando o usuário pede na tela (POST /connect).
-    if (fs.existsSync(path.join(AUTH_DIR, 'creds.json'))) {
-      void this.connect();
+    // Só reconecta sozinho as empresas que já tinham sessão pareada
+    // antes (credenciais salvas em disco) — o primeiro pareamento de
+    // cada empresa só começa quando alguém pede na tela (POST
+    // /connect).
+    if (!fs.existsSync(AUTH_BASE_DIR)) {
+      return;
+    }
+
+    const companyIds = fs
+      .readdirSync(AUTH_BASE_DIR, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((companyId) =>
+        fs.existsSync(
+          path.join(AUTH_BASE_DIR, companyId, 'creds.json'),
+        ),
+      );
+
+    for (const companyId of companyIds) {
+      void this.connect(companyId);
     }
   }
 
-  getStatus() {
-    return { status: this.status, qr: this.qrDataUrl };
+  getStatus(companyId: string) {
+    const session = this.getSession(companyId);
+
+    return { status: session.status, qr: session.qrDataUrl };
   }
 
-  async connect() {
-    if (this.connecting || this.status === 'CONNECTED') {
-      return this.getStatus();
+  async connect(companyId: string) {
+    const session = this.getSession(companyId);
+
+    if (session.connecting || session.status === 'CONNECTED') {
+      return this.getStatus(companyId);
     }
 
-    this.connecting = true;
-    this.status = 'CONNECTING';
-    this.qrDataUrl = null;
+    session.connecting = true;
+    session.status = 'CONNECTING';
+    session.qrDataUrl = null;
 
     try {
       const {
@@ -67,8 +119,9 @@ export class WhatsappNotificationsService implements OnModuleInit {
         DisconnectReason,
       } = await import('@whiskeysockets/baileys');
 
-      const { state, saveCreds } =
-        await useMultiFileAuthState(AUTH_DIR);
+      const { state, saveCreds } = await useMultiFileAuthState(
+        this.authDir(companyId),
+      );
 
       const sock = makeWASocket({
         auth: state,
@@ -76,7 +129,7 @@ export class WhatsappNotificationsService implements OnModuleInit {
         logger: pino({ level: 'silent' }) as any,
       });
 
-      this.sock = sock;
+      session.sock = sock;
 
       sock.ev.on('creds.update', saveCreds);
 
@@ -85,97 +138,115 @@ export class WhatsappNotificationsService implements OnModuleInit {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-          this.status = 'QR_PENDING';
+          session.status = 'QR_PENDING';
 
           QRCode.toDataURL(qr)
             .then((url) => {
-              this.qrDataUrl = url;
+              session.qrDataUrl = url;
             })
             .catch((err) =>
               this.logger.error(
-                `Falha ao gerar imagem do QR: ${err instanceof Error ? err.message : err}`,
+                `Falha ao gerar imagem do QR (empresa ${companyId}): ${err instanceof Error ? err.message : err}`,
               ),
             );
         }
 
         if (connection === 'open') {
-          this.status = 'CONNECTED';
-          this.qrDataUrl = null;
-          this.connecting = false;
-          this.logger.log('WhatsApp conectado.');
+          session.status = 'CONNECTED';
+          session.qrDataUrl = null;
+          session.connecting = false;
+          this.logger.log(`WhatsApp conectado (empresa ${companyId}).`);
         }
 
         if (connection === 'close') {
-          this.connecting = false;
+          session.connecting = false;
 
-          const statusCode = (lastDisconnect?.error as { output?: { statusCode?: number } })
-            ?.output?.statusCode;
-          const loggedOut =
-            statusCode === DisconnectReason.loggedOut;
+          const statusCode = (
+            lastDisconnect?.error as {
+              output?: { statusCode?: number };
+            }
+          )?.output?.statusCode;
+          const loggedOut = statusCode === DisconnectReason.loggedOut;
 
           if (loggedOut) {
-            this.status = 'DISCONNECTED';
-            this.qrDataUrl = null;
-            this.sock = null;
-            fs.rmSync(AUTH_DIR, {
+            session.status = 'DISCONNECTED';
+            session.qrDataUrl = null;
+            session.sock = null;
+            fs.rmSync(this.authDir(companyId), {
               recursive: true,
               force: true,
             });
             this.logger.warn(
-              'WhatsApp desconectado (logout) — sessão removida, será preciso parear de novo.',
+              `WhatsApp desconectado (logout, empresa ${companyId}) — sessão removida, será preciso parear de novo.`,
             );
           } else {
             this.logger.warn(
-              'Conexão do WhatsApp caiu, tentando reconectar...',
+              `Conexão do WhatsApp caiu (empresa ${companyId}), tentando reconectar...`,
             );
-            void this.connect();
+            void this.connect(companyId);
           }
         }
       });
     } catch (err) {
-      this.connecting = false;
-      this.status = 'DISCONNECTED';
+      session.connecting = false;
+      session.status = 'DISCONNECTED';
       this.logger.error(
-        `Falha ao iniciar conexão do WhatsApp: ${err instanceof Error ? err.message : err}`,
+        `Falha ao iniciar conexão do WhatsApp (empresa ${companyId}): ${err instanceof Error ? err.message : err}`,
       );
     }
 
-    return this.getStatus();
+    return this.getStatus(companyId);
   }
 
-  async logout() {
-    if (this.sock) {
+  async logout(companyId: string) {
+    const session = this.getSession(companyId);
+
+    if (session.sock) {
       try {
-        await this.sock.logout();
+        await session.sock.logout();
       } catch {
         // Segue o fluxo mesmo se der erro — a limpeza local abaixo
         // garante o reset independente da resposta do WhatsApp.
       }
     }
 
-    this.sock = null;
-    this.status = 'DISCONNECTED';
-    this.qrDataUrl = null;
-    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+    session.sock = null;
+    session.status = 'DISCONNECTED';
+    session.qrDataUrl = null;
+    fs.rmSync(this.authDir(companyId), {
+      recursive: true,
+      force: true,
+    });
 
-    return this.getStatus();
+    return this.getStatus(companyId);
   }
 
-  async send(phone: string, message: string): Promise<boolean> {
-    const { sent } = await this.sendVerbose(phone, message);
+  async send(
+    companyId: string,
+    phone: string,
+    message: string,
+  ): Promise<boolean> {
+    const { sent } = await this.sendVerbose(
+      companyId,
+      phone,
+      message,
+    );
 
     return sent;
   }
 
   /** Mesmo envio de `send()`, mas devolve o motivo da falha — usado no endpoint de teste (diagnóstico manual, ver tela WhatsApp). */
   async sendVerbose(
+    companyId: string,
     phone: string,
     message: string,
   ): Promise<{ sent: boolean; error?: string }> {
-    if (this.status !== 'CONNECTED' || !this.sock) {
+    const session = this.getSession(companyId);
+
+    if (session.status !== 'CONNECTED' || !session.sock) {
       const error = 'WhatsApp não está conectado.';
       this.logger.warn(
-        `${error} Mensagem para ${phone} não enviada.`,
+        `${error} Mensagem para ${phone} não enviada (empresa ${companyId}).`,
       );
 
       return { sent: false, error };
@@ -192,7 +263,7 @@ export class WhatsappNotificationsService implements OnModuleInit {
 
     try {
       const digits = jid.replace('@s.whatsapp.net', '');
-      const check = await this.sock.onWhatsApp(digits);
+      const check = await session.sock.onWhatsApp(digits);
       const found = check?.[0];
 
       if (!found?.exists) {
@@ -203,14 +274,14 @@ export class WhatsappNotificationsService implements OnModuleInit {
         return { sent: false, error };
       }
 
-      await this.sock.sendMessage(found.jid, { text: message });
+      await session.sock.sendMessage(found.jid, { text: message });
 
       return { sent: true };
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
 
       this.logger.error(
-        `Falha ao enviar WhatsApp para ${phone}: ${error}`,
+        `Falha ao enviar WhatsApp para ${phone} (empresa ${companyId}): ${error}`,
       );
 
       return { sent: false, error };

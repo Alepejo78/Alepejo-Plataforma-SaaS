@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Factory } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 
 import {
   productionSettingsService,
@@ -189,7 +189,7 @@ export default function ConfiguracoesDeProducaoPage() {
   }
 
   return (
-    <AppShell workspaceLabel="Configurações de produção">
+    <OsShell workspaceLabel="Configurações de produção">
       <div className="space-y-6">
         <div>
           <Link
@@ -299,6 +299,6 @@ export default function ConfiguracoesDeProducaoPage() {
           )}
         </section>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

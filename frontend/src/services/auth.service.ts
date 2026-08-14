@@ -47,4 +47,14 @@ export const authService = {
   async logout() {
     await api.post("/auth/logout");
   },
+
+  /** Login cruzado: troca a empresa ativa da sessão. */
+  async switchCompany(companyId: string) {
+    const { data } = await api.post<ApiEnvelope<LoginResponse>>(
+      "/auth/switch-company",
+      { companyId }
+    );
+
+    return data.data;
+  },
 };

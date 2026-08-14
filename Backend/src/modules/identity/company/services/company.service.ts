@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -58,5 +59,55 @@ export class CompanyService {
     await this.findById(id);
 
     return this.companyRepository.softDelete(id);
+  }
+
+  /** Empresas que o login atual pode acessar (login cruzado) — ver UserCompany. */
+  async getMyCompanies(userId: string): Promise<Company[]> {
+    return this.companyRepository.findLinkedToUser(userId);
+  }
+
+  /** Raiz + filiais do grupo de quem está pedindo (ver Company.rootCompanyId). */
+  async getGroup(companyId: string): Promise<Company[]> {
+    const company = await this.findById(companyId);
+    const rootCompanyId = company.rootCompanyId ?? company.id;
+
+    return this.companyRepository.findGroup(rootCompanyId);
+  }
+
+  /**
+   * Garante que `targetId` pertence ao mesmo grupo (mesma raiz) de
+   * `companyId`, pra não vazar acesso entre clientes diferentes.
+   */
+  private async assertSameGroup(
+    companyId: string,
+    targetId: string,
+  ): Promise<Company> {
+    const requester = await this.findById(companyId);
+    const rootCompanyId = requester.rootCompanyId ?? requester.id;
+
+    const target = await this.findById(targetId);
+    const targetRootId = target.rootCompanyId ?? target.id;
+
+    if (targetRootId !== rootCompanyId) {
+      throw new ForbiddenException(
+        'Esta empresa não pertence ao seu grupo.',
+      );
+    }
+
+    return target;
+  }
+
+  /**
+   * Atualiza uma empresa do grupo (inclusive ativar/desativar) — só
+   * permitido se `targetId` pertencer ao mesmo grupo de `companyId`.
+   */
+  async updateInGroup(
+    companyId: string,
+    targetId: string,
+    dto: UpdateCompanyDto,
+  ): Promise<Company> {
+    await this.assertSameGroup(companyId, targetId);
+
+    return this.companyRepository.update(targetId, dto);
   }
 }

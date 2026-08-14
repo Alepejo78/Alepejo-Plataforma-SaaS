@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import { warehouseService } from "@/services/inventory.service";
@@ -23,7 +23,7 @@ const adaptedService = {
 
 export default function DepositosPage() {
   return (
-    <AppShell workspaceLabel="Depósitos">
+    <OsShell workspaceLabel="Depósitos">
       <div className="space-y-6">
         <header>
           <Link
@@ -69,6 +69,6 @@ export default function DepositosPage() {
           />
         </div>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

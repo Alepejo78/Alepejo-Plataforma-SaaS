@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import {
@@ -14,7 +14,7 @@ import {
 
 export default function CadastrosProdutoPage() {
   return (
-    <AppShell workspaceLabel="Cadastros de produto">
+    <OsShell workspaceLabel="Cadastros de produto">
       <div className="space-y-6">
         <header>
           <Link
@@ -99,6 +99,6 @@ export default function CadastrosProdutoPage() {
           />
         </div>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

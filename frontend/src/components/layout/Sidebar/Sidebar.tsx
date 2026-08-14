@@ -10,7 +10,6 @@ import {
 import { useAuth } from "@/providers/AuthProvider";
 import { useMenu } from "@/hooks/useMenu";
 
-import { SidebarHeader } from "./SidebarHeader";
 import { SidebarItem } from "./SidebarItem";
 import { sidebarStyles } from "./Sidebar.styles";
 
@@ -28,7 +27,12 @@ function getInitials(name?: string) {
     .toUpperCase();
 }
 
-export function Sidebar() {
+export function Sidebar({
+  onNavigate,
+}: {
+  /** Chamado depois de uma navegação bem-sucedida — fecha o overlay do menu. */
+  onNavigate?: () => void;
+} = {}) {
   const [collapsed, setCollapsed] = useState(false);
 
   const { user, logout, loading } = useAuth();
@@ -76,9 +80,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      <SidebarHeader collapsed={collapsed} />
-
-      <nav className={sidebarStyles.navigation}>
+      <nav className={`${sidebarStyles.navigation} mt-1`}>
         {loading ? (
           <div className="space-y-2 px-2">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -94,6 +96,7 @@ export function Sidebar() {
               key={item.id}
               item={item}
               collapsed={collapsed}
+              onNavigate={onNavigate}
             />
           ))
         )}

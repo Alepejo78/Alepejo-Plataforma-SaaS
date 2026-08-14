@@ -1,5 +1,7 @@
 import {
+  ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -9,7 +11,7 @@ import { PrismaService } from '../../../../core/prisma/prisma.service';
 
 import { LoginDto } from '../dto/login.dto';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
-import { PermissionEffect } from '@prisma/client';
+import { PermissionEffect, Prisma } from '@prisma/client';
 import {
   ACCESS_TOKEN_EXPIRES_IN,
   REFRESH_TOKEN_EXPIRES_IN,
@@ -32,52 +34,64 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  private async findActiveUserByEmail(email: string) {
-    return this.prisma.user.findFirst({
-      where: {
-        email,
-        active: true,
-        deletedAt: null,
-      },
+  /**
+   * Include padrão pra montar o contexto completo de autenticação
+   * (empresa+plano+módulos, perfis+permissões) que issueTokens()
+   * precisa — usado em toda busca de usuário que vai gerar tokens
+   * (login, refresh, troca de empresa).
+   */
+  private readonly authContextInclude = {
+    company: {
       include: {
-        company: {
+        companyPlan: {
           include: {
-            companyPlan: {
+            plan: {
               include: {
-                plan: {
+                planModules: {
                   include: {
-                    planModules: {
-                      include: {
-                        module: true,
-                      },
-                    },
+                    module: true,
                   },
                 },
-              },
-            },
-      
-            companyModules: {
-              include: {
-                module: true,
               },
             },
           },
         },
-      
-        roles: {
+
+        companyModules: {
           include: {
-            role: {
+            module: true,
+          },
+        },
+      },
+    },
+
+    roles: {
+      include: {
+        role: {
+          include: {
+            permissions: {
               include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
+                permission: true,
               },
             },
           },
         },
       },
+    },
+  } satisfies Prisma.UserInclude;
+
+  private async findUserWithAuthContext(where: Prisma.UserWhereInput) {
+    return this.prisma.user.findFirst({
+      where,
+      include: this.authContextInclude,
+    });
+  }
+
+  private async findActiveUserByEmail(email: string) {
+    return this.findUserWithAuthContext({
+      email,
+      active: true,
+      deletedAt: null,
     });
   }
 
@@ -105,6 +119,12 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException(
         'Usuário ou senha inválidos.',
+      );
+    }
+
+    if (!user.company.active) {
+      throw new UnauthorizedException(
+        'Empresa inativa. Entre em contato com o suporte.',
       );
     }
 
@@ -256,6 +276,51 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  /**
+   * Login cruzado: troca a empresa ATIVA da sessão (User.companyId) por
+   * outra empresa que este login tem vínculo (UserCompany) — ex.: outra
+   * empresa do mesmo grupo. Reemite os tokens (mesmo fluxo do login) já
+   * com o novo companyId, sem precisar de senha de novo.
+   */
+  async switchCompany(userId: string, companyId: string) {
+    const link = await this.prisma.userCompany.findUnique({
+      where: { userId_companyId: { userId, companyId } },
+    });
+
+    if (!link) {
+      throw new ForbiddenException(
+        'Você não tem acesso a esta empresa.',
+      );
+    }
+
+    const company = await this.prisma.company.findFirst({
+      where: { id: companyId, deletedAt: null },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Empresa não encontrada.');
+    }
+
+    if (!company.active) {
+      throw new UnauthorizedException(
+        'Empresa inativa. Entre em contato com o suporte.',
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { companyId },
+    });
+
+    const user = await this.findUserWithAuthContext({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    return this.issueTokens(user);
+  }
+
   async refresh(dto: RefreshTokenDto) {
     let payload: { sub: string; type: string };
 
@@ -281,12 +346,10 @@ export class AuthService {
       throw new UnauthorizedException('Refresh Token inválido.');
     }
 
-    const user = await this.prisma.user.findFirst({
-      where: {
-        id: payload.sub,
-        active: true,
-        deletedAt: null,
-      },
+    const user = await this.findUserWithAuthContext({
+      id: payload.sub,
+      active: true,
+      deletedAt: null,
     });
 
     if (!user || !user.refreshTokenHash) {

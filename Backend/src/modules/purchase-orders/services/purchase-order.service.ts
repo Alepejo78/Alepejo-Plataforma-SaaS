@@ -139,6 +139,7 @@ export class PurchaseOrderService {
 
     if (partner.email) {
       void this.emailNotifications.send(
+        companyId,
         partner.email,
         `Pedido de Compra ${orderNumber} — ${companyName}`,
         `<p>Olá, ${partnerName},</p>
@@ -150,6 +151,7 @@ export class PurchaseOrderService {
 
     if (partner.mobile) {
       void this.whatsappNotifications.send(
+        companyId,
         partner.mobile,
         `Olá, ${partnerName}! Segue nosso Pedido de Compra ${orderNumber} de ${companyName}. Por favor, informe esse número (${orderNumber}) na observação da nota fiscal — isso facilita o rastreamento no recebimento.`,
       );

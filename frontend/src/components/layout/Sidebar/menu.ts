@@ -2,7 +2,6 @@ import {
   Banknote,
   BarChart3,
   Boxes,
-  Building2,
   CalendarHeart,
   CalendarX,
   Clock,
@@ -10,18 +9,13 @@ import {
   Factory,
   FileText,
   HardHat,
-  KeyRound,
   LayoutDashboard,
-  MessageCircle,
   Monitor,
   Package,
   Receipt,
-  Settings,
-  ShieldCheck,
   ShoppingCart,
   Stethoscope,
   Tag,
-  Tags,
   Target,
   Truck,
   UserCog,
@@ -70,14 +64,6 @@ export const menu: MenuEntry[] = [
         href: "/erp/produtos",
         module: "PRODUCTS",
         permission: "product.view",
-      },
-      {
-        id: "produtos-auxiliares",
-        title: "Categorias e marcas",
-        icon: Tags,
-        href: "/erp/produtos/cadastros",
-        module: "PRODUCTS",
-        permission: "product-category.view",
       },
     ],
   },
@@ -171,14 +157,6 @@ export const menu: MenuEntry[] = [
         permission: "inventory.view",
       },
       {
-        id: "depositos",
-        title: "Depósitos",
-        icon: Building2,
-        href: "/erp/estoque/depositos",
-        module: "INVENTORY",
-        permission: "warehouse.view",
-      },
-      {
         id: "movimentacoes",
         title: "Movimentações",
         icon: ClipboardList,
@@ -195,22 +173,6 @@ export const menu: MenuEntry[] = [
     icon: Wallet,
     module: "FINANCE",
     children: [
-      {
-        id: "plano-contas",
-        title: "Plano de contas",
-        icon: FileText,
-        href: "/erp/financeiro/plano-contas",
-        module: "FINANCE",
-        permission: "chart-of-account.view",
-      },
-      {
-        id: "classificacoes",
-        title: "Classificações",
-        icon: Tags,
-        href: "/erp/financeiro/classificacoes",
-        module: "FINANCE",
-        permission: "chart-of-account-classification.view",
-      },
       {
         id: "contas-receber",
         title: "Contas a receber",
@@ -259,22 +221,6 @@ export const menu: MenuEntry[] = [
         href: "/erp/rh/colaboradores",
         module: "HR",
         permission: "employee.view",
-      },
-      {
-        id: "funcoes",
-        title: "Funções e cargos",
-        icon: ClipboardList,
-        href: "/erp/rh/funcoes",
-        module: "HR",
-        permission: "job-function.view",
-      },
-      {
-        id: "rh-cadastros",
-        title: "Setores, horários e EPI",
-        icon: Tags,
-        href: "/erp/rh/cadastros",
-        module: "HR",
-        permission: "sector.view",
       },
       {
         id: "beneficios",
@@ -348,14 +294,6 @@ export const menu: MenuEntry[] = [
         module: "LABOR",
         permission: "absence-record.view",
       },
-      {
-        id: "ponto-chave-api",
-        title: "Chave de API (relógio de ponto)",
-        icon: KeyRound,
-        href: "/erp/rh/ponto/chave-api",
-        module: "LABOR",
-        permission: "time-clock.manage-api-key",
-      },
     ],
   },
 
@@ -372,14 +310,6 @@ export const menu: MenuEntry[] = [
         href: "/erp/producao/ordens",
         module: "PRODUCTION",
         permission: "production-order.view",
-      },
-      {
-        id: "producao-configuracoes",
-        title: "Configurações",
-        icon: Settings,
-        href: "/erp/producao/configuracoes",
-        module: "PRODUCTION",
-        permission: "production-settings.view",
       },
       {
         id: "acompanhamento",
@@ -530,37 +460,20 @@ export const menu: MenuEntry[] = [
 ];
 
 /**
- * Itens do antigo grupo "Sistema" — agora vivem no menu do usuário
- * (topo direito, clicando no avatar), não mais na navegação principal.
+ * Itens que ainda ficam no menu do usuário (topo direito, avatar) mesmo
+ * depois da reorganização em OS: Personalização é o único item
+ * duplicado (também vira card em OS) e Ponto-Manual é de uso pessoal do
+ * dia a dia, fica só aqui. Usuários/Perfis/Licenciamento/Configurações/
+ * Notificações saíram — moraram só dentro do app OS agora
+ * (ver frontend/src/app/os/**).
  */
 export const systemMenuItems: MenuItem[] = [
-  {
-    id: "licenciamento",
-    title: "Licenciamento",
-    icon: ShieldCheck,
-    href: "/erp/licenciamento",
-    permission: "license.view",
-  },
-  {
-    id: "configuracoes",
-    title: "Configurações",
-    icon: Settings,
-    href: "/erp/configuracoes",
-    permission: "company.view",
-  },
   {
     id: "personalizacao",
     title: "Personalização",
     icon: Monitor,
     href: "/erp/configuracoes/personalizacao",
     permission: "company-branding.view",
-  },
-  {
-    id: "whatsapp",
-    title: "WhatsApp",
-    icon: MessageCircle,
-    href: "/erp/configuracoes/whatsapp",
-    permission: "whatsapp.view",
   },
   {
     id: "ponto-manual",

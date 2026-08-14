@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Copy, KeyRound, Trash2 } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 
 import {
   timeClockApiKeyService,
@@ -103,7 +103,7 @@ export default function ChaveApiPontoPage() {
   }
 
   return (
-    <AppShell workspaceLabel="Chave de API — relógio de ponto">
+    <OsShell workspaceLabel="Chave de API — relógio de ponto">
       <div className="space-y-6">
         <div>
           <Link
@@ -234,6 +234,6 @@ export default function ChaveApiPontoPage() {
           )}
         </section>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

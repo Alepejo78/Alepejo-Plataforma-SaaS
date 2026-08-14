@@ -16,8 +16,11 @@ import { Public } from '../../../../core/decorators/public.decorator';
 import { CurrentUser } from '../../../../core/decorators/current-user.decorator';
 
 import { AuthService } from '../services/auth.service';
+import { UsersService } from '../../users/services/users.service';
 
 import { LoginDto } from '../dto/login.dto';
+import { SetPasswordDto } from '../dto/set-password.dto';
+import { SwitchCompanyDto } from '../dto/switch-company.dto';
 import type { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 
 import {
@@ -33,6 +36,7 @@ import {
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -121,6 +125,26 @@ export class AuthController {
     };
   }
 
+  /**
+   * Consumo do link de "definir senha" enviado por e-mail (usuário
+   * novo ou "Alterar Senha" na lista). Público de propósito — quem
+   * clica no link ainda não tem sessão.
+   */
+  @Public()
+  @Post('set-password')
+  @ApiOperation({
+    summary: 'Definir senha a partir do token enviado por e-mail',
+  })
+  async setPassword(
+    @Body() dto: SetPasswordDto,
+  ) {
+    return this.usersService.setPasswordWithToken(
+      dto.userId,
+      dto.token,
+      dto.password,
+    );
+  }
+
   @Get('me')
   @ApiOperation({
     summary: 'Dados da sessão atual',
@@ -129,6 +153,34 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return user;
+  }
+
+  /**
+   * Login cruzado: troca a empresa ativa da sessão por outra empresa
+   * que este login tem vínculo (ver UserCompany/GET /companies/my-companies).
+   * Não exige permissão especial — o vínculo em si já é o controle de
+   * acesso, checado dentro do AuthService.
+   */
+  @Post('switch-company')
+  @ApiOperation({
+    summary: 'Trocar a empresa ativa da sessão (login cruzado)',
+  })
+  async switchCompany(
+    @CurrentUser('id') userId: string,
+    @Body() dto: SwitchCompanyDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.switchCompany(
+      userId,
+      dto.companyId,
+    );
+
+    this.setSessionCookies(res, result);
+
+    return {
+      user: result.user,
+      expiresIn: result.expiresIn,
+    };
   }
 
   /**

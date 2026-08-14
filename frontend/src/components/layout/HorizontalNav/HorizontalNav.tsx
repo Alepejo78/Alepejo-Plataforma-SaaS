@@ -7,8 +7,8 @@ import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib";
 import { useMenu } from "@/hooks/useMenu";
+import { useTabs } from "@/providers/TabsProvider";
 
-import { Brand } from "../Brand/Brand";
 import {
   isMenuGroup,
   type MenuEntry,
@@ -49,6 +49,7 @@ function TopLeaf({
   const pathname = usePathname();
   const active = !item.disabled && isItemActive(pathname, item.href);
   const Icon = item.icon;
+  const { openTab } = useTabs("erp");
 
   const content = (
     <>
@@ -73,10 +74,32 @@ function TopLeaf({
     );
   }
 
+  function handleClick(event: React.MouseEvent<HTMLAnchorElement>) {
+    // Ctrl/Cmd/clique-do-meio: deixa o navegador abrir numa aba nova de
+    // verdade, sem mexer nas guias desta aba.
+    if (
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const opened = openTab({ href: item.href, title: item.title });
+
+    if (opened) {
+      onNavigate?.();
+    }
+  }
+
   return (
     <Link
       href={item.href}
-      onClick={onNavigate}
+      onClick={handleClick}
       className={cn(
         itemClass,
         fullWidth && "w-full",
@@ -187,31 +210,25 @@ export function HorizontalNav() {
       ref={rootRef}
       className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-sm"
     >
-      <div className="flex flex-wrap items-center gap-4 px-4 py-2">
-        <div className="min-w-[200px] shrink-0 border-r border-[var(--border)] pr-4">
-          <Brand />
-        </div>
-
-        <nav className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          {menuItems.map((entry: MenuEntry) =>
-            isMenuGroup(entry) ? (
-              <TopGroup
-                key={entry.id}
-                entry={entry}
-                open={openGroupId === entry.id}
-                onToggle={() =>
-                  setOpenGroupId((current) =>
-                    current === entry.id ? null : entry.id
-                  )
-                }
-                onNavigate={() => setOpenGroupId(null)}
-              />
-            ) : (
-              <TopLeaf key={entry.id} item={entry} />
-            )
-          )}
-        </nav>
-      </div>
+      <nav className="flex min-w-0 flex-wrap items-center gap-1 px-4 py-2">
+        {menuItems.map((entry: MenuEntry) =>
+          isMenuGroup(entry) ? (
+            <TopGroup
+              key={entry.id}
+              entry={entry}
+              open={openGroupId === entry.id}
+              onToggle={() =>
+                setOpenGroupId((current) =>
+                  current === entry.id ? null : entry.id
+                )
+              }
+              onNavigate={() => setOpenGroupId(null)}
+            />
+          ) : (
+            <TopLeaf key={entry.id} item={entry} />
+          )
+        )}
+      </nav>
     </div>
   );
 }

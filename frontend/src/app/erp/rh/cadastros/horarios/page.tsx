@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 
 import {
@@ -350,7 +350,7 @@ export default function HorariosDeTrabalhoPage() {
   }
 
   return (
-    <AppShell workspaceLabel="Horários de trabalho">
+    <OsShell workspaceLabel="Horários de trabalho">
       <div className="space-y-6">
         <header>
           <Link
@@ -871,6 +871,6 @@ export default function HorariosDeTrabalhoPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </OsShell>
   );
 }

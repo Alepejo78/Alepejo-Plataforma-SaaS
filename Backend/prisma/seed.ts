@@ -211,6 +211,7 @@ const permissionGroups = [
       ["system.access", "Acessar Sistema"],
       ["system.settings", "Configurações do Sistema"],
       ["system.audit", "Auditoria"],
+      ["system.admin", "Administração Geral"],
     ],
   },
   {
@@ -271,6 +272,7 @@ const permissionGroups = [
       ["sales-order.create", "Criar Pedidos de Venda"],
       ["sales-order.update", "Alterar Pedidos de Venda"],
       ["sales-order.cancel", "Cancelar Pedidos de Venda"],
+      ["sale.reverse", "Estornar Vendas"],
     ],
   },
   {
@@ -332,6 +334,7 @@ const permissionGroups = [
       ["purchase-order.create", "Criar Pedidos de Compra"],
       ["purchase-order.update", "Alterar Pedidos de Compra"],
       ["purchase-order.cancel", "Cancelar Pedidos de Compra"],
+      ["purchase.reverse", "Estornar Compras"],
     ],
   },
   {
@@ -476,6 +479,14 @@ const permissionGroups = [
     permissions: [
       ["whatsapp.view", "Ver Status do WhatsApp"],
       ["whatsapp.manage", "Gerenciar Pareamento do WhatsApp"],
+    ],
+  },
+  {
+    code: "EMAIL",
+    name: "E-mail",
+    permissions: [
+      ["email.view", "Ver Configuração de E-mail"],
+      ["email.manage", "Gerenciar Configuração de E-mail"],
     ],
   },
   {

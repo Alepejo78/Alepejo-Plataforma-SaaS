@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib";
+import { useTabs } from "@/providers/TabsProvider";
 
 import {
   isMenuGroup,
@@ -35,15 +36,42 @@ function LeafItem({
   item,
   collapsed,
   nested = false,
+  onNavigate,
 }: {
   item: MenuItem;
   collapsed: boolean;
   nested?: boolean;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { openTab } = useTabs("erp");
 
   const active =
     !item.disabled && isItemActive(pathname, item.href);
+
+  function handleClick(
+    event: React.MouseEvent<HTMLAnchorElement>
+  ) {
+    // Ctrl/Cmd/clique-do-meio: deixa o navegador abrir numa aba nova de
+    // verdade, sem mexer nas guias desta aba.
+    if (
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const opened = openTab({ href: item.href, title: item.title });
+
+    if (opened) {
+      onNavigate?.();
+    }
+  }
 
   const Icon = item.icon;
 
@@ -96,6 +124,7 @@ function LeafItem({
       href={item.href}
       title={collapsed ? item.title : undefined}
       className={baseClassName}
+      onClick={handleClick}
     >
       {content}
     </Link>
@@ -109,9 +138,11 @@ function LeafItem({
 function GroupItem({
   entry,
   collapsed,
+  onNavigate,
 }: {
   entry: Extract<MenuEntry, { children: MenuItem[] }>;
   collapsed: boolean;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -140,6 +171,7 @@ function GroupItem({
             key={child.id}
             item={child}
             collapsed
+            onNavigate={onNavigate}
           />
         ))}
       </div>
@@ -182,6 +214,7 @@ function GroupItem({
               item={child}
               collapsed={false}
               nested
+              onNavigate={onNavigate}
             />
           ))}
         </div>
@@ -193,15 +226,28 @@ function GroupItem({
 export function SidebarItem({
   item,
   collapsed,
+  onNavigate,
 }: {
   item: MenuEntry;
   collapsed: boolean;
+  /** Chamado depois de uma navegação bem-sucedida — fecha o overlay do menu. */
+  onNavigate?: () => void;
 }) {
   if (isMenuGroup(item)) {
     return (
-      <GroupItem entry={item} collapsed={collapsed} />
+      <GroupItem
+        entry={item}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+      />
     );
   }
 
-  return <LeafItem item={item} collapsed={collapsed} />;
+  return (
+    <LeafItem
+      item={item}
+      collapsed={collapsed}
+      onNavigate={onNavigate}
+    />
+  );
 }

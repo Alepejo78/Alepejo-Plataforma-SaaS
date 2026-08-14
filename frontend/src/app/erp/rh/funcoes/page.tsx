@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
@@ -263,7 +263,7 @@ export default function FuncoesPage() {
   }
 
   return (
-    <AppShell workspaceLabel="Recursos Humanos">
+    <OsShell workspaceLabel="Recursos Humanos">
       <ListPageLayout
         header={
           <>
@@ -721,6 +721,6 @@ export default function FuncoesPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </OsShell>
   );
 }

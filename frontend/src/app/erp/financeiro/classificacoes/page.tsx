@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import { chartOfAccountClassificationService } from "@/services/chart-of-account-classification.service";
 
 export default function ClassificacoesPage() {
   return (
-    <AppShell workspaceLabel="Financeiro">
+    <OsShell workspaceLabel="Financeiro">
       <div className="space-y-6">
         <header>
           <Link
@@ -49,6 +49,6 @@ export default function ClassificacoesPage() {
           />
         </div>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

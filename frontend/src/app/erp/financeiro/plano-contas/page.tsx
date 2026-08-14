@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
@@ -249,7 +249,7 @@ export default function PlanoContasPage() {
   }
 
   return (
-    <AppShell workspaceLabel="Financeiro">
+    <OsShell workspaceLabel="Financeiro">
       <ListPageLayout
         header={
           <>
@@ -535,6 +535,6 @@ export default function PlanoContasPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </OsShell>
   );
 }

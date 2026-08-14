@@ -188,6 +188,34 @@ model Company {
   timeClockApiKeyPrefix String?   @db.VarChar(12)
   timeClockApiKeyCreatedAt DateTime?
 
+  /// Configuração de SMTP própria da empresa, pra sair com o e-mail
+  /// que o cliente quiser (avisos de cotação, redefinição de senha
+  /// etc.) em vez do SMTP global do .env. Desligada (smtpEnabled
+  /// false) ou sem host configurado, o sistema cai no .env como
+  /// hoje — ver EmailNotificationsService.
+  smtpHost     String? @db.VarChar(255)
+  smtpPort     Int?
+  smtpUser     String? @db.VarChar(255)
+  /// Criptografada (AES-256-GCM, EncryptionService) — precisa voltar
+  /// ao valor original pra autenticar no servidor SMTP, por isso não
+  /// é hash. Nunca devolvida pro frontend depois de salva.
+  smtpPasswordEncrypted String? @db.Text
+  smtpFromEmail String? @db.VarChar(150)
+  smtpFromName  String? @db.VarChar(150)
+  smtpEnabled   Boolean @default(false)
+
+  /// Agrupa empresas do mesmo cliente (mesmo grupo/raiz de CNPJ) sob
+  /// uma licença só. `null` = a própria empresa é a raiz (caso
+  /// normal). Preenchido = aponta direto pra raiz de verdade, nunca
+  /// encadeado pra outra filial (CompanyOnboardingService.createAdditional).
+  rootCompanyId String?
+  rootCompany   Company?  @relation("CompanyGroup", fields: [rootCompanyId], references: [id])
+  siblingCompanies Company[] @relation("CompanyGroup")
+
+  /// Logins com acesso a esta empresa (login cruzado entre empresas do
+  /// mesmo grupo) — ver UserCompany.
+  userLinks UserCompany[]
+
   @@map("companies")
 }
 
@@ -289,6 +317,20 @@ model User {
 
   passwordChangedAt DateTime?
 
+  department String? @db.VarChar(150)
+
+  /// Gerente do usuário — só informativo, não aciona fluxo nenhum.
+  manager String? @db.VarChar(150)
+
+  alias String? @db.VarChar(150)
+
+  /// Hash do token de redefinição de senha por e-mail (bcrypt via
+  /// PasswordService, mesmo padrão de passwordHash). O valor puro só
+  /// existe no link enviado por e-mail, nunca é gravado.
+  passwordResetTokenHash String? @db.VarChar(255)
+
+  passwordResetTokenExpiresAt DateTime?
+
   lastLoginAt DateTime?
 
   lastLoginIp String? @db.VarChar(45)
@@ -314,6 +356,12 @@ model User {
   /// colaborador do usuário logado" sem depender de bater e-mail.
   employee Employee?
 
+  /// Empresas que este login pode acessar (login cruzado dentro do
+  /// mesmo grupo). `companyId` acima é sempre a empresa ATIVA da
+  /// sessão (trocável via AuthService.switchCompany) — sempre precisa
+  /// ter um UserCompany correspondente.
+  companies UserCompany[]
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
@@ -324,6 +372,29 @@ model User {
   @@index([email])
   @@index([status])
   @@map("users")
+}
+
+/// Vínculo/entitlement: quais empresas um login (User) pode acessar.
+/// Escopado hoje a empresas do mesmo grupo (rootCompanyId), criado em
+/// CompanyOnboardingService.createAdditional (auto-vínculo de quem
+/// cadastrou) e em CompanyService.linkUserToGroupCompany (vínculo
+/// manual). Cada empresa vinculada tem sua própria Role/UserRole
+/// (Role é por empresa) — este model só controla a lista de empresas
+/// que aparecem no seletor de "trocar de empresa".
+model UserCompany {
+  id String @id @default(cuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@map("user_companies")
 }
 
 model Role {

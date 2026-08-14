@@ -3,7 +3,840 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
-## 🔵 Próxima sessão começa por aqui — desenho de navegação em guias
+## 🔵 Logo movido pro topo + menu horizontal com o mesmo esquema hambúrguer (13-08-2026, mesma sessão nova)
+
+Dois ajustes pedidos em sequência, logo depois do overlay→inline/push
+(seção abaixo): (1) tirar logo/nome da empresa de dentro do menu — fica
+só uma vez, no início da barra única do topo, antes do seletor de apps;
+(2) o layout horizontal (`sidebarLayout: "horizontal"`, módulo BRANDING)
+tinha ficado fora desse esquema — sempre visível, fixo, com logo próprio
+duplicado — corrigido pra seguir exatamente o mesmo padrão
+esconder/expandir por hambúrguer que o menu vertical ganhou.
+
+- **`AppTabsBar.tsx`**: ganhou `<Brand />` + separador vertical antes do
+  `AppLauncher`/guias de app — `LOGO+empresa | separador | apps e
+  demais`. Header trocou `h-16` fixo por `min-h-16` (o nome da empresa
+  pode quebrar em 2 linhas, `logoWidth` é configurável por empresa).
+- **`Brand.tsx`**: perdeu o prop `collapsed` (só existia pro uso antigo
+  dentro da Sidebar/cabeçalho recolhido, que não existe mais) — sempre
+  mostra logo + nome completo agora, único lugar onde é usado.
+- **`SidebarHeader.tsx` apagado** — só existia pra mostrar `Brand`
+  dentro da Sidebar; sem ele, não sobrava nada de útil no componente.
+  A identidade da empresa dentro da Sidebar aberta continua aparecendo
+  no rodapé (nome do usuário + `company.tradeName`, já existia).
+- **`HorizontalNav.tsx`**: perdeu a coluna do `Brand` (com a borda
+  separadora) — sobrou só a `<nav>` com os itens de menu.
+- **`AppShell.tsx` (ramo horizontal)**: reestruturado pra espelhar o
+  ramo vertical — `AppTabsBar` → `TabsBar` (agora recebendo
+  `isMenuOpen`/`onOpenMenu`, antes não tinha hambúrguer nenhum) →
+  `{isMenuOpen && <HorizontalNav />}` empilhado logo abaixo, empurrando
+  o `main` pra baixo quando aberto (mesma ideia do push lateral do
+  ramo vertical, só que empurrando por cima em vez de pelo lado — faz
+  sentido pra uma barra horizontal). Antes o `HorizontalNav` ficava
+  sempre visível, numa faixa própria ACIMA do `AppTabsBar` — por isso o
+  usuário descreveu como "ficou fora do navegador e guia sistema erp".
+  Estado aberto/fechado é o mesmo `useSidebar()` (guardado no
+  `TabsProvider`, sobrevive à navegação, zera no logout — [[sidebar
+  overlay-inline]] mesma base).
+- **Testado de verdade pela tela**: a empresa de teste (Alessandro/
+  AlePejo) está com `sidebarLayout: "horizontal"` no momento (mudou de
+  vertical pra horizontal em algum ponto desta sessão maratona,
+  provavelmente por outra sessão mexendo em Personalização em
+  paralelo) — deu pra confirmar o ramo horizontal ao vivo:
+  clique no hambúrguer da `TabsBar` → `<nav>` apareceu logo abaixo dela
+  (bottom em y=293) empurrando o `main` pra baixo (top em y=306, sem
+  sobreposição) → clique de novo → `<nav>` sumiu por inteiro, `main`
+  voltou a subir (top em y=192). Barra do topo com `LOGO+"AlePejo
+  ERP Cloud"` seguida do separador e do resto confirmada via árvore de
+  acessibilidade. `npx tsc --noEmit` limpo; `eslint` nos arquivos
+  tocados só acusou 2 erros pré-existentes (padrão
+  `setState` dentro de `useEffect` em `Brand.tsx`/`Sidebar.tsx`, já
+  existiam antes desta sessão, fora do escopo daqui). **Não cheguei a
+  testar o ramo vertical de novo depois desta rodada** (a empresa de
+  teste está em horizontal agora) — vale conferir os dois ramos juntos
+  numa próxima sessão se possível.
+
+## 🔵 Sidebar do ERP: overlay virou inline/push (13-08-2026, sessão nova)
+
+Correção pedida pelo usuário sobre o comportamento registrado na seção
+logo abaixo ("Guias/abas — versão simples"): o overlay com fundo
+escurecido cobrindo a tela **não era o que o usuário queria** — pediu
+que a Sidebar, ao expandir pelo ícone de menu da `TabsBar`, **empurre o
+conteúdo** (redimensiona a área de `main` dentro do próprio guia) em
+vez de flutuar por cima. Modo ícone-somente (toggle interno da Sidebar,
+`w-72`/`w-[72px]`) continua existindo do jeito que já era. Clicar de
+novo no ícone de menu da `TabsBar` fecha a Sidebar por inteiro
+(largura zero, `main` volta a ocupar tudo) — o botão virou toggle de
+verdade (ícone alterna `Menu`/`X`), antes só abria.
+
+- **`AppShell.tsx`** (ramo não-horizontal): removido o par
+  `<div className="fixed inset-0">` + backdrop `bg-black/40`. A
+  Sidebar (quando `isMenuOpen`) e o `<main>` agora são irmãos dentro de
+  um `<div className="flex flex-1 gap-3 overflow-hidden">`, logo
+  abaixo da `TabsBar` — `main` tem `flex-1`, então encolhe/cresce
+  sozinho conforme a Sidebar aparece/some.
+- **`Sidebar.styles.ts`**: `root` perdeu `fixed inset-y-0 left-0 z-40`,
+  `h-dvh` e `md:static md:translate-x-0` (resquício do padrão
+  fixo-no-desktop/overlay-no-mobile antigo) — agora é só
+  `flex h-full shrink-0 flex-col` mais os cantos/borda/fundo de
+  sempre, porque vive dentro do `flex` do `AppShell`, não mais
+  posicionada sozinha na tela.
+- **`TabsBar.tsx`**: ganhou prop `isMenuOpen` — o botão do ícone de
+  menu alterna `Menu`/`X` e `aria-label` "Abrir menu"/"Fechar menu"
+  conforme o estado, refletindo que agora é toggle (`onOpenMenu` no
+  `AppShell` virou `setMenuOpen((v) => !v)`, antes só `setMenuOpen(true)`).
+- **Testado de verdade pela tela** (`npx tsc --noEmit` limpo antes):
+  logado, cliquei no ícone de menu → Sidebar expandiu ao lado do
+  conteúdo (confirmado via `getBoundingClientRect`: `aside` em
+  `position: static`, x=12 largura 288, `main` começando em x=312 —
+  sem sobreposição, sem overlay) → cliquei "Recolher menu" (interno da
+  Sidebar) → virou ícone-somente (largura 72px) → cliquei de novo no
+  ícone de menu da `TabsBar` → Sidebar sumiu por inteiro, `main`
+  voltou a ocupar a largura toda (1256px). Ramo horizontal
+  (`HorizontalNav`, só empresas com módulo BRANDING +
+  `sidebarLayout: "horizontal"`) não foi tocado — nunca teve Sidebar
+  overlay, não tinha esse problema.
+
+## 🔵 Guias/abas — versão simples (13-08-2026, mesma sessão da reorganização em OS)
+
+Última frente da maratona de navegação. Pedido do usuário: "continuar
+agora com as guias" — os dois apps (guias de 1º nível) e, dentro do
+ERP/OS, guias de 2º nível de verdade (até 6, ajustável depois).
+
+**Decisão tomada com o usuário antes de construir**: existem duas versões
+possíveis. A **completa** preserva o formulário/tela ao trocar de guia
+(exige manter todas as guias "vivas" ao mesmo tempo — reescrever a base de
+~50 páginas do ERP, risco alto, é por isso que essa frente foi adiada duas
+vezes antes). A **simples** entrega guias de verdade (até 6, sobrevivem a
+F5, reaproveitam guia já aberta) mas trocar de guia recarrega a tela por
+trás — se algo não foi salvo antes de trocar, perde, igual já é hoje.
+**Construída a versão simples** — os componentes dela (provider, barras,
+persistência) são a base direta pra evoluir pra completa depois, nada foi
+jogado fora.
+
+### O que foi feito
+
+- **`TabsProvider`** (`frontend/src/providers/TabsProvider.tsx`, novo,
+  montado no layout raiz ao lado do `AuthProvider`) — 2 listas
+  independentes de guias (`erp`/`os`), persistidas em `sessionStorage`
+  (sobrevive a F5, some ao fechar a aba do navegador). Cada app tem 1 guia
+  fixa não-fechável ("Visão geral" pro ERP, "OS" pro OS).
+  `usePathname()` interno mantém a guia ativa em sincronia com a URL real.
+  Limite de 6 guias por app (`MAX_TABS`, fácil de mudar).
+- **`frontend/src/lib/osRoutes.ts`**: `isOsPath()` decide se uma URL
+  pertence ao app OS (inclui as 16 URLs que continuam com prefixo
+  `/erp/...` mas já são telas de OS, ver seção acima) — corrige de quebra
+  um bug pequeno que já existia no seletor de app anterior (confundia
+  essas URLs como "Sistema ERP"). `OS_PATH_TITLES` mapeia cada URL de OS
+  pro título da guia.
+- **`AppTabsBar`** (substitui o antigo `AppSwitcher` dropdown) — guias de
+  1º nível de verdade (Sistema ERP | OS), lado a lado, estilo aba de
+  navegador, numa faixa própria acima do `TopBar`.
+- **`TabsBar`** (novo, `frontend/src/components/layout/TabsBar/`) — guias
+  de 2º nível do app atual, botão × por guia (exceto a fixa), ícone de
+  menu que abre a Sidebar em overlay (só no ERP — OS navega só por
+  cards). Mostra aviso quando o limite de 6 é atingido.
+- **Sidebar do ERP virou overlay sempre** (`AppShell.tsx`) — igual ao
+  print do Infor usado de referência: antes ficava fixa no desktop e só
+  virava overlay no mobile; agora é sempre acionada pelo ícone de menu
+  dentro da `TabsBar`, fecha sozinha depois de escolher um item. Conteúdo
+  do menu (`menu.ts`) não mudou.
+- **Clique num item de menu (Sidebar, `HorizontalNav`) ou card de OS
+  (`OsCardLink`) passa a "avisar antes de navegar"**: clique normal
+  intercepta o `<Link>`, checa o limite de 6, registra/reaproveita a guia
+  e só então navega; **Ctrl/Cmd/clique-do-meio continua abrindo numa aba
+  nova de verdade do navegador**, sem interceptar (bônus, não pedido, mas
+  natural de preservar).
+- **`TopBar` simplificado**: perdeu o botão de abrir menu mobile (mudou
+  de lugar, ver `TabsBar`) e o parâmetro `companyName`/toggle antigos —
+  só recebe `workspaceLabel`/`userName` agora.
+- **Testado de verdade, ponta a ponta pela tela**: abri 6 guias do ERP
+  (Visão geral fixa + 5) → tentei a 7ª → bloqueou, aviso apareceu
+  (confirmado sem race condition, o aviso some sozinho depois de ~4s) →
+  fechei uma guia (não-ativa, não navegou) → **F5**: as guias
+  sobreviveram, lidas de volta do `sessionStorage` → cliquei no mesmo
+  item de menu duas vezes → reaproveitou a guia, não duplicou → troquei
+  pro app OS pelo `AppTabsBar` → entrei em Segurança → Usuários
+  (`/erp/configuracoes/usuarios`) → confirmei que essa guia foi pra lista
+  de **OS**, sem tocar na lista do ERP (prova que o `isOsPath` novo
+  funciona) → voltei pro Sistema ERP → as 5 guias do ERP continuavam
+  exatamente como estavam.
+
+### Ajustes de visual/comportamento pedidos logo depois (mesma sessão, olhando a tela ao vivo)
+
+Depois do primeiro build acima, o usuário testou ao vivo e pediu vários
+ajustes seguidos. **`TopBar.tsx` foi removido** (não existe mais como
+componente/arquivo) — o que ele mostrava (tema/empresa/avatar) foi
+fundido dentro da própria `AppTabsBar`, num painel só. `TopBar.styles.ts`
+sobrou só com os tokens que o `CompanySwitcher` ainda usa.
+
+- **`AppLauncher`** (novo, `frontend/src/components/layout/TopBar/AppLauncher.tsx`)
+  — ícone (`LayoutGrid`) no início da `AppTabsBar`, abre um overlay com
+  "Sistema ERP"/"OS" pra abrir. É o ponto de entrada pra reabrir um app
+  que foi fechado.
+- **Guias de app (Sistema ERP/OS) agora fecham** (`TabsProvider` ganhou
+  `openApps: AppKey[]`, persistido em `sessionStorage`
+  (`alepejo:apps`), + `openApp`/`closeApp`) — não deixa fechar a única
+  guia de app aberta. Fechar uma guia de app **não apaga** as guias de
+  2º nível daquele app (ficam guardadas, aparecem de novo se reabrir o
+  app na mesma sessão). Reabrir/trocar pra um app leva pra onde a pessoa
+  parou nele (`activeHref`), não sempre pra home.
+- **`AppTabsBar` virou o painel único do topo**: ícone de apps + guias de
+  app (estilo pill, não mais "aba de navegador destacada" — o branco
+  "avulso" que incomodava) + tema/empresa/avatar à direita, tudo no mesmo
+  `rounded-3xl` — `workspaceLabel` (nome da tela) **não aparece mais em
+  lugar nenhum**, ficaria redundante com o nome já mostrado na guia de
+  2º nível ativa.
+- **Sidebar do ERP: fica ESCONDIDA por padrão, ícone de menu (dentro da
+  `TabsBar`, à esquerda das guias de 2º nível) expande e mostra por cima
+  da tela (overlay com fundo escurecido), fecha sozinha ao escolher um
+  item.** Isso foi um vaivém dentro da sessão: cheguei a reverter pra
+  "sempre fixa no desktop" (interpretando um pedido anterior do usuário
+  ao contrário), o usuário corrigiu ao vivo ("pode ficar igual fez da
+  última vez... ocultando, o clicar ela expande") — **o comportamento
+  final e correto é o overlay/hambúrguer**, não o fixo. Se algum dia
+  isso for mexido de novo, essa é a direção certa, não a fixa.
+- **Confirmado junto com o usuário**: a Sidebar só existe dentro do
+  `AppShell` (app ERP) — o `OsShell` nunca renderiza Sidebar nenhuma, é
+  só cards. Trocar pra guia OS naturalmente esconde a Sidebar por
+  construção, sem precisar de lógica extra.
+
+**⚠️ Não testado por mim ponta a ponta depois da última correção** (a
+sessão foi interrompida por limite de contexto logo depois de restaurar o
+padrão overlay/hambúrguer) — `npx tsc --noEmit` do frontend ficou limpo, e
+o código restaurado é exatamente o que já tinha sido testado e funcionado
+antes nesta mesma sessão (só reaplicado), mas vale conferir de novo pela
+tela na próxima sessão antes de seguir pra qualquer coisa nova:
+1. Sidebar escondida por padrão, ícone de menu na `TabsBar` mostra ela
+   por cima da tela, fecha sozinha ao clicar um item.
+2. `AppLauncher` (ícone de grade no início da barra) abre a lista
+   Sistema ERP/OS.
+3. Fechar a guia "OS" (ou "Sistema ERP") funciona e não deixa fechar a
+   última restante.
+4. Visual do painel único do topo (sem mais o branco "avulso" da guia
+   ativa).
+
+### Pendências conhecidas
+
+- **Versão completa (preservar formulário ao trocar de guia)** — não
+  construída, exige reescrever a base de ~50 páginas do ERP (extrair
+  conteúdo de rota + registry de import dinâmico + manter tudo montado ao
+  mesmo tempo). Fica pra quando o usuário pedir.
+- **Título da guia mostrar nome do registro** (ex.: nome do colaborador
+  em edição, não só "Colaboradores") — não construído, precisa de um hook
+  por página.
+- **FAVORITOS/FERRAMENTAS** da barra de guias (vistos nos prints do Infor
+  usados de referência) — não construídos.
+- **Subtelas continuam fora do esquema de guias** (decisão já tomada
+  antes) — abrem por navegação normal, sem virar guia nem mudar a guia
+  ativa mostrada na barra. Efeito colateral assumido: a barra de guias
+  pode mostrar a guia "pai" destacada enquanto o conteúdo na tela já é o
+  da subtela (ex.: um relatório) — visual, sem afetar dado nenhum.
+
+## 🔵 App "OS" — reorganização do menu do avatar (13-08-2026)
+
+Retomada da frente "Desenho de navegação em guias" (ver seção mais abaixo,
+mesmo nome) — só a parte de **reorganizar em app OS**, não o mecanismo de
+guias/abas em si (isso continua adiado, é a parte tecnicamente mais
+arriscada). Pedido do usuário: "acho que o próximo passo é ir pra alteração
+de navegador, porque vai precisar agora" — o menu do avatar estava virando
+um cesto de tudo depois das últimas sessões (empresas do grupo, login
+cruzado).
+
+**Decisões fechadas com o usuário antes de construir**: (1) fazer só a
+reorganização em OS nesta sessão, guias ficam pra depois; (2) trocar entre
+os apps ERP/OS por um **alternador sempre visível no topo** (mesmo padrão
+do seletor de empresa), não escolha na tela de login; (3) aba de E-mail
+(hoje junto com WhatsApp em "Notificações") continua junto, a tela toda foi
+pro card "APIs"; (4) card "Empresa" só mudou de lugar — a tela
+`/erp/configuracoes` já era (e continua sendo) um placeholder vazio, não
+foi construída agora.
+
+### O que foi feito
+
+- **`OsShell`** (`frontend/src/components/layout/OsShell/OsShell.tsx`) —
+  moldura nova pro app OS, espelha o ramo "horizontal" do `AppShell.tsx`
+  (TopBar + conteúdo) só que **sem** Sidebar/HorizontalNav — navegação
+  dentro de OS é por cards, não por menu lateral. Mesmos props
+  (`children`/`workspaceLabel`) que `AppShell`, substituto direto.
+- **`AppSwitcher`**
+  (`frontend/src/components/layout/TopBar/AppSwitcher.tsx`, ao lado do
+  `CompanySwitcher` no `TopBar.tsx`) — deriva o app atual do
+  `usePathname()` (`/os/**` = OS, resto = Sistema ERP), sem estado novo,
+  sem backend.
+- **Nenhuma URL de tela existente mudou** — só a moldura ao redor delas
+  (`AppShell` → `OsShell`) nestas 16 rotas, que passaram a viver "dentro"
+  de OS: `/erp/configuracoes/usuarios`, `/erp/configuracoes/perfis` (+
+  `[id]/permissoes`), `/erp/licenciamento`, `/erp/configuracoes` (Empresa),
+  `/erp/configuracoes/personalizacao`, `/erp/configuracoes/notificacoes`,
+  `/erp/rh/ponto/chave-api`, `/erp/produtos/cadastros`,
+  `/erp/estoque/depositos`, `/erp/financeiro/plano-contas`,
+  `/erp/financeiro/classificacoes`, `/erp/rh/funcoes`, `/erp/rh/cadastros`
+  (+ `/horarios`), `/erp/producao/configuracoes`.
+- **Telas novas em `/os/**`** (hub em cards, `OsCardLink` reaproveitando o
+  estilo dos atalhos da Visão geral): `/os` (7 cards: Portal/Segurança/
+  APIs/Empresa/Configurações/Personalização/Licenciamento, cada um só
+  aparece com a permissão equivalente da tela de destino — zero permissão
+  nova), `/os/portal` (placeholder "Em breve"), `/os/seguranca` (Usuários +
+  Perfis), `/os/apis` (WhatsApp+E-mail + Chave de API do ponto),
+  `/os/configuracoes` (5 cards por módulo) + `/os/configuracoes/cadastro`,
+  `/estoque`, `/financeiro`, `/rh`, `/producao` (cada um lista os itens que
+  saíram do menu principal, apontando pras URLs de sempre).
+- **`menu.ts`**: **7 itens "menu de apoio" saíram do menu principal do
+  ERP** (Categorias e marcas, Plano de contas, Depósitos, Classificações,
+  Funções e cargos, Setores/horários/EPI, Chave de API do ponto) — só
+  existem mais dentro de OS → Configurações. `systemMenuItems` (avatar)
+  encolheu de 7 pra **2 itens**: Personalização (único duplicado, continua
+  no avatar E em OS) e Ponto-Manual (só avatar, uso pessoal do dia a dia).
+  Usuários/Perfis/Licenciamento/Configurações/Notificações saíram do
+  avatar — só existem dentro de OS agora.
+- **Testado de verdade, ponta a ponta pela tela**: logado como Alessandro
+  → alternador mostrou "Sistema ERP" → troquei pra OS → os 7 cards
+  apareceram (todas as permissões dele) → entrei em Segurança → Usuários
+  (mesma tela de sempre, sidebar do ERP **sumiu**) → voltei, testei APIs e
+  Configurações → Financeiro (2 links certos) → voltei pro ERP, expandi os
+  grupos Cadastros/Estoque/Financeiro/RH/Produção e confirmei que os 7
+  itens relocados **não aparecem mais** ali, só os que ficaram → conferi o
+  menu do avatar com só Personalização + Ponto-Manual → alternador
+  voltando de qualquer tela de OS pra `/` (Sistema ERP) funcionando.
+
+### Pendências conhecidas
+
+- **Mecanismo de guias/abas continua não implementado** — cada tela ainda
+  é uma navegação de página inteira normal (sem persistir Sidebar/TopBar
+  entre rotas, sem múltiplas guias abertas). Fica pra uma sessão futura,
+  ver desenho completo na seção "Desenho de navegação em guias" mais
+  abaixo (agora só faltando essa parte).
+- Card "Empresa" (`/erp/configuracoes`) continua vazio ("Nada por aqui
+  ainda") — decisão consciente desta sessão, construir os campos reais
+  fica pra quando for pedido.
+- Card "Portal" sem conteúdo definido (mesma pendência já registrada no
+  desenho original).
+
+## 🔵 Login cruzado entre empresas do grupo + base de multi-empresa (13-08-2026)
+
+Pedido do usuário: primeiro de uma lista de 5 pendências priorizadas
+(login cruzado, relatório consolidado por grupo, multi-empresa "1
+login/N empresas", navegação em guias, banco de horas/folha).
+Investigação mostrou que **login cruzado e a decisão já registrada de
+multi-empresa ("1 login, várias empresas", modelo Slack/Notion) são a
+mesma peça de arquitetura** — este sprint entrega as duas de uma vez,
+escopado a empresas do mesmo grupo (`rootCompanyId`), que é o caso de
+uso real hoje.
+
+Descoberta que simplificou a implementação: `JwtStrategy.validate()`
+já re-consulta `User.companyId` do banco a cada request (não confia no
+claim do JWT) — então "trocar de empresa" só precisa validar o
+vínculo, atualizar `User.companyId` e reemitir os tokens; nenhum
+guard/repository do resto do sistema precisou mudar.
+
+### O que foi feito
+
+- **Model novo `UserCompany`** (migration
+  `20260813142309_add_user_company_links`, com backfill: todo usuário
+  existente ganhou o vínculo com a empresa que já era a dele) — lista
+  de empresas que um login pode acessar. `User.companyId` continua
+  existindo e representando a empresa ATIVA da sessão, só que agora é
+  trocável.
+- **`AuthService.switchCompany`** + `POST /auth/switch-company`
+  (autenticado, sem permissão especial — o vínculo já é o controle de
+  acesso): valida `UserCompany`, checa empresa ativa, atualiza
+  `User.companyId`, reemite os tokens (mesmo fluxo do login).
+  **Bug real corrigido no caminho**: `AuthService.refresh()` buscava o
+  usuário sem `include` de empresa/perfis antes de chamar
+  `issueTokens()`, que precisa desses dados — refatorado num método
+  privado só (`findUserWithAuthContext`) reaproveitado por login,
+  refresh e troca de empresa.
+- **`GET /companies/my-companies`**: lista as empresas que o login
+  atual pode acessar — alimenta o seletor.
+- **Seletor de empresa** no `TopBar` (`CompanySwitcher.tsx`): se o
+  usuário só tem 1 empresa, mostra o indicador estático de sempre
+  (sem chamada extra); com mais de uma, vira dropdown. Trocar dá
+  reload completo da página (mais simples/seguro que invalidar cache
+  tela por tela).
+- **`CompanyOnboardingService.createAdditional`**: quem cadastra uma
+  empresa adicional do grupo **já ganha acesso a ela** automaticamente
+  (perfil Administrador lá) — fecha a pendência antiga registrada
+  neste doc. Se o "E-mail do administrador" informado no formulário
+  for o mesmo de quem está cadastrando, não cria mais um usuário
+  duplicado (só usa o vínculo); se for diferente, continua criando o
+  login separado de sempre.
+- **Testado de verdade, ponta a ponta**: cadastrei empresa adicional
+  com e-mail de administrador igual ao meu → confirmei no banco 1 só
+  usuário (sem duplicar) com `UserCompany`/`UserRole` nas duas
+  empresas → seletor no topo apareceu com as duas → troquei e
+  `/auth/me` confirmou o `companyId` mudando → voltei pra empresa
+  original → testei rejeição (403) tentando trocar pra uma empresa
+  sem vínculo via chamada direta. **Dados de teste revertidos**
+  (empresa de teste excluída do banco).
+
+### Vínculo de empresa movido pro Cadastro de Usuário (mesma sessão, pedido logo em seguida)
+
+Primeira versão do vínculo (modal "Vincular usuário" dentro de
+`/erp/licenciamento`, por e-mail + perfil escolhido na hora) foi
+**substituída** a pedido do usuário: "o vínculo da empresa acho
+melhor ficar no cadastro de usuários. Lista todas as empresas
+cadastradas com caixa de seleção pra marcar a empresa que terá
+acesso, opção de marcar todas." Os endpoints antigos
+(`GET /companies/group/:id/roles`, `POST /companies/group/:id/link-user`)
+foram **removidos**, não só descontinuados — sem uso órfão no código.
+
+- **Tela "Usuários" (`/erp/configuracoes/usuarios`), formulário de
+  criar/editar**: seção nova "Empresas com acesso (login cruzado)"
+  (gated por `company.update`, só aparece se o grupo tiver mais de uma
+  empresa) — checkbox por empresa do grupo + "Marcar todas"/"Desmarcar
+  todas". A empresa dona do cadastro aparece sempre marcada e
+  desabilitada (não dá pra tirar o próprio acesso por ali).
+- **`UsersService.setCompanies`** (novo, privado, chamado por
+  `create`/`update` quando `companyIds` vem no payload): concede a
+  Role "Administrador" (`code: 'ADMIN'`) da empresa recém-marcada
+  automaticamente — **só se o usuário ainda não tiver nenhuma role
+  lá** (não sobrescreve um vínculo mais específico já existente).
+  Desmarcar só remove o acesso (`UserCompany`) — não mexe nas roles já
+  concedidas naquela empresa. `CreateUserDto`/`UpdateUserDto` ganharam
+  `companyIds?: string[]`; `GET /users` passou a incluir as empresas
+  vinculadas (`companies: { companyId }[]`) pra pré-marcar os
+  checkboxes ao editar.
+- **Testado de verdade pela tela**: criei usuário de teste marcando a
+  empresa "Alessandro Lourenco" do grupo → conferi no banco `Role
+  Administrador` concedida automaticamente lá → editei o mesmo
+  usuário, desmarquei a empresa, salvei → conferi que o vínculo
+  (`UserCompany`) sumiu. **Dados de teste revertidos** (usuário de
+  teste excluído).
+
+### Pendências conhecidas
+
+- A Role concedida automaticamente ao marcar uma empresa é sempre
+  "Administrador" (`code: ADMIN`) — não dá pra escolher um perfil mais
+  restrito pra essa empresa extra direto pela tela (só editando depois
+  em Perfis/matriz de permissões, ou tirando a role manualmente).
+- Vínculo só alcança **empresas do mesmo grupo** de quem está
+  cadastrando — dar acesso a uma empresa fora do grupo ainda exigiria
+  mexer direto no banco (fora do escopo pedido até aqui).
+- Relatório consolidado por grupo (DRE/balanço somando `rootCompanyId`,
+  pedido do usuário, próximo da lista de 5) ainda não construído — a
+  estrutura de dados já suporta.
+- Navegação em guias (ERP/OS) e banco de horas/folha de pagamento
+  seguem como sprints separados, sem dependência deste.
+
+## 🔵 Cadastro de Empresas — onboarding de cliente novo + empresa adicional (12-08-2026, mesma sessão)
+
+Última frente desta sessão maratona. Pedido do usuário na sequência
+do WhatsApp por empresa: precisa de um jeito de cadastrar empresa.
+Esclarecido em duas rodadas de pergunta que são **dois fluxos**,
+ambos pedidos: **cliente novo** se cadastra sozinho (autoatendimento,
+primeira empresa dele) e **cliente já licenciado** cadastra **outra
+empresa própria** de dentro do sistema — essa segunda só é permitida
+se o CNPJ novo tiver a **mesma raiz (8 primeiros dígitos)** do CNPJ
+da empresa que já tem a licença ("pra não se perder em multi
+empresas" — a licença fica sempre ancorada na empresa que iniciou).
+
+Investigação prévia importante: o endpoint que já existia
+(`POST /companies`, público) só inseria a linha crua da empresa — sem
+plano, sem perfil, sem usuário. Só existe **um plano no sistema**
+("ENTERPRISE", nome herdado do seed, mas na prática é o plano-base:
+os módulos add-on — BRANDING/HR/PRODUCTION/LABOR — são vendidos à
+parte via `CompanyModule`, igual já era pra ALEPEJO).
+
+### O que foi feito
+
+- **`Company.rootCompanyId`** (migration
+  `20260813022333_add_company_root_company_group`, auto-relação):
+  `null` = a empresa é raiz (todo cadastro de cliente novo nasce
+  raiz); preenchido = aponta **direto** pra raiz de verdade, nunca
+  encadeado (uma filial nunca aponta pra outra filial).
+- **`CompanyOnboardingService`** novo
+  (`Backend/src/modules/identity/company/services/company-onboarding.service.ts`)
+  — orquestra o que antes só existia espalhado, reaproveitando tudo
+  que já tinha pronto: `CompanyRepository.create`,
+  `LicenseService.assignPlan`/`enableModule` (módulo de licenciamento
+  já existia, só nunca tinha sido chamado num fluxo de cadastro),
+  `UsersService.create` + `UsersService.requestPasswordReset` (a
+  peça de convite por e-mail construída pro Cadastro de Usuário desta
+  mesma sessão — reaproveitada aqui sem mudar nada). A Role
+  "Administrador" com **todas as permissions do catálogo** é criada
+  em tempo de execução, mesma lógica que só existia hardcoded em
+  `prisma/seed.ts:816-836` pra ALEPEJO.
+  - `signup(dto)`: cliente novo — nasce raiz, plano ENTERPRISE mas
+    **sem nenhum add-on habilitado** (mesma regra de sempre: add-on
+    só depois de vendido/habilitado à parte). O e-mail informado no
+    cadastro vira o login do primeiro usuário (Administrador) —
+    fecha com a visão registrada antes ("e-mail da compra vira
+    Superusuário").
+  - `createAdditional(companyId, dto)`: resolve a raiz de quem está
+    pedindo (`rootCompanyId ?? própria empresa`), valida raiz de
+    CNPJ (só dígitos, 8 primeiros) contra a raiz — `BadRequestException`
+    clara se não bater. **Copia o plano e os módulos habilitados da
+    raiz** pra empresa nova (mesma licença, sem comprar de novo).
+- **Endpoints novos**: `POST /companies/signup` (`@Public()`) e
+  `POST /companies/additional` (`@Permissions('company.create')`,
+  permissão que já existia no catálogo — sem seed novo).
+- **Tela pública `/cadastro-empresa`**: Razão social/Nome
+  fantasia/CNPJ (com máscara)/E-mail/Telefone/Nome do administrador
+  → sucesso mostra que o e-mail vai receber o link de definir senha.
+  **Botão "Criar conta" do login, que era só enfeite desde uma
+  sessão antiga (pendência registrada há tempo neste doc), agora
+  leva pra essa tela** — pendência fechada de quebra.
+- **Botão "Cadastrar empresa" em `/erp/licenciamento`** (gated por
+  `company.create`): modal com os mesmos campos + E-mail do
+  administrador (aqui pode ser diferente de quem está cadastrando,
+  já que é o login da empresa nova). Mensagem de sucesso avisa
+  explicitamente que **o usuário atual não ganha acesso automático**
+  à empresa nova (ver pendência abaixo).
+
+### Testado de verdade, ponta a ponta, pela tela
+
+**Fluxo 1 (cliente novo)**: cadastrei "Empresa Teste Signup LTDA"
+(CNPJ de teste) → conferi no banco: plano ENTERPRISE, 0 módulos
+add-on, 1 Role com 184 permissions, 1 usuário `PENDING_ACTIVATION` →
+setei o token de reset direto no banco (sem SMTP real neste
+ambiente, mesmo truque de sempre) → `/definir-senha` funcionando →
+**login de verdade com o usuário novo**: menu mostrou só os módulos
+base (Cadastros/Compras/Comercial/Estoque/Financeiro/Dashboard/
+Relatórios), **sem** Recursos Humanos/Produção (confirma que os
+add-ons realmente não vieram de graça) → conferi também que "Criar
+conta" no login leva pra `/cadastro-empresa` de verdade.
+
+**Fluxo 2 (empresa adicional)**: logado como Alessandro (ALEPEJO) →
+"Cadastrar empresa" com CNPJ de raiz **diferente** → bloqueado com a
+mensagem certa → mesmo formulário com CNPJ de raiz **igual** à da
+ALEPEJO (`00000000` + finais diferentes) → sucesso → conferi no
+banco: `rootCompanyId` apontando pra ALEPEJO, mesmo plano
+ENTERPRISE, **os 4 mesmos add-ons herdados** (BRANDING/HR/PRODUCTION/
+LABOR, sem precisar habilitar de novo), Role própria com 184
+permissions, usuário próprio `PENDING_ACTIVATION`.
+
+**Dados de teste revertidos**: as duas empresas de teste (e seus
+usuários) excluídas do banco depois de confirmado tudo.
+
+### Tela "Empresas do grupo" — pergunta do usuário logo depois de terminar
+
+O usuário perguntou, com razão: depois de cadastrar, onde vê/edita/
+inativa as empresas? Não existia nada — só o cadastro em si.
+Completado na mesma sessão:
+
+- **Dois bugs reais encontrados e corrigidos**: `UpdateCompanyDto`
+  tinha o **mesmo bug já corrigido em `UpdateUserDto`** nesta sessão
+  — campos redeclarados só pra documentação do Swagger, sem
+  decorator de validação, faziam `PATCH /companies/me` (e o endpoint
+  novo abaixo) rejeitar com "campo não é permitido". Corrigido do
+  mesmo jeito, em todos os 7 campos. E: **`Company.active` nunca era
+  checado em lugar nenhum** — desativar uma empresa não tinha efeito
+  real nenhum até agora (achado ao investigar o que "inativar"
+  deveria fazer de verdade).
+- **`Company.active` agora bloqueia login de verdade**: checado em
+  `AuthService.validateUser` (login) **e** em `JwtStrategy.validate`
+  (roda em toda request autenticada — desativar uma empresa derruba
+  sessões já abertas na hora, não só impede logins novos).
+- **`GET /companies/group`** (permissão `company.view`) — lista raiz
+  + filiais (mesma `rootCompanyId`). **`PATCH /companies/group/:id`**
+  (permissão `company.update`) — edita/ativa/desativa uma empresa do
+  grupo, validando que ela pertence ao mesmo grupo de quem está
+  pedindo (`ForbiddenException` senão — protege contra editar empresa
+  de outro cliente).
+- **Seção "Empresas do grupo" em `/erp/licenciamento`**: tabela com
+  Razão social (marca "Raiz" na que não tem `rootCompanyId`),
+  CNPJ, Situação, botões Editar (modal) e Ativar/Desativar (com
+  confirmação "tem certeza?"). Só aparece quando há mais de uma
+  empresa no grupo — cliente com uma empresa só não vê a seção.
+- **Testado de verdade**: descobri no caminho que **o usuário já
+  tinha testado o cadastro de empresa adicional sozinho antes de eu
+  chegar nessa parte** (empresa "Alessandro Lourenco" com login real,
+  senha já definida) — não mexi nela. Criei uma empresa de teste
+  separada, desativei pela tela → **login com a conta dela bloqueado
+  de verdade (401, "Empresa inativa")** → reativei → login voltou a
+  funcionar. Dados de teste (só os meus, não os do usuário) revertidos
+  depois.
+
+### Pendência conhecida (registrada de propósito, não resolvida)
+
+- ~~Login cruzado entre empresas do mesmo grupo não existe~~ —
+  **feito em 13-08-2026** (`UserCompany` + seletor de empresa no
+  `TopBar` + tela "Vincular usuário"), ver seção no topo do
+  documento.
+- **Relatório consolidado por grupo** (pedido do usuário, ainda não
+  construído): DRE/balanço somando todas as empresas da mesma raiz
+  (`rootCompanyId`), com detalhamento por empresa — despesas,
+  receitas, compras, vendas. A estrutura de dados já suporta (é só
+  agrupar/filtrar por `rootCompanyId` nos relatórios de Contas a
+  Pagar/Receber, Compras e Vendas que já existem), mas o relatório em
+  si fica pra uma próxima sessão.
+- **`Company.code`** pra empresa adicional usa raiz do CNPJ + 4
+  dígitos de timestamp (evita colisão sem precisar pedir um código
+  manual no formulário) — funcional, mas não é um código "bonito"
+  como os cadastrados manualmente (ex.: `ALEPEJO`). Se precisar de
+  um código mais legível, dá pra trocar por um campo no formulário.
+
+## 🔵 Ajustes na Segurança + Notificações com SMTP por empresa (12-08-2026, mesma sessão)
+
+Depois de entregar o Cadastro de Usuário/Perfis (seção logo abaixo),
+o usuário pediu mais 3 coisas na sequência, todas feitas e testadas:
+
+1. **Matriz de permissões — linha "Contas a Pagar/Receber" ganhou
+   "Estornar documentos"**: o sistema já tinha um estorno de baixa de
+   título (`reopen`), só que usando a mesma permissão de "Baixar
+   Títulos" (`financial-entry.settle`) — a célula passou a reaproveitar
+   essa permissão (usuário confirmou, sem criar código novo). Ajuste
+   em `frontend/src/app/erp/configuracoes/perfis/[id]/permissoes/page.tsx`
+   (`REVERSE_EQUIVALENT_CODES`).
+2. **Confirmação em toda ação de "Estornar" do sistema** (pedido:
+   "tem certeza que deseja estornar? Sim/Não"): adicionado
+   `window.confirm` antes de chamar a API nos 3 botões literalmente
+   chamados "Estornar" que já existiam — Produção (`Estornar
+   conclusão`, `producao/ordens/page.tsx`), Financeiro (`Estornar
+   baixa`, `FinancialEntriesScreen.tsx`), Recebimento de compras
+   (`Estornar recebimento`, `compras/recebimento/page.tsx`).
+   **Deliberadamente não mexi** nos botões "Reabrir"/"Desfazer
+   aprovação" de Ponto/Faltas/Vendas (terminologia diferente no
+   sistema — "Reabrir" ≠ "Estornar" — não perguntei se o usuário
+   queria isso também, fica pendente se ele quiser expandir).
+3. **"Marcar tudo" por linha na matriz de permissões**: checkbox novo
+   na frente de cada linha (`getRowPermissionIds`) que marca/desmarca
+   de uma vez só todas as células reais daquela linha. Fix necessário
+   junto: `toggle()` agora só concede o que falta e só revoga o que
+   já existe (antes, marcar um grupo parcialmente concedido dava erro
+   "já vinculada" tentando conceder de novo uma permissão que uma das
+   células já tinha).
+
+### Configuração de E-mail por empresa (SMTP) — pedido novo, feito nesta sessão
+
+Pedido do usuário: hoje o envio de e-mail (cotação, redefinição de
+senha etc.) só funciona com SMTP fixo no `.env` do servidor — ele
+quer que **cada empresa configure o e-mail que quiser** direto pela
+tela, numa página nova em Configurações **com abas** (pensando em
+"futuramente ter mais coisas"), reaproveitando esse layout de abas
+pra também abrigar o WhatsApp (que tinha tela própria).
+
+- **`Company` ganhou campos de SMTP** (migration
+  `20260813011657_add_company_smtp_settings`): `smtpHost`,
+  `smtpPort`, `smtpUser`, `smtpPasswordEncrypted`, `smtpFromEmail`,
+  `smtpFromName`, `smtpEnabled`.
+- **`EncryptionService` novo** (`Backend/src/core/security/
+  encryption.service.ts`, AES-256-GCM, chave derivada de
+  `ENCRYPTION_KEY` ou `JWT_SECRET` via SHA-256) — diferente do
+  `PasswordService` (hash, não-reversível): a senha de SMTP precisa
+  voltar ao valor original pra autenticar no servidor, então não dá
+  pra só hashear.
+- **`EmailNotificationsService` reescrito**: `send()`/`sendVerbose()`
+  agora recebem `companyId` e resolvem a config em cascata — SMTP
+  próprio da empresa (`smtpEnabled` + host configurado) senão cai no
+  `.env` global, mantendo funcionando quem não configurou nada ainda.
+  **Todos os 7 lugares que chamavam `send()`** foram atualizados pra
+  passar o `companyId` (Pedido de Compra, Pedido de Venda, Orçamento,
+  Cotação, avisos de exame/aniversário — 2 chamadas —, e o
+  `requestPasswordReset` do Cadastro de Usuário desta mesma sessão).
+- **Endpoints novos** (`Backend/src/modules/notifications/controllers/
+  email-settings.controller.ts`): `GET/PUT /notifications/email/settings`
+  (senha nunca volta pro frontend — só um `hasPassword: boolean`;
+  campo vazio no PUT mantém a senha salva, só troca se vier
+  preenchido) e `POST /notifications/email/test` (usa `sendVerbose`,
+  devolve o motivo real do erro). Permissões novas `email.view`/
+  `email.manage` (seed, grupo `EMAIL`).
+- **Tela nova `/erp/configuracoes/notificacoes`** com **abas**
+  ("Configuração E-mail" / "Configuração WhatsApp", desenhada pra
+  caber mais abas no futuro). O conteúdo do WhatsApp foi **movido**
+  da tela própria antiga (`/erp/configuracoes/whatsapp`, **apagada**)
+  pra um componente (`frontend/src/components/settings/
+  WhatsappSettingsTab.tsx`) dentro dessa página nova — WhatsApp
+  continua sessão única global do sistema (não por empresa, diferente
+  do e-mail), só mudou de endereço. Componente novo
+  `EmailSettingsTab.tsx`: Servidor/Porta/Usuário/Senha/E-mail do
+  remetente/Nome do remetente/Habilitado + botão de teste. **Campos
+  de remetente vêm pré-preenchidos com o e-mail e nome já cadastrados
+  da empresa** (pedido explícito do usuário — "mesmos dados de envio
+  pra cotação" —, `companyService.getMine()`), editável livremente.
+  Menu do avatar: item "WhatsApp" virou **"Notificações"**, mesmo
+  lugar, aponta pra essa página nova.
+- **Testado de verdade pela tela**: configurei host/usuário de teste,
+  salvei, recarreguei a página e confirmou que persistiu; aba
+  WhatsApp confirmada intacta (sessão já pareada continuou
+  "Conectado" normalmente depois da mudança de tela). **Dados de
+  teste revertidos** (host/usuário de teste limpos, `enabled: false`)
+  — **não tinha credencial SMTP real disponível nesta sessão pra
+  testar o envio de verdade**, só o fluxo de salvar/carregar/
+  criptografar. Usuário ainda precisa configurar um SMTP real (ex.:
+  Gmail com senha de app) e testar o envio de fato quando quiser usar
+  pra valer.
+- **WhatsApp virou sessão por empresa** (mesma sessão, pedido logo
+  em seguida do usuário: "quando o cliente comprar, esses dados vão
+  todos vazio pra eles preencherem, o mesmo será pro WhatsApp"): até
+  aqui era **uma sessão só, global pro sistema inteiro** — se uma
+  empresa pareasse um número, todas as outras veriam o mesmo
+  conectado. `WhatsappNotificationsService` reescrito: em vez de um
+  `sock`/`status`/`qr` único, agora é um `Map<companyId, sessão>`,
+  cada empresa com sua própria pasta de credenciais
+  (`whatsapp-auth/<companyId>/`, antes era `whatsapp-auth/` direto).
+  `onModuleInit` varre as subpastas e reconecta cada empresa que já
+  tinha sessão pareada. Controller e os 6 lugares que chamavam
+  `send()`/`sendVerbose()` (Pedido de Compra/Venda, Orçamento,
+  Cotação, avisos de exame/aniversário) passaram a mandar o
+  `companyId`. **Migração da sessão já pareada da ALEPEJO**: os
+  ~5.100 arquivos que estavam soltos em `whatsapp-auth/` foram
+  movidos pra `whatsapp-auth/<companyId da ALEPEJO>/` — testado
+  reiniciando o backend e conferindo log `WhatsApp conectado (empresa
+  ...)` e a tela mostrando "Conectado" igual antes, sessão não se
+  perdeu.
+- **Pendência conhecida**: o item de menu "Notificações" usa
+  `permission: "email.view"` como gate único — um perfil com só
+  `whatsapp.view` (sem `email.view`) não vê o item no menu, mesmo
+  podendo usar a aba WhatsApp se acessasse a URL direto. Não é falha
+  de segurança (cada aba já checa sua própria permissão nos dados),
+  só uma limitação de UX a resolver se algum perfil precisar dessa
+  combinação específica.
+
+## 🔵 Cadastro de Usuário e Perfis de Acesso — implementado e testado (12-08-2026)
+
+Resultado da frente "Segurança primeiro" (ver decisão logo abaixo):
+**cadastro de usuário + perfis com matriz de permissões** construído
+do zero e testado ponta a ponta pela tela. Resolve a pendência antiga
+mais citada neste doc ("não existe nenhuma UI de cadastro de
+usuário"). Descoberta importante: **o RBAC completo já existia no
+backend** (`User`/`Role`/`Permission`/`RolePermission`/`UserRole`,
+CRUD pronto em `Backend/src/modules/identity/`) — o trabalho foi
+telas novas + extensões pontuais, não construir do zero.
+
+**Onde entrar**: menu do avatar → **Usuários** (`/erp/configuracoes/
+usuarios`) e **Perfis de acesso** (`/erp/configuracoes/perfis`).
+Ainda são telas soltas no menu do avatar — quando a navegação em
+guias/OS existir (frente adiada, ver seção logo abaixo), é só
+reencaixar o link, sem refazer a tela.
+
+### O que foi feito
+
+- **Migration** (`20260812234825_add_user_profile_fields_and_password_reset`):
+  `User` ganhou `department`, `manager` (só informativo), `alias`,
+  `passwordResetTokenHash`, `passwordResetTokenExpiresAt`.
+- **Ações de usuário**: Ativar/Desativar (reaproveita `PATCH
+  /users/:id` com `{active}`, já existia); **Bloquear Conta/
+  Desbloquear** (endpoints novos, mexem no mesmo `lockedUntil` que o
+  login já respeitava de verdade — confirmado testando login de
+  usuário bloqueado retornando 401); **Copiar** (sem endpoint novo —
+  só abre o formulário de criação pré-preenchido com
+  Departamento/Gerente/Alias/Perfil do usuário copiado, e-mail em
+  branco).
+- **Vínculo usuário↔perfil**: `CreateUserDto`/`UpdateUserDto`
+  ganharam `roleId` opcional; `UsersService` sincroniza o vínculo
+  `UserRole` (seleção única na UI, mesmo o modelo suportando N:N).
+- **Fluxo de redefinição de senha por e-mail** (não existia nada
+  disso antes — nenhum forgot-password/convite em todo o sistema):
+  botão "Alterar Senha" dispara `POST /users/:id/reset-password-email`
+  (gera token aleatório, hash salvo, e-mail best-effort via
+  `EmailNotificationsService`, mesmo padrão já usado em Pedido de
+  Compra/Orçamento); link leva pra `/definir-senha` (página pública
+  nova, fora do `AppShell`) que consome `POST /auth/set-password`
+  (`@Public()`, mesmo padrão do login). Usuário novo nasce com senha
+  aleatória descartável — o acesso real sempre passa por esse fluxo,
+  não existe campo de senha no formulário de cadastro. **Essa base
+  já serve pronta** pra quando a visão futura de Licenciamento
+  ("convite por e-mail pra definir senha") for retomada.
+- **Tela "Perfis de acesso"**: CRUD simples de `Role` (nome/código/
+  descrição/ativo) + link "Configurar permissões" por linha.
+- **Tela "Configurar perfil" (matriz de permissões)**: uma linha por
+  módulo real do sistema (por `PermissionGroup`, que já batia quase
+  1:1 com os grupos do menu), colunas cadastrar/editar/excluir/
+  consultar + Aprovador Compras/Aprovador vendas/Entrada e saída
+  Estoque/Concluir produção/Ajustes de estoque/Ajuste Horas/Estornar
+  documentos — cada célula só fica clicável onde existe permission
+  code real por trás (senão mostra "—"). **Duas permissões novas**
+  criadas no catálogo pra fechar colunas que não tinham permissão
+  correspondente: `purchase.reverse` ("Estornar Compras"),
+  `sale.reverse` ("Estornar Vendas"); e `system.admin`
+  ("Administração Geral") — essa última não virou coluna da matriz
+  (não tem módulo natural), ficou como checkbox único separado perto
+  do nome do perfil. **Sem endpoint novo pra grant/revoke** — reusa
+  `POST`/`DELETE /identity/role-permissions` já existentes, um
+  clique = uma chamada, otimista com reversão em erro.
+- **"Estornar documentos" também na linha "Contas a Pagar/Receber"**:
+  o sistema já tinha um estorno de baixa de título (`reopen`), só que
+  usando a mesma permissão de "Baixar Títulos"
+  (`financial-entry.settle`) — a célula agora reaproveita essa
+  permissão existente (usuário confirmou, sem criar código novo),
+  em vez de ficar com "—" como nas outras linhas sem estorno.
+- **Coluna "Visível" do mockup**: por decisão do usuário, é a mesma
+  coisa que "consultar" (view) — não virou coluna própria.
+- **Toggles de nível alto do mockup** (APPs/ERP ALEPEJO/OS/
+  Configurações/personalizações/licenciamento) **ficaram de fora**
+  desta rodada — não existe ainda o esqueleto de guias/OS pra eles
+  controlarem de verdade. Pendência consciente.
+
+### Dois bugs reais encontrados e corrigidos no caminho (pré-existentes, não da sessão de desenho)
+
+- **`RoleFilterDto`** (`Backend/src/modules/identity/roles/dto/role-filter.dto.ts`):
+  `page`/`limit` eram `number` com `@IsNumberString()` e valor padrão
+  numérico (`= 1`) — o padrão nunca batia com o próprio validador
+  (esperava string, recebia number), então **qualquer chamada a `GET
+  /identity/roles` sem `?page=`/`?limit=` explícito na URL quebrava**
+  (400 "page é inválido"). Corrigido trocando o tipo/default pra
+  string (`'1'`/`'20'`), consistente com o decorator. Endpoint nunca
+  tinha sido exercitado por nenhuma tela até agora.
+- **`UpdateUserDto`** (`Backend/src/modules/identity/users/dto/update-user.dto.ts`):
+  o campo `active?: boolean` (redeclarado só pra doc do Swagger) não
+  tinha nenhum decorator de `class-validator` — o
+  `ValidationPipe({whitelist, forbidNonWhitelisted})` global rejeitava
+  **qualquer** `PATCH /users/:id`, mesmo sem "active" no corpo
+  enviado (a declaração de campo nu na classe já bastava pra
+  `class-validator` tratá-lo como propriedade "desconhecida"/proibida
+  na instância transformada). Travava editar qualquer usuário — bug
+  crítico pra esta feature, corrigido com `@IsOptional() @IsBoolean()`.
+
+### Testado de verdade, ponta a ponta, pela tela (não só por API)
+
+Criei usuário de teste com perfil Administrador → editei o perfil pra
+um perfil novo restrito (só `partner.view` concedido) → **login como
+esse usuário mostrou só Cadastros/Relatórios no menu**, dashboard
+zerado, e tentar abrir `/erp/produtos` deu **403 de verdade do
+backend** ("Você não possui permissão"), não só escondido do menu →
+Alterar Senha (token debugado direto no banco pra não depender de
+SMTP local, `/definir-senha` funcionando, login com a senha nova
+funcionando) → Bloquear Conta (login retornou 401 "bloqueada") →
+Desbloquear (login voltaria a funcionar) → Desativar (status virou
+Inativo) → Copiar (abriu form pré-preenchido certo, conferido via
+JS) → Perfis: criar, editar nome, matriz marcando/desmarcando
+persistindo depois de F5. **Dados de teste revertidos** (usuário e
+perfil de teste excluídos via API depois — sem botão de excluir
+usuário na tela ainda, só soft-delete por API, ver pendência abaixo).
+
+### Pendências conhecidas
+
+- **Sem botão "Excluir" na tela de Usuários** — o backend já suporta
+  (`DELETE /users/:id`, soft delete), só não foi colocado na UI
+  (não estava no mockup do usuário, que só tinha Ativar/Desativar/
+  Bloquear pro ciclo de vida).
+- **Role "Administrador" não tem `isSystem: true`** no seed — o campo
+  existe no schema exatamente pra evitar exclusão acidental do
+  perfil admin, mas o seed nunca setou. Com a tela nova de Perfis,
+  **dá pra excluir o Administrador pela UI hoje** (proteção só
+  esconde o botão quando `isSystem` é true). Vale considerar setar
+  `isSystem: true` nele no seed quando for mexer nessa área de novo.
+- **`system.admin` ("Administração Geral")** existe como permissão e
+  tem checkbox na tela, mas **nenhum guard do sistema ainda checa
+  essa permissão** pra dar bypass total — é só o vínculo, sem efeito
+  prático ainda.
+- **"Definição concluída"** calculada de `!mustChangePassword` — o
+  usuário admin seed (`alessandro.lourenco@alepejo.com.br`) aparece
+  como "Não" porque o seed nunca setou esse campo pra ele
+  (`mustChangePassword` default `true` no schema); não afeta o login
+  dele, só a leitura dessa coluna específica na lista.
+- Durante a sessão, matei um processo de backend órfão (PID antigo,
+  travando o `.dll` do Prisma Client no `prisma generate`) — se algo
+  parecer ter caído no meio da sessão anterior a esta, é isso.
+
+## 🔵 Ordem de implementação combinada (12-08-2026): Segurança primeiro
+
+**Decisão final desta sessão de desenho**: construir primeiro **OS →
+Segurança** (cadastro de usuário + perfis/permissões, ver mockups
+detalhados na seção "OS → Segurança — mockups do cadastro de
+usuário/perfis" mais abaixo) como **tela normal do sistema atual**
+(fora do esquema de guias, que ainda não existe) — resolve uma
+lacuna real (hoje não existe nenhuma UI de cadastro de usuário) e é
+praticamente autocontido. A reestruturação de navegação em guias
+(ERP/OS, guias, overlay do menu) **fica pra depois**, por ser a
+mudança mais arriscada (mexe em como toda tela abre hoje) e não
+bloqueia o Segurança. Quando o esqueleto de guias existir depois,
+Segurança só precisa ser reencaixado no menu como card de OS, não
+reconstruído.
+
+## 🔵 Desenho de navegação em guias (detalhado nesta sessão, build fica pra depois — ver ordem de implementação acima)
 
 **Commit e backup feitos em 12-08-2026 de propósito**, antes de começar
 esta frente nova (commit `22fccf9`, zip
@@ -40,6 +873,298 @@ não decidido ainda): o que acontece ao tentar abrir a 7ª guia
 F5 no navegador ou reseta; toda tela do sistema vira guia ou só
 alguns módulos (telas de impressão/etiqueta, por exemplo, hoje abrem
 fora do `AppShell` de propósito — ficam de fora do esquema de guias?).
+
+### Respostas do usuário (12-08-2026, mesma sessão que abriu a frente)
+
+1. **Dois apps na navegação**: **SISTEMA ERP** e **OS** (Ordens de
+   Serviço). A OS não é só ordem de serviço em si — o usuário pensa
+   nela também como o lugar pra **configurações de sistema e criação
+   de usuários, API, tudo que for de configuração** (ou seja, o
+   módulo grande e pendente de "Cadastro de Usuários"/administração,
+   registrado em pendências antigas mais abaixo neste doc, entraria
+   dentro do app OS, não dentro do ERP). Ainda não perguntei se
+   "entrar" no app é uma escolha na tela de login (uma vez por sessão)
+   ou um alternador que fica disponível o tempo todo dentro do
+   sistema — perguntar antes de desenhar a navegação em si.
+2. **Limite de 6 guias**: ao tentar abrir a 7ª, **bloqueia** — mostra
+   mensagem de erro de acesso, não fecha a mais antiga sozinha.
+3. **F5 no navegador**: as guias **sobrevivem e são atualizadas**
+   (recarregam). Se alguma guia estava com **algo em edição**, o F5
+   **sai da edição** e volta pra tela principal daquela guia — mesmo
+   se havia subtelas abertas dentro dela.
+4. **Escopo das guias**: só os **módulos** (telas principais do menu)
+   viram guia. **Subtelas, tela de impressão e etiqueta continuam
+   como são hoje** (fora do esquema de guias, padrão atual mantido).
+5. **Referência visual**: usuário vai mandar **prints de tela** do
+   Infor CloudSuite (não vai passar login) — aguardando.
+
+### Prints do Infor CloudSuite recebidos e mapeados pro Alepejo ERP (12-08-2026)
+
+Usuário mandou 4 prints da estrutura real do Infor CloudSuite. Leitura
+dos prints e como mapeia pro nosso sistema, confirmado nas mensagens
+do usuário:
+
+- **Ícone de menu (grid) no canto superior esquerdo**: abre a sidebar
+  de navegação **por cima de tudo na tela** (overlay), com busca no
+  topo e a árvore de módulos/telas — é o menu lateral que já existe
+  hoje, muda o comportamento (overlay em vez de fixo), não o
+  conteúdo.
+- **Guias de primeiro nível ("apps")**: no Infor, "CloudSuite WMS" e
+  "OS" ficam lado a lado no topo. No Alepejo: **"Sistema ERP Alepejo"**
+  (equivalente ao CloudSuite WMS) e **"OS"**. São dois apps
+  separados, cada um com sua própria área de guias de tela dentro.
+- **Guia "OS"**: ao abrir, mostra uma tela inicial em cards. O usuário
+  quer 3 cards: **Portal**, **Segurança** (vai ser o **cadastro de
+  usuários e perfis de acesso** — "criar novo usuário" e "criar
+  perfis de acesso" ficam dentro dela; **resolve a pendência antiga
+  de "Cadastro de Usuários"** registrada mais abaixo neste doc — ela
+  mora dentro de OS, não dentro do ERP) e **APIs**.
+- **Dentro do app "Sistema ERP Alepejo"**: o menu lateral continua
+  exatamente como é hoje (sidebar com os módulos/telas). O que muda:
+  **cada item de menu clicado abre numa guia de segundo nível** (nova
+  aba ao lado de "Página inicial", ex.: "Ordem de compra"), em vez de
+  trocar o conteúdo da página inteira como acontece hoje.
+- **Barra de guias de segundo nível tem dois controles**:
+  **FAVORITOS** (salvar telas específicas pra ficarem de acesso
+  rápido ali, sem precisar navegar pelo menu lateral de novo) e
+  **FERRAMENTAS** (fecha todas as guias abertas e dá refresh na guia
+  atual).
+
+**Aviso do usuário**: as telas dos prints (Ordem de compra, Portal,
+Segurança, APIs etc.) são **só exemplos de estrutura/comportamento**,
+não uma lista literal do que construir — o que vale copiar é o
+padrão de guias em dois níveis, overlay do menu, Favoritos/Ferramentas.
+
+**Confirmado**: o limite de 6 guias é **por app** — Sistema ERP
+Alepejo com até 6 guias próprias e OS com até 6 guias próprias,
+independentes um do outro.
+
+### Mais decisões do usuário (mesma sessão, continuando o detalhamento)
+
+- **Guia duplicada**: clicar num item do menu pra uma tela que já está
+  aberta numa guia **reaproveita a guia existente** (traz pra frente),
+  não abre outra.
+- **Overlay do menu**: ao escolher um item, o overlay **fecha
+  sozinho** (igual o padrão do Infor no print).
+- **Título da guia**: mostra o **nome do registro quando disponível**
+  (ex.: editando um colaborador, a guia mostra o nome dele, não só
+  "Colaboradores") — ajuda a diferenciar guias iguais abertas com
+  registros diferentes.
+- **Itens de hoje do menu do avatar** (Licenciamento, Configurações,
+  Personalização, WhatsApp, Ponto-Manual):
+  - **Ponto-Manual**: fica só no avatar (uso pessoal do dia a dia).
+  - **Personalização**: fica no avatar **e também** vai pra dentro de
+    OS (duplicado, disponível nos dois lugares).
+  - **Licenciamento, Configurações, WhatsApp**: por eliminação, vão
+    pra dentro de OS (não foram citados como "ficam no avatar").
+
+### Decisão grande: "menus de apoio" de todos os módulos migram pra OS → Configurações
+
+Pedido do usuário: dentro de OS, card **"Configurações"** vira o lugar
+central pra **todos os menus de apoio/cadastros de configuração que
+hoje ficam espalhados dentro de cada módulo do ERP** ("tudo que for
+configuração"). Estrutura: Card Configurações → dentro dele, um card
+por módulo (nome do menu original) → dentro desse, os submenus/telas
+de configuração daquele módulo. Exemplos dados pelo usuário:
+- Configurações → **Cadastro** → Categorias e Marcas.
+- Configurações → **Estoque** → Cadastro de Depósitos.
+- Configurações → **Financeiro** → Plano de contas.
+- "e assim por diante" — vale pra todo cadastro de apoio/configuração
+  de qualquer módulo (RH, Compras, Vendas, Produção, LABOR etc.), não
+  só os 3 exemplos citados.
+
+**Fechado, com base na lista real de**
+`frontend/src/components/layout/Sidebar/menu.ts` (levantada e
+proposta item a item, usuário confirmou/ajustou): só estes submenus
+de apoio **saem do menu principal do ERP** e passam a existir **só**
+dentro de OS → Configurações → [card do módulo] — todo o resto do
+menu (incluindo Orçamento e Benefícios, que eu tinha achado
+ambíguos) **fica no ERP**:
+
+- Cadastros → **Categorias e marcas** (`produtos-auxiliares`)
+- Financeiro → **Plano de contas** (`plano-contas`)
+- Estoque → **Depósitos** (`depositos`)
+- Financeiro → **Classificações** (`classificacoes`)
+- RH → **Funções e cargos** (`funcoes`)
+- RH → **Setores, horários e EPI** (`rh-cadastros`)
+- Produção → **Configurações** (`producao-configuracoes`)
+
+**Personalização** continua sendo o único item duplicado (fica no
+avatar e também em OS).
+
+**Fechado (respostas do usuário)**:
+- A tela "Configurações" que já existe hoje no avatar
+  (`/erp/configuracoes`, dados da empresa, item `configuracoes` em
+  `systemMenuItems`) vira um **card separado chamado "Empresa"**
+  dentro de OS — não fica dentro do card-contêiner "Configurações"
+  que reúne os 7 itens de apoio acima.
+- **RH → Chave de API (relógio de ponto)** (`ponto-chave-api`) **e
+  WhatsApp** (`whatsapp`, hoje no avatar): os dois vão pra **OS →
+  card "APIs"** (não pro card "Configurações").
+
+### Estrutura de cards de OS fechada até aqui
+
+- **Portal** (card do Infor, sem conteúdo definido ainda pro
+  Alepejo).
+- **Segurança** → criar usuário, criar perfis de acesso (resolve a
+  pendência antiga de "Cadastro de Usuários").
+- **APIs** → Chave de API do relógio de ponto, WhatsApp, e **regra
+  geral**: qualquer outra integração/API que o sistema ganhar no
+  futuro entra dentro desse mesmo card, não espalha em outro lugar.
+- **Empresa** → a tela de Configurações/dados da empresa que já
+  existe hoje (`/erp/configuracoes`).
+- **Configurações** (card-contêiner) → um card por módulo, cada um
+  com os submenus de apoio daquele módulo: Cadastro (Categorias e
+  marcas), Estoque (Depósitos), Financeiro (Plano de contas,
+  Classificações), RH (Funções e cargos, Setores/horários e EPI),
+  Produção (Configurações).
+- **Personalização** → **card próprio** em OS, além de continuar no
+  avatar (único item duplicado nos dois lugares).
+- **Licenciamento** → **card próprio** em OS.
+
+### Cards de OS — lista fechada
+
+Portal, Segurança, APIs, Empresa, Configurações (contêiner por
+módulo), Personalização, Licenciamento.
+
+### OS → Segurança — mockups do cadastro de usuário/perfis (12-08-2026)
+
+Usuário mandou 4 prints (planilha, não tela real) detalhando como
+quer o card **Segurança** dentro de OS. Isso é o desenho da pendência
+antiga registrada acima neste doc ("não existe hoje nenhuma tela de
+Cadastro de Usuários", só API sem UI). 3 telas + 1 lista de exemplo:
+
+**Tela 1 — Lista de usuários**
+- Botão **"Novo usuário"**.
+- Menu **"Ação"** (aplicado ao(s) usuário(s) marcado(s) via
+  checkbox): Ativar, Desativar, **Copiar** (clona um usuário
+  existente com todas as permissões dele, pra criar um novo já
+  configurado igual), **Alterar Senha** (dispara e-mail pro usuário
+  definir uma senha nova), Bloquear Conta, Desbloquear.
+- Colunas da tabela: checkbox de seleção, um ícone de ação por linha
+  (**não perguntei ainda o que faz** — atalho de editar? entrar
+  como/impersonar?), Definição concluída (ícone de check — onboarding
+  do usuário completo ou não), Nome completo, Endereço de e-mail, ID
+  federada (login SSO/federado — provavelmente campo pra usar
+  futuramente, sem integração hoje), Último logon, Status, Email
+  verificado, Senha expirada, Conta bloqueada.
+
+**Tela 2 — Cadastro de usuário** (novo/editar)
+- Botão Salvar.
+- Campos: Nome, Empresa, Email, Departamento, **Nome do Usuário
+  Login** (mesmo valor do e-mail, **não editável depois de criado**),
+  Gerente (**não perguntei ainda se é só informativo ou se alimenta
+  algum fluxo de aprovação**), Alias do Usuário, **Perfil de
+  segurança** (dropdown — populado pelos perfis cadastrados na Tela
+  3, pedido explícito do usuário: "conforme for cadastrando os
+  perfis, ter uma opção de lista de perfis pra escolha dentro do
+  cadastro de usuário").
+
+**Tela 3 — Configurar perfil** (perfis de acesso/permissões)
+- Campo Nome do Perfil.
+- Checkboxes de nível alto (acesso grosso, antes de entrar no
+  detalhe): **APPs, ERP ALEPEJO, OS, Configurações, personalizações,
+  licenciamento** — liga/desliga o acesso a cada app/card de nível
+  superior pra esse perfil.
+- Campo de Filtros (2 caixas) pra achar linha rápido na tabela grande
+  de baixo.
+- **Tabela grande de permissões**, uma linha por módulo+menu — pedido
+  explícito: **"listar todos os módulos e submenus com as caixas
+  para seleção"**, ou seja, todo item real de `menu.ts` (Cadastro/
+  parceiros, Cadastro/produtos, Compras/compras, Compras/cotações
+  etc.) vira uma linha. Colunas de permissão por linha: **cadastrar,
+  editar, excluir, consultar, Visível** (genéricas, CRUD + visível no
+  menu) **+ colunas de ação de negócio específica**: Estornar
+  documentos, Aprovador Compras, Aprovador vendas, Entrada e saída
+  Estoque, Concluir produção, Ajustes de estoque, Ajuste Horas,
+  Configurações gerais, Administração geral (nem toda coluna faz
+  sentido pra toda linha — ex.: "Aprovador Compras" só é relevante
+  pras linhas de Compras — o mockup mostra a coluna pra toda linha
+  mesmo assim, deixando em branco o que não se aplica).
+
+**Lista de exemplo de perfis** (não é fixa, é só exemplo de nomes que
+o usuário já pensou, perfis são criados livremente pela Tela 3):
+SuperUsuarios, Supervisores, Administrador, Usuarios, Operação.
+
+**Nota técnica minha, registrada pra quando isso virar implementação**
+(não é decisão do usuário, é observação de arquitetura): o sistema
+**já tem hoje** um RBAC funcionando por trás de cada tela (strings
+tipo `"product.view"`, `"employee.update"` etc., grupos de permissão
+no `seed.ts`, é assim que o menu decide o que mostrar). A matriz nova
+do mockup (cadastrar/editar/excluir/consultar/visível + colunas de
+ação de negócio) vai precisar **mapear pra esse sistema de permissões
+que já existe**, não é uma reformulação do zero — isso é trabalho de
+levantamento técnico pra fazer quando essa tela for construída de
+verdade (bater cada checkbox da matriz contra a lista real de
+permissions do backend), não precisa ser resolvido nesta fase de
+desenho.
+
+**Respondido pelo usuário**:
+- Ícone de ação da Tela 1: não é uma ação própria — é o **gatilho do
+  menu "Ação"** (Ativar/Desativar/Copiar/Alterar Senha/Bloquear
+  Conta/Desbloquear), que só fica habilitado depois de marcar o
+  checkbox de uma linha.
+- Campo "Gerente" da Tela 2: **só informativo**, não aciona fluxo
+  nenhum.
+- **Todas as aprovações do sistema ficam dentro do perfil** (Tela 3,
+  colunas tipo "Aprovador Compras"/"Aprovador vendas" e qualquer outra
+  que existir) — não existe uma tela separada de configurar quem
+  aprova o quê, é tudo controlado pela matriz de permissões do
+  perfil.
+
+### Visão do fluxo de compra/licenciamento → usuário Superusuário (12-08-2026)
+
+Usuário trouxe uma visão nova, ligando o cadastro de usuário/perfis
+(seção acima) ao **licenciamento**: quando o cliente **comprar o
+ERP** e escolher os módulos contratados, o **e-mail usado no cadastro
+da compra** deve ser **liberado automaticamente como usuário com o
+perfil Superusuário** (acesso total, primeiro usuário da empresa
+nova) — sem precisar de um administrador manualmente criando esse
+primeiro usuário. Conforme o cliente **for comprando mais módulos**
+depois (upsell), esses módulos vão **sendo ativados dentro dos
+perfis** (presumivelmente liberando as linhas/colunas correspondentes
+na matriz de permissão automaticamente, já que o módulo virou
+disponível pra empresa).
+
+**Isso conecta com uma pendência antiga registrada mais abaixo neste
+doc** ("Ponto - Manual" / decisão em aberto sobre "Superusuário" — o
+usuário tinha avisado que ainda estava pensando como resolver quem
+pode lançar/aprovar ponto de qualquer colaborador, não só o próprio).
+O perfil "SuperUsuarios" do mockup de perfis (seção acima) parece ser
+essa mesma peça se encaixando.
+
+Hoje **não existe um fluxo de compra/checkout self-service** no
+sistema (só a tela de Licenciamento, que trata módulo habilitado por
+empresa já existente, sem jornada de "cliente novo compra sozinho").
+**Decisão do usuário: fica pra depois** ("ainda temos que pensar como
+fazer essa parte de licenciamento, fica pra frente") — não é escopo
+desta sessão de navegação, fica só a visão registrada acima pra
+retomar quando for a vez desse fluxo ser desenhado.
+
+**Pontos adicionais que o usuário já quer que constem no desenho
+futuro de Licenciamento** (ainda não é pra construir agora, só
+registro pra não perder quando essa frente for retomada):
+- **Cadastro de empresas** entra dentro do card Licenciamento (em
+  OS) — hoje a empresa (tenant) não tem uma tela de auto-cadastro,
+  isso passaria a existir ali.
+- **Configurar licença com limite de usuários** — por empresa, um
+  teto de quantos usuários aquela licença permite criar.
+- **Cadastrar o usuário inicial da empresa e amarrar esse usuário à
+  empresa** — no provisionamento de uma empresa nova, já nasce um
+  usuário vinculado a ela (encaixa com a visão anterior do e-mail da
+  compra virando Superusuário).
+- **Convite por e-mail pra definir senha**: ao invés de já mandar uma
+  senha, o sistema envia o login por e-mail e a pessoa **finaliza o
+  próprio cadastro definindo a senha** no primeiro acesso.
+- **URL do sistema com a empresa no caminho**: o link de login deve
+  levar o nome/identificador da empresa direto na URL, ex.:
+  `www.alepejo.com.br/empresa/login` — assim toda vez que alguém
+  acessa o sistema, a empresa já vem resolvida pelo próprio link, sem
+  precisar escolher/digitar em outro lugar. **Implicação técnica
+  grande pra quando for construir**: hoje o login não é
+  multi-tenant por URL (não sei ainda como a resolução de empresa
+  funciona no login atual — investigar antes de desenhar o
+  roteamento).
 
 ---
 
@@ -1580,8 +2705,17 @@ novas e ao revisitar as existentes.
    original, é tema totalmente novo pro sistema). Retomar com calma,
    é a área de maior risco (dinheiro real do colaborador) de todo o
    sistema até agora.
-4. **Multi-empresa — decisão tomada, implementação adiada de propósito**
-   (09-08-2026). Diagnóstico: o **isolamento de dados já é sólido** —
+4. ~~Multi-empresa — decisão tomada, implementação adiada de
+   propósito~~ — **arquitetura implementada em 13-08-2026**
+   (`UserCompany`, exatamente o modelo "1 login, várias empresas"
+   descrito abaixo), ver seção "Login cruzado entre empresas do
+   grupo" no topo do documento. Escopado por enquanto a empresas do
+   mesmo grupo (`rootCompanyId`) — vincular um usuário a uma empresa
+   **fora** do grupo dele ainda não tem tela (só seria possível hoje
+   mexendo direto no banco), mas o mecanismo em si (tabela, troca de
+   sessão, seletor) já serve pra isso se for pedido.
+   Diagnóstico original (09-08-2026): o **isolamento de dados já é
+   sólido** —
    todo repository filtra por `companyId` vindo do JWT, empresas
    diferentes já não se veem. A lacuna real é em identidade/login:
    `User.companyId` é fixo (1 usuário = 1 empresa) e `User.email` é

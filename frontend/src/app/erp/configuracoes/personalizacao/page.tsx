@@ -10,7 +10,7 @@ import {
   Upload,
 } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { useAuth } from "@/providers/AuthProvider";
 
 import {
@@ -396,7 +396,7 @@ const SIDEBAR_LAYOUT_OPTIONS: {
 ];
 
 function BrandingSection() {
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   const [branding, setBranding] = useState<CompanyBranding | null>(
     null
@@ -418,7 +418,10 @@ function BrandingSection() {
       const result = await companyBrandingService.get();
 
       setBranding(result);
-      setSystemName(result.systemName ?? "");
+      // Campo livre, mas parte pré-preenchido com a Razão social da
+      // empresa logada — só quando ainda não foi customizado, pra não
+      // sobrescrever o que a empresa já escreveu ali.
+      setSystemName(result.systemName || user?.company.legalName || "");
     } catch (err) {
       setLoadError(
         extractMessage(
@@ -429,6 +432,11 @@ function BrandingSection() {
     } finally {
       setLoading(false);
     }
+    // `user` só entra como valor padrão inicial (fallback pra Razão
+    // social) — deps vazias de propósito, senão qualquer refresh de
+    // `user` (outro toggle salvo na página) refaria essa chamada e
+    // apagaria um nome ainda não salvo que a pessoa esteja digitando.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -688,7 +696,7 @@ export default function PersonalizacaoPage() {
   const { hasModule } = useAuth();
 
   return (
-    <AppShell workspaceLabel="Personalização">
+    <OsShell workspaceLabel="Personalização">
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Monitor
@@ -733,6 +741,6 @@ export default function PersonalizacaoPage() {
           )}
         </section>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

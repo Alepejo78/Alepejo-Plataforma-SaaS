@@ -1,8 +1,8 @@
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 
 export default function Configuracoes() {
   return (
-    <AppShell workspaceLabel="Configurações">
+    <OsShell workspaceLabel="Configurações">
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">
           Configurações
@@ -12,6 +12,6 @@ export default function Configuracoes() {
           Nada por aqui ainda.
         </section>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

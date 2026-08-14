@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Clock, Settings } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
@@ -11,7 +11,7 @@ import { ppeTypeService, sectorService } from "@/services/hr.service";
 
 export default function CadastrosRhPage() {
   return (
-    <AppShell workspaceLabel="Cadastros de RH">
+    <OsShell workspaceLabel="Cadastros de RH">
       <div className="space-y-6">
         <header>
           <Link
@@ -99,6 +99,6 @@ export default function CadastrosRhPage() {
           />
         </div>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

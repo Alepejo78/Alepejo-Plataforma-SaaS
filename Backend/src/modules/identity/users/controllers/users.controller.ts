@@ -69,6 +69,58 @@ import {
       return this.usersService.update(companyId, id, updateUserDto);
     }
 
+    @Patch(':id/activate')
+    @Permissions('user.update')
+    @ApiOperation({ summary: 'Ativar usuário' })
+    activate(
+      @CurrentUser('companyId') companyId: string,
+      @Param('id') id: string,
+    ) {
+      return this.usersService.activate(companyId, id);
+    }
+
+    @Patch(':id/deactivate')
+    @Permissions('user.update')
+    @ApiOperation({ summary: 'Desativar usuário' })
+    deactivate(
+      @CurrentUser('companyId') companyId: string,
+      @Param('id') id: string,
+    ) {
+      return this.usersService.deactivate(companyId, id);
+    }
+
+    @Patch(':id/block')
+    @Permissions('user.update')
+    @ApiOperation({ summary: 'Bloquear conta do usuário' })
+    block(
+      @CurrentUser('companyId') companyId: string,
+      @Param('id') id: string,
+    ) {
+      return this.usersService.block(companyId, id);
+    }
+
+    @Patch(':id/unblock')
+    @Permissions('user.update')
+    @ApiOperation({ summary: 'Desbloquear conta do usuário' })
+    unblock(
+      @CurrentUser('companyId') companyId: string,
+      @Param('id') id: string,
+    ) {
+      return this.usersService.unblock(companyId, id);
+    }
+
+    @Post(':id/reset-password-email')
+    @Permissions('user.update')
+    @ApiOperation({
+      summary: 'Enviar e-mail de redefinição de senha',
+    })
+    requestPasswordReset(
+      @CurrentUser('companyId') companyId: string,
+      @Param('id') id: string,
+    ) {
+      return this.usersService.requestPasswordReset(companyId, id);
+    }
+
     @Delete(':id')
     @Permissions('user.delete')
     @ApiOperation({ summary: 'Excluir usuário (soft delete)' })

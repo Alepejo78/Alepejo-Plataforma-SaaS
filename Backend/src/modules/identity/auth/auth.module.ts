@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from '../../../core/prisma/prisma.module';
 
 import { LicenseModule } from '../license/license.module';
+import { UsersModule } from '../users/users.module';
 
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
@@ -30,6 +31,7 @@ import { ACCESS_TOKEN_EXPIRES_IN } from './constants/token.constants';
     }),
 
     LicenseModule,
+    UsersModule,
   ],
 
   controllers: [AuthController],

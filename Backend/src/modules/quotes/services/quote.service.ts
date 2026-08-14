@@ -123,6 +123,7 @@ export class QuoteService {
 
     if (partner.email) {
       void this.emailNotifications.send(
+        companyId,
         partner.email,
         `Orçamento ${quoteNumber} — ${companyName}`,
         `<p>Olá, ${partnerName},</p>
@@ -134,6 +135,7 @@ export class QuoteService {
 
     if (partner.mobile) {
       void this.whatsappNotifications.send(
+        companyId,
         partner.mobile,
         `Olá, ${partnerName}! Segue nosso orçamento ${quoteNumber} de ${companyName}, no valor de ${value}. Qualquer dúvida, estamos à disposição.`,
       );

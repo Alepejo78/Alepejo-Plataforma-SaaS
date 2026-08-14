@@ -1,25 +1,25 @@
 "use client";
 
-import { useState } from "react";
-
 import { useAuth } from "@/providers/AuthProvider";
+import { useSidebar } from "@/providers/TabsProvider";
 
 import type { AppShellProps } from "./AppShell.types";
 
 import { Sidebar } from "../Sidebar";
 import { HorizontalNav } from "../HorizontalNav/HorizontalNav";
-import { TopBar } from "../TopBar";
+import { AppTabsBar } from "../TopBar";
+import { TabsBar } from "../TabsBar";
 
-export function AppShell({
-  children,
-  workspaceLabel,
-}: AppShellProps) {
+/**
+ * `workspaceLabel` não aparece mais em lugar nenhum aqui — a guia de
+ * 2º nível ativa (`TabsBar`) já mostra o nome da tela, deixaria
+ * duplicado. O prop continua aceito só pra não quebrar as telas que já
+ * chamam `<AppShell workspaceLabel="...">`.
+ */
+export function AppShell({ children }: AppShellProps) {
   const { user, hasModule, sessionError } = useAuth();
 
-  const [
-    isMobileNavigationOpen,
-    setMobileNavigationOpen,
-  ] = useState(false);
+  const { isOpen: isMenuOpen, toggle: toggleMenu } = useSidebar();
 
   // Layout horizontal só vale com o módulo BRANDING licenciado —
   // senão a empresa fica sempre na sidebar vertical (padrão).
@@ -30,16 +30,15 @@ export function AppShell({
   if (horizontal) {
     return (
       <div className="flex h-screen flex-col gap-3 bg-[var(--background)] p-3">
-        <HorizontalNav />
+        <AppTabsBar />
 
-        <TopBar
-          companyName={user?.company?.tradeName}
-          userName={user?.name}
-          workspaceLabel={workspaceLabel}
-          isMobileNavigationOpen={false}
-          onMobileNavigationToggle={() => {}}
-          showMobileNavigationToggle={false}
+        <TabsBar
+          app="erp"
+          isMenuOpen={isMenuOpen}
+          onOpenMenu={toggleMenu}
         />
+
+        {isMenuOpen && <HorizontalNav />}
 
         {sessionError && (
           <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">
@@ -67,43 +66,23 @@ export function AppShell({
   }
 
   return (
-    <div className="flex h-screen gap-3 bg-[var(--background)] p-3">
-      <div
-        className={
-          isMobileNavigationOpen
-            ? "fixed inset-0 z-40 md:static md:z-auto"
-            : "hidden md:block"
-        }
-      >
-        <Sidebar />
-      </div>
+    <div className="flex h-screen flex-col gap-3 bg-[var(--background)] p-3">
+      <AppTabsBar />
 
-      {isMobileNavigationOpen && (
-        <button
-          aria-label="Fechar navegação"
-          onClick={() => setMobileNavigationOpen(false)}
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
-        />
+      <TabsBar
+        app="erp"
+        isMenuOpen={isMenuOpen}
+        onOpenMenu={toggleMenu}
+      />
+
+      {sessionError && (
+        <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">
+          {sessionError}
+        </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-3">
-        <TopBar
-          companyName={user?.company?.tradeName}
-          userName={user?.name}
-          workspaceLabel={workspaceLabel}
-          isMobileNavigationOpen={isMobileNavigationOpen}
-          onMobileNavigationToggle={() =>
-            setMobileNavigationOpen(
-              (previous) => !previous
-            )
-          }
-        />
-
-        {sessionError && (
-          <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">
-            {sessionError}
-          </div>
-        )}
+      <div className="flex flex-1 gap-3 overflow-hidden">
+        {isMenuOpen && <Sidebar />}
 
         <main
           className="

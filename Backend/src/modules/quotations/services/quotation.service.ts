@@ -382,6 +382,7 @@ export class QuotationService {
 
       if (offer.partner.email) {
         void this.emailNotifications.send(
+          companyId,
           offer.partner.email,
           `Você foi selecionado — Cotação COT-${quotationNumber}`,
           `<p>Olá, ${partnerName},</p>
@@ -394,6 +395,7 @@ export class QuotationService {
 
       if (offer.partner.mobile) {
         void this.whatsappNotifications.send(
+          companyId,
           offer.partner.mobile,
           `Olá, ${partnerName}! Sua proposta foi escolhida como vencedora na cotação COT-${quotationNumber} de ${companyName}. Segue o Pedido de Compra ${orderNumber} gerado a partir dela. Por favor, informe esse número (${orderNumber}) na observação da nota fiscal — isso facilita o rastreamento no recebimento.`,
         );

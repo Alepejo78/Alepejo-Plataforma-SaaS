@@ -144,6 +144,7 @@ export class SalesOrderService {
 
     if (partner.email) {
       void this.emailNotifications.send(
+        companyId,
         partner.email,
         `Pedido de Venda ${orderNumber} — ${companyName}`,
         `<p>Olá, ${partnerName},</p>
@@ -155,6 +156,7 @@ export class SalesOrderService {
 
     if (partner.mobile) {
       void this.whatsappNotifications.send(
+        companyId,
         partner.mobile,
         `Olá, ${partnerName}! Segue nosso Pedido de Venda ${orderNumber} de ${companyName}, no valor de ${value}. Qualquer dúvida, estamos à disposição.`,
       );

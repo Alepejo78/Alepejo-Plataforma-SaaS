@@ -255,6 +255,7 @@ export default function LoginPage() {
 
             <button
               type="button"
+              onClick={() => router.push("/cadastro-empresa")}
               className="font-semibold text-[var(--text-primary)] hover:underline"
             >
               Criar conta

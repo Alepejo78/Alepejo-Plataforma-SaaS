@@ -545,9 +545,17 @@ export default function RecebimentoPage() {
                               <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() =>
-                                  void runUnreceive(p.id)
-                                }
+                                onClick={() => {
+                                  if (
+                                    !window.confirm(
+                                      "Tem certeza que deseja estornar?"
+                                    )
+                                  ) {
+                                    return;
+                                  }
+
+                                  void runUnreceive(p.id);
+                                }}
                                 title="Estornar recebimento (só se ainda não houver pagamento no financeiro)"
                                 aria-label="Estornar recebimento"
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"

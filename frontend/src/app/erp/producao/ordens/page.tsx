@@ -701,7 +701,15 @@ export default function OrdensDeProducaoPage() {
                               <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() =>
+                                onClick={() => {
+                                  if (
+                                    !window.confirm(
+                                      "Tem certeza que deseja estornar?"
+                                    )
+                                  ) {
+                                    return;
+                                  }
+
                                   void runAction(
                                     o.id,
                                     (id) =>
@@ -709,8 +717,8 @@ export default function OrdensDeProducaoPage() {
                                         id
                                       ),
                                     "Não foi possível estornar a conclusão."
-                                  )
-                                }
+                                  );
+                                }}
                                 title="Estornar conclusão"
                                 aria-label="Estornar conclusão"
                                 className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-50"

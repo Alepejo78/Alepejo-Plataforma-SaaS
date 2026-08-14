@@ -702,12 +702,20 @@ export function FinancialEntriesScreen({
                               <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() =>
+                                onClick={() => {
+                                  if (
+                                    !window.confirm(
+                                      "Tem certeza que deseja estornar?"
+                                    )
+                                  ) {
+                                    return;
+                                  }
+
                                   void runAction(
                                     entry.id,
                                     "reopen"
-                                  )
-                                }
+                                  );
+                                }}
                                 title="Estornar baixa"
                                 aria-label="Estornar baixa"
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"

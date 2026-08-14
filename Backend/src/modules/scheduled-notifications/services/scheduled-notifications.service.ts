@@ -102,6 +102,7 @@ export class ScheduledNotificationsService {
 
       if (employee.email) {
         void this.emailNotifications.send(
+          employee.companyId,
           employee.email,
           subject,
           `<p>${message}</p>`,
@@ -110,6 +111,7 @@ export class ScheduledNotificationsService {
 
       if (employee.mobile) {
         void this.whatsappNotifications.send(
+          employee.companyId,
           employee.mobile,
           message,
         );
@@ -150,6 +152,7 @@ export class ScheduledNotificationsService {
 
       if (employee.email) {
         void this.emailNotifications.send(
+          employee.companyId,
           employee.email,
           'Feliz aniversário! 🎉',
           `<p>${message}</p>`,
@@ -158,6 +161,7 @@ export class ScheduledNotificationsService {
 
       if (employee.mobile) {
         void this.whatsappNotifications.send(
+          employee.companyId,
           employee.mobile,
           message,
         );

@@ -1,15 +1,16 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 
 import { WhatsappNotificationsService } from '../services/whatsapp-notifications.service';
 import { SendTestWhatsappDto } from '../dto/send-test-whatsapp.dto';
 
 /**
- * Pareamento e status da sessão de WhatsApp (Baileys) — sessão única,
- * global ao sistema (não é por empresa, mesmo padrão do SMTP em
- * Configurações). Só admins com `whatsapp.manage` conseguem
+ * Pareamento e status da sessão de WhatsApp (Baileys) — uma sessão
+ * POR EMPRESA (mesmo padrão do SMTP em Configurações: cliente novo
+ * nasce sem nada pareado). Só admins com `whatsapp.manage` conseguem
  * conectar/desconectar; `whatsapp.view` só consulta o status.
  */
 @ApiTags('Notifications - WhatsApp')
@@ -24,8 +25,10 @@ export class WhatsappNotificationsController {
   @ApiOperation({
     summary: 'Status da conexão do WhatsApp (e QR code, se aguardando pareamento)',
   })
-  getStatus() {
-    return this.service.getStatus();
+  getStatus(
+    @CurrentUser('companyId') companyId: string,
+  ) {
+    return this.service.getStatus(companyId);
   }
 
   @Post('connect')
@@ -33,8 +36,10 @@ export class WhatsappNotificationsController {
   @ApiOperation({
     summary: 'Iniciar/retomar a conexão do WhatsApp (gera QR code para parear)',
   })
-  connect() {
-    return this.service.connect();
+  connect(
+    @CurrentUser('companyId') companyId: string,
+  ) {
+    return this.service.connect(companyId);
   }
 
   @Post('logout')
@@ -42,8 +47,10 @@ export class WhatsappNotificationsController {
   @ApiOperation({
     summary: 'Desconectar e apagar a sessão pareada do WhatsApp',
   })
-  logout() {
-    return this.service.logout();
+  logout(
+    @CurrentUser('companyId') companyId: string,
+  ) {
+    return this.service.logout(companyId);
   }
 
   @Post('test')
@@ -51,8 +58,12 @@ export class WhatsappNotificationsController {
   @ApiOperation({
     summary: 'Enviar uma mensagem de teste para um número (diagnóstico)',
   })
-  async sendTest(@Body() dto: SendTestWhatsappDto) {
+  async sendTest(
+    @CurrentUser('companyId') companyId: string,
+    @Body() dto: SendTestWhatsappDto,
+  ) {
     return this.service.sendVerbose(
+      companyId,
       dto.phone,
       dto.message ??
         'Mensagem de teste do AlePejo ERP — se você recebeu isso, o WhatsApp está funcionando.',

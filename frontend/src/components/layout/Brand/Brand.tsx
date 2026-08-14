@@ -7,10 +7,6 @@ import { systemConfig } from "@/config/system";
 import { useAuth } from "@/providers/AuthProvider";
 import { brandingAssetUrl } from "@/services/company-branding.service";
 
-interface BrandProps {
-  collapsed?: boolean;
-}
-
 /**
  * O que estoura a largura da coluna é a MAIOR palavra, não o
  * tamanho total do nome (frases quebram linha; uma palavra sozinha
@@ -38,9 +34,7 @@ function fitFontSizeClass(name: string) {
   return "text-xs";
 }
 
-export function Brand({
-  collapsed = false,
-}: BrandProps) {
+export function Brand() {
   const { company, systemName } = systemConfig;
   const { user, hasModule } = useAuth();
 
@@ -83,9 +77,10 @@ export function Brand({
 
   const displayName = customName || company.name;
 
-  // Recolhida, a barra tem 72px com 8px de padding de cada lado
-  // (veja SidebarHeader): 56px é o limite antes de estourar.
-  const size = collapsed ? 56 : company.logoWidth;
+  // 23,5% menor que o logoWidth configurado (dois ajustes pedidos em
+  // sequência: -10%, depois mais -15% em cima disso) — só a exibição
+  // na barra do topo, não mexe no valor cadastrado em Personalização.
+  const logoSize = company.logoWidth * 0.9 * 0.85;
 
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -97,28 +92,26 @@ export function Brand({
         src={logo}
         alt={displayName}
         className="shrink-0 max-w-none object-contain"
-        style={{ width: size, height: size }}
+        style={{ width: logoSize, height: logoSize }}
       />
 
-      {!collapsed && (
-        <div className="min-w-0 flex-1">
-          <h1
-            className={`font-bold text-[var(--text-primary)] ${
-              customName
-                ? `${fitFontSizeClass(displayName)} text-center leading-tight`
-                : "text-2xl truncate"
-            }`}
-          >
-            {displayName}
-          </h1>
+      <div className="min-w-0 flex-1">
+        <h1
+          className={`font-bold text-[var(--text-primary)] ${
+            customName
+              ? `${fitFontSizeClass(displayName)} text-center leading-tight`
+              : "text-2xl truncate"
+          }`}
+        >
+          {displayName}
+        </h1>
 
-          {!customName && (
-            <p className="truncate text-sm text-[var(--text-secondary)]">
-              {systemName}
-            </p>
-          )}
-        </div>
-      )}
+        {!customName && (
+          <p className="truncate text-sm text-[var(--text-secondary)]">
+            {systemName}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

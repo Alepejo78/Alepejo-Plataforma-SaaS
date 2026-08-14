@@ -66,6 +66,40 @@ export class CompanyRepository extends BaseRepository {
     });
   }
 
+  /** Raiz + todas as filiais (mesmo `rootCompanyId`) — usado pela tela "Empresas do grupo". */
+  async findGroup(rootCompanyId: string): Promise<Company[]> {
+    return this.prisma.company.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { id: rootCompanyId },
+          { rootCompanyId },
+        ],
+      },
+      orderBy: {
+        legalName: 'asc',
+      },
+    });
+  }
+
+  /** Empresas que este login pode acessar (login cruzado) — ver UserCompany. */
+  async findLinkedToUser(userId: string): Promise<Company[]> {
+    const links = await this.prisma.userCompany.findMany({
+      where: {
+        userId,
+        company: { deletedAt: null },
+      },
+      include: {
+        company: true,
+      },
+      orderBy: {
+        company: { legalName: 'asc' },
+      },
+    });
+
+    return links.map((link) => link.company);
+  }
+
   async update(
     id: string,
     data: Prisma.CompanyUpdateInput,

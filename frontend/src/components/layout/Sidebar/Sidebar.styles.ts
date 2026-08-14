@@ -5,10 +5,9 @@
  */
 export const sidebarStyles = {
   root: [
-    "fixed inset-y-0 left-0 z-40 flex h-dvh shrink-0 flex-col",
+    "flex h-full shrink-0 flex-col",
     "rounded-3xl border border-[var(--border)]",
     "bg-[var(--surface)] shadow-sm",
-    "md:static md:translate-x-0",
   ].join(" "),
 
   brand:

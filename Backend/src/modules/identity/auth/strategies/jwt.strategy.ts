@@ -91,6 +91,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
+    if (!user.company.active) {
+      throw new UnauthorizedException(
+        'Empresa inativa. Entre em contato com o suporte.',
+      );
+    }
+
     const permissions = user.roles.flatMap((userRole) =>
       userRole.role.permissions.map((rolePermission) => ({
         code: rolePermission.permission.code,
