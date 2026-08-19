@@ -13,8 +13,15 @@ const isProduction = (): boolean =>
 
 /**
  * httpOnly: JavaScript não consegue ler o cookie (proteção contra XSS).
- * sameSite lax: o navegador envia o cookie em navegação normal, mas não
- *   em requisições cross-site de terceiros (proteção contra CSRF).
+ * sameSite: em dev, frontend e backend são "same-site" (mesmo host
+ *   `localhost`, só porta diferente) — `lax` já basta e é mais
+ *   restritivo contra CSRF. Em produção, frontend (Vercel,
+ *   `app.alepejo.com.br`) e backend (Railway, `up.railway.app`) são
+ *   domínios DIFERENTES de verdade — toda chamada do frontend pro
+ *   backend é cross-site, e `lax` bloqueia o navegador de enviar o
+ *   cookie nela (o login "funcionava" mas a sessão seguinte dizia
+ *   "não encontrada"). Por isso `none` em produção — exige `secure:
+ *   true` junto, que já é o caso.
  * secure: só trafega em HTTPS. Desligado em dev para funcionar em
  *   http://localhost.
  *
@@ -27,7 +34,7 @@ const isProduction = (): boolean =>
 const baseCookieOptions = (): CookieOptions => ({
   httpOnly: true,
   secure: isProduction(),
-  sameSite: 'lax',
+  sameSite: isProduction() ? 'none' : 'lax',
   path: '/',
 });
 
