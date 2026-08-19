@@ -14,6 +14,7 @@ export type WhatsAppStatus =
   | 'CONNECTED';
 
 const AUTH_BASE_DIR = dataPath('whatsapp-auth');
+const TIMEOUT_MESSAGE = '__whatsapp_call_timeout__';
 
 interface SessionState {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -265,7 +266,10 @@ export class WhatsappNotificationsService implements OnModuleInit {
 
     try {
       const digits = jid.replace('@s.whatsapp.net', '');
-      const check = await session.sock.onWhatsApp(digits);
+      const check = await this.withTimeout(
+        session.sock.onWhatsApp(digits),
+        'Checagem do número',
+      );
       const found = check?.[0];
 
       if (!found?.exists) {
@@ -276,11 +280,30 @@ export class WhatsappNotificationsService implements OnModuleInit {
         return { sent: false, error };
       }
 
-      await session.sock.sendMessage(found.jid, { text: message });
+      await this.withTimeout(
+        session.sock.sendMessage(found.jid, { text: message }),
+        'Envio da mensagem',
+      );
 
       return { sent: true };
     } catch (err) {
-      const error = err instanceof Error ? err.message : String(err);
+      const isTimeout = err instanceof Error && err.message === TIMEOUT_MESSAGE;
+
+      const error = isTimeout
+        ? 'A sessão do WhatsApp travou (sem resposta) — desconecte e conecte de novo.'
+        : err instanceof Error
+          ? err.message
+          : String(err);
+
+      // Sessão que trava numa chamada básica como essa não volta
+      // sozinha — marcar como desconectada evita a UI mostrar
+      // "Conectado" enquanto na prática nada mais vai funcionar até
+      // reconectar (ver comentário da classe: send() nunca deve
+      // travar quem chama).
+      if (isTimeout) {
+        session.status = 'DISCONNECTED';
+        session.sock = null;
+      }
 
       this.logger.error(
         `Falha ao enviar WhatsApp para ${phone} (empresa ${companyId}): ${error}`,
@@ -288,6 +311,35 @@ export class WhatsappNotificationsService implements OnModuleInit {
 
       return { sent: false, error };
     }
+  }
+
+  /** Corta chamadas do Baileys que ficam penduradas sem responder nem dar erro (socket morto mas sem detectar) — sem isso, a requisição HTTP fica presa até o Railway desistir e devolver "Application failed to respond". */
+  private withTimeout<T>(
+    promise: Promise<T>,
+    label: string,
+    timeoutMs = 20_000,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(TIMEOUT_MESSAGE));
+      }, timeoutMs);
+
+      promise
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+    }).catch((err) => {
+      if (err instanceof Error && err.message === TIMEOUT_MESSAGE) {
+        this.logger.warn(`${label}: sem resposta em ${timeoutMs}ms.`);
+      }
+
+      throw err;
+    });
   }
 
   /** Converte um telefone livre em JID do WhatsApp, assumindo Brasil (DDI 55) quando ausente. */
