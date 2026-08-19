@@ -3,6 +3,29 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 SISTEMA NO AR — deploy de produção concluído e testado (19-08-2026)
+
+Confirmado de ponta a ponta: login em `https://app.alepejo.com.br` →
+`/os` sem cair de volta pro login, todos os cards aparecendo
+(inclusive os exclusivos de dono da plataforma). Domínio próprio,
+HTTPS, backend, banco, proxy same-origin — tudo funcionando junto.
+
+**Causa do `BACKEND_URL` não pegar antes**: tinha sido cadastrado no
+projeto ERRADO (Railway, onde não faz efeito nenhum) em vez do Vercel
+(onde o `next.config.ts` lê pra montar o rewrite). Depois de mover pra
+o lugar certo + redeploy, resolveu.
+
+Estado final de produção:
+- Frontend: Vercel, domínios `alepejo.com.br`/`www.alepejo.com.br`
+  (institucional) e `app.alepejo.com.br` (sistema).
+- Backend: Railway, `alepejo-plataforma-saas-production.up.railway.app`.
+- Todo tráfego do navegador passa por `app.alepejo.com.br` (proxy via
+  `next.config.ts` rewrites) — nunca fala direto com o Railway.
+- Banco: Postgres no Railway, migrado e com seed rodado (login Dono
+  ainda com a senha de teste — **trocar antes de divulgar o sistema**,
+  via "Esqueci minha senha" em `/alepejo/login`, agora que o SMTP e o
+  `FRONTEND_URL` estão certos em produção).
+
 ## 🟢 Login não persistia em produção — frontend/backend em domínios diferentes (19-08-2026)
 
 Depois de tudo no ar (Railway + Vercel + domínio + CORS +
