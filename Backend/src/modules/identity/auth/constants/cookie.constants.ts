@@ -1,4 +1,4 @@
-import type { CookieOptions } from 'express';
+import type { CookieOptions, Response } from 'express';
 
 /**
  * Nomes dos cookies de sessão.
@@ -46,3 +46,27 @@ export const refreshTokenCookieOptions = (): CookieOptions =>
 
 export const clearCookieOptions = (): CookieOptions =>
   baseCookieOptions();
+
+/**
+ * Grava os dois cookies de sessão numa resposta — usado pelo login
+ * normal (`AuthController`) e por qualquer outro fluxo que precise
+ * abrir sessão sem senha na mesma resposta que já autenticou o
+ * usuário por outro meio (ex.: cadastro público com pagamento
+ * imediato, ver `CompanyController.signup`).
+ */
+export const setSessionCookies = (
+  res: Response,
+  tokens: { accessToken: string; refreshToken: string },
+): void => {
+  res.cookie(
+    ACCESS_TOKEN_COOKIE,
+    tokens.accessToken,
+    accessTokenCookieOptions(),
+  );
+
+  res.cookie(
+    REFRESH_TOKEN_COOKIE,
+    tokens.refreshToken,
+    refreshTokenCookieOptions(),
+  );
+};

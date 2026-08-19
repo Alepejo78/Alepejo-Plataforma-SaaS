@@ -119,14 +119,14 @@ export class CompanyOnboardingService {
     }
 
     const roleId = await this.provisionAdminRole(company.id);
-    await this.provisionAdminUser(
+    const user = await this.provisionAdminUser(
       company.id,
       dto.adminName,
       dto.adminEmail,
       roleId,
     );
 
-    return { companyId: company.id };
+    return { companyId: company.id, userId: user.id };
   }
 
   /**

@@ -5,7 +5,9 @@ import {
   Param,
   Patch,
   Post,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 
 import {
   ApiOperation,
@@ -17,6 +19,8 @@ import { Public } from '../../../../core/decorators/public.decorator';
 import { CurrentUser } from '../../../../core/decorators/current-user.decorator';
 import { Permissions } from '../../auth/decorators/permissions.decorator';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
+import { AuthService } from '../../auth/services/auth.service';
+import { setSessionCookies } from '../../auth/constants/cookie.constants';
 
 import { CompanyService } from '../services/company.service';
 import { CompanyOnboardingService } from '../services/company-onboarding.service';
@@ -47,6 +51,7 @@ export class CompanyController {
     private readonly companyService: CompanyService,
     private readonly onboardingService: CompanyOnboardingService,
     private readonly licenseService: LicenseService,
+    private readonly authService: AuthService,
   ) {}
 
   /**
@@ -114,8 +119,25 @@ export class CompanyController {
     status: 409,
     description: 'Documento já cadastrado.',
   })
-  signup(@Body() dto: CompanySignupDto) {
-    return this.onboardingService.signup(dto);
+  async signup(
+    @Body() dto: CompanySignupDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { companyId, userId } = await this.onboardingService.signup(dto);
+
+    if (!dto.payNow) {
+      return { companyId };
+    }
+
+    // Pagar na hora exige sessão pra chamar POST /billing/me/subscribe
+    // em seguida — abre aqui, na mesma resposta que acabou de criar a
+    // conta (ver AuthService.issueSessionForUser). O fluxo de definir
+    // senha por e-mail continua acontecendo do mesmo jeito, pra quando
+    // essa sessão inicial expirar.
+    const tokens = await this.authService.issueSessionForUser(userId);
+    setSessionCookies(res, tokens);
+
+    return { companyId };
   }
 
   @Post('additional')

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
+  IsBoolean,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -113,4 +114,12 @@ export class CompanySignupDto {
   @IsArray()
   @IsString({ each: true })
   moduleIds?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'true = pular o teste e ir direto pro pagamento (a resposta já vem com sessão ativa, pra chamar /billing/me/subscribe em seguida).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  payNow?: boolean;
 }

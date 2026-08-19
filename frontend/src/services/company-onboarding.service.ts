@@ -25,6 +25,8 @@ export type CompanySignupPayload = {
   planId: string;
   /** Só pro plano Customizado (code CUSTOM) — ids dos módulos escolhidos no montador. */
   moduleIds?: string[];
+  /** true = pular o teste e ir direto pro pagamento — a resposta já vem com sessão ativa. */
+  payNow?: boolean;
 };
 
 export interface PublicPlanModule {

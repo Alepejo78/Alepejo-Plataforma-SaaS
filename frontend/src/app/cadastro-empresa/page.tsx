@@ -15,6 +15,8 @@ import {
   emptyAddress,
   type AddressFormState,
 } from "@/components/company/AddressFields";
+import { PaymentCheckout } from "@/components/billing/PaymentCheckout";
+import { useAuth } from "@/providers/AuthProvider";
 
 function extractMessage(err: unknown, fallback: string) {
   const message = (
@@ -59,9 +61,12 @@ function money(value: string | number | null | undefined) {
 function CadastroEmpresaForm() {
   const searchParams = useSearchParams();
   const planId = searchParams.get("planId") ?? "";
+  const payNow = searchParams.get("payNow") === "1";
   const moduleIds = (searchParams.get("modules") ?? "")
     .split(",")
     .filter(Boolean);
+
+  const { refreshUser } = useAuth();
 
   const [plan, setPlan] = useState<PublicPlan | null>(null);
   const [planError, setPlanError] = useState(false);
@@ -133,7 +138,15 @@ function CadastroEmpresaForm() {
         adminEmail: form.adminEmail.trim(),
         planId,
         moduleIds: moduleIds.length > 0 ? moduleIds : undefined,
+        payNow: payNow || undefined,
       });
+
+      if (payNow) {
+        // A resposta já veio com sessão ativa (ver CompanyController.
+        // signup) — atualiza o AuthProvider pra ele saber disso
+        // (também grava a empresa lembrada, igual um login normal).
+        await refreshUser();
+      }
 
       setDone(true);
     } catch (err) {
@@ -216,28 +229,53 @@ function CadastroEmpresaForm() {
         )}
 
         {done ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-[var(--success)]">
-              <CheckCircle2 size={20} />
-              <p className="text-sm font-medium">
-                Empresa cadastrada com sucesso.
+          payNow ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-[var(--success)]">
+                <CheckCircle2 size={20} />
+                <p className="text-sm font-medium">
+                  Empresa cadastrada — falta só pagar.
+                </p>
+              </div>
+
+              <p className="text-sm text-[var(--text-secondary)]">
+                Também enviamos um e-mail para{" "}
+                <strong>{form.adminEmail}</strong> com o link pra
+                definir sua senha (pra próxima vez que entrar) — por
+                enquanto, já dá pra usar o sistema normalmente.
               </p>
+
+              <PaymentCheckout
+                finalLabel="Ir para o sistema"
+                onFinal={() => {
+                  window.location.href = "/";
+                }}
+              />
             </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-[var(--success)]">
+                <CheckCircle2 size={20} />
+                <p className="text-sm font-medium">
+                  Empresa cadastrada com sucesso.
+                </p>
+              </div>
 
-            <p className="text-sm text-[var(--text-secondary)]">
-              Enviamos um e-mail para <strong>{form.adminEmail}</strong>{" "}
-              com o link para definir a senha e começar a usar o
-              sistema. Seu teste grátis de {trialDays} dia
-              {trialDays === 1 ? "" : "s"} já começou.
-            </p>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Enviamos um e-mail para <strong>{form.adminEmail}</strong>{" "}
+                com o link para definir a senha e começar a usar o
+                sistema. Seu teste grátis de {trialDays} dia
+                {trialDays === 1 ? "" : "s"} já começou.
+              </p>
 
-            <Link
-              href="/login"
-              className="inline-block rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-            >
-              Ir para o login
-            </Link>
-          </div>
+              <Link
+                href="/login"
+                className="inline-block rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+              >
+                Ir para o login
+              </Link>
+            </div>
+          )
         ) : (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-6">

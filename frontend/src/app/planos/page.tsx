@@ -94,11 +94,15 @@ function CustomPlanModal({
   const displayTotal =
     billingCycle === "YEARLY" && totalYearly > 0 ? totalYearly / 12 : totalMonthly;
 
-  function handleContinue() {
+  function handleContinue(payNow: boolean) {
     const query = new URLSearchParams({
       planId: customPlanId,
       modules: Array.from(selected).join(","),
     });
+
+    if (payNow) {
+      query.set("payNow", "1");
+    }
 
     router.push(`/cadastro-empresa?${query.toString()}`);
   }
@@ -220,13 +224,23 @@ function CustomPlanModal({
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={handleContinue}
-                className="rounded-xl bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-              >
-                Continuar com {selected.size} módulo(s)
-              </button>
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleContinue(false)}
+                  className="rounded-xl bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                >
+                  Continuar com {selected.size} módulo(s)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleContinue(true)}
+                  className="text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:underline"
+                >
+                  Comprar agora
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -426,16 +440,26 @@ export default function PlanosPage() {
                     ))}
                 </ul>
 
-                <Link
-                  href={`/cadastro-empresa?planId=${plan.id}`}
-                  className={`mt-6 rounded-xl px-4 py-3 text-center text-sm font-semibold transition-colors ${
-                    plan.highlighted
-                      ? "bg-[var(--primary)] text-[var(--primary-contrast)] hover:bg-[var(--primary-hover)]"
-                      : "border border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                  }`}
-                >
-                  Começar teste de {trialDays} dia{trialDays === 1 ? "" : "s"}
-                </Link>
+                <div className="mt-6 flex flex-col gap-2">
+                  <Link
+                    href={`/cadastro-empresa?planId=${plan.id}`}
+                    className={`rounded-xl px-4 py-3 text-center text-sm font-semibold transition-colors ${
+                      plan.highlighted
+                        ? "bg-[var(--primary)] text-[var(--primary-contrast)] hover:bg-[var(--primary-hover)]"
+                        : "border border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                    }`}
+                  >
+                    Começar teste de {trialDays} dia
+                    {trialDays === 1 ? "" : "s"}
+                  </Link>
+
+                  <Link
+                    href={`/cadastro-empresa?planId=${plan.id}&payNow=1`}
+                    className="rounded-xl px-4 py-3 text-center text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:underline"
+                  >
+                    Comprar agora
+                  </Link>
+                </div>
               </div>
               );
             })}

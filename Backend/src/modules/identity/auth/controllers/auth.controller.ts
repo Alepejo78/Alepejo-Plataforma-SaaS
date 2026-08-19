@@ -28,9 +28,8 @@ import type { AuthenticatedUser } from '../interfaces/authenticated-user.interfa
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
-  accessTokenCookieOptions,
-  refreshTokenCookieOptions,
   clearCookieOptions,
+  setSessionCookies,
 } from '../constants/cookie.constants';
 
 @ApiTags('Authentication')
@@ -40,29 +39,6 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
   ) {}
-
-  /**
-   * Grava os tokens em cookies httpOnly e devolve apenas os dados
-   * públicos da sessão. Os tokens NÃO voltam no corpo da resposta:
-   * assim nenhum JavaScript do frontend consegue lê-los, o que
-   * neutraliza roubo de sessão por XSS.
-   */
-  private setSessionCookies(
-    res: Response,
-    tokens: { accessToken: string; refreshToken: string },
-  ): void {
-    res.cookie(
-      ACCESS_TOKEN_COOKIE,
-      tokens.accessToken,
-      accessTokenCookieOptions(),
-    );
-
-    res.cookie(
-      REFRESH_TOKEN_COOKIE,
-      tokens.refreshToken,
-      refreshTokenCookieOptions(),
-    );
-  }
 
   @Public()
   @Post('login')
@@ -75,7 +51,7 @@ export class AuthController {
   ) {
     const result = await this.authService.login(dto);
 
-    this.setSessionCookies(res, result);
+    setSessionCookies(res, result);
 
     return {
       user: result.user,
@@ -119,7 +95,7 @@ export class AuthController {
       throw error;
     }
 
-    this.setSessionCookies(res, result);
+    setSessionCookies(res, result);
 
     return {
       user: result.user,
@@ -210,7 +186,7 @@ export class AuthController {
       dto.companyId,
     );
 
-    this.setSessionCookies(res, result);
+    setSessionCookies(res, result);
 
     return {
       user: result.user,

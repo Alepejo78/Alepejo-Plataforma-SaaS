@@ -343,6 +343,29 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  /**
+   * Emite sessão pra um usuário sem pedir senha — usado só logo após
+   * `CompanyOnboardingService.signup()`, na mesma resposta que acabou
+   * de criar a conta, quando o cliente escolhe pagar na hora em vez
+   * de esperar o e-mail de definir senha (ver `CompanyController.
+   * signup`, campo `payNow`). Seguro porque é a MESMA resposta HTTP
+   * que criou a conta — ninguém além de quem preencheu o cadastro
+   * recebe esses cookies.
+   */
+  async issueSessionForUser(userId: string) {
+    const user = await this.findUserWithAuthContext({
+      id: userId,
+      active: true,
+      deletedAt: null,
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    return this.issueTokens(user);
+  }
+
   async refresh(dto: RefreshTokenDto) {
     let payload: { sub: string; type: string };
 
