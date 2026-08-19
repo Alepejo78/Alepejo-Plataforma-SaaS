@@ -106,7 +106,31 @@ export interface MyLicense {
   companyModules: CompanyModuleLicense[];
 }
 
+export interface PlatformSettings {
+  id: string;
+  trialDays: number;
+}
+
 export const licenseService = {
+  async getPlatformSettings(): Promise<PlatformSettings> {
+    const { data } = await api.get<ApiEnvelope<PlatformSettings>>(
+      "/identity/license/platform-settings"
+    );
+
+    return data.data;
+  },
+
+  async updatePlatformSettings(
+    trialDays: number
+  ): Promise<PlatformSettings> {
+    const { data } = await api.patch<ApiEnvelope<PlatformSettings>>(
+      "/identity/license/platform-settings",
+      { trialDays }
+    );
+
+    return data.data;
+  },
+
   async me(): Promise<MyLicense> {
     const { data } = await api.get<ApiEnvelope<MyLicense>>(
       "/identity/license/me"

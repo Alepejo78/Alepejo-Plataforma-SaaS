@@ -939,19 +939,11 @@ function Contact() {
 
           <div className="mt-8 space-y-4 text-sm text-[var(--text-secondary)]">
             <a
-              href="mailto:alessandro.lourenco@alepejo.com.br"
+              href="mailto:suporte@alepejo.com.br"
               className="flex items-center gap-3 hover:text-[var(--text-primary)]"
             >
               <Mail size={18} className="text-[var(--primary)]" />
-              alessandro.lourenco@alepejo.com.br
-            </a>
-
-            <a
-              href="mailto:ale.lourenco.net@gmail.com"
-              className="flex items-center gap-3 hover:text-[var(--text-primary)]"
-            >
-              <Mail size={18} className="text-[var(--primary)]" />
-              ale.lourenco.net@gmail.com
+              suporte@alepejo.com.br
             </a>
 
             <a

@@ -338,4 +338,12 @@ async removeModule(id: string) {
 async history(companyId: string) {
   return this.repository.history(companyId);
 }
+
+async getPlatformSettings() {
+  return this.repository.getPlatformSettings();
+}
+
+async updatePlatformSettings(trialDays: number) {
+  return this.repository.updatePlatformSettings({ trialDays });
+}
 }

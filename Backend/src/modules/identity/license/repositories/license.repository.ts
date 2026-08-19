@@ -267,6 +267,30 @@ export class LicenseRepository {
     });
   }
 
+  // ==========================
+  // Platform Settings (singleton)
+  // ==========================
+
+  /** Sempre uma linha só — cria com o padrão na primeira leitura, se ainda não existir. */
+  async getPlatformSettings() {
+    const existing = await this.prisma.platformSettings.findFirst();
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.prisma.platformSettings.create({ data: {} });
+  }
+
+  async updatePlatformSettings(data: { trialDays: number }) {
+    const settings = await this.getPlatformSettings();
+
+    return this.prisma.platformSettings.update({
+      where: { id: settings.id },
+      data,
+    });
+  }
+
   dashboard() {
     return Promise.all([
       this.prisma.company.count(),

@@ -1904,6 +1904,21 @@ model Plan {
   @@map("plans")
 }
 
+/**
+ * Configurações da plataforma como um todo (não por empresa) —
+ * tabela singleton, sempre uma linha só. Hoje só guarda os dias de
+ * teste grátis (editável em Administrar planos), mas é o lugar certo
+ * pra outras configurações globais que apareçam depois.
+ */
+model PlatformSettings {
+  id        String   @id @default(cuid())
+  /// Dias de teste grátis pra quem se cadastra escolhendo um plano comercial.
+  trialDays Int      @default(14)
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
 model PlanModule {
   id        String   @id @default(cuid())
   planId    String

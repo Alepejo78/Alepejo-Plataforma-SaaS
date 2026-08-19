@@ -26,6 +26,7 @@ import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { CreateModuleDto } from '../dto/create-module.dto';
 import { UpdateModuleDto } from '../dto/update-module.dto';
+import { UpdatePlatformSettingsDto } from '../dto/update-platform-settings.dto';
 
 /**
  * Regras de escopo deste controller:
@@ -137,6 +138,24 @@ export class LicenseController {
   @ApiOperation({ summary: 'Excluir plano' })
   removePlan(@Param('id') id: string) {
     return this.service.removePlan(id);
+  }
+
+  // ==========================
+  // Configurações da plataforma
+  // ==========================
+
+  @Get('platform-settings')
+  @Permissions('license.catalog.view')
+  @ApiOperation({ summary: 'Configurações gerais da plataforma (ex.: dias de teste grátis)' })
+  getPlatformSettings() {
+    return this.service.getPlatformSettings();
+  }
+
+  @Patch('platform-settings')
+  @Permissions('platform.license.manage')
+  @ApiOperation({ summary: 'Atualizar configurações gerais da plataforma' })
+  updatePlatformSettings(@Body() dto: UpdatePlatformSettingsDto) {
+    return this.service.updatePlatformSettings(dto.trialDays);
   }
 
   // ==========================

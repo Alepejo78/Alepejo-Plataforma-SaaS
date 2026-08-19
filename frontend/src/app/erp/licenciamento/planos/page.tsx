@@ -92,6 +92,11 @@ export default function PlanosAdminPage() {
   const [moduleSaving, setModuleSaving] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
+  const [trialDays, setTrialDays] = useState("");
+  const [trialDaysSaving, setTrialDaysSaving] = useState(false);
+  const [trialDaysError, setTrialDaysError] = useState("");
+  const [trialDaysSaved, setTrialDaysSaved] = useState(false);
+
   const load = useCallback(async () => {
     if (!allowed) {
       setLoading(false);
@@ -102,13 +107,15 @@ export default function PlanosAdminPage() {
     setListError("");
 
     try {
-      const [planList, moduleList] = await Promise.all([
+      const [planList, moduleList, platformSettings] = await Promise.all([
         licenseService.listPlans(),
         licenseService.listModules(),
+        licenseService.getPlatformSettings(),
       ]);
 
       setPlans(planList);
       setModules(moduleList);
+      setTrialDays(String(platformSettings.trialDays));
     } catch (err) {
       setListError(
         extractMessage(err, "Não foi possível carregar os planos.")
@@ -222,6 +229,30 @@ export default function PlanosAdminPage() {
     }
   }
 
+  async function saveTrialDays() {
+    const days = Number(trialDays);
+
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      setTrialDaysError("Informe um número de dias entre 1 e 365.");
+      return;
+    }
+
+    setTrialDaysSaving(true);
+    setTrialDaysError("");
+    setTrialDaysSaved(false);
+
+    try {
+      await licenseService.updatePlatformSettings(days);
+      setTrialDaysSaved(true);
+    } catch (err) {
+      setTrialDaysError(
+        extractMessage(err, "Não foi possível salvar.")
+      );
+    } finally {
+      setTrialDaysSaving(false);
+    }
+  }
+
   /**
    * Só atualiza o valor local, sem chamar a API — chamar a cada tecla
    * digitada desabilitava o campo no meio da digitação (`moduleSaving`
@@ -330,6 +361,59 @@ export default function PlanosAdminPage() {
             </button>
           </div>
         </header>
+
+        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+            Teste grátis
+          </h2>
+
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            Quantos dias de teste grátis quem se cadastra escolhendo um
+            plano comercial recebe, antes de precisar contratar.
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-end gap-3">
+            <div className="w-32">
+              <label className={labelClass} htmlFor="trialDays">
+                Dias
+              </label>
+
+              <input
+                id="trialDays"
+                type="number"
+                min={1}
+                max={365}
+                value={trialDays}
+                onChange={(e) => {
+                  setTrialDays(e.target.value);
+                  setTrialDaysSaved(false);
+                }}
+                className={fieldClass}
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={trialDaysSaving}
+              onClick={() => void saveTrialDays()}
+              className="h-11 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+            >
+              {trialDaysSaving ? "Salvando..." : "Salvar"}
+            </button>
+
+            {trialDaysSaved && !trialDaysError && (
+              <span className="text-sm text-[var(--success)]">
+                Salvo!
+              </span>
+            )}
+          </div>
+
+          {trialDaysError && (
+            <p className="mt-2 text-sm text-[var(--danger)]">
+              {trialDaysError}
+            </p>
+          )}
+        </section>
 
         {listError && (
           <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">

@@ -20,13 +20,8 @@ import { CompanyAdditionalDto } from '../dto/company-additional.dto';
 
 const DEFAULT_PLAN_CODE = 'ENTERPRISE';
 
-/**
- * Duração do teste grátis pra quem se cadastra escolhendo um plano
- * comercial — configurável via `TRIAL_DAYS` no .env (Railway/local),
- * mesmo padrão já usado para outros valores do sistema (ex.:
- * JWT_EXPIRES_IN). Sem a variável, mantém os 14 dias combinados.
- */
-const TRIAL_DAYS = Number(process.env.TRIAL_DAYS) || 14;
+/** Usado só se a linha de `PlatformSettings` ainda não existir por algum motivo. */
+const FALLBACK_TRIAL_DAYS = 14;
 
 /** Menor código raiz gerado pra cliente novo — os manuais (ex.: "ALEPEJO") ficam fora dessa faixa. */
 const GROUP_CODE_BASE = 1000;
@@ -108,8 +103,14 @@ export class CompanyOnboardingService {
       active: true,
     });
 
+    const platformSettings =
+      await this.prisma.platformSettings.findFirst();
+
     const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+    trialEndsAt.setDate(
+      trialEndsAt.getDate() +
+        (platformSettings?.trialDays ?? FALLBACK_TRIAL_DAYS),
+    );
 
     await this.licenseService.assignPlan(company.id, plan.id, trialEndsAt);
 
