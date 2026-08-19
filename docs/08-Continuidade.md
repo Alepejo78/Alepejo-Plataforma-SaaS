@@ -3,6 +3,42 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 E-mail (SMTP Gmail) não saía em produção — ENETUNREACH IPv6 (19-08-2026)
+
+Sintoma: "Reenviar meu link de acesso" (`/esqueci-senha`) respondia
+sucesso, mas o e-mail nunca chegava. Log do Railway mostrou a causa
+real: `Falha ao enviar e-mail ...: connect ENETUNREACH
+2a00:1450:...  - Local (:::0)` — o Gmail (`smtp.gmail.com`) resolve
+tanto IPv4 quanto IPv6, e o Node tenta IPv6 primeiro por padrão; o
+Railway não tem saída IPv6, então a conexão falha em vez de cair pro
+IPv4. Corrigido em `email-notifications.service.ts`: `family: 4` nas
+opções do `nodemailer.createTransport()` (força IPv4 direto — não tem
+esse campo nos types do nodemailer, por isso o `as SMTPTransport.
+Options & { family: number }`). Testado local (sem erro no log depois
+da mudança) antes de aplicar em produção.
+
+**Nota pra próxima vez**: qualquer conexão de saída (SMTP, ou
+qualquer outra API externa) que dê `ENETUNREACH` num host cloud
+(Railway, Render, etc.) provavelmente é isso — falta de saída IPv6 —
+mesmo diagnóstico se repetir em outro serviço.
+
+## 🟢 Preços do catálogo sumiam a cada reseed do banco (19-08-2026)
+
+`os planos estão zerados` em produção — os preços (pesquisa de
+mercado + 20% desconto anual, aplicados numa sessão anterior) só
+existiam no banco LOCAL, nunca guardados num script permanente.
+Criado `Backend/prisma/scripts/set-catalog-prices.ts` (idempotente,
+por `code`) com os valores reais: Essencial R$119,90/R$1.151,04,
+Profissional R$179,80/R$1.726,08, Completo R$339,50/R$3.259,20 (+
+mesma taxa de implantação), módulos avulsos (Financeiro, Marca
+Própria, RH, Ponto/Folha, Produção). Rodado via Console do Railway.
+Módulos mínimos (BPS/Produtos/Estoque/Vendas/Compras) continuam sem
+preço próprio de propósito — nunca vendidos avulsos.
+
+**Fluxo combinado com o usuário a partir de agora**: ajustar e testar
+local primeiro, só aplicar em produção depois de confirmação
+explícita — não sair rodando script em produção sem pedir.
+
 ## 🟢 SISTEMA NO AR — deploy de produção concluído e testado (19-08-2026)
 
 Confirmado de ponta a ponta: login em `https://app.alepejo.com.br` →

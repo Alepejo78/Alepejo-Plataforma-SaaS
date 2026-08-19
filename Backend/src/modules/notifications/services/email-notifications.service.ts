@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { EncryptionService } from '../../../core/security/encryption.service';
@@ -146,7 +147,13 @@ export class EmailNotificationsService {
         user: config.user,
         pass: config.pass,
       },
-    });
+      // Gmail (e outros) resolvem tanto IPv4 quanto IPv6 — em hosts
+      // sem saída IPv6 (ex.: Railway), a tentativa em IPv6 falha com
+      // ENETUNREACH em vez de cair pro IPv4. Força IPv4 direto (`family`
+      // é repassado pro `net.connect` do Node, mas não está nos types
+      // do nodemailer, daí o `as`).
+      family: 4,
+    } as SMTPTransport.Options & { family: number });
 
     try {
       await transporter.sendMail({
