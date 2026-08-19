@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Bar,
@@ -43,7 +43,22 @@ import {
 
 import { systemConfig } from "@/config/system";
 import { contactService } from "@/services/contact.service";
+import { companyOnboardingService } from "@/services/company-onboarding.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
+
+/** Dias de teste grátis vigente (Administrar planos) — usado nos textos de chamada pra ação abaixo. */
+function useTrialDays() {
+  const [trialDays, setTrialDays] = useState(14);
+
+  useEffect(() => {
+    companyOnboardingService
+      .getPublicTrialDays()
+      .then(setTrialDays)
+      .catch(() => {});
+  }, []);
+
+  return trialDays;
+}
 
 const financeiroChartData = [
   { month: "Mar", receita: 32100, despesa: 18400 },
@@ -570,6 +585,8 @@ function DashboardPreview() {
 }
 
 function Hero() {
+  const trialDays = useTrialDays();
+
   return (
     <section className="relative overflow-hidden">
       <div
@@ -591,7 +608,8 @@ function Hero() {
 
           <p className="mt-5 max-w-lg text-lg text-[var(--text-muted)]">
             Cadastros, vendas, compras, estoque, financeiro, produção e RH —
-            tudo integrado, na nuvem. Comece em minutos, com 14 dias grátis.
+            tudo integrado, na nuvem. Comece em minutos, com {trialDays} dia
+            {trialDays === 1 ? "" : "s"} grátis.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -599,7 +617,8 @@ function Hero() {
               href="/planos"
               className="rounded-xl bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
             >
-              Começar teste grátis de 14 dias
+              Começar teste grátis de {trialDays} dia
+              {trialDays === 1 ? "" : "s"}
             </Link>
 
             <a
@@ -1064,6 +1083,8 @@ function Contact() {
 }
 
 function FinalCta() {
+  const trialDays = useTrialDays();
+
   return (
     <section className="border-t border-[var(--border)] bg-[var(--surface)] py-20 text-center">
       <div className="mx-auto max-w-2xl px-6">
@@ -1072,8 +1093,8 @@ function FinalCta() {
         </h2>
 
         <p className="mt-3 text-[var(--text-muted)]">
-          14 dias grátis, sem cartão de crédito. Escolha o plano e comece
-          agora.
+          {trialDays} dia{trialDays === 1 ? "" : "s"} grátis, sem cartão de
+          crédito. Escolha o plano e comece agora.
         </p>
 
         <Link

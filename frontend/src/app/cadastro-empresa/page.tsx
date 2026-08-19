@@ -65,6 +65,7 @@ function CadastroEmpresaForm() {
 
   const [plan, setPlan] = useState<PublicPlan | null>(null);
   const [planError, setPlanError] = useState(false);
+  const [trialDays, setTrialDays] = useState(14);
 
   const [form, setForm] = useState(emptyForm);
   const [address, setAddress] = useState<AddressFormState>(emptyAddress);
@@ -92,6 +93,13 @@ function CadastroEmpresaForm() {
       })
       .catch(() => setPlanError(true));
   }, [planId]);
+
+  useEffect(() => {
+    companyOnboardingService
+      .getPublicTrialDays()
+      .then(setTrialDays)
+      .catch(() => {});
+  }, []);
 
   function setField(
     field: Exclude<keyof typeof emptyForm, "personType">,
@@ -219,7 +227,8 @@ function CadastroEmpresaForm() {
             <p className="text-sm text-[var(--text-secondary)]">
               Enviamos um e-mail para <strong>{form.adminEmail}</strong>{" "}
               com o link para definir a senha e começar a usar o
-              sistema. Seu teste grátis de 14 dias já começou.
+              sistema. Seu teste grátis de {trialDays} dia
+              {trialDays === 1 ? "" : "s"} já começou.
             </p>
 
             <Link

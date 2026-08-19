@@ -74,6 +74,20 @@ export class CompanyController {
   }
 
   /**
+   * Dias de teste grátis, pra mostrar no botão de `/planos`
+   * ("Começar teste de X dias") — vem de Administrar planos, não é
+   * mais fixo no código.
+   */
+  @Public()
+  @Get('trial-days')
+  @ApiOperation({ summary: 'Dias de teste grátis vigente (público, pra página de preços)' })
+  async getPublicTrialDays() {
+    const settings = await this.licenseService.getPlatformSettings();
+
+    return { trialDays: settings.trialDays };
+  }
+
+  /**
    * Página pública de login com o nome da empresa na URL
    * (`/<slug>/login`) também não tem sessão — só o nome, nada sensível.
    */

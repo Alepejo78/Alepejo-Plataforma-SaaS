@@ -95,6 +95,15 @@ export const companyOnboardingService = {
     return data.data ?? [];
   },
 
+  /** Pública (sem sessão) — dias de teste grátis vigente, pro texto do botão em `/planos`. */
+  async getPublicTrialDays(): Promise<number> {
+    const { data } = await api.get<ApiEnvelope<{ trialDays: number }>>(
+      "/companies/trial-days"
+    );
+
+    return data.data.trialDays;
+  },
+
   /** Pública (sem sessão) — nome da empresa pra tela de login `/<slug>/login`. */
   async getBySlug(slug: string): Promise<PublicCompany> {
     const { data } = await api.get<ApiEnvelope<PublicCompany>>(

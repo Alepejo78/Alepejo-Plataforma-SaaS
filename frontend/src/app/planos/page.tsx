@@ -237,6 +237,7 @@ function CustomPlanModal({
 
 export default function PlanosPage() {
   const [plans, setPlans] = useState<PublicPlan[]>([]);
+  const [trialDays, setTrialDays] = useState(14);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [customOpen, setCustomOpen] = useState(false);
@@ -252,6 +253,11 @@ export default function PlanosPage() {
         setError("Não foi possível carregar os planos. Tente novamente.")
       )
       .finally(() => setLoading(false));
+
+    companyOnboardingService
+      .getPublicTrialDays()
+      .then(setTrialDays)
+      .catch(() => {});
   }, []);
 
   const sortedPlans = [...plans]
@@ -277,8 +283,8 @@ export default function PlanosPage() {
           </h1>
 
           <p className="mt-3 text-[var(--text-muted)]">
-            14 dias grátis pra testar, sem cartão de crédito. Cancele
-            quando quiser.
+            {trialDays} dia{trialDays === 1 ? "" : "s"} grátis pra testar,
+            sem cartão de crédito. Cancele quando quiser.
           </p>
         </div>
 
@@ -428,7 +434,7 @@ export default function PlanosPage() {
                       : "border border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                   }`}
                 >
-                  Começar teste de 14 dias
+                  Começar teste de {trialDays} dia{trialDays === 1 ? "" : "s"}
                 </Link>
               </div>
               );
