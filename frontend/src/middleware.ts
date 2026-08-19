@@ -11,8 +11,34 @@ import { COMPANY_SLUG_COOKIE } from "./lib/companyLogin";
 const ACCESS_TOKEN_COOKIE = "alepejo_at";
 const REFRESH_TOKEN_COOKIE = "alepejo_rt";
 
+/**
+ * Domínio "de vitrine" (institucional/planos) — separado do domínio
+ * do sistema (`app.<domínio>`) por decisão do usuário: quem digita o
+ * domínio principal sem saber do sistema vê a apresentação, não uma
+ * tela de login. Configurável via env pra não hardcodar em ambientes
+ * de teste/preview.
+ */
+const MARKETING_HOSTNAMES = (
+  process.env.MARKETING_HOSTNAMES ?? "alepejo.com.br,www.alepejo.com.br"
+)
+  .split(",")
+  .map((host) => host.trim())
+  .filter(Boolean);
+
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  // Domínio principal (vitrine): raiz mostra a página institucional,
+  // reescrita por baixo — a URL visível continua sendo só o domínio,
+  // sem `/institucional` aparecendo. Roda ANTES de qualquer checagem
+  // de sessão: institucional é sempre pública, em qualquer domínio.
+  const hostname = request.headers.get("host") ?? "";
+
+  if (MARKETING_HOSTNAMES.includes(hostname) && pathname === "/") {
+    return NextResponse.rewrite(
+      new URL("/institucional", request.url)
+    );
+  }
 
   const accessToken = request.cookies.get(
     ACCESS_TOKEN_COOKIE
