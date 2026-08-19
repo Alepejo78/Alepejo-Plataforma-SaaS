@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Check,
   Edit,
   Eye,
   FileText,
@@ -96,9 +97,14 @@ const labelClass =
 
 const STATUS_BADGE_CLASS: Record<QuoteStatus, string> = {
   DRAFT: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  APPROVED: "bg-[var(--primary-soft)] text-[var(--primary)]",
   CONVERTED: "bg-[var(--success-soft)] text-[var(--success)]",
   CANCELLED: "bg-[var(--danger-soft)] text-[var(--danger)]",
 };
+
+function formatOrderNumber(n: number) {
+  return `PV-${String(n).padStart(6, "0")}`;
+}
 
 interface ItemForm {
   productId: string;
@@ -385,6 +391,26 @@ export default function OrcamentosPage() {
     }
   }
 
+  async function approveQuote(id: string) {
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await quoteService.approve(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(
+          err,
+          "Não foi possível aprovar o orçamento."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   const semDeposito = warehouses.length === 0;
 
   return (
@@ -589,6 +615,21 @@ export default function OrcamentosPage() {
                                   className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
                                 >
                                   <Edit size={16} />
+                                </button>
+                              </Can>
+
+                              <Can permission="quote.approve">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void approveQuote(q.id)
+                                  }
+                                  title="Aprovar (gera Pedido de Venda)"
+                                  aria-label="Aprovar"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                >
+                                  <Check size={16} />
                                 </button>
                               </Can>
 
@@ -949,6 +990,15 @@ export default function OrcamentosPage() {
                   · {detail.warehouse?.code} ·{" "}
                   {QUOTE_STATUS_LABELS[detail.status]}
                 </p>
+
+                {detail.salesOrder && (
+                  <p className="mt-1 text-sm text-[var(--primary)]">
+                    Pedido de venda gerado:{" "}
+                    {formatOrderNumber(
+                      detail.salesOrder.number
+                    )}
+                  </p>
+                )}
               </div>
 
               <button

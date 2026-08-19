@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { isPublicRoute } from "./lib/publicRoutes";
+import { COMPANY_SLUG_COOKIE } from "./lib/companyLogin";
+
 /**
  * Nomes definidos no backend em
  * identity/auth/constants/cookie.constants.ts — manter sincronizado.
@@ -8,16 +11,8 @@ import type { NextRequest } from "next/server";
 const ACCESS_TOKEN_COOKIE = "alepejo_at";
 const REFRESH_TOKEN_COOKIE = "alepejo_rt";
 
-/** Rotas acessíveis sem sessão. */
-const PUBLIC_ROUTES = ["/login"];
-
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-
-  const isPublicRoute = PUBLIC_ROUTES.some(
-    (route) =>
-      pathname === route || pathname.startsWith(`${route}/`)
-  );
 
   const accessToken = request.cookies.get(
     ACCESS_TOKEN_COOKIE
@@ -32,13 +27,38 @@ export function middleware(request: NextRequest) {
   // e o interceptor do axios renova o access token na primeira chamada.
   const hasSession = Boolean(accessToken || refreshToken);
 
-  if (!hasSession && !isPublicRoute) {
-    const loginUrl = new URL("/login", request.url);
+  // Empresa que este navegador usou da última vez (ver
+  // lib/companyLogin.ts) — só ela sabe direcionar direto pro
+  // `/<empresa>/login`, já que `/login` sozinho não tem mais
+  // formulário. Sem esse cookie, cai no `/login` genérico mesmo, que
+  // mostra a mensagem pra usar o link do e-mail.
+  const companySlug = request.cookies.get(
+    COMPANY_SLUG_COOKIE
+  )?.value;
+
+  if (!hasSession && !isPublicRoute(pathname)) {
+    const loginUrl = new URL(
+      companySlug ? `/${companySlug}/login` : "/login",
+      request.url
+    );
 
     loginUrl.searchParams.set(
       "from",
       `${pathname}${search}`
     );
+
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Visita direta em `/login` com a empresa já conhecida: pula a
+  // mensagem intermediária e vai direto pro formulário certo.
+  if (pathname === "/login" && companySlug) {
+    const loginUrl = new URL(`/${companySlug}/login`, request.url);
+    const from = request.nextUrl.searchParams.get("from");
+
+    if (from) {
+      loginUrl.searchParams.set("from", from);
+    }
 
     return NextResponse.redirect(loginUrl);
   }
@@ -50,6 +70,40 @@ export function middleware(request: NextRequest) {
   // ao /login para se reautenticar nem para sair.
   // Quem já tem sessão válida é levado para a home pelo próprio
   // formulário de login, após autenticar.
+
+  // Com sessão e empresa conhecida (cookie atualizado a cada /auth/me,
+  // ver AuthProvider), toda navegação passa a mostrar o nome da
+  // empresa fixo na URL (`/<empresa>/os`, `/<empresa>/erp/...`) sem
+  // precisar mover nenhuma página nem tocar nos `Link`/`router.push`
+  // existentes (que continuam apontando pro caminho "puro", tipo
+  // `/os`): aqui a gente só decide o que aparece na barra de endereço.
+  if (hasSession && companySlug && !isPublicRoute(pathname)) {
+    const segments = pathname.split("/").filter(Boolean);
+    const [first, second] = segments;
+
+    if (first === companySlug) {
+      // Já veio com o slug. `/<empresa>/login` é página de verdade
+      // (`app/[empresa]/login/page.tsx`) — não reescrever essa.
+      if (second === "login") {
+        return NextResponse.next();
+      }
+
+      // Reescreve por baixo pro caminho sem slug, que é o que
+      // realmente existe no App Router — a URL visível continua com
+      // o slug, só o conteúdo servido é que "não sabe" dele.
+      const rewritten = request.nextUrl.clone();
+      rewritten.pathname = `/${segments.slice(1).join("/")}`;
+
+      return NextResponse.rewrite(rewritten);
+    }
+
+    // Veio sem slug (qualquer link/navegação antiga) — redireciona
+    // pra versão com o nome da empresa, que é o que deve aparecer.
+    const withSlug = request.nextUrl.clone();
+    withSlug.pathname = `/${companySlug}${pathname}`;
+
+    return NextResponse.redirect(withSlug);
+  }
 
   return NextResponse.next();
 }

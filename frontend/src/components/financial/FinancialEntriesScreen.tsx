@@ -250,7 +250,7 @@ export function FinancialEntriesScreen({
   function openEdit(entry: FinancialEntry) {
     setEditingId(entry.id);
     setForm({
-      partnerId: entry.partnerId,
+      partnerId: entry.partnerId ?? "",
       partnerLabel:
         entry.partner?.tradeName ??
         entry.partner?.legalName ??
@@ -580,6 +580,7 @@ export function FinancialEntriesScreen({
                         <p className="font-medium text-[var(--text-primary)]">
                           {entry.partner?.tradeName ??
                             entry.partner?.legalName ??
+                            entry.employee?.name ??
                             "—"}
                         </p>
                       </td>
@@ -627,19 +628,21 @@ export function FinancialEntriesScreen({
                         <div className="flex justify-end gap-2">
                           {entry.status === "OPEN" && (
                             <>
-                              <Can permission="financial-entry.update">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openEdit(entry)
-                                  }
-                                  title="Editar"
-                                  aria-label="Editar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
-                                >
-                                  <Pencil size={16} />
-                                </button>
-                              </Can>
+                              {!entry.employeeId && (
+                                <Can permission="financial-entry.update">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openEdit(entry)
+                                    }
+                                    title="Editar"
+                                    aria-label="Editar"
+                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                                  >
+                                    <Pencil size={16} />
+                                  </button>
+                                </Can>
+                              )}
 
                               <Can permission="financial-entry.settle">
                                 <button
@@ -675,7 +678,8 @@ export function FinancialEntriesScreen({
                               </Can>
 
                               {!entry.purchaseId &&
-                                !entry.saleId && (
+                                !entry.saleId &&
+                                !entry.employeeId && (
                                   <Can permission="financial-entry.delete">
                                     <button
                                       type="button"
@@ -992,7 +996,8 @@ export function FinancialEntriesScreen({
 
                 <p className="text-sm text-[var(--text-muted)]">
                   {settleTarget.partner?.tradeName ??
-                    settleTarget.partner?.legalName}{" "}
+                    settleTarget.partner?.legalName ??
+                    settleTarget.employee?.name}{" "}
                   · {money(settleTarget.amount)}
                 </p>
               </div>

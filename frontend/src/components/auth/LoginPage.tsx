@@ -2,12 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Eye, EyeOff, Volume2 } from "lucide-react";
 
 import { systemConfig } from "../../config/system";
 import { useAuth } from "@/providers/AuthProvider";
 
-export default function LoginPage() {
+interface LoginPageProps {
+  /** Preenchido só na tela `/<empresa>/login` — mostra pra qual empresa é esse acesso. */
+  companyName?: string;
+}
+
+export default function LoginPage({ companyName }: LoginPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -164,6 +170,12 @@ export default function LoginPage() {
 
         <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
 
+          {companyName && (
+            <p className="mb-1 text-sm font-medium text-[var(--primary)]">
+              {companyName}
+            </p>
+          )}
+
           <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6">
             Acessar Sistema
           </h2>
@@ -248,6 +260,7 @@ export default function LoginPage() {
 
             <button
               type="button"
+              onClick={() => router.push("/esqueci-senha")}
               className="text-[var(--text-secondary)] hover:underline"
             >
               Esqueci minha senha
@@ -255,12 +268,21 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => router.push("/cadastro-empresa")}
+              onClick={() => router.push("/planos")}
               className="font-semibold text-[var(--text-primary)] hover:underline"
             >
               Criar conta
             </button>
 
+          </div>
+
+          <div className="mt-4 text-center">
+            <Link
+              href="/institucional"
+              className="text-sm text-[var(--text-secondary)] hover:underline"
+            >
+              Conheça o sistema
+            </Link>
           </div>
 
         </div>

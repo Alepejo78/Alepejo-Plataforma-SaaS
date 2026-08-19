@@ -43,8 +43,13 @@ export class LicenseRepository {
 
   findPlans() {
     return this.prisma.plan.findMany({
+      include: {
+        planModules: {
+          include: { module: true },
+        },
+      },
       orderBy: {
-        name: 'asc',
+        sortOrder: 'asc',
       },
     });
   }
@@ -171,6 +176,10 @@ export class LicenseRepository {
     });
   }
 
+  findPlanByCode(code: string) {
+    return this.prisma.plan.findUnique({ where: { code } });
+  }
+
   createPlan(dto: CreatePlanDto) {
     const { moduleIds, ...data } = dto;
 
@@ -201,7 +210,27 @@ export class LicenseRepository {
 
     return this.prisma.plan.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        // moduleIds ausente = não mexe na composição; presente (mesmo
+        // []) = substitui pelo conjunto novo. Sem isso o campo era
+        // aceito no DTO e simplesmente descartado — editar os módulos
+        // de um plano já criado nunca funcionava.
+        ...(moduleIds !== undefined && {
+          planModules: {
+            deleteMany: {},
+            create: moduleIds.map((moduleId) => ({
+              moduleId,
+              included: true,
+            })),
+          },
+        }),
+      },
+      include: {
+        planModules: {
+          include: { module: true },
+        },
+      },
     });
   }
 

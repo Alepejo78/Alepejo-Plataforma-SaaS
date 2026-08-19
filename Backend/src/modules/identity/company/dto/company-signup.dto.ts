@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -26,21 +27,56 @@ export class CompanySignupDto {
   @MaxLength(20)
   document: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'contato@empresa.com.br',
-    description:
-      'Também é o e-mail de login do primeiro usuário (administrador).',
+    description: 'E-mail de contato da empresa — não é o de login.',
   })
+  @IsOptional()
   @IsEmail({}, { message: 'E-mail inválido.' })
-  @IsNotEmpty({ message: 'O e-mail é obrigatório.' })
   @MaxLength(150)
-  email: string;
+  email?: string;
 
   @ApiPropertyOptional({ example: '(43) 99999-9999' })
   @IsOptional()
   @IsString()
   @MaxLength(30)
   phone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  zipCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  street?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  number?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  district?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  state?: string;
 
   @ApiProperty({
     example: 'Fulano de Tal',
@@ -50,4 +86,31 @@ export class CompanySignupDto {
   @IsNotEmpty({ message: 'O nome do administrador é obrigatório.' })
   @MaxLength(150)
   adminName: string;
+
+  @ApiProperty({
+    example: 'admin@empresa.com.br',
+    description: 'E-mail de login do primeiro usuário (administrador).',
+  })
+  @IsEmail({}, { message: 'E-mail do administrador inválido.' })
+  @IsNotEmpty({ message: 'O e-mail do administrador é obrigatório.' })
+  @MaxLength(150)
+  adminEmail: string;
+
+  @ApiProperty({
+    description:
+      'Id do plano escolhido em /planos — a conta nasce em período de teste com os módulos desse plano.',
+  })
+  @IsString({ message: 'Selecione um plano.' })
+  @IsNotEmpty({ message: 'Selecione um plano.' })
+  planId: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Só pro plano Customizado (code CUSTOM) — ids dos módulos escolhidos no montador.',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  moduleIds?: string[];
 }

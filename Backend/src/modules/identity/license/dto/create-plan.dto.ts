@@ -43,6 +43,19 @@ export class CreatePlanDto {
   maxUsers?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  setupFee?: number;
+
+  @IsOptional()
+  @IsInt()
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  highlighted?: boolean;
+
+  @IsOptional()
   @IsBoolean()
   active?: boolean;
 

@@ -448,11 +448,15 @@ export interface Employee {
   maritalStatus?: MaritalStatus | null;
   educationLevel?: EducationLevel | null;
 
+  employeeNumber?: number | null;
+
   cpf?: string | null;
   rg?: string | null;
   workCard?: string | null;
   workCardSeries?: string | null;
   pis?: string | null;
+  driverLicense?: string | null;
+  driverLicenseCategory?: string | null;
 
   zipCode?: string | null;
   street?: string | null;
@@ -550,6 +554,8 @@ export interface EmployeePayload {
   workCard?: string;
   workCardSeries?: string;
   pis?: string;
+  driverLicense?: string;
+  driverLicenseCategory?: string;
 
   zipCode?: string;
   street?: string;

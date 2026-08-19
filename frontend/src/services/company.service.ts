@@ -8,6 +8,7 @@ interface ApiEnvelope<T> {
 
 export interface Company {
   id: string;
+  slug: string;
   legalName: string;
   tradeName?: string | null;
   document: string;

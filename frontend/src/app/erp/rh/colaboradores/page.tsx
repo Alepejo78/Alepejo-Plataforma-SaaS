@@ -151,6 +151,7 @@ const TABS = [
 type Tab = (typeof TABS)[number];
 
 interface FormState {
+  employeeNumber: number | null;
   /** Empresa do grupo a que o colaborador pertence (frente "Interprise"). */
   companyId: string;
   photo: string;
@@ -169,6 +170,8 @@ interface FormState {
   workCard: string;
   workCardSeries: string;
   pis: string;
+  driverLicense: string;
+  driverLicenseCategory: string[];
 
   zipCode: string;
   street: string;
@@ -230,6 +233,7 @@ interface FormState {
 
 function emptyForm(companyId = ""): FormState {
   return {
+    employeeNumber: null,
     companyId,
     photo: "",
     name: "",
@@ -247,6 +251,8 @@ function emptyForm(companyId = ""): FormState {
     workCard: "",
     workCardSeries: "",
     pis: "",
+    driverLicense: "",
+    driverLicenseCategory: [],
 
     zipCode: "",
     street: "",
@@ -443,6 +449,7 @@ export default function ColaboradoresPage() {
     setNewExamDate("");
     void loadExamHistory(item.id);
     setForm({
+      employeeNumber: item.employeeNumber ?? null,
       companyId: item.companyId ?? user?.companyId ?? "",
       photo: item.photo ?? "",
       name: item.name,
@@ -460,6 +467,10 @@ export default function ColaboradoresPage() {
       workCard: item.workCard ?? "",
       workCardSeries: item.workCardSeries ?? "",
       pis: item.pis ?? "",
+      driverLicense: item.driverLicense ?? "",
+      driverLicenseCategory: item.driverLicenseCategory
+        ? item.driverLicenseCategory.split("")
+        : [],
 
       zipCode: item.zipCode ? maskCEP(item.zipCode) : "",
       street: item.street ?? "",
@@ -663,6 +674,9 @@ export default function ColaboradoresPage() {
       workCard: form.workCard.trim() || undefined,
       workCardSeries: form.workCardSeries.trim() || undefined,
       pis: form.pis.trim() || undefined,
+      driverLicense: form.driverLicense.trim() || undefined,
+      driverLicenseCategory:
+        form.driverLicenseCategory.join("") || undefined,
 
       zipCode: onlyDigits(form.zipCode) || undefined,
       street: form.street.trim() || undefined,
@@ -840,31 +854,6 @@ export default function ColaboradoresPage() {
     }
   }
 
-  async function remove(item: Employee) {
-    if (
-      !window.confirm(
-        `Excluir o colaborador "${item.name}"?`
-      )
-    ) {
-      return;
-    }
-
-    setActionError("");
-
-    try {
-      await employeeService.remove(item.id);
-
-      await load();
-    } catch (err) {
-      setActionError(
-        extractMessage(
-          err,
-          "Não foi possível excluir o colaborador."
-        )
-      );
-    }
-  }
-
   return (
     <AppShell workspaceLabel="Recursos Humanos">
       <ListPageLayout
@@ -953,6 +942,9 @@ export default function ColaboradoresPage() {
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">
+                    ID
+                  </th>
+                  <th className="px-4 py-3 font-semibold">
                     Nome
                   </th>
                   <th className="px-4 py-3 font-semibold">
@@ -960,6 +952,9 @@ export default function ColaboradoresPage() {
                   </th>
                   <th className="px-4 py-3 font-semibold">
                     Setor
+                  </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Telefone
                   </th>
                   <th className="px-4 py-3 text-right font-semibold">
                     Salário
@@ -980,6 +975,15 @@ export default function ColaboradoresPage() {
                     key={item.id}
                     className="border-t border-[var(--border)]"
                   >
+                    <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
+                      {item.employeeNumber != null
+                        ? String(item.employeeNumber).padStart(
+                            4,
+                            "0"
+                          )
+                        : "—"}
+                    </td>
+
                     <td className="px-4 py-3">
                       <p className="font-medium text-[var(--text-primary)]">
                         {item.name}
@@ -1002,6 +1006,14 @@ export default function ColaboradoresPage() {
 
                     <td className="px-4 py-3 text-[var(--text-secondary)]">
                       {item.jobFunction?.sector?.name ?? "—"}
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
+                      {item.mobile
+                        ? maskPhone(item.mobile)
+                        : item.phone
+                          ? maskPhone(item.phone)
+                          : "—"}
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
@@ -1033,18 +1045,6 @@ export default function ColaboradoresPage() {
                             className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                           >
                             <Pencil size={16} />
-                          </button>
-                        </Can>
-
-                        <Can permission="employee.delete">
-                          <button
-                            type="button"
-                            onClick={() => void remove(item)}
-                            title="Excluir"
-                            aria-label="Excluir"
-                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
-                          >
-                            <Trash2 size={16} />
                           </button>
                         </Can>
                       </div>
@@ -1098,26 +1098,53 @@ export default function ColaboradoresPage() {
             <div className="space-y-4">
               {activeTab === "Pessoais" && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-4 border-b border-[var(--border)] pb-4">
-                    <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-hover)]">
-                      {form.photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={brandingAssetUrl(form.photo) ?? ""}
-                          alt={form.name || "Foto"}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-xs text-[var(--text-muted)]">
-                          Sem foto
-                        </span>
-                      )}
+                  <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap items-start gap-4 border-b border-[var(--border)] pb-4">
+                    <div className="w-24">
+                      <label className={labelClass}>ID</label>
+
+                      <input
+                        disabled
+                        readOnly
+                        className={`${fieldClass} text-center opacity-70`}
+                        value={
+                          form.employeeNumber != null
+                            ? String(
+                                form.employeeNumber
+                              ).padStart(4, "0")
+                            : "—"
+                        }
+                      />
                     </div>
 
                     <div>
+                      <label className={`${labelClass} invisible`}>
+                        Foto
+                      </label>
+
+                      <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-hover)]">
+                        {form.photo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={brandingAssetUrl(form.photo) ?? ""}
+                            alt={form.name || "Foto"}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-[9px] text-[var(--text-muted)]">
+                            Sem foto
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={`${labelClass} invisible`}>
+                        Foto
+                      </label>
+
                       {editingId ? (
                         <>
-                          <label className="inline-block cursor-pointer rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]">
+                          <label className="inline-flex h-11 cursor-pointer items-center rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]">
                             {photoUploading
                               ? "Enviando..."
                               : "Enviar foto"}
@@ -1141,42 +1168,77 @@ export default function ColaboradoresPage() {
                           )}
                         </>
                       ) : (
-                        <p className="text-sm text-[var(--text-muted)]">
+                        <p className="flex h-11 items-center text-sm text-[var(--text-muted)]">
                           Salve o cadastro primeiro para
                           enviar a foto.
                         </p>
                       )}
                     </div>
-                  </div>
 
-                  {groupCompanies.length > 1 && (
-                    <div className="sm:col-span-2 lg:col-span-4">
+                    <div className="self-stretch border-l border-[var(--border)]" />
+
+                    {groupCompanies.length > 1 && (
+                      <div className="w-72">
+                        <label className={labelClass}>
+                          Empresa
+                        </label>
+
+                        <select
+                          className={fieldClass}
+                          value={form.companyId}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              companyId: e.target.value,
+                            })
+                          }
+                        >
+                          {groupCompanies.map((company) => (
+                            <option
+                              key={company.id}
+                              value={company.id}
+                            >
+                              {company.tradeName ??
+                                company.legalName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="w-80">
                       <label className={labelClass}>
-                        Empresa
+                        Usuário do sistema
                       </label>
 
                       <select
                         className={fieldClass}
-                        value={form.companyId}
+                        value={form.userId}
                         onChange={(e) =>
                           setForm({
                             ...form,
-                            companyId: e.target.value,
+                            userId: e.target.value,
                           })
                         }
                       >
-                        {groupCompanies.map((company) => (
-                          <option
-                            key={company.id}
-                            value={company.id}
-                          >
-                            {company.tradeName ??
-                              company.legalName}
+                        <option value="">
+                          Nenhum (sem login vinculado)
+                        </option>
+
+                        {systemUsers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name} — {u.email}
                           </option>
                         ))}
                       </select>
-                    </div>
-                  )}
+
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Pra telas de autoatendimento (ex.: Ponto -
+                        Manual) saberem qual colaborador é o usuário
+                      logado.
+                    </p>
+                  </div>
+                  </div>
 
                   <div className="sm:col-span-2 lg:col-span-2">
                     <label className={labelClass}>
@@ -1449,6 +1511,63 @@ export default function ColaboradoresPage() {
                         })
                       }
                     />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Documento de habilitação (CNH)
+                    </label>
+
+                    <input
+                      className={fieldClass}
+                      value={form.driverLicense}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          driverLicense: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <label className={labelClass}>Tipo</label>
+
+                    <div className="flex h-11 items-center gap-4">
+                      {["A", "B", "C", "D", "E"].map(
+                        (category) => (
+                          <label
+                            key={category}
+                            className="flex items-center gap-1.5 text-sm text-[var(--text-primary)] cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={form.driverLicenseCategory.includes(
+                                category
+                              )}
+                              onChange={() =>
+                                setForm({
+                                  ...form,
+                                  driverLicenseCategory:
+                                    form.driverLicenseCategory.includes(
+                                      category
+                                    )
+                                      ? form.driverLicenseCategory.filter(
+                                          (c) => c !== category
+                                        )
+                                      : [
+                                          ...form.driverLicenseCategory,
+                                          category,
+                                        ].sort(),
+                                })
+                              }
+                              className="h-4 w-4 rounded border-[var(--border)] accent-[var(--primary)]"
+                            />
+                            {category}
+                          </label>
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1761,39 +1880,6 @@ export default function ColaboradoresPage() {
                     </select>
                   </div>
 
-                  <div className="mx-auto w-56">
-                    <label className={labelClass}>
-                      Usuário do sistema
-                    </label>
-
-                    <select
-                      className={fieldClass}
-                      value={form.userId}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          userId: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">
-                        Nenhum (sem login vinculado)
-                      </option>
-
-                      {systemUsers.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} — {u.email}
-                        </option>
-                      ))}
-                    </select>
-
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      Pra telas de autoatendimento (ex.: Ponto -
-                      Manual) saberem qual colaborador é o usuário
-                      logado.
-                    </p>
-                  </div>
-
                   <div>
                     <label className={labelClass}>
                       Estágio de experiência
@@ -1907,7 +1993,7 @@ export default function ColaboradoresPage() {
                   </div>
 
                   <div className="mx-auto w-40">
-                    <label className={labelClass}>
+                    <label className="mb-1 flex min-h-10 items-end text-sm font-medium text-[var(--text-secondary)]">
                       Data de admissão
                     </label>
 
@@ -1929,7 +2015,7 @@ export default function ColaboradoresPage() {
                   </div>
 
                   <div className="mx-auto w-40">
-                    <label className={labelClass}>
+                    <label className="mb-1 flex min-h-10 items-end text-sm font-medium text-[var(--text-secondary)]">
                       Vence experiência
                     </label>
 
@@ -1946,8 +2032,8 @@ export default function ColaboradoresPage() {
                     </p>
                   </div>
 
-                  <div>
-                    <label className={labelClass}>
+                  <div className="mx-auto w-40">
+                    <label className="mb-1 flex min-h-10 items-end text-sm font-medium text-[var(--text-secondary)]">
                       Previsão de término (contrato)
                     </label>
 
@@ -1965,7 +2051,7 @@ export default function ColaboradoresPage() {
                   </div>
 
                   <div className="mx-auto w-40">
-                    <label className={labelClass}>
+                    <label className="mb-1 flex min-h-10 items-end text-sm font-medium text-[var(--text-secondary)]">
                       Data de demissão
                     </label>
 
@@ -2126,79 +2212,11 @@ export default function ColaboradoresPage() {
                 <div className="space-y-6">
                   <div>
                     <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
-                      Saúde ocupacional
+                      Afastamento
                     </p>
 
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      <div>
-                        <label className={labelClass}>
-                          Próximo exame pendente
-                        </label>
-
-                        <input
-                          type="date"
-                          disabled
-                          readOnly
-                          className={`${fieldClass} opacity-70`}
-                          value={form.nextExamDate}
-                        />
-
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                          {form.nextExamDate
-                            ? "Calculado a partir do último exame registrado."
-                            : "Sem exame registrado ainda — a referência é a data de admissão."}
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className={labelClass}>
-                          Avisar exame com quantos dias
-                        </label>
-
-                        <input
-                          type="number"
-                          min={0}
-                          className={fieldClass}
-                          value={form.examReminderDays}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              examReminderDays: e.target.value,
-                            })
-                          }
-                        />
-
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                          Recebe também aviso fixo 3 dias antes e no
-                          dia do exame, por e-mail/WhatsApp.
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className={labelClass}>
-                          Dias de aviso (afastamento)
-                        </label>
-
-                        <input
-                          type="number"
-                          min={0}
-                          className={fieldClass}
-                          value={form.noticeDays}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              noticeDays: e.target.value,
-                              onLeave: Number(
-                                e.target.value
-                              )
-                                ? true
-                                : form.onLeave,
-                            })
-                          }
-                        />
-                      </div>
-
-                      <div className="lg:border-l lg:border-[var(--border)] lg:pl-4">
+                      <div className="mx-auto w-40">
                         <label className={labelClass}>
                           Início do afastamento
                         </label>
@@ -2225,7 +2243,7 @@ export default function ColaboradoresPage() {
                         />
                       </div>
 
-                      <div>
+                      <div className="mx-auto w-28">
                         <label className={labelClass}>
                           Dias afastado
                         </label>
@@ -2250,7 +2268,7 @@ export default function ColaboradoresPage() {
                         />
                       </div>
 
-                      <div>
+                      <div className="mx-auto w-40">
                         <label className={labelClass}>
                           Fim do afastamento
                         </label>
@@ -2268,7 +2286,7 @@ export default function ColaboradoresPage() {
                         </p>
                       </div>
 
-                      <div className="flex items-end pb-2">
+                      <div className="flex items-center justify-center">
                         <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                           <input
                             type="checkbox"
@@ -2292,7 +2310,7 @@ export default function ColaboradoresPage() {
                     </p>
 
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      <div>
+                      <div className="mx-auto w-40">
                         <label className={labelClass}>
                           Início das férias
                         </label>
@@ -2320,7 +2338,7 @@ export default function ColaboradoresPage() {
                         />
                       </div>
 
-                      <div>
+                      <div className="mx-auto w-28">
                         <label className={labelClass}>
                           Dias de férias
                         </label>
@@ -2347,7 +2365,7 @@ export default function ColaboradoresPage() {
                         />
                       </div>
 
-                      <div>
+                      <div className="mx-auto w-40">
                         <label className={labelClass}>
                           Fim das férias
                         </label>
@@ -2365,7 +2383,7 @@ export default function ColaboradoresPage() {
                         </p>
                       </div>
 
-                      <div className="flex items-end pb-2">
+                      <div className="flex items-center justify-center">
                         <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                           <input
                             type="checkbox"
@@ -2379,6 +2397,58 @@ export default function ColaboradoresPage() {
                           />
                           Em férias
                         </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[var(--border)] pt-6">
+                    <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+                      Saúde ocupacional
+                    </p>
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="mx-auto w-48">
+                        <label className="mb-1 flex min-h-10 items-end text-sm font-medium text-[var(--text-secondary)]">
+                          Próximo exame pendente
+                        </label>
+
+                        <input
+                          type="date"
+                          disabled
+                          readOnly
+                          className={`${fieldClass} opacity-70`}
+                          value={form.nextExamDate}
+                        />
+
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          {form.nextExamDate
+                            ? "Calculado a partir do último exame registrado."
+                            : "Sem exame registrado ainda — a referência é a data de admissão."}
+                        </p>
+                      </div>
+
+                      <div className="mx-auto w-48">
+                        <label className="mb-1 flex min-h-10 items-end text-sm font-medium text-[var(--text-secondary)]">
+                          Avisar exame com quantos dias
+                        </label>
+
+                        <input
+                          type="number"
+                          min={0}
+                          className={fieldClass}
+                          value={form.examReminderDays}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              examReminderDays: e.target.value,
+                            })
+                          }
+                        />
+
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Recebe também aviso fixo 3 dias antes e no
+                          dia do exame, por e-mail/WhatsApp.
+                        </p>
                       </div>
                     </div>
                   </div>

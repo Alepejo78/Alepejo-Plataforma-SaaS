@@ -11,6 +11,7 @@ import { FinancialEntryFilterDto } from '../dto/financial-entry-filter.dto';
 
 const includeRelations = {
   partner: true,
+  employee: true,
   chartOfAccount: {
     include: { classification: true },
   },
@@ -45,6 +46,7 @@ export class FinancialEntriesRepository {
       type,
       status,
       partnerId,
+      employeeId,
       search,
       dueFrom,
       dueTo,
@@ -61,6 +63,7 @@ export class FinancialEntriesRepository {
       ...(type && { type }),
       ...(status && { status }),
       ...(partnerId && { partnerId }),
+      ...(employeeId && { employeeId }),
 
       ...((dueFrom || dueTo) && {
         dueDate: {
@@ -111,6 +114,14 @@ export class FinancialEntriesRepository {
                   },
                 },
               ],
+            },
+          },
+          {
+            employee: {
+              name: {
+                contains: search,
+                mode: Prisma.QueryMode.insensitive,
+              },
             },
           },
         ],

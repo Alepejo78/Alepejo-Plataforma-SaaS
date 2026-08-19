@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 import { PrismaService } from '../../../../core/prisma/prisma.service';
+import { LicenseService } from '../../license/services/license.service';
 
 import { LoginDto } from '../dto/login.dto';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
@@ -32,6 +33,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly licenseService: LicenseService,
   ) {}
 
   /**
@@ -242,31 +244,51 @@ export class AuthService {
           }
         : null,
     
-      modules: [
-        ...(user.company.companyPlan?.plan?.planModules ?? [])
-          .filter((item) => item.included)
-          .map((item) => ({
-            id: item.module.id,
-            code: item.module.code,
-            name: item.module.name,
-            route: item.module.route,
-            icon: item.module.icon,
-          })),
-    
-        ...(user.company.companyModules ?? [])
-          .filter(
-            (item) =>
-              item.enabled &&
-              item.licensed,
-          )
-          .map((item) => ({
-            id: item.module.id,
-            code: item.module.code,
-            name: item.module.name,
-            route: item.module.route,
-            icon: item.module.icon,
-          })),
-      ],
+      // Assinatura bloqueada esconde tudo do menu, exceto BPS (o
+      // único "básico" que existe como Module de verdade com nome/
+      // rota — ver o mesmo comentário em JwtStrategy.validate, que é
+      // quem realmente monta a sessão em toda requisição seguinte;
+      // isto aqui só cobre a resposta imediata de login/refresh).
+      modules: this.licenseService.isSubscriptionBlocked(
+        user.company.companyPlan,
+      )
+        ? (user.company.companyPlan?.plan?.planModules ?? [])
+            .filter(
+              (item: { included: boolean; module: { code: string } }) =>
+                item.included && item.module.code === 'BPS',
+            )
+            .map((item: { module: any }) => ({
+              id: item.module.id,
+              code: item.module.code,
+              name: item.module.name,
+              route: item.module.route,
+              icon: item.module.icon,
+            }))
+        : [
+            ...(user.company.companyPlan?.plan?.planModules ?? [])
+              .filter((item) => item.included)
+              .map((item) => ({
+                id: item.module.id,
+                code: item.module.code,
+                name: item.module.name,
+                route: item.module.route,
+                icon: item.module.icon,
+              })),
+
+            ...(user.company.companyModules ?? [])
+              .filter(
+                (item) =>
+                  item.enabled &&
+                  item.licensed,
+              )
+              .map((item) => ({
+                id: item.module.id,
+                code: item.module.code,
+                name: item.module.name,
+                route: item.module.route,
+                icon: item.module.icon,
+              })),
+          ],
     };
   }
 

@@ -21,6 +21,7 @@ import { AssignCompanyPlanDto } from '../dto/assign-company-plan.dto';
 import { EnableModuleDto } from '../dto/enable-module.dto';
 import { DisableModuleDto } from '../dto/disable-module.dto';
 import { StartTrialDto } from '../dto/start-trial.dto';
+import { SetCustomModulesDto } from '../dto/set-custom-modules.dto';
 import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { CreateModuleDto } from '../dto/create-module.dto';
@@ -81,6 +82,19 @@ export class LicenseController {
       dto.moduleId,
       dto.days,
     );
+  }
+
+  @Post('me/custom-modules')
+  @Permissions('license.view')
+  @ApiOperation({
+    summary:
+      'Montar/ajustar o plano por módulo avulso da minha empresa (vira Plano Customizado)',
+  })
+  setCustomModulesMine(
+    @CurrentUser('companyId') companyId: string,
+    @Body() dto: SetCustomModulesDto,
+  ) {
+    return this.service.setCustomModules(companyId, dto.moduleIds);
   }
 
   // ==========================

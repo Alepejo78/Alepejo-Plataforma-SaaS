@@ -72,6 +72,10 @@ model Company {
 
   code String @unique @db.VarChar(20)
 
+  /// URL amigável ("minha-empresa") — usada no link fixo de login
+  /// (`/<slug>/login`), gerada a partir do nome no cadastro.
+  slug String @unique @db.VarChar(80)
+
   legalName String @db.VarChar(200)
 
   tradeName String? @db.VarChar(200)
@@ -110,10 +114,10 @@ model Company {
   /// Chaves liga/desliga do módulo BRANDING — cada uma independente:
   /// desligada, usa o padrão AlePejo naquele item mesmo que exista
   /// arquivo/nome salvo (permite deixar algo pronto sem publicar).
-  brandingLogoLightEnabled  Boolean @default(false)
-  brandingLogoDarkEnabled   Boolean @default(false)
-  brandingLoginVideoEnabled Boolean @default(false)
-  brandingSystemNameEnabled Boolean @default(false)
+  brandingLogoLightEnabled   Boolean @default(false)
+  brandingLogoDarkEnabled    Boolean @default(false)
+  brandingLoginVideoEnabled  Boolean @default(false)
+  brandingSystemNameEnabled  Boolean @default(false)
   brandingThemeToggleEnabled Boolean @default(false)
 
   /// Layout do menu: "vertical" (sidebar lateral) ou "horizontal"
@@ -164,6 +168,12 @@ model Company {
   chartOfAccountClassifications ChartOfAccountClassification[]
   financialEntries              FinancialEntry[]
   budgets                       Budget[]
+  payrollTaxTables              PayrollTaxTable[]
+  payrollSettings               PayrollSettings?
+  payrolls                      Payroll[]
+  thirteenthSalaries            ThirteenthSalary[]
+  vacationPeriods               VacationPeriod[]
+  vacationGrants                VacationGrant[]
 
   quotes            Quote[]
   salesOrders       SalesOrder[]
@@ -171,14 +181,14 @@ model Company {
   purchaseOrders    PurchaseOrder[]
   documentSequences DocumentSequence[]
 
-  sectors        Sector[]
-  jobFunctions   JobFunction[]
-  workSchedules  WorkSchedule[]
+  sectors            Sector[]
+  jobFunctions       JobFunction[]
+  workSchedules      WorkSchedule[]
   workScheduleShifts WorkScheduleShift[]
-  ppeTypes       PpeType[]
-  employees      Employee[]
-  ppeDeliveries  PpeDelivery[]
-  benefits       Benefit[]
+  ppeTypes           PpeType[]
+  employees          Employee[]
+  ppeDeliveries      PpeDelivery[]
+  benefits           Benefit[]
 
   productionOrders   ProductionOrder[]
   productionSettings ProductionSettings?
@@ -192,8 +202,8 @@ model Company {
   /// ponto, leitor de QR/código de barras) sem login — hash (bcrypt),
   /// nunca gravamos o valor puro. Mostrado por inteiro só uma vez, na
   /// hora de gerar/regenerar (ver TimeClockApiKeyService).
-  timeClockApiKeyHash   String?   @db.VarChar(255)
-  timeClockApiKeyPrefix String?   @db.VarChar(12)
+  timeClockApiKeyHash      String?   @db.VarChar(255)
+  timeClockApiKeyPrefix    String?   @db.VarChar(12)
   timeClockApiKeyCreatedAt DateTime?
 
   /// Configuração de SMTP própria da empresa, pra sair com o e-mail
@@ -201,23 +211,23 @@ model Company {
   /// etc.) em vez do SMTP global do .env. Desligada (smtpEnabled
   /// false) ou sem host configurado, o sistema cai no .env como
   /// hoje — ver EmailNotificationsService.
-  smtpHost     String? @db.VarChar(255)
-  smtpPort     Int?
-  smtpUser     String? @db.VarChar(255)
+  smtpHost              String? @db.VarChar(255)
+  smtpPort              Int?
+  smtpUser              String? @db.VarChar(255)
   /// Criptografada (AES-256-GCM, EncryptionService) — precisa voltar
   /// ao valor original pra autenticar no servidor SMTP, por isso não
   /// é hash. Nunca devolvida pro frontend depois de salva.
   smtpPasswordEncrypted String? @db.Text
-  smtpFromEmail String? @db.VarChar(150)
-  smtpFromName  String? @db.VarChar(150)
-  smtpEnabled   Boolean @default(false)
+  smtpFromEmail         String? @db.VarChar(150)
+  smtpFromName          String? @db.VarChar(150)
+  smtpEnabled           Boolean @default(false)
 
   /// Agrupa empresas do mesmo cliente (mesmo grupo/raiz de CNPJ) sob
   /// uma licença só. `null` = a própria empresa é a raiz (caso
   /// normal). Preenchido = aponta direto pra raiz de verdade, nunca
   /// encadeado pra outra filial (CompanyOnboardingService.createAdditional).
-  rootCompanyId String?
-  rootCompany   Company?  @relation("CompanyGroup", fields: [rootCompanyId], references: [id])
+  rootCompanyId    String?
+  rootCompany      Company?  @relation("CompanyGroup", fields: [rootCompanyId], references: [id])
   siblingCompanies Company[] @relation("CompanyGroup")
 
   /// Logins com acesso a esta empresa (login cruzado entre empresas do
@@ -393,7 +403,7 @@ model UserCompany {
   id String @id @default(cuid())
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   companyId String
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -570,37 +580,37 @@ model UnitOfMeasure {
 }
 
 model Product {
-  id                       String           @id @default(cuid())
+  id                       String               @id @default(cuid())
   companyId                String
-  company                  Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company                  Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   categoryId               String?
-  category                 ProductCategory? @relation(fields: [categoryId], references: [id])
+  category                 ProductCategory?     @relation(fields: [categoryId], references: [id])
   brandId                  String?
-  brand                    Brand?           @relation(fields: [brandId], references: [id])
+  brand                    Brand?               @relation(fields: [brandId], references: [id])
   unitId                   String
-  unit                     UnitOfMeasure    @relation(fields: [unitId], references: [id])
-  code                     String           @db.VarChar(30)
-  barcode                  String?          @db.VarChar(30)
-  reference                String?          @db.VarChar(50)
-  description              String           @db.VarChar(200)
-  complementaryDescription String?          @db.VarChar(255)
-  type                     ProductType      @default(PRODUCT)
-  inventoryControl         InventoryControl @default(SIMPLE)
+  unit                     UnitOfMeasure        @relation(fields: [unitId], references: [id])
+  code                     String               @db.VarChar(30)
+  barcode                  String?              @db.VarChar(30)
+  reference                String?              @db.VarChar(50)
+  description              String               @db.VarChar(200)
+  complementaryDescription String?              @db.VarChar(255)
+  type                     ProductType          @default(PRODUCT)
+  inventoryControl         InventoryControl     @default(SIMPLE)
   /// Congelado (frente "Interprise") — Product virou cadastro de
   /// grupo, custo real passou a ser Inventory.averageCost (por
   /// empresa/depósito). Default só pra não quebrar create() sem o
   /// campo, não é mais preenchido pela tela.
-  cost                     Decimal          @default(0) @db.Decimal(18, 2)
-  salePrice                Decimal          @db.Decimal(18, 2)
-  minimumStock             Decimal          @default(0) @db.Decimal(18, 3)
-  currentStock             Decimal          @default(0) @db.Decimal(18, 3)
+  cost                     Decimal              @default(0) @db.Decimal(18, 2)
+  salePrice                Decimal              @db.Decimal(18, 2)
+  minimumStock             Decimal              @default(0) @db.Decimal(18, 3)
+  currentStock             Decimal              @default(0) @db.Decimal(18, 3)
   /// Lote mínimo por ordem de produção — sobrepõe o padrão da
   /// empresa (ProductionSettings.minBatchSize) quando preenchido.
-  minProductionBatch       Decimal?         @db.Decimal(18, 3)
-  status                   ProductStatus    @default(ACTIVE)
-  active                   Boolean          @default(true)
-  createdAt                DateTime         @default(now())
-  updatedAt                DateTime         @updatedAt
+  minProductionBatch       Decimal?             @db.Decimal(18, 3)
+  status                   ProductStatus        @default(ACTIVE)
+  active                   Boolean              @default(true)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
   deletedAt                DateTime?
   Inventory                Inventory[]
   purchaseItems            PurchaseItem[]
@@ -618,21 +628,21 @@ model Product {
 }
 
 model Warehouse {
-  id          String      @id @default(cuid())
-  companyId   String
-  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  code        String      @db.VarChar(20)
-  description String      @db.VarChar(120)
-  active      Boolean     @default(true)
-  inventories Inventory[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  purchases   Purchase[]
-  quotes         Quote[]
-  salesOrders    SalesOrder[]
-  quotations     Quotation[]
-  purchaseOrders PurchaseOrder[]
-  sales       Sale[]
+  id               String            @id @default(cuid())
+  companyId        String
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code             String            @db.VarChar(20)
+  description      String            @db.VarChar(120)
+  active           Boolean           @default(true)
+  inventories      Inventory[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  purchases        Purchase[]
+  quotes           Quote[]
+  salesOrders      SalesOrder[]
+  quotations       Quotation[]
+  purchaseOrders   PurchaseOrder[]
+  sales            Sale[]
   productionOrders ProductionOrder[]
 
   @@unique([companyId, code])
@@ -641,15 +651,15 @@ model Warehouse {
 }
 
 model Inventory {
-  id                String           @id @default(cuid())
-  companyId         String
-  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  productId         String
-  product           Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  warehouseId       String
-  warehouse         Warehouse        @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  quantity          Decimal          @default(0) @db.Decimal(18, 4)
-  averageCost       Decimal          @default(0) @db.Decimal(18, 4)
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  quantity    Decimal   @default(0) @db.Decimal(18, 4)
+  averageCost Decimal   @default(0) @db.Decimal(18, 4)
 
   /// Quantidade bloqueada para venda (não é reserva nem avaria — só
   /// impede a venda por decisão administrativa).
@@ -739,7 +749,7 @@ model StockMovement {
   /// usuário informou (ex.: "Nota Fiscal nº 55501") nas manuais.
   documentNumber String? @db.VarChar(100)
 
-  createdAt   DateTime          @default(now())
+  createdAt DateTime @default(now())
 
   @@index([companyId])
   @@index([inventoryId])
@@ -762,9 +772,9 @@ enum SaleStatus {
 }
 
 model Purchase {
-  id           String          @id @default(cuid())
-  companyId    String
-  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
   /// Formatada no frontend como "C" + 9 dígitos (ex.: C000000001).
@@ -952,7 +962,7 @@ model PurchaseOrder {
 
   totalAmount Decimal @default(0) @db.Decimal(18, 2)
 
-  items PurchaseOrderItem[]
+  items    PurchaseOrderItem[]
   purchase Purchase?
 
   /// Preenchido quando o pedido nasceu da proposta vencedora de uma
@@ -987,9 +997,9 @@ model PurchaseOrderItem {
 }
 
 model Sale {
-  id          String          @id @default(cuid())
-  companyId   String
-  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
   /// Formatada no frontend como "V" + 9 dígitos (ex.: V000000001).
@@ -1040,9 +1050,9 @@ model Sale {
 
   /// Preenchido quando a venda nasceu de um orçamento ou pedido de
   /// venda (só um dos dois, escolhido no cadastro da venda).
-  quoteId String?     @unique
-  quote   Quote?      @relation(fields: [quoteId], references: [id])
-  salesOrderId String? @unique
+  quoteId      String?     @unique
+  quote        Quote?      @relation(fields: [quoteId], references: [id])
+  salesOrderId String?     @unique
   salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
 
   createdAt DateTime @default(now())
@@ -1089,13 +1099,16 @@ model DocumentSequence {
 
 enum QuoteStatus {
   DRAFT
+  APPROVED
   CONVERTED
   CANCELLED
 }
 
-/// Orçamento: proposta enviada ao cliente antes da venda. Se
-/// aceito, vira uma Venda (Sale.quoteId) e o status passa a
-/// CONVERTED — a partir daí não pode mais ser editado.
+/// Orçamento: proposta enviada ao cliente antes da venda. Aprovado
+/// gera um Pedido de Venda sozinho (SalesOrder.quoteId) e o status
+/// passa a APPROVED. Se aceito diretamente (sem passar por Pedido),
+/// vira uma Venda (Sale.quoteId) e o status passa a CONVERTED — em
+/// ambos os casos, a partir daí não pode mais ser editado.
 model Quote {
   id String @id @default(cuid())
 
@@ -1126,6 +1139,10 @@ model Quote {
 
   items QuoteItem[]
   sale  Sale?
+
+  /// Pedido de Venda gerado quando o orçamento é aprovado (ver
+  /// SalesOrder.quoteId) — relação reversa, a FK vive no SalesOrder.
+  salesOrder SalesOrder?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1188,6 +1205,11 @@ model SalesOrder {
 
   items SalesOrderItem[]
   sale  Sale?
+
+  /// Preenchido quando o pedido nasceu da aprovação automática de um
+  /// Orçamento (ver Quote.salesOrder) — não editável, só referência.
+  quoteId String? @unique
+  quote   Quote?  @relation(fields: [quoteId], references: [id])
 
   productionOrders ProductionOrder[]
 
@@ -1303,9 +1325,14 @@ model FinancialEntry {
   type   FinancialEntryType
   status FinancialEntryStatus @default(OPEN)
 
-  /// Cliente (a receber) ou fornecedor (a pagar).
-  partnerId String
-  partner   BusinessPartner @relation("FinancialEntryPartner", fields: [partnerId], references: [id])
+  /// Cliente (a receber) ou fornecedor (a pagar) — XOR com
+  /// `employeeId` (título de folha/13º/férias aponta pro colaborador
+  /// em vez de um parceiro; nunca os dois preenchidos, reforçado por
+  /// CHECK no banco e validação no service/DTO).
+  partnerId  String?
+  partner    BusinessPartner? @relation("FinancialEntryPartner", fields: [partnerId], references: [id])
+  employeeId String?
+  employee   Employee?        @relation(fields: [employeeId], references: [id])
 
   chartOfAccountId String?
   chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
@@ -1339,14 +1366,470 @@ model FinancialEntry {
   saleId     String?
   sale       Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
 
+  /// Preenchido quando o título nasce da aprovação de uma folha de pagamento.
+  payrollItemId String?      @unique
+  payrollItem   PayrollItem? @relation(fields: [payrollItemId], references: [id], onDelete: SetNull)
+
+  /// Preenchido quando o título nasce da aprovação de uma parcela de 13º salário.
+  thirteenthSalaryItemId String?               @unique
+  thirteenthSalaryItem   ThirteenthSalaryItem? @relation(fields: [thirteenthSalaryItemId], references: [id], onDelete: SetNull)
+
+  /// Preenchido quando o título nasce da aprovação de um gozo de férias.
+  vacationGrantId String?        @unique
+  vacationGrant   VacationGrant? @relation(fields: [vacationGrantId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([companyId])
   @@index([partnerId])
+  @@index([employeeId])
   @@index([type, status])
   @@index([dueDate])
   @@map("financial_entries")
+}
+
+enum PayrollTaxType {
+  INSS
+  IRRF
+}
+
+/// Conjunto de parâmetros fiscais vigente num período — INSS, IRRF,
+/// FGTS e dedução por dependente mudam todo ano (às vezes no meio do
+/// ano), então viram cadastro editável em vez de valor fixo no
+/// código. Nova vigência = nova linha (nunca edita uma já usada) —
+/// folha já fechada continua auditável com a tabela que valia então.
+model PayrollTaxTable {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  validFrom DateTime
+  /// null = vigência em aberto (a atual).
+  validTo   DateTime?
+
+  fgtsPercentage          Decimal @default(8.00) @db.Decimal(5, 2)
+  dependentDeductionValue Decimal @db.Decimal(18, 2)
+
+  /// Redutor adicional de IRRF (reforma da isenção até R$5.000,
+  /// vigente 2026): pra base tributável entre `irrfReliefThreshold` e
+  /// `irrfReliefPhaseOutEnd`, desconta
+  /// `irrfReliefBase - (irrfReliefFactor × base)` do IRRF já
+  /// calculado pela tabela. Abaixo do threshold, isento total. Acima
+  /// do phase-out, sem redutor (só a tabela tradicional). Nulos =
+  /// redutor não se aplica (tabelas anteriores a 2026).
+  irrfReliefThreshold   Decimal? @db.Decimal(18, 2)
+  irrfReliefPhaseOutEnd Decimal? @db.Decimal(18, 2)
+  irrfReliefBase        Decimal? @db.Decimal(18, 6)
+  irrfReliefFactor      Decimal? @db.Decimal(10, 6)
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brackets PayrollTaxBracket[]
+
+  @@index([companyId])
+  @@map("payroll_tax_tables")
+}
+
+/// Faixa progressiva de INSS ou IRRF. Fórmula unificada:
+/// imposto = base × rate − deduction (parcela a deduzir).
+model PayrollTaxBracket {
+  id                String          @id @default(cuid())
+  payrollTaxTableId String
+  payrollTaxTable   PayrollTaxTable @relation(fields: [payrollTaxTableId], references: [id], onDelete: Cascade)
+
+  taxType PayrollTaxType
+  order   Int
+
+  minBase   Decimal  @db.Decimal(18, 2)
+  /// null = sem teto (última faixa, ex.: IRRF acima de R$4.664,68).
+  maxBase   Decimal? @db.Decimal(18, 2)
+  rate      Decimal  @db.Decimal(5, 2)
+  deduction Decimal  @db.Decimal(18, 2)
+
+  @@index([payrollTaxTableId, taxType])
+  @@map("payroll_tax_brackets")
+}
+
+/// Parâmetros configuráveis da folha (singleton por empresa) — o que
+/// não é tabela fiscal, mas ainda pode variar por empresa/convenção.
+model PayrollSettings {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Adicional de hora extra (%) — ex.: 50 = paga 150% do valor/hora.
+  extraHourSurchargePercentage  Decimal @default(50.00) @db.Decimal(5, 2)
+  /// % do salário base descontado como Vale Transporte (limitado ao
+  /// custo real cadastrado no benefício, se menor).
+  transportVoucherPercentage    Decimal @default(6.00) @db.Decimal(5, 2)
+  /// 1 = parcela única de 13º; 2 = duas parcelas (padrão CLT).
+  thirteenthDefaultInstallments Int     @default(2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payroll_settings")
+}
+
+enum PayrollStatus {
+  DRAFT
+  APPROVED
+  CANCELLED
+}
+
+enum PayrollItemStatus {
+  PENDING
+  INCLUDED
+  EXCLUDED
+}
+
+enum PayrollLineType {
+  PROVENTO
+  DESCONTO
+}
+
+/// Folha de pagamento de uma competência (mês/ano) — por empresa
+/// (cada filial paga seus próprios colaboradores, diferente dos
+/// cadastros de apoio que são de grupo).
+model Payroll {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa (DocumentSequenceService, tipo "PAYROLL").
+  number Int
+
+  competenceYear  Int
+  competenceMonth Int
+
+  status PayrollStatus @default(DRAFT)
+
+  /// Usado como data de emissão/vencimento dos títulos gerados na aprovação.
+  paymentDate      DateTime?
+  generatedAt      DateTime  @default(now())
+  approvedAt       DateTime?
+  approvedByUserId String?
+
+  totalGross        Decimal @default(0) @db.Decimal(18, 2)
+  totalDeductions   Decimal @default(0) @db.Decimal(18, 2)
+  totalNet          Decimal @default(0) @db.Decimal(18, 2)
+  /// Informativo — FGTS é encargo do empregador, não desconta do líquido.
+  totalEmployerFgts Decimal @default(0) @db.Decimal(18, 2)
+
+  observation String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items PayrollItem[]
+
+  @@unique([companyId, competenceYear, competenceMonth])
+  @@index([companyId])
+  @@map("payrolls")
+}
+
+/// Um colaborador dentro de uma folha — snapshot de tudo no momento
+/// da geração (nunca recalcula sozinho se o cadastro do colaborador
+/// mudar depois).
+model PayrollItem {
+  id         String   @id @default(cuid())
+  payrollId  String
+  payroll    Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  status PayrollItemStatus @default(PENDING)
+
+  baseSalary      Decimal    @db.Decimal(18, 2)
+  salaryType      SalaryType
+  dependentsCount Int        @default(0)
+
+  workedMinutes   Int     @default(0)
+  expectedMinutes Int     @default(0)
+  extraMinutes    Int     @default(0)
+  extraAmount     Decimal @default(0) @db.Decimal(18, 2)
+
+  unjustifiedAbsenceDays Int     @default(0)
+  absenceDeductionAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  transportVoucherDeduction Decimal @default(0) @db.Decimal(18, 2)
+
+  otherEarnings   Decimal @default(0) @db.Decimal(18, 2)
+  otherDeductions Decimal @default(0) @db.Decimal(18, 2)
+
+  grossAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  inssBase   Decimal @default(0) @db.Decimal(18, 2)
+  inssAmount Decimal @default(0) @db.Decimal(18, 2)
+  irrfBase   Decimal @default(0) @db.Decimal(18, 2)
+  irrfAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  netAmount          Decimal @default(0) @db.Decimal(18, 2)
+  employerFgtsAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  /// Título a pagar gerado na aprovação — relação reversa, a FK vive
+  /// no FinancialEntry (mesmo padrão de Sale.quoteId/salesOrderId).
+  financialEntry FinancialEntry?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines PayrollItemLine[]
+
+  @@unique([payrollId, employeeId])
+  @@index([employeeId])
+  @@map("payroll_items")
+}
+
+/// Linha do holerite (o que é impresso) — rastreabilidade rubrica a
+/// rubrica, mesmo padrão header/item já usado em Sale/SaleItem.
+model PayrollItemLine {
+  id            String      @id @default(cuid())
+  payrollItemId String
+  payrollItem   PayrollItem @relation(fields: [payrollItemId], references: [id], onDelete: Cascade)
+
+  type           PayrollLineType
+  /// SALARIO_BASE, HORAS_EXTRAS, VALE_TRANSPORTE, INSS, IRRF, FALTA_INJUSTIFICADA, BENEFICIO...
+  code           String          @db.VarChar(40)
+  description    String          @db.VarChar(150)
+  /// Ex.: "220h", "6%", "2 dias" — texto livre pro holerite mostrar a referência.
+  referenceValue String?         @db.VarChar(50)
+  amount         Decimal         @db.Decimal(18, 2)
+  sortOrder      Int
+
+  @@index([payrollItemId])
+  @@map("payroll_item_lines")
+}
+
+/// 13º salário de um ano/parcela (1 ou 2) — mesmo padrão header/item
+/// de `Payroll`, reaproveitando os enums de status (DRAFT/APPROVED/
+/// CANCELLED e PENDING/INCLUDED/EXCLUDED têm o mesmo significado aqui).
+/// 1ª parcela (paga até 30/11): sem desconto de INSS/IRRF. 2ª parcela
+/// (paga até 20/12): INSS/IRRF incidem sobre o valor TOTAL do 13º
+/// (tributação exclusiva, separada do salário do mês), descontados
+/// inteiros na 2ª parcela.
+model ThirteenthSalary {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa (DocumentSequenceService, tipo "THIRTEENTH_SALARY").
+  number Int
+
+  year        Int
+  /// 1 = primeira parcela (sem desconto), 2 = segunda parcela (com INSS/IRRF sobre o total).
+  installment Int
+
+  status PayrollStatus @default(DRAFT)
+
+  paymentDate      DateTime?
+  generatedAt      DateTime  @default(now())
+  approvedAt       DateTime?
+  approvedByUserId String?
+
+  totalGross        Decimal @default(0) @db.Decimal(18, 2)
+  totalDeductions   Decimal @default(0) @db.Decimal(18, 2)
+  totalNet          Decimal @default(0) @db.Decimal(18, 2)
+  totalEmployerFgts Decimal @default(0) @db.Decimal(18, 2)
+
+  observation String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items ThirteenthSalaryItem[]
+
+  @@unique([companyId, year, installment])
+  @@index([companyId])
+  @@map("thirteenth_salaries")
+}
+
+/// Um colaborador dentro de um 13º — snapshot no momento da geração,
+/// igual a `PayrollItem`.
+model ThirteenthSalaryItem {
+  id                 String           @id @default(cuid())
+  thirteenthSalaryId String
+  thirteenthSalary   ThirteenthSalary @relation(fields: [thirteenthSalaryId], references: [id], onDelete: Cascade)
+  employeeId         String
+  employee           Employee         @relation(fields: [employeeId], references: [id])
+
+  status PayrollItemStatus @default(PENDING)
+
+  baseSalary   Decimal @db.Decimal(18, 2)
+  /// Avos — meses trabalhados no ano (considerando pelo menos 15 dias no mês de admissão).
+  monthsWorked Int
+
+  /// Valor bruto do 13º completo (baseSalary/12 × monthsWorked) — igual nas duas parcelas.
+  grossAmount               Decimal @default(0) @db.Decimal(18, 2)
+  /// Só na 2ª parcela: valor já pago na 1ª (abatido do líquido, sem duplicar).
+  previousInstallmentAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  otherEarnings   Decimal @default(0) @db.Decimal(18, 2)
+  otherDeductions Decimal @default(0) @db.Decimal(18, 2)
+
+  inssBase   Decimal @default(0) @db.Decimal(18, 2)
+  inssAmount Decimal @default(0) @db.Decimal(18, 2)
+  irrfBase   Decimal @default(0) @db.Decimal(18, 2)
+  irrfAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  netAmount          Decimal @default(0) @db.Decimal(18, 2)
+  employerFgtsAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  /// Título a pagar gerado na aprovação — relação reversa, a FK vive no FinancialEntry.
+  financialEntry FinancialEntry?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines ThirteenthSalaryItemLine[]
+
+  @@unique([thirteenthSalaryId, employeeId])
+  @@index([employeeId])
+  @@map("thirteenth_salary_items")
+}
+
+/// Linha do recibo de 13º — mesmo padrão de `PayrollItemLine`.
+model ThirteenthSalaryItemLine {
+  id                     String               @id @default(cuid())
+  thirteenthSalaryItemId String
+  thirteenthSalaryItem   ThirteenthSalaryItem @relation(fields: [thirteenthSalaryItemId], references: [id], onDelete: Cascade)
+
+  type           PayrollLineType
+  code           String          @db.VarChar(40)
+  description    String          @db.VarChar(150)
+  referenceValue String?         @db.VarChar(50)
+  amount         Decimal         @db.Decimal(18, 2)
+  sortOrder      Int
+
+  @@index([thirteenthSalaryItemId])
+  @@map("thirteenth_salary_item_lines")
+}
+
+enum VacationPeriodStatus {
+  OPEN
+  CLOSED
+}
+
+/// Período aquisitivo de férias (12 meses) — criado sob demanda a
+/// partir da admissão (1º período) ou do fim do período anterior
+/// (seguintes). `totalDays` sempre 30 — proporcionalidade por excesso
+/// de faltas (art. 130 CLT) fora de escopo, ver plano.
+model VacationPeriod {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  startDate          DateTime
+  endDate            DateTime
+  /// Prazo legal pra conceder as férias deste período (endDate + 12 meses).
+  concessiveDeadline DateTime
+
+  totalDays Int @default(30)
+  usedDays  Int @default(0)
+  soldDays  Int @default(0)
+
+  status VacationPeriodStatus @default(OPEN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  grants VacationGrant[]
+
+  @@unique([employeeId, startDate])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("vacation_periods")
+}
+
+/// Um "gozo" de férias — documento por colaborador (sem lote/
+/// competência, diferente de Payroll/ThirteenthSalary: férias são
+/// concedidas individualmente, quando o colaborador tira). Reaproveita
+/// PayrollStatus (DRAFT/APPROVED/CANCELLED).
+model VacationGrant {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  vacationPeriodId String
+  vacationPeriod   VacationPeriod @relation(fields: [vacationPeriodId], references: [id])
+
+  /// Numeração sequencial por empresa (DocumentSequenceService, tipo "VACATION").
+  number Int
+
+  status PayrollStatus @default(DRAFT)
+
+  startDate  DateTime
+  /// Dias efetivamente gozados (descanso).
+  days       Int
+  /// Dias vendidos como abono pecuniário (até 1/3 do período — 10 de 30).
+  soldDays   Int      @default(0)
+  endDate    DateTime
+  returnDate DateTime
+
+  baseSalary Decimal @db.Decimal(18, 2)
+
+  vacationAmount            Decimal @default(0) @db.Decimal(18, 2)
+  /// 1/3 constitucional sobre `vacationAmount`.
+  constitutionalThirdAmount Decimal @default(0) @db.Decimal(18, 2)
+  /// Abono pecuniário — isento de INSS/IRRF/FGTS.
+  soldAmount                Decimal @default(0) @db.Decimal(18, 2)
+  soldThirdAmount           Decimal @default(0) @db.Decimal(18, 2)
+
+  otherEarnings   Decimal @default(0) @db.Decimal(18, 2)
+  otherDeductions Decimal @default(0) @db.Decimal(18, 2)
+
+  /// Base tributável = vacationAmount + constitutionalThirdAmount (abono não entra).
+  grossAmount Decimal @default(0) @db.Decimal(18, 2)
+  inssBase    Decimal @default(0) @db.Decimal(18, 2)
+  inssAmount  Decimal @default(0) @db.Decimal(18, 2)
+  irrfBase    Decimal @default(0) @db.Decimal(18, 2)
+  irrfAmount  Decimal @default(0) @db.Decimal(18, 2)
+
+  netAmount          Decimal @default(0) @db.Decimal(18, 2)
+  /// FGTS incide só sobre vacationAmount+constitutionalThirdAmount, nunca sobre o abono.
+  employerFgtsAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  approvedAt       DateTime?
+  approvedByUserId String?
+  observation      String?
+
+  /// Título a pagar gerado na aprovação — relação reversa, a FK vive no FinancialEntry.
+  financialEntry FinancialEntry?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines VacationGrantLine[]
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("vacation_grants")
+}
+
+/// Linha do recibo de férias — mesmo padrão de `PayrollItemLine`.
+model VacationGrantLine {
+  id              String        @id @default(cuid())
+  vacationGrantId String
+  vacationGrant   VacationGrant @relation(fields: [vacationGrantId], references: [id], onDelete: Cascade)
+
+  type           PayrollLineType
+  code           String          @db.VarChar(40)
+  description    String          @db.VarChar(150)
+  referenceValue String?         @db.VarChar(50)
+  amount         Decimal         @db.Decimal(18, 2)
+  sortOrder      Int
+
+  @@index([vacationGrantId])
+  @@map("vacation_grant_lines")
 }
 
 enum BudgetType {
@@ -1385,6 +1868,9 @@ model Module {
   route          String?          @db.VarChar(150)
   sortOrder      Int              @default(0)
   active         Boolean          @default(true)
+  /// Preço quando contratado avulso (add-on), fora de um plano — ex.: BRANDING.
+  monthlyPrice   Decimal?         @db.Decimal(18, 2)
+  yearlyPrice    Decimal?         @db.Decimal(18, 2)
   planModules    PlanModule[]
   companyModules CompanyModule[]
   licenseHistory LicenseHistory[]
@@ -1401,7 +1887,13 @@ model Plan {
   description    String?          @db.VarChar(500)
   monthlyPrice   Decimal?         @db.Decimal(18, 2)
   yearlyPrice    Decimal?         @db.Decimal(18, 2)
+  /// Cobrança única no início (migração/treinamento) — não é mensalidade.
+  setupFee       Decimal?         @db.Decimal(18, 2)
   maxUsers       Int?
+  /// Ordem de exibição na página de preços (menor primeiro).
+  sortOrder      Int              @default(0)
+  /// Marca o plano "recomendado" com destaque visual na página de preços.
+  highlighted    Boolean          @default(false)
   active         Boolean          @default(true)
   planModules    PlanModule[]
   companyPlans   CompanyPlan[]
@@ -1427,6 +1919,24 @@ model PlanModule {
   @@map("plan_modules")
 }
 
+enum CompanyPlanStatus {
+  /// Período de teste, ainda não pagou.
+  TRIAL
+  /// Assinatura em dia.
+  ACTIVE
+  /// Venceu e não pagou ainda, mas dentro da tolerância — módulos continuam liberados.
+  PAST_DUE
+  /// Tolerância vencida — módulos básicos (login, licenciamento) continuam liberados, o resto não.
+  BLOCKED
+  /// Cancelada pelo cliente ou pela plataforma.
+  CANCELLED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
 model CompanyPlan {
   id          String    @id @default(cuid())
   companyId   String    @unique
@@ -1438,11 +1948,81 @@ model CompanyPlan {
   autoRenew   Boolean   @default(true)
   company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   plan        Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+
+  status           CompanyPlanStatus @default(TRIAL)
+  billingCycle     BillingCycle      @default(MONTHLY)
+  /// Até quando a assinatura está paga (fim do período corrente).
+  currentPeriodEnd DateTime?
+  /// Prazo de tolerância após vencer — só é preenchido quando cai em PAST_DUE.
+  graceUntil       DateTime?
+
+  asaasCustomerId     String? @db.VarChar(50)
+  asaasSubscriptionId String? @db.VarChar(50)
+
+  charges BillingCharge[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([planId])
+  @@index([status])
   @@map("company_plans")
+}
+
+enum BillingChargeType {
+  SUBSCRIPTION
+  SETUP_FEE
+  ADDON
+}
+
+enum BillingChargeStatus {
+  PENDING
+  CONFIRMED
+  RECEIVED
+  OVERDUE
+  REFUNDED
+  CANCELLED
+}
+
+/// Cada cobrança emitida no Asaas — histórico de faturas/PIX/boletos
+/// gerados pra assinatura, pra mostrar ao cliente (link, status) e pra
+/// reconciliar com o webhook.
+model BillingCharge {
+  id            String      @id @default(cuid())
+  companyPlanId String
+  companyPlan   CompanyPlan @relation(fields: [companyPlanId], references: [id], onDelete: Cascade)
+
+  asaasPaymentId String? @unique @db.VarChar(50)
+
+  type        BillingChargeType
+  billingType String?             @db.VarChar(20)
+  value       Decimal             @db.Decimal(18, 2)
+  dueDate     DateTime
+  status      BillingChargeStatus @default(PENDING)
+  paidAt      DateTime?
+
+  invoiceUrl  String? @db.VarChar(255)
+  bankSlipUrl String? @db.VarChar(255)
+  pixPayload  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyPlanId])
+  @@map("billing_charges")
+}
+
+/// Log de todo evento de webhook recebido do Asaas, pra idempotência —
+/// o Asaas reenvia eventos, e sem isso um PAYMENT_CONFIRMED duplicado
+/// estenderia a assinatura duas vezes.
+model BillingWebhookEvent {
+  id           String   @id @default(cuid())
+  asaasEventId String   @unique @db.VarChar(100)
+  event        String   @db.VarChar(50)
+  payload      Json
+  processedAt  DateTime @default(now())
+
+  @@map("billing_webhook_events")
 }
 
 model CompanyModule {
@@ -1522,17 +2102,17 @@ model Sector {
 /// Cadastro de horários de trabalho (ex.: "Comercial (Seg a Sex)" —
 /// "SEG A SEX: 07:30-12:00 | 13:12-17:30"), reaproveitável entre funções.
 model WorkSchedule {
-  id           String        @id @default(cuid())
+  id           String              @id @default(cuid())
   companyId    String
-  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name         String        @db.VarChar(120)
-  description  String?       @db.VarChar(255)
-  active       Boolean       @default(true)
+  company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String              @db.VarChar(120)
+  description  String?             @db.VarChar(255)
+  active       Boolean             @default(true)
   jobFunctions JobFunction[]
   employees    Employee[]
   shifts       WorkScheduleShift[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   @@unique([companyId, name])
   @@index([companyId])
@@ -1700,15 +2280,19 @@ model Employee {
   companyId String
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
+  /// Matrícula sequencial gerada sozinha por empresa (DocumentSequenceService,
+  /// type "EMPLOYEE") — nunca editável pelo usuário.
+  employeeNumber Int?
+
   // --- Pessoais ---
-  name          String @db.VarChar(150)
-  fatherName    String? @db.VarChar(150)
-  motherName    String? @db.VarChar(150)
-  birthDate     DateTime?
-  gender        Gender?
-  birthCity     String? @db.VarChar(100)
-  birthState    String? @db.VarChar(2)
-  maritalStatus MaritalStatus?
+  name           String          @db.VarChar(150)
+  fatherName     String?         @db.VarChar(150)
+  motherName     String?         @db.VarChar(150)
+  birthDate      DateTime?
+  gender         Gender?
+  birthCity      String?         @db.VarChar(100)
+  birthState     String?         @db.VarChar(2)
+  maritalStatus  MaritalStatus?
   educationLevel EducationLevel?
 
   /// Foto do colaborador (frente "Interprise" — cadastro de grupo).
@@ -1720,6 +2304,11 @@ model Employee {
   workCard       String? @db.VarChar(20)
   workCardSeries String? @db.VarChar(20)
   pis            String? @db.VarChar(20)
+
+  /// Categorias marcadas em caixa de seleção (ex.: "AB"), sem
+  /// separador — concatenação simples das letras A a E.
+  driverLicense         String? @db.VarChar(20)
+  driverLicenseCategory String? @db.VarChar(10)
 
   // --- Contato ---
   zipCode  String? @db.VarChar(10)
@@ -1745,7 +2334,7 @@ model Employee {
   workScheduleId String?
   workSchedule   WorkSchedule? @relation(fields: [workScheduleId], references: [id])
 
-  baseSalary    Decimal? @db.Decimal(18, 2)
+  baseSalary    Decimal?       @db.Decimal(18, 2)
   salaryType    SalaryType?
   paymentMethod PaymentMethod?
 
@@ -1815,17 +2404,23 @@ model Employee {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  dependents       EmployeeDependent[]
-  ppeDeliveries    PpeDelivery[]
-  employeeBenefits EmployeeBenefit[]
-  exams            EmployeeExam[]
-  timeEntries          TimeEntry[]
-  timeSheetApprovals   TimeSheetApproval[]
-  timeEntryAdjustments TimeEntryAdjustment[]
-  absenceRecords       AbsenceRecord[]
+  dependents            EmployeeDependent[]
+  ppeDeliveries         PpeDelivery[]
+  employeeBenefits      EmployeeBenefit[]
+  exams                 EmployeeExam[]
+  timeEntries           TimeEntry[]
+  timeSheetApprovals    TimeSheetApproval[]
+  timeEntryAdjustments  TimeEntryAdjustment[]
+  absenceRecords        AbsenceRecord[]
+  financialEntries      FinancialEntry[]
+  payrollItems          PayrollItem[]
+  thirteenthSalaryItems ThirteenthSalaryItem[]
+  vacationPeriods       VacationPeriod[]
+  vacationGrants        VacationGrant[]
 
   @@unique([companyId, cpf])
   @@unique([companyId, badgeCode])
+  @@unique([companyId, employeeNumber])
   @@index([companyId])
   @@index([jobFunctionId])
   @@map("employees")
@@ -1876,17 +2471,21 @@ enum BenefitCalculationType {
 /// Vale Alimentação, etc.) — manutenção própria (criar/editar/
 /// desativar), igual padrão de Setor/Horário/Tipo de EPI.
 model Benefit {
-  id          String   @id @default(cuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name        String   @db.VarChar(120)
-  description String?  @db.VarChar(255)
+  id                 String                 @id @default(cuid())
+  companyId          String
+  company            Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name               String                 @db.VarChar(120)
+  description        String?                @db.VarChar(255)
   /// FIXED: valor em R$ digitado direto. PERCENTAGE: % sobre o
   /// salário do colaborador (ex.: Vale Transporte).
-  calculationType BenefitCalculationType @default(FIXED)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  calculationType    BenefitCalculationType @default(FIXED)
+  /// Marca o benefício de Vale Transporte pra folha descontar os 6%
+  /// (ou o custo real, se cadastrado menor) automaticamente — em vez
+  /// de tentar reconhecer pelo nome digitado.
+  isTransportVoucher Boolean                @default(false)
+  active             Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   employeeBenefits EmployeeBenefit[]
 
@@ -1922,6 +2521,10 @@ model EmployeeDependent {
   name         String                 @db.VarChar(150)
   birthDate    DateTime?
   relationship DependentRelationship?
+  /// Se entra na dedução de IRRF da folha (R$189,59/mês em 2026) —
+  /// desmarcar quando o dependente passar da idade/condição que dá
+  /// direito, sem precisar excluir o cadastro.
+  irrfEligible Boolean                @default(true)
   createdAt    DateTime               @default(now())
 
   @@index([employeeId])

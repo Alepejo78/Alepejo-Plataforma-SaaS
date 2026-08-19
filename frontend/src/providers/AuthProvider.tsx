@@ -12,6 +12,8 @@ import {
 import { useRouter } from "next/navigation";
 
 import { authService } from "@/services/auth.service";
+import { isPublicRoute } from "@/lib/publicRoutes";
+import { rememberCompanySlug } from "@/lib/companyLogin";
 
 import type {
   AuthUser,
@@ -69,6 +71,7 @@ export function AuthProvider({
 
       setUser(currentUser);
       setSessionError("");
+      rememberCompanySlug(currentUser.company.slug);
     } catch (err) {
       setUser(null);
 
@@ -80,9 +83,13 @@ export function AuthProvider({
         // O middleware não consegue detectar isso — ele só verifica
         // se o cookie está presente — então o redirecionamento
         // precisa acontecer aqui.
+        // Numa rota pública (definir senha, criar conta) o 401 é o
+        // estado NORMAL — quem está ali ainda não tem sessão mesmo.
+        // Redirecionar daqui tirava o usuário novo da própria tela de
+        // criar senha, deixando-o sem nenhuma forma de entrar.
         if (
           typeof window !== "undefined" &&
-          !window.location.pathname.startsWith("/login")
+          !isPublicRoute(window.location.pathname)
         ) {
           const { pathname, search } = window.location;
 
@@ -117,6 +124,7 @@ export function AuthProvider({
       const currentUser = await authService.me();
 
       setUser(currentUser);
+      rememberCompanySlug(currentUser.company.slug);
     },
     []
   );

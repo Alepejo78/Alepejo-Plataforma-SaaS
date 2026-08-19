@@ -10,18 +10,18 @@ export default function OsConfiguracoesFinanceiroPage() {
 
   const cards = [
     {
-      title: "Plano de contas",
-      description: "Cadastros de apoio do Financeiro",
-      href: "/erp/financeiro/plano-contas",
-      icon: FileText,
-      visible: can("chart-of-account.view"),
-    },
-    {
       title: "Classificações",
       description: "Cadastros de apoio do Financeiro",
       href: "/erp/financeiro/classificacoes",
       icon: Tags,
       visible: can("chart-of-account-classification.view"),
+    },
+    {
+      title: "Plano de contas",
+      description: "Cadastros de apoio do Financeiro",
+      href: "/erp/financeiro/plano-contas",
+      icon: FileText,
+      visible: can("chart-of-account.view"),
     },
   ].filter((card) => card.visible);
 

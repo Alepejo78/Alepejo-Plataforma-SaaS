@@ -32,14 +32,18 @@ export class FinancialEntriesService {
   ) {}
 
   async create(companyId: string, dto: CreateFinancialEntryDto) {
-    // A receber exige cliente; a pagar exige fornecedor.
-    await this.businessPartnersService.assertHasRole(
-      companyId,
-      dto.partnerId,
-      dto.type === FinancialEntryType.RECEIVABLE
-        ? BusinessPartnerRole.CUSTOMER
-        : BusinessPartnerRole.SUPPLIER,
-    );
+    if (dto.employeeId) {
+      await this.assertEmployee(companyId, dto.employeeId);
+    } else if (dto.partnerId) {
+      // A receber exige cliente; a pagar exige fornecedor.
+      await this.businessPartnersService.assertHasRole(
+        companyId,
+        dto.partnerId,
+        dto.type === FinancialEntryType.RECEIVABLE
+          ? BusinessPartnerRole.CUSTOMER
+          : BusinessPartnerRole.SUPPLIER,
+      );
+    }
 
     if (dto.chartOfAccountId) {
       await this.assertChartOfAccount(
@@ -51,6 +55,7 @@ export class FinancialEntriesService {
     return this.repository.create(companyId, {
       type: dto.type,
       partnerId: dto.partnerId,
+      employeeId: dto.employeeId,
       chartOfAccountId: dto.chartOfAccountId,
       issueDate: new Date(dto.issueDate),
       termDays: dto.termDays,
@@ -61,6 +66,19 @@ export class FinancialEntriesService {
       paymentMethod: dto.paymentMethod,
       observation: dto.observation,
     } as Prisma.FinancialEntryUncheckedCreateInput);
+  }
+
+  private async assertEmployee(companyId: string, employeeId: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, companyId },
+      select: { id: true },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(
+        'Colaborador não encontrado.',
+      );
+    }
   }
 
   async findAll(
@@ -194,6 +212,12 @@ export class FinancialEntriesService {
       );
     }
 
+    if (entry.payrollItemId || entry.thirteenthSalaryItemId || entry.vacationGrantId) {
+      throw new BadRequestException(
+        'Este título nasceu de uma folha de pagamento e não pode ser excluído. Use o cancelamento.',
+      );
+    }
+
     return this.repository.delete(id);
   }
 
@@ -207,7 +231,10 @@ export class FinancialEntriesService {
     params: {
       companyId: string;
       type: FinancialEntryType;
-      partnerId: string;
+      /// Exatamente um dos dois — parceiro (compra/venda) ou
+      /// colaborador (folha/13º/férias).
+      partnerId?: string;
+      employeeId?: string;
       amount: number;
       issueDate: Date;
       termDays?: number | null;
@@ -218,6 +245,9 @@ export class FinancialEntriesService {
       documentType?: FinancialDocumentType | null;
       purchaseId?: string;
       saleId?: string;
+      payrollItemId?: string;
+      thirteenthSalaryItemId?: string;
+      vacationGrantId?: string;
       observation?: string;
     },
   ) {
@@ -226,6 +256,7 @@ export class FinancialEntriesService {
         companyId: params.companyId,
         type: params.type,
         partnerId: params.partnerId,
+        employeeId: params.employeeId,
         amount: params.amount,
         issueDate: params.issueDate,
         termDays: params.termDays ?? undefined,
@@ -237,6 +268,9 @@ export class FinancialEntriesService {
         documentType: params.documentType ?? undefined,
         purchaseId: params.purchaseId,
         saleId: params.saleId,
+        payrollItemId: params.payrollItemId,
+        thirteenthSalaryItemId: params.thirteenthSalaryItemId,
+        vacationGrantId: params.vacationGrantId,
         observation: params.observation,
       },
     });

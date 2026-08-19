@@ -23,12 +23,15 @@ export class EmployeesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(
+    tx: Prisma.TransactionClient,
     companyId: string,
+    employeeNumber: number,
     dto: CreateEmployeeDto,
   ): Promise<Employee> {
-    return this.prisma.employee.create({
+    return tx.employee.create({
       data: {
         companyId,
+        employeeNumber,
         name: dto.name,
         fatherName: dto.fatherName,
         motherName: dto.motherName,
@@ -44,6 +47,8 @@ export class EmployeesRepository {
         workCard: dto.workCard,
         workCardSeries: dto.workCardSeries,
         pis: dto.pis,
+        driverLicense: dto.driverLicense,
+        driverLicenseCategory: dto.driverLicenseCategory,
 
         zipCode: dto.zipCode,
         street: dto.street,
@@ -280,6 +285,8 @@ export class EmployeesRepository {
         workCard: dto.workCard,
         workCardSeries: dto.workCardSeries,
         pis: dto.pis,
+        driverLicense: dto.driverLicense,
+        driverLicenseCategory: dto.driverLicenseCategory,
 
         zipCode: dto.zipCode,
         street: dto.street,

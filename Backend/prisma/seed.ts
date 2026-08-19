@@ -267,6 +267,7 @@ const permissionGroups = [
       ["quote.view", "Consultar Orçamentos"],
       ["quote.create", "Criar Orçamentos"],
       ["quote.update", "Alterar Orçamentos"],
+      ["quote.approve", "Aprovar Orçamentos"],
       ["quote.cancel", "Cancelar Orçamentos"],
       ["sales-order.view", "Consultar Pedidos de Venda"],
       ["sales-order.create", "Criar Pedidos de Venda"],
@@ -575,6 +576,40 @@ const permissionGroups = [
       ],
     ],
   },
+  {
+    code: "PAYROLL",
+    name: "Folha de Pagamento",
+    permissions: [
+      [
+        "payroll-tax-table.view",
+        "Consultar Parâmetros Fiscais (INSS/IRRF/FGTS)",
+      ],
+      [
+        "payroll-tax-table.manage",
+        "Alterar Parâmetros Fiscais (INSS/IRRF/FGTS)",
+      ],
+      ["payroll-settings.view", "Consultar Configurações da Folha"],
+      ["payroll-settings.manage", "Alterar Configurações da Folha"],
+      ["payroll.view", "Consultar Folha de Pagamento"],
+      ["payroll.generate", "Gerar Folha de Pagamento"],
+      ["payroll.update", "Alterar Itens da Folha (recalcular/ajustar/excluir)"],
+      ["payroll.approve", "Aprovar Folha de Pagamento"],
+      ["payroll.cancel", "Cancelar Folha de Pagamento"],
+      ["payroll.report", "Ver Relatórios/Holerites da Folha"],
+      ["thirteenth-salary.view", "Consultar 13º Salário"],
+      ["thirteenth-salary.generate", "Gerar Parcela de 13º Salário"],
+      ["thirteenth-salary.update", "Alterar Itens do 13º (ajustar/excluir)"],
+      ["thirteenth-salary.approve", "Aprovar 13º Salário"],
+      ["thirteenth-salary.cancel", "Cancelar 13º Salário"],
+      ["thirteenth-salary.report", "Ver Recibos do 13º Salário"],
+      ["vacation.view", "Consultar Férias"],
+      ["vacation.create", "Conceder Férias"],
+      ["vacation.update", "Ajustar Gozo de Férias"],
+      ["vacation.approve", "Aprovar Gozo de Férias"],
+      ["vacation.cancel", "Cancelar Gozo de Férias"],
+      ["vacation.report", "Ver Recibos de Férias"],
+    ],
+  },
 ];
 
 async function main() {
@@ -592,6 +627,7 @@ async function main() {
     update: {},
     create: {
       code: "ALEPEJO",
+      slug: "alepejo",
       legalName: "AlePejo Tecnologia Ltda",
       tradeName: "AlePejo",
       document: "00000000000191",
@@ -701,6 +737,115 @@ async function main() {
         included: true,
       },
     });
+  }
+
+  // Planos comerciais (venda de verdade — ENTERPRISE acima é só pra
+  // uso interno/demo). Sem preço aqui: valor é preenchido depois na
+  // tela de administração, pra não chumbar preço errado no código.
+  // Mesma composição de módulos de add-billing-catalog.ts — se mudar
+  // aqui, mudar lá também (ou o próximo `db seed` diverge do backfill
+  // já rodado num banco existente).
+  const COMMERCIAL_PLANS: {
+    code: string;
+    name: string;
+    description: string;
+    sortOrder: number;
+    highlighted: boolean;
+    moduleCodes: string[];
+  }[] = [
+    {
+      code: "ESSENCIAL",
+      name: "Essencial",
+      description:
+        "Cadastros, produtos, estoque, vendas e financeiro — o básico pra rodar um comércio.",
+      sortOrder: 1,
+      highlighted: false,
+      moduleCodes: ["BPS", "PRODUCTS", "INVENTORY", "SALES", "FINANCE"],
+    },
+    {
+      code: "PROFISSIONAL",
+      name: "Profissional",
+      description: "Essencial + Compras e Recursos Humanos.",
+      sortOrder: 2,
+      highlighted: true,
+      moduleCodes: [
+        "BPS",
+        "PRODUCTS",
+        "INVENTORY",
+        "SALES",
+        "FINANCE",
+        "PURCHASE",
+        "HR",
+      ],
+    },
+    {
+      code: "COMPLETO",
+      name: "Completo",
+      description: "Profissional + Produção e Ponto/Folha de Pagamento.",
+      sortOrder: 3,
+      highlighted: false,
+      moduleCodes: [
+        "BPS",
+        "PRODUCTS",
+        "INVENTORY",
+        "SALES",
+        "FINANCE",
+        "PURCHASE",
+        "HR",
+        "PRODUCTION",
+        "LABOR",
+      ],
+    },
+    {
+      // Mesma composição de add-billing-catalog.ts — se mudar aqui, mudar lá também.
+      code: "CUSTOM",
+      name: "Plano Customizado",
+      description: "Monte o plano escolhendo só os módulos que sua empresa precisa.",
+      sortOrder: 99,
+      highlighted: false,
+      moduleCodes: [] as string[],
+    },
+  ];
+
+  for (const def of COMMERCIAL_PLANS) {
+    const commercialPlan = await prisma.plan.upsert({
+      where: { code: def.code },
+      update: {
+        name: def.name,
+        description: def.description,
+        sortOrder: def.sortOrder,
+        highlighted: def.highlighted,
+        active: true,
+      },
+      create: {
+        code: def.code,
+        name: def.name,
+        description: def.description,
+        sortOrder: def.sortOrder,
+        highlighted: def.highlighted,
+        active: true,
+      },
+    });
+
+    for (const moduleCode of def.moduleCodes) {
+      const mod = allModules.find((m) => m.code === moduleCode);
+
+      if (!mod) {
+        continue;
+      }
+
+      await prisma.planModule.upsert({
+        where: {
+          planId_moduleId: { planId: commercialPlan.id, moduleId: mod.id },
+        },
+        update: { included: true },
+        create: {
+          planId: commercialPlan.id,
+          moduleId: mod.id,
+          included: true,
+        },
+      });
+    }
   }
 
   // A empresa seed (ALEPEJO) ganha o add-on BRANDING habilitado

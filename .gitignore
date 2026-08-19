@@ -40,3 +40,4 @@ Backend/prisma/scripts/output/
 
 # Backups locais (zip da pasta inteira, não versionado)
 backup-*.zip
+backups/

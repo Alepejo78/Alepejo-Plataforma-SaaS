@@ -35,6 +35,15 @@ export interface MenuItem {
    * tudo que já existia antes).
    */
   section?: "interprise" | "empresa";
+
+  /**
+   * Calculado em tempo de execução por `useMenu` (não faz parte da
+   * definição estática em `menu.ts`) — `module` exigido mas não
+   * licenciado. Item continua aparecendo (diferente de `disabled`),
+   * só que sem navegar: leva pra Licenciamento com uma chamada pra
+   * adquirir o módulo.
+   */
+  locked?: boolean;
 }
 
 /**

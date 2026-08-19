@@ -171,19 +171,35 @@ export function TabsProvider({
   const router = useRouter();
   const { user } = useAuth();
 
-  const [erp, setErp] = useState<AppTabsState>(() =>
-    loadFromStorage("erp")
-  );
-  const [os, setOs] = useState<AppTabsState>(() =>
-    loadFromStorage("os")
-  );
-  const [openApps, setOpenAppsState] = useState<AppKey[]>(() =>
-    loadOpenApps()
-  );
+  // Sempre inicializa com o default (nunca lê sessionStorage aqui) —
+  // no servidor `window` não existe, então o SSR sempre geraria esse
+  // mesmo default; se o client-side lesse o storage já na primeira
+  // renderização, o HTML hidratado divergiria do HTML do servidor
+  // (hydration mismatch), o que faz o React descartar e remontar essa
+  // sub-árvore e deixa os cliques dos botões de fechar guia presos a
+  // elementos já substituídos (aparentam não fazer nada). O estado
+  // real do sessionStorage só é aplicado depois, no efeito abaixo.
+  const [erp, setErp] = useState<AppTabsState>(() => ({
+    openTabs: [HOME_TAB.erp],
+    activeHref: HOME_TAB.erp.href,
+  }));
+  const [os, setOs] = useState<AppTabsState>(() => ({
+    openTabs: [HOME_TAB.os],
+    activeHref: HOME_TAB.os.href,
+  }));
+  const [openApps, setOpenAppsState] = useState<AppKey[]>(["erp"]);
+  const [hydrated, setHydrated] = useState(false);
   const [capMessage, setCapMessage] = useState<string | null>(
     null
   );
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setErp(loadFromStorage("erp"));
+    setOs(loadFromStorage("os"));
+    setOpenAppsState(loadOpenApps());
+    setHydrated(true);
+  }, []);
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((value) => !value);
@@ -253,17 +269,24 @@ export function TabsProvider({
   // Garante que o app da URL atual sempre tem guia aberta na barra —
   // cobre acesso direto por link/favorito a um app ainda fechado.
   useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     if (!openApps.includes(currentApp)) {
       setOpenApps([...openApps, currentApp]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentApp]);
+  }, [currentApp, hydrated]);
 
   // Mantém a guia ativa em sincronia com a URL real — cobre navegação
   // que não passou por openTab (link solto numa tela, voltar do
   // navegador). Subtelas (fora do menu/cards) não mexem nas guias.
+  // Espera `hydrated` pra não rodar antes do estado real (do
+  // sessionStorage) ter sido carregado — senão adicionaria a guia em
+  // cima do estado default, que logo seria sobrescrito.
   useEffect(() => {
-    if (!isTabEligible(currentApp, pathname)) {
+    if (!hydrated || !isTabEligible(currentApp, pathname)) {
       return;
     }
 
@@ -286,6 +309,34 @@ export function TabsProvider({
       return;
     }
 
+    const title = titleFor(currentApp, pathname) ?? pathname;
+
+    // Navegação solta (link "Voltar" dentro da tela, botão voltar do
+    // navegador, URL colada direto) pra uma guia ainda não aberta —
+    // troca o CONTEÚDO da guia ativa no lugar dela, em vez de acumular
+    // guia nova (guia nova de verdade só nasce clicando em algo do
+    // menu/cards, que passa por `openTab`). A guia Home nunca é
+    // substituída (é sempre fixa).
+    const activeIndex = current.openTabs.findIndex(
+      (tab) => tab.href === current.activeHref
+    );
+    const canReplace =
+      activeIndex !== -1 &&
+      current.openTabs[activeIndex].href !== HOME_TAB[currentApp].href;
+
+    if (canReplace) {
+      const nextTabs = current.openTabs.map((tab, i) =>
+        i === activeIndex ? { href: pathname, title } : tab
+      );
+
+      setStateFor(currentApp, {
+        openTabs: nextTabs,
+        activeHref: pathname,
+      });
+
+      return;
+    }
+
     if (current.openTabs.length >= MAX_TABS) {
       // Chegou aqui por fora do openTab (ex.: URL colada direto) —
       // deixa acessar mesmo passando do limite, só não vira guia fixa.
@@ -297,14 +348,12 @@ export function TabsProvider({
       return;
     }
 
-    const title = titleFor(currentApp, pathname) ?? pathname;
-
     setStateFor(currentApp, {
       openTabs: [...current.openTabs, { href: pathname, title }],
       activeHref: pathname,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, currentApp]);
+  }, [pathname, currentApp, hydrated]);
 
   useEffect(() => {
     if (!capMessage) {

@@ -15,6 +15,7 @@ const includeRelations = {
     },
   },
   sale: true,
+  salesOrder: true,
 };
 
 @Injectable()
@@ -151,6 +152,14 @@ export class QuoteRepository {
     return this.prisma.quote.update({
       where: { id },
       data: { status: 'CANCELLED' },
+    });
+  }
+
+  async approve(id: string): Promise<Quote> {
+    return this.prisma.quote.update({
+      where: { id },
+      data: { status: 'APPROVED' },
+      include: includeRelations,
     });
   }
 }

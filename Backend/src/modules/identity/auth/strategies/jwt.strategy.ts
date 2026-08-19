@@ -8,6 +8,7 @@ import type { Request } from 'express';
 
 import { PrismaService } from '../../../../core/prisma/prisma.service';
 import { ACCESS_TOKEN_COOKIE } from '../constants/cookie.constants';
+import { LicenseService } from '../../license/services/license.service';
 
 /**
  * Lê o access token do cookie httpOnly (usado pelo frontend).
@@ -27,6 +28,7 @@ const cookieExtractor = (req: Request): string | null => {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly licenseService: LicenseService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -114,28 +116,55 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     >();
 
-    if (user.company.companyPlan?.plan?.planModules) {
-      for (const item of user.company.companyPlan.plan.planModules) {
-        licensedModules.set(item.module.code, {
-          code: item.module.code,
-          name: item.module.name,
+    // Assinatura bloqueada (TRIAL vencido, PAST_DUE sem tolerância,
+    // BLOCKED/CANCELLED) esconde tudo do menu, exceto o essencial
+    // ("BPS" — cadastros — é o único módulo "básico" que existe de
+    // verdade como Module com nome/rota pra mostrar; os outros da
+    // lista do LicenseService.hasModule() são só código de guard, sem
+    // equivalente de menu). Sem isso, o menu continuaria mostrando
+    // tudo clicável pra quem está bloqueado, e cada clique erraria
+    // 403 — pior experiência do que simplesmente esconder.
+    const blocked = this.licenseService.isSubscriptionBlocked(
+      user.company.companyPlan,
+    );
+
+    if (!blocked) {
+      if (user.company.companyPlan?.plan?.planModules) {
+        for (const item of user.company.companyPlan.plan.planModules) {
+          licensedModules.set(item.module.code, {
+            code: item.module.code,
+            name: item.module.name,
+            trial: false,
+            expiresAt: null,
+          });
+        }
+      }
+
+      if (user.company.companyModules) {
+        for (const item of user.company.companyModules) {
+          if (!item.enabled || !item.licensed) {
+            continue;
+          }
+
+          licensedModules.set(item.module.code, {
+            code: item.module.code,
+            name: item.module.name,
+            trial: item.trial,
+            expiresAt: item.expiresAt,
+          });
+        }
+      }
+    } else {
+      const bps = user.company.companyPlan?.plan?.planModules?.find(
+        (item) => item.module.code === 'BPS',
+      )?.module;
+
+      if (bps) {
+        licensedModules.set('BPS', {
+          code: bps.code,
+          name: bps.name,
           trial: false,
           expiresAt: null,
-        });
-      }
-    }
-
-    if (user.company.companyModules) {
-      for (const item of user.company.companyModules) {
-        if (!item.enabled || !item.licensed) {
-          continue;
-        }
-
-        licensedModules.set(item.module.code, {
-          code: item.module.code,
-          name: item.module.name,
-          trial: item.trial,
-          expiresAt: item.expiresAt,
         });
       }
     }
@@ -159,6 +188,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       company: {
         id: user.company.id,
         code: user.company.code,
+        slug: user.company.slug,
         legalName: user.company.legalName,
         tradeName: user.company.tradeName,
         logo: user.company.logo,

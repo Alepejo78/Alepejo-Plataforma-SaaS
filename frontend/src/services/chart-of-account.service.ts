@@ -43,7 +43,8 @@ export interface ChartOfAccountPayload {
   code: string;
   classificationId: string;
   description: string;
-  type: ChartOfAccountType;
+  /** Não pedido mais na tela — o backend usa DESPESA como padrão. */
+  type?: ChartOfAccountType;
   parentId?: string;
 }
 

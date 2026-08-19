@@ -274,13 +274,19 @@ export class UsersService {
   }
 
   /**
-   * Dispara e-mail com link pra o usuário definir a própria senha
-   * (usuário novo, ou "Alterar Senha" na lista). Best-effort: o envio
-   * nunca lança, mesmo padrão de EmailNotificationsService.send.
+   * Gera o token e dispara o e-mail com o link de definir senha.
+   * Compartilhado pelos dois caminhos que levam a isso: o admin
+   * pedindo pra um usuário (`requestPasswordReset`) e o próprio
+   * usuário pelo "Esqueci minha senha"
+   * (`requestPasswordResetByEmail`). Best-effort: o envio nunca lança,
+   * mesmo padrão de EmailNotificationsService.send.
    */
-  async requestPasswordReset(companyId: string, id: string) {
-    const user = await this.findById(companyId, id);
-
+  private async sendPasswordResetLink(user: {
+    id: string;
+    name: string;
+    email: string;
+    companyId: string;
+  }) {
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = await this.passwordService.hash(token);
 
@@ -291,32 +297,85 @@ export class UsersService {
       ),
     });
 
+    const company = await this.prisma.company.findUnique({
+      where: { id: user.companyId },
+      select: { slug: true, tradeName: true, legalName: true },
+    });
+
     const frontendUrl =
       process.env.FRONTEND_URL ?? 'http://localhost:3000';
-    const link = `${frontendUrl}/definir-senha?userId=${user.id}&token=${token}`;
+    const resetLink = `${frontendUrl}/definir-senha?userId=${user.id}&token=${token}`;
+    const loginLink = company
+      ? `${frontendUrl}/${company.slug}/login`
+      : `${frontendUrl}/login`;
+    const companyName = company?.tradeName || company?.legalName || '';
 
     void this.emailNotifications.send(
-      companyId,
+      user.companyId,
       user.email,
       'Defina sua senha de acesso — AlePejo ERP',
-      `<p>Olá, ${user.name},</p>
-<p>Clique no link abaixo para definir sua senha de acesso ao AlePejo ERP:</p>
-<p><a href="${link}">${link}</a></p>
-<p>Este link expira em 24 horas. Se você não pediu essa alteração, ignore este e-mail.</p>`,
+      `<div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+  <div style="text-align: center; padding: 24px 0;">
+    <img src="${frontendUrl}/logo.png" alt="AlePejo" width="64" height="64" />
+    <h1 style="font-size: 20px; margin: 12px 0 4px;">AlePejo ERP Cloud</h1>
+    <p style="color: #666; font-size: 13px; margin: 0;">Gestão inteligente para empresas</p>
+  </div>
+  <p>Olá, ${user.name},</p>
+  <p>Sua conta (<strong>${user.email}</strong>)${companyName ? ` da empresa <strong>${companyName}</strong>` : ''} foi criada. Clique no botão abaixo para definir sua senha de acesso:</p>
+  <p style="text-align: center; margin: 24px 0;">
+    <a href="${resetLink}" style="background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Definir minha senha</a>
+  </p>
+  <p style="font-size: 13px; color: #666;">Se o botão não funcionar, copie e cole este link no navegador:<br><a href="${resetLink}">${resetLink}</a></p>
+  <p style="font-size: 13px; color: #666;">Este link expira em 24 horas. Se você não pediu essa alteração, ignore este e-mail.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+  <p style="font-size: 14px;"><strong>Guarde este link — é ele que você vai usar sempre para entrar no sistema:</strong></p>
+  <p style="text-align: center; margin: 16px 0;">
+    <a href="${loginLink}" style="background: #eef2ff; color: #2563eb; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">${loginLink}</a>
+  </p>
+  <p style="font-size: 13px; color: #666;">Salve nos favoritos do navegador ou na tela inicial do celular — o login não tem mais um endereço único para todo mundo, cada empresa tem o seu.</p>
+</div>`,
     );
+  }
+
+  /**
+   * Admin pedindo o link pra um usuário da empresa dele (usuário novo,
+   * ou "Alterar Senha" na lista de usuários).
+   */
+  async requestPasswordReset(companyId: string, id: string) {
+    const user = await this.findById(companyId, id);
+
+    await this.sendPasswordResetLink(user);
 
     return { sent: true };
   }
 
   /**
-   * Consumo público do token de redefinição (usuário sem sessão,
-   * clicando o link do e-mail). Chamado por AuthController.
+   * "Esqueci minha senha": o próprio usuário pede o link, sem sessão,
+   * informando só o e-mail.
+   *
+   * Responde SEMPRE `{ sent: true }`, exista o e-mail ou não. Dizer
+   * "e-mail não encontrado" transformaria a tela num validador de
+   * quais e-mails têm conta aqui (enumeração de usuários), que é
+   * exatamente o que um atacante quer antes de tentar senha.
    */
-  async setPasswordWithToken(
-    userId: string,
-    token: string,
-    password: string,
-  ) {
+  async requestPasswordResetByEmail(email: string) {
+    const user = await this.usersRepository.findByEmail(email);
+
+    if (user && user.active) {
+      await this.sendPasswordResetLink(user);
+    }
+
+    return { sent: true };
+  }
+
+  /**
+   * Confere o par userId+token do link de redefinição — mesma
+   * checagem usada tanto pra consumir o token (`setPasswordWithToken`)
+   * quanto só pra mostrar o e-mail antes disso (`getResetInfo`).
+   * Exige o token certo pra revelar qualquer coisa: sem ele, um userId
+   * chutado não devolve nada (evita enumeração de contas).
+   */
+  private async validateResetToken(userId: string, token: string) {
     const user = await this.usersRepository.findByIdUnscoped(userId);
 
     if (
@@ -341,6 +400,31 @@ export class UsersService {
       );
     }
 
+    return user;
+  }
+
+  /**
+   * Só pra exibir o e-mail da conta na tela de definir senha, antes
+   * do usuário digitar a nova senha — confirma visualmente pra qual
+   * conta é o link. Chamado por AuthController.
+   */
+  async getResetInfo(userId: string, token: string) {
+    const user = await this.validateResetToken(userId, token);
+
+    return { email: user.email };
+  }
+
+  /**
+   * Consumo público do token de redefinição (usuário sem sessão,
+   * clicando o link do e-mail). Chamado por AuthController.
+   */
+  async setPasswordWithToken(
+    userId: string,
+    token: string,
+    password: string,
+  ) {
+    const user = await this.validateResetToken(userId, token);
+
     const passwordHash = await this.passwordService.hash(password);
 
     await this.usersRepository.update(user.id, {
@@ -355,7 +439,12 @@ export class UsersService {
       lockedUntil: null,
     });
 
-    return { success: true };
+    const company = await this.prisma.company.findUnique({
+      where: { id: user.companyId },
+      select: { slug: true },
+    });
+
+    return { success: true, companySlug: company?.slug ?? null };
   }
 
   async remove(companyId: string, id: string) {

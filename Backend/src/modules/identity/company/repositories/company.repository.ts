@@ -3,6 +3,7 @@ import { Company, Prisma } from '@prisma/client';
 
 import { BaseRepository } from '../../../../core/common/repositories/base.repository';
 import { PrismaService } from '../../../../core/prisma/prisma.service';
+import { generateUniqueSlug } from '../utils/slug.util';
 
 @Injectable()
 export class CompanyRepository extends BaseRepository {
@@ -12,9 +13,31 @@ export class CompanyRepository extends BaseRepository {
     super(prisma);
   }
 
-  async create(data: Prisma.CompanyCreateInput): Promise<Company> {
+  /**
+   * Todo cadastro de empresa passa por aqui (signup público, empresa
+   * adicional do grupo, cadastro direto) — gerar o slug neste único
+   * ponto garante que nenhum caminho esqueça dele. `slug` é opcional
+   * na entrada (o Prisma exige na saída porque a coluna é NOT NULL).
+   */
+  async create(
+    data: Omit<Prisma.CompanyCreateInput, 'slug'> & { slug?: string },
+  ): Promise<Company> {
+    const slug =
+      data.slug ??
+      (await generateUniqueSlug(
+        data.tradeName || data.legalName,
+        async (candidate) => {
+          const found = await this.prisma.company.findUnique({
+            where: { slug: candidate },
+            select: { id: true },
+          });
+
+          return Boolean(found);
+        },
+      ));
+
     return this.prisma.company.create({
-      data,
+      data: { ...data, slug },
     });
   }
 
@@ -61,6 +84,16 @@ export class CompanyRepository extends BaseRepository {
     return this.prisma.company.findFirst({
       where: {
         document,
+        deletedAt: null,
+      },
+    });
+  }
+
+  /** Usado pela página pública de login com o nome da empresa na URL (`/<slug>/login`). */
+  async findBySlug(slug: string): Promise<Company | null> {
+    return this.prisma.company.findFirst({
+      where: {
+        slug,
         deletedAt: null,
       },
     });

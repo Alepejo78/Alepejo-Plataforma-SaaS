@@ -3,6 +3,790 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Preço de módulo avulso não deixava digitar (18-08-2026)
+
+`erp/licenciamento/planos` → tabela "Módulos avulsos" — cada dígito
+digitado no preço mensal/anual chamava `updateModulePrice()` na hora
+(`onChange`), que dava `setModuleSaving(mod.id)` e isso desabilitava o
+próprio campo (`disabled={moduleSaving === mod.id}`) até a resposta da
+API voltar — na prática, o campo travava a cada tecla, impossível
+digitar mais de um dígito seguido. Separado em duas funções:
+`editModulePrice()` só atualiza o estado local (a cada tecla, sem
+chamar API) e `saveModulePrice()` salva de verdade, chamada só no
+`onBlur` do campo. Testado digitando 5 dígitos seguidos sem travar e
+confirmando 1 único PATCH disparado ao sair do campo.
+
+## 🟢 Modal de "Nova vigência" travava sem jeito de fechar (18-08-2026)
+
+`erp/rh/parametros-fiscais` — com a tabela atual (4 faixas de INSS +
+5 de IRRF + campos de redutor de IRRF), o formulário de "Nova
+vigência" ficava bem mais alto que a tela. O X de fechar estava só no
+topo do card, dentro do fluxo normal do conteúdo — rolando pra ver as
+faixas de baixo, o X rolava junto e sumia, sem nenhum jeito de fechar.
+Corrigido com três saídas (não só uma, pra não repetir isso em outro
+formulário parecido):
+- Cabeçalho do modal virou `sticky top-0` — o X fica sempre visível
+  mesmo com o formulário rolado até o fim.
+- Tecla Esc fecha o modal.
+- Clique fora do card (no fundo escuro) fecha o modal.
+
+## 🟢 Nome da empresa fixo na URL em todas as telas (18-08-2026)
+
+Antes, só `/<empresa>/login` mostrava o slug — depois de autenticado,
+tudo virava rota "pura" (`/os`, `/erp/vendas`, etc.), sem nome de
+empresa nenhum na barra de endereço. Corrigido em
+`frontend/src/middleware.ts`, sem tocar em nenhuma página nem em
+nenhum `Link`/`router.push` existente (que continuam apontando pro
+caminho puro):
+
+- Request chega em `/<algo>/erp/vendas` autenticado: se `<algo>` bate
+  com o slug lembrado (cookie `alepejo_company_slug`, atualizado pelo
+  `AuthProvider` a cada `/auth/me`), o middleware **reescreve** por
+  baixo pra `/erp/vendas` (o que realmente existe no App Router) — a
+  URL visível continua com o slug, só o conteúdo servido é que "não
+  sabe" dele.
+- Request chega em `/erp/vendas` (sem slug — qualquer link antigo):
+  middleware **redireciona** pra `/<slug>/erp/vendas`.
+- `/<slug>/login` continua sendo a página de verdade
+  (`app/[empresa]/login/page.tsx`), não é reescrita.
+- Rotas públicas (`/planos`, `/institucional` etc.) ficam de fora —
+  nunca ganham prefixo de empresa.
+
+**Troca de empresa** (login cruzado, `CompanySwitcher.tsx`) — antes só
+dava `window.location.reload()` na mesma URL, o que deixava a barra de
+endereço com o slug da empresa ANTIGA até a próxima navegação (o
+middleware só sabe reescrever com o cookie, que essa tela acabou de
+atualizar). Agora calcula a URL com o slug da empresa NOVA
+(`company.slug`, adicionado ao tipo `Company` do frontend — o backend
+já devolvia o campo, só não estava tipado) e navega direto pra lá.
+
+Testado: login em `/alepejo/login` → `/alepejo/os` → clique em
+"Segurança" → `/alepejo/os/seguranca` → clique em "Usuários" →
+`/alepejo/erp/configuracoes/usuarios`, tudo via clique normal de link,
+sem nenhuma tela precisar saber do slug.
+
+## 🟢 Módulo "Clientes e faturamento" — só o dono da plataforma (18-08-2026)
+
+Novo card em OS (`/erp/licenciamento/clientes`), visível só com
+`platform.license.manage` (reaproveitada — mesma permissão de
+"Administrar planos e preços", já que os dois são áreas exclusivas do
+dono e não há ainda um papel "operador de plataforma" separado do
+admin do tenant). As duas telas agora se linkam uma na outra
+("Ver clientes e faturamento" / "Ver planos e preços").
+
+**O que mostra**: uma linha por empresa RAIZ (empresas do grupo herdam
+a licença da raiz e não são cobradas à parte, então ficam de fora),
+com nome, contato (e-mail/telefone/documento), plano, módulos
+contratados, ciclo de cobrança, e uma grade Jan-Dez + Total pro ano
+selecionado (setas pra trocar de ano).
+
+**Como a grade é montada** (`BillingService.customerReport()` e
+`buildMonthsGrid()`, `Backend/src/modules/billing/services/
+billing.service.ts`) — não é uma cópia direta de `BillingCharge`,
+é derivada:
+- **Ciclo mensal**: cada mês tenta casar com uma cobrança real
+  (`dueDate` caindo naquele mês/ano). Sem cobrança: mês antes do
+  início do plano fica vazio (`—`); mês atual/futuro projeta o preço
+  vigente com status "A pagar" (ainda não gerado pelo Asaas); mês
+  passado sem cobrança fica vazio (ex.: período de trial).
+- **Ciclo anual**: só existe UMA cobrança por ano no Asaas — se caiu
+  no ano pedido, os 12 meses recebem o mesmo status dela com o valor
+  dividido por 12 (é assim que "o desconto anual" aparece mês a mês,
+  igual pedido pelo usuário). Sem cobrança ainda gerada pro ano, projeta
+  como "a pagar".
+- Status por célula: `PAGO` (RECEIVED/CONFIRMED), `VENCIDO` (pendente
+  com vencimento passado), `A_PAGAR` (pendente futuro ou projeção),
+  `VAZIO` (nada aplicável nesse mês).
+- Plano Customizado usa o mesmo `customPlanPrice()` que já existia (base
+  do Essencial + módulos extras) pra saber o valor mensal/anual — sem
+  duplicar a lógica de preço.
+
+**Excluir plano** — o backend já tinha o endpoint (`DELETE /identity/
+license/plans/:id`), só faltava o botão na tela; adicionado ao lado de
+"Editar" em cada card de `/erp/licenciamento/planos`.
+
+**Banco zerado de novo (18-08-2026)** — a pedido do usuário, mesmo
+padrão de antes (`TRUNCATE TABLE "companies" CASCADE`, preserva
+catálogo global). Login Dono da plataforma já sai pronto do seed:
+`alessandro.lourenco@alepejo.com.br` / `Lore@251378` (constantes
+`ADMIN_EMAIL`/`ADMIN_PASSWORD` no topo de `Backend/prisma/seed.ts` —
+já eram essas antes, não precisou mudar nada no seed).
+
+## 🟢 Layout do cadastro de empresa + Plano de contas sem tipo (18-08-2026)
+
+Itens que tinham sido só anotados ("depois, ja anotar esses ajustes")
+foram implementados na sequência:
+
+**Cadastro de empresa** — `/cadastro-empresa` (signup público) e o
+`AddCompanyModal`/`EditCompanyModal` de `erp/configuracoes` (empresa do
+grupo) agora seguem o mesmo layout em grade de 3 colunas:
+1. Empresa do grupo (só existe no modal de empresa do grupo — o
+   `/cadastro-empresa` nunca teve esse campo, então já nasce oculto no
+   cadastro inicial, como pedido)
+2. Razão social | Tipo de documento | CNPJ/CPF
+3. Nome Fantasia | E-mail da empresa | Telefone
+4. CEP | Rua | Número (autopreenche por ViaCEP)
+5. Bairro | Cidade | UF
+6. Separador — depois, Nome do Administrador | E-mail do administrador
+   (só no `/cadastro-empresa`; o modal de empresa do grupo não cria
+   usuário, só vincula quem já está logado)
+
+Campos de endereço extraídos pra `frontend/src/components/company/
+AddressFields.tsx` (antes só existiam duplicados dentro de
+`erp/configuracoes/page.tsx`) — reaproveitado agora também no cadastro
+público.
+
+**E-mail da empresa virou distinto do e-mail de login**: antes o campo
+`email` do `CompanySignupDto` servia pros dois propósitos. Agora
+`email` é só contato da empresa (opcional) e existe um `adminEmail`
+próprio (obrigatório) — é ele que vira o login do primeiro usuário
+(`CompanyOnboardingService.signup()` → `provisionAdminUser(...,
+dto.adminEmail, ...)`). `EditCompanyModal` bloqueia edição de Razão
+Social e CNPJ (`disabled`, como já era só no CNPJ).
+
+**Larguras dos campos ajustadas** — grid de 6 colunas (`sm:grid-cols-6`)
+com `col-span` proporcional em vez de colunas iguais: Razão social
+maior, Tipo de documento e CNPJ/CPF menores; Nome fantasia maior,
+E-mail mantido, Telefone menor; CEP e Número pequenos, Rua grande;
+Bairro grande, Cidade média, UF pequeno. Spans do endereço já vêm
+embutidos em `AddressFields.tsx` (reaproveitado nos três formulários).
+
+**Plano de contas** (`erp/financeiro/plano-contas`) — campo "Tipo"
+(Despesa/Receita) removido do formulário de criar/editar, do filtro da
+lista e da coluna de badge; contas servem pra qualquer lançamento
+agora. O campo `type` continua existindo no banco só por compatibilidade
+(`ChartOfAccount.type @default(DESPESA)`, `CompanySignupDto`/DTO do
+backend não exigem mais) — não precisou de migration, só parar de
+pedir na tela. Card "Classificações" agora vem antes de "Plano de
+contas" em `os/configuracoes/financeiro`.
+
+## 🟢 Preços do catálogo preenchidos + base do Customizado (18-08-2026)
+
+Sem nenhuma empresa com `platform.license.manage` no banco (a ALEPEJO
+foi zerada e não recriada), os preços abaixo foram preenchidos direto
+via script, não pela tela de admin — mesmo resultado, só sem sessão.
+
+**Preços** (pesquisa de mercado — Bling/Tiny/ContaAzul/Omie cobram mais
+caro porque emitem NF-e, o que o AlePejo não faz hoje, então o preço
+ficou abaixo deles de propósito):
+
+| | Mensal | Anual (20% off) |
+|---|---|---|
+| Essencial | R$ 129,90 | R$ 1.247,04 |
+| Profissional | R$ 249,90 | R$ 2.399,04 |
+| Completo | R$ 379,90 | R$ 3.647,04 |
+| Financeiro (avulso) | R$ 49,90 | R$ 479,04 |
+| RH (avulso) | R$ 39,90 | R$ 383,04 |
+| Ponto e Folha (avulso) | R$ 89,90 | R$ 863,04 |
+| Produção (avulso) | R$ 69,90 | R$ 671,04 |
+| Personalização (avulso) | R$ 39,90 | R$ 383,04 |
+
+Desconto anual: 20% sobre `mensal × 12`, aplicado nos dois lados
+(`Plan.yearlyPrice`/`Module.yearlyPrice`) — não é mais o "10x" (≈2
+meses grátis) usado antes. Badge "20% off" adicionado em `/planos`
+(planos fixos e total do Customizado) e no modal "Módulos" de
+Licenciamento.
+
+**Base do Plano Customizado corrigida** — o Customizado inclui os
+mesmos 5 módulos mínimos do Essencial (Cadastros, Produtos, Estoque,
+Vendas, Compras), então o total agora PARTE do preço do Essencial
+(`CUSTOM_PLAN_BASE_CODE = 'ESSENCIAL'` em
+`Backend/src/modules/billing/services/billing.service.ts`) em vez de
+zero — antes disso, criar um Customizado só com o mínimo cobraria
+R$0,00 (bug real, teria cobrado errado no Asaas). Base buscada
+dinamicamente do preço do Essencial (não hardcoded), então se o preço
+do Essencial mudar na tela de admin, o Customizado acompanha sozinho.
+Corrigido nos três lugares que calculam esse total:
+`BillingService.customPlanPrice()` (backend, o que realmente cobra),
+`/planos` (`CustomPlanModal`) e `/erp/licenciamento` (`ChooseModulesModal`).
+
+## 🟢 Licenciamento por módulo — visível mas bloqueado, plano customizado (18-08-2026)
+
+Rodada grande de ajustes pedidos depois de testar o fluxo de compra
+pela primeira vez. Itens, do mais estrutural ao mais visual:
+
+**1. Bug de segurança real corrigido**: `CompanyOnboardingService.
+provisionAdminRole()` concedia TODAS as permissions (inclusive
+`platform.license.manage`, `platform.permission.manage`) pro admin de
+QUALQUER empresa nova — cliente comum virava dono da plataforma sem
+saber. Corrigido excluindo `platform.*` na concessão
+(`WHERE NOT code LIKE 'platform.%'`); script
+`prisma/scripts/revoke-platform-permissions-from-tenants.ts` limpa
+empresas que já existiam antes da correção (rodar em qualquer ambiente
+com empresas cadastradas antes de 18-08-2026).
+
+**2. "Administrar planos e preços"** virou Card próprio em OS
+(`frontend/src/app/os/page.tsx`), visível só com
+`platform.license.manage` — que agora só a empresa ALEPEJO tem, por
+causa do item 1. A tela em si (`/erp/licenciamento/planos`) ganhou
+guarda própria (`useAuth().can`), não só o link escondido.
+
+**3. Plano Customizado** — novo `Plan` (code `CUSTOM`, sem
+`planModules` fixo — todo o acesso vem de `CompanyModule` individual).
+Aparece em `/planos` (público, `POST /companies/signup` aceita
+`moduleIds[]`) e em `/erp/licenciamento` (autenticado, botão
+"Módulos" → `POST /identity/license/me/custom-modules`, sincroniza
+habilitando o que foi marcado e desabilitando o que foi desmarcado).
+Mínimo sempre garantido no servidor (`MINIMUM_CUSTOM_MODULE_CODES` em
+`Backend/src/modules/identity/license/constants/custom-plan.
+constants.ts`, importado tanto pelo signup quanto pelo
+`LicenseService`): Cadastros, Produtos, Estoque, Vendas, Compras.
+`BillingService.subscribe()` soma o preço dos módulos habilitados
+quando `plan.code === 'CUSTOM'` em vez de ler `plan.monthlyPrice`
+(que é null pro Customizado — o valor varia por empresa).
+
+**4. Cadastro de empresa do grupo simplificado**: `CompanyAdditionalDto`
+não pede mais `adminName`/`adminEmail` — só vincula quem já está
+logado à empresa nova (como já fazia). Convidar outra pessoa é decisão
+separada do administrador, feita depois em Configurações > Usuários,
+não algo embutido no cadastro da empresa (pedido do usuário).
+
+**5. Menu com módulo bloqueado em vez de escondido** — mudança de
+filosofia em `useMenu.ts`: permissão (RBAC) continua escondendo de
+verdade (sem ela, o item nem aparece); falta de licença de módulo, não
+— o item aparece com cadeado, leva pra `/erp/licenciamento` em vez da
+rota real. Um grupo pode ter parte licenciada e parte bloqueada ao
+mesmo tempo (ex.: Recursos Humanos com HR liberado e LABOR não), já
+que cada filho carrega seu próprio `locked`. Aplicado nos dois layouts
+(`SidebarItem.tsx` vertical, `HorizontalNav.tsx` horizontal).
+
+**6. Perfis de acesso só marcam módulo licenciado** — tela de
+permissões (`/erp/configuracoes/perfis/[id]/permissoes`) ganhou um
+mapa `GROUP_MODULE` (grupo de permissão → módulo, manual porque os ~34
+grupos não batem 1:1 com os 10 módulos vendáveis — ex.: PARTNER,
+CLIENT e SUPPLIER são todos BPS; HR sozinho cobre colaborador, setor,
+função, benefício, exame e EPI). Grupo sem módulo licenciado: checkbox
+sempre desmarcado e desabilitado, mesmo que já estivesse concedido
+antes (o vínculo continua no banco, só a marcação não aparece — quem
+bloqueia de verdade continua sendo o `LicenseGuard`). Vale pra
+qualquer perfil, inclusive Administrador — a regra é da empresa, não
+do perfil.
+
+**7. Página institucional e `/planos` unificadas** — `PublicNav`
+(`frontend/src/components/marketing/PublicNav.tsx`) extraído como
+componente compartilhado (logo, nome, tagline, links), usado nas duas
+páginas — antes `/planos` só tinha um link de texto "← Conheça o
+sistema". Demonstração da institucional reconstruída pra imitar as
+telas reais de cadastro (cabeçalho + busca + tabela + badge, não mais
+um mock genérico de navegador) e Financeiro ganhou sub-aba Dashboard
+com gráfico de verdade (recharts, mesmo componente da tela real).
+
+Todos os 7 itens testados via empresa de teste descartável (criada,
+verificada, apagada) — nenhum mexeu nos dados reais do usuário
+("Sistema de Gestão Ale", "Angelita Consultoria").
+
+## 🟢 `/login` genérico desativado — só entra pelo link da empresa (18-08-2026)
+
+Evolução do item abaixo, a pedido do usuário: `/login` sem a empresa
+**não deve mais funcionar como formulário**. O acesso passa a ser
+exclusivamente pelo link `/<empresa>/login` que o e-mail manda (ver
+item abaixo) — o usuário foi instruído a salvar esse link nos favoritos.
+
+- **O problema a resolver**: sem saber a empresa, pra onde mandar
+  quando a sessão expira no meio da navegação (ou alguém digita
+  `/login` direto)? Resolvido lembrando a última empresa usada NESTE
+  navegador — `frontend/src/lib/companyLogin.ts`
+  (`rememberCompanySlug`/`getRememberedCompanySlug`), cookie
+  `alepejo_company_slug` (não-httpOnly de propósito, nada sensível,
+  legível tanto no cliente quanto no `middleware.ts`).
+- Cookie é gravado em dois pontos: ao visitar `/<empresa>/login` com
+  slug válido (`app/[empresa]/login/page.tsx`) e depois de um login
+  bem-sucedido (`AuthProvider.login()`/`loadSession()`, usando
+  `company.slug` que agora vem em `GET /auth/me` — adicionado em
+  `JwtStrategy.validate()`, `frontend/src/types/auth.ts`).
+- `app/login/page.tsx` foi reescrito: não tem mais formulário. Se o
+  cookie existir, redireciona sozinho pro `/<slug>/login` (preservando
+  `?from=`); sem cookie, mostra "Acesse pelo seu link de login" com
+  atalho "Reenviar meu link de acesso" (→ `/esqueci-senha`, que já
+  manda o link certo por e-mail) e link pra `/institucional`.
+- `middleware.ts` faz o mesmo redirecionamento ANTES de renderizar
+  qualquer coisa, nos dois lugares que hoje mandam pra `/login`: rota
+  protegida sem sessão, e visita direta em `/login` com o cookie
+  presente. Evita o "flash" da mensagem genérica pra quem o navegador
+  já reconhece.
+- E-mail de "definir senha" reforçado: agora destaca "Guarde este
+  link — é ele que você vai usar sempre pra entrar" e explica que não
+  existe mais um endereço único de login pra todo mundo.
+- **Testado** (com cookie limpo manualmente entre os casos): `/login`
+  sem cookie → mensagem, sem formulário; visitar `/empresa-teste/login`
+  grava o cookie; `/login` com cookie → redireciona sozinho pro
+  `/empresa-teste/login` (confirmado via middleware, sem precisar
+  carregar a página genérica); rota protegida sem sessão e sem cookie →
+  cai no `/login` genérico; rota protegida sem sessão e com cookie → cai
+  direto no `/empresa-teste/login?from=...`; confirmado que
+  `GET /auth/me` devolve `company.slug` corretamente.
+
+## 🟢 Login com nome da empresa fixo na URL (18-08-2026)
+
+Pedido à parte: o e-mail de "definir senha" deveria mostrar o link
+permanente de acesso já com a empresa identificada
+(`alepejo.com.br/<empresa>/login`), pra virar o bookmark do cliente,
+além de mostrar o e-mail do destinatário e a marca do sistema.
+
+- `Company` ganhou `slug` (`prisma/migrations/20260818090000_company_slug`
+  + `20260818091000_company_slug_not_null` — nullable primeiro, backfill,
+  depois NOT NULL). Gerado em `Backend/src/modules/identity/company/utils/slug.util.ts`
+  (`slugify` + `generateUniqueSlug`, sufixo `-2`/`-3`... em colisão).
+  **Único ponto de geração**: `CompanyRepository.create()` — todo
+  cadastro de empresa (signup, empresa adicional, `/companies` direto)
+  passa por ali, então nenhum caminho fica sem slug. Empresas que já
+  existiam ganharam slug via `prisma/scripts/backfill-company-slugs.ts`
+  (script mantido no repo pra rodar em outros ambientes).
+- Rota pública nova `GET /companies/by-slug/:slug` (só `legalName`/
+  `tradeName`, nada sensível) alimenta a tela nova
+  `frontend/src/app/[empresa]/login/page.tsx` — mesmo `LoginPage`,
+  agora aceitando `companyName?` opcional, mostrado acima do
+  formulário. Slug não encontrado → login genérico normal, sem quebrar
+  nada. `publicRoutes.ts` ganhou um regex (`/^\/[^/]+\/login\/?$/`)
+  pra liberar esse padrão de rota sem exigir sessão.
+- `UsersService.sendPasswordResetLink()` (usado tanto no convite de
+  usuário novo quanto em "Esqueci minha senha") foi reescrito: agora
+  busca o slug da empresa, monta `loginLink = <frontendUrl>/<slug>/login`
+  e reformula o e-mail com logo (`<frontendUrl>/logo.png`), nome do
+  sistema, tagline "Gestão inteligente para empresas", o e-mail do
+  destinatário e o nome da empresa, mantendo o botão funcional de
+  definir senha (token) **e** mostrando o link fixo de login pra depois.
+  `setPasswordWithToken()` agora devolve `companySlug` — o botão "Ir
+  para o login" de `/definir-senha` já usa isso pra mandar direto pro
+  `/<slug>/login` em vez do genérico.
+- **Testado**: `/empresa-teste/login` mostra "Empresa Teste" acima do
+  formulário; `/nao-existe/login` cai no login genérico sem erro;
+  `GET /companies/by-slug/:slug` responde 200 com o nome e 404 pra slug
+  inexistente; disparei um "Esqueci minha senha" de verdade pro e-mail
+  de teste e voltou 201 sem erro nos logs do backend (confirma que a
+  busca da empresa e a montagem do template não quebram).
+- **Pendência de ambiente**: sem `FRONTEND_URL` setado no `.env`, os
+  links (e a logo do e-mail) apontam pro `http://localhost:3000` —
+  precisa setar pro domínio real antes de ir pra produção.
+
+## 🟡 Licenciamento/cobrança — Fase 4 (Asaas) — código pronto, falta chave real (18-08-2026)
+
+Sequência da Fase 4 do plano
+(`C:\Users\alelo\.claude\plans\unified-shimmying-wadler.md`): cobrança
+via Asaas, sandbox por padrão.
+
+- `Backend/src/modules/billing/` — `AsaasService` (cliente HTTP isolado,
+  `fetch` nativo, sem dependência nova) com customer/subscription/payment/
+  PIX QR code; `BillingService` orquestra contratação (`subscribe`) e
+  webhook (`handleWebhook`); `BillingController` expõe
+  `POST /billing/me/subscribe` (autoatendimento, `license.view`) e
+  `POST /billing/webhook` (público, protegido por header
+  `asaas-access-token`).
+- **Segurança do webhook** (testada): sem o header → 401; header errado
+  → 401; header certo mas evento repetido → `{duplicated: true}` sem
+  reprocessar (idempotência por `BillingWebhookEvent.asaasEventId`).
+  Nunca confia no corpo do webhook pro status/valor — sempre reconsulta
+  a cobrança na API do Asaas antes de ativar (só usa o `payment.id` do
+  corpo pra saber ONDE olhar).
+- Tela `/erp/licenciamento` ganhou botão "Contratar" (visível quando o
+  status não é `ACTIVE`) com modal (PIX/Boleto/Escolher na fatura),
+  mostra o código PIX copia-e-cola ou o link do boleto/fatura depois de
+  gerado.
+- **`ASAAS_API_KEY` não está configurada** (`.env`/`.env.example`
+  documentam onde gerar, sandbox: `sandbox.asaas.com`) — sem ela,
+  `AsaasService` responde 503 de propósito (`ServiceUnavailableException`),
+  testado pela tela: cliquei em Contratar → Gerar cobrança → erro
+  amigável na tela, sem quebrar nada. **Falta**: criar conta sandbox no
+  Asaas, gerar a chave, colar no `.env`, e cadastrar
+  `ASAAS_WEBHOOK_TOKEN` (já gerado e salvo no `.env`,
+  `c1352df354bef7bd3ea46a12731f53ea4bfe2ad825d99223ca0a908f09c20efc`) no
+  painel do Asaas em Configurações > Integrações > Webhooks, apontando
+  pra `<domínio>/api/billing/webhook`.
+- **Não testado de ponta a ponta** (depende da chave real): gerar
+  cobrança de verdade, pagar no sandbox, confirmar que o webhook chega
+  e vira `ACTIVE`. Próximo passo assim que a chave existir.
+
+## 🟢 Página institucional pública (17-08-2026)
+
+Fora do plano de licenciamento (pedido à parte, encaixado entre as
+Fases 3 e 4), pra dar uma porta de entrada pra quem ainda não conhece
+o sistema. Fluxo: `/institucional` → `/planos` → `/cadastro-empresa`.
+
+- `frontend/src/app/institucional/page.tsx` — landing pública: hero,
+  grid de funcionalidades (os módulos reais do sistema), demonstração
+  com abas (Vendas/Financeiro/Estoque/RH — dados de exemplo, mockup
+  visual só pra ilustrar, sem chamar a API), formulário de contato e
+  CTA final pra `/planos`. Entrou em `publicRoutes.ts`. Link "Conheça
+  o sistema" adicionado no login; `/planos` ganhou link de volta.
+- **Contato de verdade, não só decorativo**: `POST /contact`
+  (`Backend/src/modules/marketing/`, `@Public()`) reaproveita o
+  `EmailNotificationsService` já existente (mesmo SMTP global do
+  `.env`) e manda a mensagem pro e-mail configurado em `SMTP_USER`.
+  Testado pela tela: preencheu e enviou, `sent: true`, confirmação
+  "Mensagem enviada!" na tela.
+- **Pendência de conteúdo, não técnica**: o e-mail/telefone mostrados
+  na seção de contato (`contato@alepejo.com.br`, `(43) 99999-9999`)
+  são placeholder — não existe um contato comercial real cadastrado em
+  lugar nenhum do sistema ainda. Trocar por dado real antes de divulgar
+  a página.
+
+## 🟡 Licenciamento/cobrança — EM ANDAMENTO (17-08-2026)
+
+Plano completo em `C:\Users\alelo\.claude\plans\unified-shimmying-wadler.md`
+(contexto, decisões com o usuário — Asaas, planos fechados + add-on,
+trial 14 dias, tolerância antes de bloquear —, 5 fases). Fases 1, 2 e 3
+concluídas e testadas; retomar pela Fase 4 (Asaas).
+
+**Fase 1 (catálogo comercial)** — `Plan` ganhou `setupFee`/`sortOrder`/
+`highlighted`, `Module` ganhou `monthlyPrice`/`yearlyPrice` (preço de
+add-on avulso). 3 planos comerciais seedados (ESSENCIAL/PROFISSIONAL/
+COMPLETO — `add-billing-catalog.ts` + `seed.ts`), sem preço travado no
+código (o usuário preenche na tela). Tela nova
+`frontend/src/app/erp/licenciamento/planos/page.tsx` (link em
+Licenciamento e futuramente em OS), reaproveitando a API que já
+existia (`platform.license.manage`). **Bug real corrigido**:
+`LicenseRepository.updatePlan()` aceitava `moduleIds` no DTO e
+descartava — editar os módulos de um plano já criado nunca funcionava.
+Testado pela tela: editar preço e desmarcar/marcar módulo agora
+persiste de verdade.
+
+**Fase 2 (bloqueio real)** — `CompanyPlan` ganhou `status` (TRIAL/
+ACTIVE/PAST_DUE/BLOCKED/CANCELLED), `billingCycle`, `currentPeriodEnd`,
+`graceUntil`, `asaasCustomerId/SubscriptionId` (mesma migration da
+Fase 1, `20260817120000_billing`). Também criadas (ainda não usadas):
+`BillingCharge`, `BillingWebhookEvent`.
+
+**Achado importante**: a checagem "essa empresa pode usar este módulo"
+estava **duplicada em 3 lugares** — `LicenseService.hasModule()` (o
+guard, `LicenseGuard`), `AuthService.issueTokens()` (resposta de
+login/refresh) e `JwtStrategy.validate()` (roda em **toda** requisição
+autenticada — é quem realmente alimenta `/auth/me` e o menu do
+frontend). Só corrigir o primeiro teria deixado o sistema "bloqueado
+por trás, mas com o menu inteiro clicável por cima" — pior experiência
+que simplesmente esconder. `LicenseService.isSubscriptionBlocked()`
+virou público e é chamado nos três lugares agora.
+
+Regra de bloqueio (`isSubscriptionBlocked`): TRIAL vencido → bloqueia;
+PAST_DUE sem tolerância ou com tolerância vencida → bloqueia; BLOCKED/
+CANCELLED → bloqueia sempre. **Importante**: `trialEndsAt`/
+`graceUntil` nulos NÃO bloqueiam (toda empresa já existente ganhou
+`status: TRIAL` por padrão da migration, sem essas datas — tratar
+"sem data" como "já venceu" quebraria o acesso de quem já estava
+usando o sistema). Módulo `BPS` (Cadastros) sempre liberado mesmo
+bloqueado — senão o cliente não consegue nem entrar pra resolver a
+pendência.
+
+Aviso na tela: `frontend/src/components/layout/SubscriptionBanner/`,
+plugado em `AppShell` e `OsShell` — mostra teste acabando (≤7 dias),
+pagamento pendente (com a data da tolerância) ou bloqueado (com botão
+"Regularizar" pra `/erp/licenciamento`). Corrigido de quebra um bug
+pré-existente na tela de Licenciamento: os campos de data usavam
+`startedAt`/`expiresAt` que não existem no Prisma (os reais são
+`startDate`/`endDate`) — sempre mostravam "—".
+
+**Testado com script isolado** (`LicenseService.hasModule()` chamado
+direto via `NestFactory.createApplicationContext`) os 6 cenários:
+TRIAL sem data (libera), TRIAL vencido (bloqueia), TRIAL válido
+(libera), BLOCKED (bloqueia), PAST_DUE dentro da tolerância (libera),
+PAST_DUE vencido (bloqueia) — todos corretos, `BPS` sempre `true`.
+**Testado pela tela**: forcei a Empresa Teste pra cada estado — aviso
+de trial acabando apareceu, aviso de pagamento pendente com a data
+certa, aviso de bloqueado, e `/auth/me` passou a devolver só `BPS` no
+array de módulos quando bloqueado (antes devolvia tudo).
+
+**Fase 3 (signup escolhendo plano)** — `CompanySignupDto` ganhou
+`planId` obrigatório; `CompanyOnboardingService.signup()` agora busca o
+`Plan` pelo id (404 se não existir/inativo), chama
+`licenseService.assignPlan(company.id, plan.id, trialEndsAt)` com
+`trialEndsAt = hoje + 14 dias` — o antigo `provisionPlan()`
+(`DEFAULT_PLAN_CODE = 'ENTERPRISE'`) continua existindo só para
+`createAdditional`/`copyLicense` (empresa adicional do mesmo cliente,
+que herda a licença da raiz, não compra de novo).
+
+Rota pública nova `GET /companies/plans` (`@Public()`, em
+`CompanyController`, antes do `signup`) devolve o catálogo comercial
+pra quem ainda não tem sessão — mesmo dado de `GET /identity/license/
+plans`, só que sem autenticação.
+
+Telas novas: `frontend/src/app/planos/page.tsx` (pública, cards dos 3
+planos com preço/módulos, "Começar teste de 14 dias" → `/cadastro-
+empresa?planId=<id>`) e `cadastro-empresa/page.tsx` reescrita pra ler
+`planId` da query string (`useSearchParams` + `Suspense`, padrão já
+usado em outras telas do projeto) — sem `planId` válido, mostra tela
+pedindo pra escolher um plano em vez do formulário. `/planos` entrou em
+`publicRoutes.ts`.
+
+**Testado pela tela**: `/planos` lista os 3 planos (preço zerado nos
+que o usuário ainda não preencheu na tela de admin — dado, não bug);
+clicando em "Começar teste" no Profissional (R$ 249,90/mês) o plano
+aparece pré-selecionado em `/cadastro-empresa`; submetido o cadastro,
+`POST /companies/signup` voltou 201. Conferido direto no banco:
+`CompanyPlan.status = TRIAL`, `trialEndsAt` = +14 dias exatos,
+`planId` = Profissional, módulos do plano corretos (BPS, Produtos,
+Estoque, Vendas, Financeiro, Compras), usuário criado
+`PENDING_ACTIVATION` com token de definir senha. Empresa de teste
+removida depois de confirmar.
+
+## 🔴 Base de dados zerada pra simular "sistema recém-comprado" (16-08-2026)
+
+A pedido do usuário, a base local (`localhost:5433/alepejo`) foi
+**totalmente zerada** — as duas empresas que existiam (AlePejo e a
+filial Lourenco, com todo o histórico de testes desta sessão: vendas,
+compras, folha, ponto etc.) foram apagadas via
+`TRUNCATE TABLE "companies" CASCADE` (a forma que ignora as FKs
+`RESTRICT` que uma `DELETE` normal respeitaria — só `Permission`/
+`PermissionGroup` (catálogo de RBAC) e `Plan`/`Module` (catálogo
+comercial) sobrevivem, porque nada neles referencia `companies`).
+
+**Backup de segurança**: antes de zerar, rodei um dump completo em
+JSON de toda tabela do schema (não tínhamos `pg_dump` disponível no
+ambiente) — está em `backups/db-backup-<timestamp>.json` (pasta
+gitignored, só local, não versionada). Se precisar recuperar algo do
+histórico antigo (dados da AlePejo/Lourenco), está ali.
+
+**Estado atual**: uma empresa nova, **"Empresa Teste Ltda"** (CNPJ
+placeholder `11111111000191`, e-mail `ale.lourenco.net@gmail.com`),
+provisionada através do fluxo real de "Criar conta"
+(`CompanyOnboardingService.signup()` — o mesmo endpoint que um cliente
+novo usaria, não um atalho inventado): plano ENTERPRISE, perfil
+"Administrador" com **todas as 213 permissões** concedidas, 1 usuário
+(Alessandro Lourenço, `PENDING_ACTIVATION`) e o e-mail de "definir
+senha" disparado via SMTP (confirmado recebido pelo usuário). Nenhum
+cadastro de apoio (plano de contas, funções, horários, parâmetros
+fiscais de folha) foi recriado — a empresa está 100% vazia, exatamente
+como uma compra do zero.
+
+**Próxima sessão**: se o usuário for continuar testando a partir daqui
+como "cliente novo", ele vai precisar passar pelo onboarding normal
+(definir senha → cadastrar plano de contas/funções/parâmetros fiscais
+da folha etc., cada módulo do zero). Nenhum dado de teste antigo
+existe mais no ERP em si — só neste arquivo de handoff e no backup
+JSON.
+
+### 🐛 Bug REAL de produto encontrado nisso: convite por e-mail caía no login
+
+Ao clicar no link "definir senha" do e-mail, o usuário novo era jogado
+pra tela de login — onde ele não tem como entrar, porque **ainda não
+tem senha**. Beco sem saída: nenhum cliente novo conseguiria fazer o
+primeiro acesso. Valia igual pro "Criar conta" (`/cadastro-empresa`).
+
+A causa: **três** camadas independentes bloqueiam navegação sem sessão,
+e as três só conheciam `/login` como rota pública:
+
+1. `frontend/src/middleware.ts` — redirect no servidor.
+2. `frontend/src/providers/AuthProvider.tsx` — no 401 de `/auth/me`.
+3. `frontend/src/services/api.ts` (`redirectToLogin`) — no 401 de
+   qualquer request, depois que o refresh também falha.
+
+Consertar só uma não resolvia nada (a seguinte redirecionava do mesmo
+jeito) — foi exatamente o que aconteceu ao depurar: corrigi o
+middleware, `curl` passou a devolver 200, e o navegador continuou
+caindo no login por causa das outras duas.
+
+**Correção**: lista única em `frontend/src/lib/publicRoutes.ts`
+(`isPublicRoute()`), usada pelos três pontos. Se aparecer outra rota
+pública no futuro (ex.: "esqueci minha senha"), basta acrescentar lá.
+
+**Testado ponta a ponta**: link com token inválido → mostra "Link
+inválido ou expirado" e **fica na tela** (não expulsa); link válido →
+define senha → login entra no sistema como "Empresa Teste".
+
+### ✅ "Esqueci minha senha" implementado (mesma sessão)
+
+Era um `<button>` sem `onClick` na tela de login — não fazia nada, e
+quem perdesse a senha ficava travado pra sempre. O backend já tinha
+metade do caminho (`requestPasswordReset` só pra admin logado, e
+`/auth/set-password` público). O que faltava:
+
+- **Backend**: `UsersService.sendPasswordResetLink()` (privado) extraído
+  do `requestPasswordReset` pra ser compartilhado, mais
+  `requestPasswordResetByEmail(email)` e o endpoint público
+  `POST /auth/forgot-password` (`ForgotPasswordDto`).
+  **Importante**: responde SEMPRE `{ sent: true }`, exista o e-mail ou
+  não — responder diferente transformaria a tela num validador de quais
+  e-mails têm conta no sistema (enumeração de usuários).
+- **Frontend**: tela `frontend/src/app/esqueci-senha/page.tsx`,
+  `authService.forgotPassword()`, botão do login ligado, rota
+  acrescentada em `publicRoutes.ts`.
+
+**Testado**: e-mail inexistente → mesma mensagem genérica ("Se existir
+uma conta com esse e-mail...") e HTTP 201 idêntico; e-mail real → 201 e
+token novo gravado no banco, e-mail entregue.
+
+### A seed rodou no meio disso — empresa recriada e depois removida
+
+Durante a limpeza, `prisma db seed` foi executada (não por comando meu —
+nenhum deles dispara seed), recriando a empresa "AlePejo Tecnologia
+Ltda" (`00000000000191`) com os cadastros de apoio dela. Isso também
+fez um script meu (`findFirst()` sem filtro) pegar o usuário errado —
+lição: em script destrutivo, **sempre** filtrar por e-mail/documento
+explícito, nunca `findFirst()`.
+
+A empresa da seed foi apagada a pedido do usuário (apagar os usuários
+dela primeiro, porque `users.companyId` é RESTRICT; o resto cai por
+cascata).
+
+**Estado final do banco**: 1 empresa (`Empresa Teste Ltda`), 1 usuário
+(`ale.lourenco.net@gmail.com`, PENDING_ACTIVATION, perfil Administrador
+com as 213 permissões), catálogo de permissões/planos intacto, e zero
+dados de operação (colaboradores, produtos, parceiros, plano de contas,
+financeiro — tudo 0).
+
+⚠️ **Não rodar `npx prisma db seed` nesse banco** enquanto a simulação
+de "cliente novo" estiver valendo — a seed recria a AlePejo inteira.
+
+## 🟢 Folha de Pagamento — melhorias pós-entrega (16-08-2026) — CONCLUÍDO E TESTADO
+
+Depois das 6 fases (ver seção logo abaixo), o usuário pediu mais 6 itens
+em cima do módulo já pronto. Todos implementados e testados ponta a
+ponta pela tela:
+
+1. **Tela de manutenção dos parâmetros fiscais**
+   (`frontend/src/app/erp/rh/parametros-fiscais/page.tsx`, card em
+   OS ▸ Configurações ▸ RH) — antes só existia o backend (Fase 1).
+   Mostra as vigências cadastradas (INSS/IRRF por faixa, FGTS, dedução
+   por dependente) e permite cadastrar uma nova vigência já pré-
+   preenchida com os valores da vigência atual (só ajusta o que
+   mudou). Também edita `PayrollSettings` (adicional de hora extra, %
+   VT, parcelas padrão do 13º).
+2. **Programação de Férias** — nova tela dedicada
+   (`frontend/src/app/erp/rh/ferias/programacao/page.tsx`, permissão
+   `vacation.create`, igual à existente) que só cria (não aprova). Ao
+   salvar, cai na tela de Férias com o novo rótulo de status
+   "Aguardando aprovação" (antes "Rascunho"). A tela de Férias virou
+   fila de aprovação pura — botão antigo "Conceder férias" (modal)
+   removido de lá.
+3. **Estorno de folha/13º/férias aprovados** — `PATCH .../reverse` nos
+   3 (`payroll.service.ts`, `thirteenth-salary.service.ts`,
+   `vacation-grant.service.ts`): volta pra rascunho/aguardando
+   aprovação, **apaga** (não só cancela) o(s) título(s) financeiro(s)
+   gerado(s) — necessário porque o FK é `@unique`, então uma
+   reaprovação depois teria erro de constraint se só marcasse
+   CANCELLED. Bloqueia se algum título já foi baixado (mesma regra do
+   cancelamento). Reaproveita a permissão `.approve` de cada módulo —
+   mesmo padrão de `FinancialEntriesService.reopen()` que reaproveita
+   `financial-entry.settle`, não criei permissão nova. Isso também
+   resolve "editar folha aprovada": estorna, os botões de
+   ajustar/recalcular/excluir item voltam a aparecer (já existiam,
+   só ficavam escondidos com status ≠ DRAFT).
+4. **Atalho do relatório de encargos no menu Relatórios** —
+   `frontend/src/components/layout/Sidebar/menu.ts`, entrada
+   `relatorio-encargos` apontando pra `/erp/rh/folha/relatorio`
+   (mesma tela da Fase 6, permissão `payroll.report`).
+5. **Permissões**: nenhuma nova precisou ser criada — tudo reaproveitou
+   permissões já existentes (`vacation.create` pra programação,
+   `.approve` de cada módulo pro estorno, `payroll-tax-table.*`/
+   `payroll-settings.*` já existentes pra tela de parâmetros).
+6. **Holerite/recibo no formato clássico** (pedido com print de
+   referência de um sistema real — "Demonstrativo de Pagamento
+   Mensal", fonte monoespaçada, caixa com bordas, colunas Cod./
+   Descrição/Unidade/Proventos/Descontos, rodapé com Base INSS/Base
+   IRRF/Dep. IRRF/FGTS) — componente novo e compartilhado
+   `frontend/src/components/payroll/PayslipDocument.tsx`, reaproveitado
+   pelos 3 recibos (Folha, 13º, Férias). Campos que a referência tinha
+   e o sistema não rastreia (Centro de Custo, Área RH/Subárea RH,
+   Grupo/Subgrupo, Série CTPS) foram **omitidos** — não criei cadastro
+   novo pra isso, só copiei o estilo visual com os dados que já
+   existem (admissão, cargo, banco/agência/C-C do colaborador, que
+   precisou entrar no `select` do Prisma nos 3 repositories).
+
+**Testado pela tela**: parâmetros fiscais renderizando as tabelas
+2026 corretas; programação de férias criando com status "Aguardando
+aprovação"; estorno testado em Folha e em Férias — em ambos, voltou a
+rascunho, título sumiu de Contas a Pagar, reaprovar depois funcionou
+limpo (sem erro de constraint); relatório de encargos confirmado
+funcionando na URL do atalho; holerite novo renderizando idêntico ao
+formato de referência com todos os valores batendo.
+
+## 🟢 Módulo de Folha de Pagamento (14/15-08-2026) — Fases 1-6, base do módulo
+
+Plano completo aprovado pelo usuário em
+`C:\Users\alelo\.claude\plans\unified-shimmying-wadler.md` (contexto,
+tabelas fiscais 2026, decisões de escopo, modelagem, riscos). 6 fases:
+1) Fundação (parâmetros fiscais + gap FinancialEntry↔Employee), 2) Motor
+de cálculo, 3) Folha mensal completa, 4) 13º salário, 5) Férias,
+6) Polimento/relatório consolidado.
+
+**Fases 1, 2 e 3 concluídas e testadas ponta a ponta pela tela**
+(gerar folha → conferir cálculo → ver holerite → aprovar → título
+apareceu em Contas a Pagar vinculado ao colaborador, sem botão Editar/
+Excluir, só Baixar/Cancelar). Caso real testado: salário R$1.300,
+1 falta injustificada, ~2h extra — INSS R$95,58, IRRF R$0 (isento),
+líquido R$1.178,82, todos batendo com o cálculo manual.
+
+- **Módulo `Backend/src/modules/payroll/`**: `PayrollTaxTable`/
+  `PayrollTaxBracket`/`PayrollSettings` (parâmetros fiscais, por
+  **rootCompanyId** — grupo econômico), `Payroll`/`PayrollItem`/
+  `PayrollItemLine` (folha em si, por **companyId** — cada filial paga
+  seus colaboradores). `PayrollCalculationService` (INSS/IRRF/FGTS
+  progressivos) + `PayrollMonthSummaryService` (reaproveita
+  `TimeTrackingService.getDaySummaries` e `AbsenceService`, sem
+  duplicar lógica de ponto) + `PayrollItemBuilderService` (monta os
+  valores/linhas por `salaryType`) + `PayrollService` (orquestra
+  gerar/recalcular/ajustar/excluir/aprovar/cancelar).
+- **Gap `FinancialEntry`↔`Employee` resolvido**: `partnerId` opcional,
+  `employeeId` alternativo (XOR por CHECK no banco). Título de folha
+  nasce com `payrollItemId` (FK em `FinancialEntry`, mesmo padrão de
+  `purchaseId`/`saleId`) — bloqueado pra exclusão direta, só cancelamento.
+- **Aprovação** segue o padrão de `QuoteService.approve()`: transação,
+  1 `FinancialEntry` PAYABLE por colaborador incluído via
+  `createFromDocument`, categoria "Salários" (04.01.18). Bloqueia se
+  algum colaborador tiver dia de ponto pendente de aprovação na
+  competência.
+- **Achado corrigido nesta sessão**: `calculateInss` não limitava a
+  base ao teto (R$8.475,55) antes de aplicar a fórmula da última
+  faixa — corrigido pra sempre capar a base no teto antes de calcular
+  (senão salário muito acima do teto gerava desconto de INSS maior
+  que o máximo legal).
+- **Frontend**: `frontend/src/services/payroll.service.ts` +
+  `frontend/src/app/erp/rh/folha/` (lista, revisão/aprovação em
+  `[id]/page.tsx`, holerite imprimível em
+  `[id]/holerite/[itemId]/page.tsx` atrás de `ReportAccessGuard`).
+  Menu "Folha de pagamento" adicionado em Recursos Humanos
+  (`frontend/src/components/layout/Sidebar/menu.ts`).
+- **Permissões**: grupo `PAYROLL` ganhou `payroll.view/generate/
+  update/approve/cancel/report` (seed.ts + script
+  `add-payroll-monthly-permissions.ts`, já rodado no banco atual).
+- **Limitações conhecidas** (avisadas no plano, válido lembrar):
+  jornada de MENSALISTA usa divisor fixo de 220h/mês (não há campo de
+  "horas contratuais" no cadastro); sem banco de horas; sem cálculo de
+  rescisão; sem geração de guias oficiais (DARF/GPS/FGTS/eSocial).
+
+**Fase 4 (13º salário) também concluída e testada ponta a ponta**:
+1ª parcela (sem desconto, 50% do proporcional) e 2ª parcela (INSS/IRRF
+sobre o valor total, descontando a 1ª já paga) — `ThirteenthSalary`/
+`ThirteenthSalaryItem`/`ThirteenthSalaryItemLine`, avos calculados por
+`countMonthsWorked` (admissão até dia 15 conta o mês) em
+`ThirteenthSalaryItemBuilderService`. Caso real testado: salário
+R$1.300 — 1ª parcela 1/12 avos = R$54,17; 2ª parcela 5/12 avos =
+R$541,67 − R$54,17 (já pago) − R$40,63 (INSS) = R$446,87 líquido,
+títulos 13S-000001/13S-000002 gerados em Contas a Pagar. Telas em
+`frontend/src/app/erp/rh/decimo-terceiro/`. Permissões `thirteenth-
+salary.*` (grupo PAYROLL).
+
+**Fase 5 (Férias) também concluída e testada ponta a ponta**:
+`VacationPeriod` (período aquisitivo de 12 meses, criado sob demanda a
+partir da admissão — `VacationPeriodService.findOrCreateGrantablePeriod`)
++ `VacationGrant` (documento único por gozo, sem lote — diferente de
+Payroll/13º que são por competência). INSS/IRRF incidem só sobre
+férias+1/3 constitucional; abono pecuniário (venda de até 10 dias) e o
+1/3 sobre ele são isentos, exatamente como a legislação prevê. Ao
+cancelar um gozo aprovado, os dias voltam pro saldo do período
+automaticamente. Caso real testado: salário R$1.300, 20 dias de
+descanso + 10 dias vendidos — férias R$866,67 + 1/3 R$288,89 + abono
+R$433,33 + 1/3 do abono R$144,44 − INSS R$86,67 = líquido R$1.646,66,
+título FER-000001 gerado em Contas a Pagar. Telas em
+`frontend/src/app/erp/rh/ferias/`. Permissões `vacation.*` (grupo
+PAYROLL).
+
+**Fase 6 (relatório consolidado) também concluída e testada**:
+`PayrollReportService.getMonthlyCharges(companyId, year, month)` junta
+Folha mensal (pela competência em si) + 13º salário + Férias (pelo mês
+em que foram aprovados — é quando o encargo passa a existir) num só
+relatório com INSS/IRRF/FGTS/Vale Transporte por origem e total geral.
+Endpoint `GET /payroll/reports/monthly-charges` (nota: registrado ANTES
+de `GET /payroll/:id` no controller, senão o Nest casaria "reports" com
+o parâmetro `:id`). Tela `frontend/src/app/erp/rh/folha/relatorio/page.tsx`
+(landscape, imprimível), link "Relatório de encargos" na lista de
+Folha. Testado com os dados reais desta sessão: R$3.025,80 bruto,
+R$222,88 INSS, R$237,72 FGTS, R$3.326,52 líquido — todos os totais
+batendo exatamente com a soma manual dos 3 documentos aprovados.
+
+**Módulo de Folha de Pagamento 100% completo (Fases 1-6, todas
+testadas ponta a ponta pela tela)**: folha mensal, 13º salário (1ª/2ª
+parcela), férias e relatório consolidado de encargos — nada pendente
+neste módulo.
+
 ## 🔵 Endereço da empresa + relatórios com permissão própria (14-08-2026, sessão seguinte à do "Interprise") — LER ANTES DE CONTINUAR
 
 Continuação da lista de pendências (itens 2 e 3 do backlog registrado

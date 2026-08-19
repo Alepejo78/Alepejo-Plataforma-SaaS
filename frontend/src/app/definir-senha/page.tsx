@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
 import { api } from "@/services/api";
+import { AuthBrandHeader } from "@/components/auth/AuthBrandHeader";
 
 function extractMessage(err: unknown, fallback: string) {
   const message = (
@@ -36,8 +37,27 @@ function DefinirSenhaForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [companySlug, setCompanySlug] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
 
   const linkInvalid = !userId || !token;
+
+  useEffect(() => {
+    if (linkInvalid) {
+      return;
+    }
+
+    api
+      .get<{ data: { email: string } }>("/auth/reset-info", {
+        params: { userId, token },
+      })
+      .then(({ data }) => setEmail(data.data.email))
+      .catch(() => {
+        // Token inválido/expirado: o erro real aparece só ao tentar
+        // salvar a senha — aqui só deixa de mostrar o e-mail.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, token]);
 
   async function handleSubmit() {
     if (loading) {
@@ -59,12 +79,15 @@ function DefinirSenhaForm() {
     setLoading(true);
 
     try {
-      await api.post("/auth/set-password", {
+      const { data } = await api.post<{
+        data: { success: boolean; companySlug: string | null };
+      }>("/auth/set-password", {
         userId,
         token,
         password,
       });
 
+      setCompanySlug(data.data.companySlug);
       setDone(true);
     } catch (err) {
       setError(
@@ -81,9 +104,19 @@ function DefinirSenhaForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-8">
       <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
-        <h1 className="mb-6 text-2xl font-bold text-[var(--text-primary)]">
+        <AuthBrandHeader />
+
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
           Definir senha de acesso
         </h1>
+
+        <p className="mb-6 mt-1 min-h-[1.25rem] text-sm text-[var(--text-muted)]">
+          {email && (
+            <>
+              Conta: <strong>{email}</strong>
+            </>
+          )}
+        </p>
 
         {linkInvalid ? (
           <p className="text-sm text-[var(--danger)]">
@@ -99,7 +132,7 @@ function DefinirSenhaForm() {
             </div>
 
             <Link
-              href="/login"
+              href={companySlug ? `/${companySlug}/login` : "/login"}
               className="inline-block rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
             >
               Ir para o login

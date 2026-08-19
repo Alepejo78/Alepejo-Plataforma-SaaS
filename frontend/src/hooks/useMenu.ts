@@ -11,18 +11,23 @@ import {
 } from "@/components/layout/Sidebar/Sidebar.types";
 
 /**
- * Devolve apenas as entradas de menu que o usuário atual pode ver.
+ * Devolve as entradas de menu que o usuário atual pode ver.
  *
- * Uma entrada aparece quando:
- *   1. o módulo exigido está licenciado para a empresa, E
- *   2. o usuário possui a permissão exigida.
+ * Permissão (RBAC) ainda esconde de verdade — sem a permissão, o item
+ * nem aparece (não é algo que "comprar" resolve). Licença de módulo,
+ * não: o item aparece bloqueado, com chamada pra adquirir, em vez de
+ * simplesmente sumir — decisão do usuário, pra deixar visível o que o
+ * sistema oferece mesmo sem estar contratado.
  *
- * Grupos são filtrados nos filhos; um grupo sem nenhum filho visível
- * é removido do menu.
+ * Grupos são filtrados pela permissão dos filhos; um grupo sem nenhum
+ * filho com permissão é removido do menu (não existe "grupo bloqueado"
+ * por inteiro — cada filho carrega seu próprio `locked`, então um
+ * grupo pode ter parte licenciada e parte bloqueada ao mesmo tempo,
+ * ex.: Recursos Humanos com módulo HR liberado e LABOR não).
  *
- * Isto é conveniência de UI, não segurança: esconder o item não
- * protege nada. A autorização real acontece no backend, que valida
- * licença e permissão a cada request.
+ * Isto é conveniência de UI, não segurança: esconder ou bloquear o
+ * item não protege nada. A autorização real acontece no backend, que
+ * valida licença e permissão a cada request.
  */
 export function useMenu(): MenuEntry[] {
   const { user, can, hasModule } = useAuth();
@@ -32,33 +37,30 @@ export function useMenu(): MenuEntry[] {
       return [];
     }
 
-    const isVisible = (entry: {
-      module?: string;
-      permission?: string;
-    }) => {
-      if (entry.module && !hasModule(entry.module)) {
-        return false;
-      }
+    const hasPermission = (entry: { permission?: string }) =>
+      !entry.permission || can(entry.permission);
 
-      if (entry.permission && !can(entry.permission)) {
-        return false;
-      }
-
-      return true;
-    };
+    const isLocked = (entry: { module?: string }) =>
+      Boolean(entry.module && !hasModule(entry.module));
 
     return menu.reduce<MenuEntry[]>((visible, entry) => {
-      if (!isVisible(entry)) {
-        return visible;
-      }
-
       if (!isMenuGroup(entry)) {
-        visible.push(entry);
+        if (!hasPermission(entry)) {
+          return visible;
+        }
+
+        visible.push({ ...entry, locked: isLocked(entry) });
 
         return visible;
       }
 
-      const children = entry.children.filter(isVisible);
+      if (!hasPermission(entry)) {
+        return visible;
+      }
+
+      const children = entry.children
+        .filter(hasPermission)
+        .map((child) => ({ ...child, locked: isLocked(child) }));
 
       if (children.length > 0) {
         visible.push({ ...entry, children });

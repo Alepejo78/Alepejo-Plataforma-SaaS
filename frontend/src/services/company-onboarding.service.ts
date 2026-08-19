@@ -10,10 +10,41 @@ export type CompanySignupPayload = {
   legalName: string;
   tradeName?: string;
   document: string;
-  email: string;
+  /** E-mail de contato da empresa — não é o de login. */
+  email?: string;
   phone?: string;
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  district?: string;
+  city?: string;
+  state?: string;
   adminName: string;
+  /** E-mail de login do primeiro usuário (administrador). */
+  adminEmail: string;
+  planId: string;
+  /** Só pro plano Customizado (code CUSTOM) — ids dos módulos escolhidos no montador. */
+  moduleIds?: string[];
 };
+
+export interface PublicPlanModule {
+  included: boolean;
+  module: { id: string; code: string; name: string };
+}
+
+export interface PublicPlan {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  monthlyPrice?: string | number | null;
+  yearlyPrice?: string | number | null;
+  setupFee?: string | number | null;
+  maxUsers?: number | null;
+  sortOrder?: number;
+  highlighted?: boolean;
+  planModules?: PublicPlanModule[];
+}
 
 export type CompanyAdditionalPayload = {
   legalName: string;
@@ -23,11 +54,56 @@ export type CompanyAdditionalPayload = {
   isGroupCompany?: boolean;
   email?: string;
   phone?: string;
-  adminName: string;
-  adminEmail: string;
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  district?: string;
+  city?: string;
+  state?: string;
 };
 
+export interface PublicCompany {
+  legalName: string;
+  tradeName: string | null;
+}
+
+export interface PublicModule {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  monthlyPrice?: string | number | null;
+  yearlyPrice?: string | number | null;
+}
+
 export const companyOnboardingService = {
+  /** Pública (sem sessão) — lista os planos comerciais pra página de preços. */
+  async listPublicPlans(): Promise<PublicPlan[]> {
+    const { data } = await api.get<ApiEnvelope<PublicPlan[]>>(
+      "/companies/plans"
+    );
+
+    return data.data ?? [];
+  },
+
+  /** Pública (sem sessão) — módulos avulsos pro montador do plano Customizado. */
+  async listPublicModules(): Promise<PublicModule[]> {
+    const { data } = await api.get<ApiEnvelope<PublicModule[]>>(
+      "/companies/modules"
+    );
+
+    return data.data ?? [];
+  },
+
+  /** Pública (sem sessão) — nome da empresa pra tela de login `/<slug>/login`. */
+  async getBySlug(slug: string): Promise<PublicCompany> {
+    const { data } = await api.get<ApiEnvelope<PublicCompany>>(
+      `/companies/by-slug/${encodeURIComponent(slug)}`
+    );
+
+    return data.data;
+  },
+
   async signup(
     payload: CompanySignupPayload
   ): Promise<{ companyId: string }> {

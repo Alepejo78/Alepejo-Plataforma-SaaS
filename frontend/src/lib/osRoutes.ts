@@ -19,6 +19,7 @@ const OS_ONLY_ERP_PATHS = [
   "/erp/financeiro/classificacoes",
   "/erp/rh/funcoes",
   "/erp/rh/cadastros",
+  "/erp/rh/parametros-fiscais",
   "/erp/producao/configuracoes",
 ] as const;
 
@@ -71,6 +72,7 @@ export const OS_PATH_TITLES: Record<string, string> = {
   "/erp/configuracoes/usuarios": "Usuários",
   "/erp/configuracoes/perfis": "Perfis de acesso",
   "/erp/licenciamento": "Licenciamento",
+  "/erp/licenciamento/planos": "Planos e preços",
   "/erp/configuracoes": "Empresa",
   "/erp/configuracoes/personalizacao": "Personalização",
   "/erp/configuracoes/notificacoes": "Notificações",
@@ -81,5 +83,6 @@ export const OS_PATH_TITLES: Record<string, string> = {
   "/erp/financeiro/classificacoes": "Classificações",
   "/erp/rh/funcoes": "Funções e cargos",
   "/erp/rh/cadastros": "Setores, horários e EPI",
+  "/erp/rh/parametros-fiscais": "Parâmetros fiscais (INSS/IRRF/FGTS)",
   "/erp/producao/configuracoes": "Configurações de produção",
 };

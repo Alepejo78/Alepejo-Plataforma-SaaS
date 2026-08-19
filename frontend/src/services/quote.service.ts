@@ -6,13 +6,18 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
-export type QuoteStatus = "DRAFT" | "CONVERTED" | "CANCELLED";
+export type QuoteStatus =
+  | "DRAFT"
+  | "APPROVED"
+  | "CONVERTED"
+  | "CANCELLED";
 
 export const QUOTE_STATUS_LABELS: Record<
   QuoteStatus,
   string
 > = {
   DRAFT: "Rascunho",
+  APPROVED: "Aprovado",
   CONVERTED: "Convertido em venda",
   CANCELLED: "Cancelado",
 };
@@ -59,6 +64,12 @@ export interface Quote {
     id: string;
     code: string;
     description: string;
+  } | null;
+
+  /** Pedido de Venda gerado automaticamente na aprovação (ver /quotes/:id/approve). */
+  salesOrder?: {
+    id: string;
+    number: number;
   } | null;
 }
 
@@ -128,6 +139,14 @@ export const quoteService = {
   async cancel(id: string): Promise<Quote> {
     const { data } = await api.patch<ApiEnvelope<Quote>>(
       `/quotes/${id}/cancel`
+    );
+
+    return data.data;
+  },
+
+  async approve(id: string): Promise<Quote> {
+    const { data } = await api.patch<ApiEnvelope<Quote>>(
+      `/quotes/${id}/approve`
     );
 
     return data.data;

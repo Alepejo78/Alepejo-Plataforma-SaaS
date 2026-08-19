@@ -88,12 +88,18 @@ export interface FinancialEntry {
   id: string;
   type: FinancialEntryType;
   status: FinancialEntryStatus;
-  partnerId: string;
+  /** Um dos dois — parceiro (compra/venda) ou colaborador (folha). */
+  partnerId?: string | null;
   partner?: {
     id: string;
     legalName: string;
     tradeName?: string | null;
     document: string;
+  } | null;
+  employeeId?: string | null;
+  employee?: {
+    id: string;
+    name: string;
   } | null;
   chartOfAccountId?: string | null;
   chartOfAccount?: {
@@ -115,6 +121,7 @@ export interface FinancialEntry {
   observation?: string | null;
   purchaseId?: string | null;
   saleId?: string | null;
+  payrollItemId?: string | null;
   createdAt: string;
 }
 

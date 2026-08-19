@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import { UsersService } from '../../users/services/users.service';
 
 import { LoginDto } from '../dto/login.dto';
 import { SetPasswordDto } from '../dto/set-password.dto';
+import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { SwitchCompanyDto } from '../dto/switch-company.dto';
 import type { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 
@@ -123,6 +125,39 @@ export class AuthController {
       user: result.user,
       expiresIn: result.expiresIn,
     };
+  }
+
+  /**
+   * "Esqueci minha senha" — o próprio usuário pede o link por e-mail.
+   * Público de propósito: quem esqueceu a senha não consegue logar
+   * pra pedir. Responde sempre igual, exista o e-mail ou não (ver
+   * UsersService.requestPasswordResetByEmail).
+   */
+  @Public()
+  @Post('forgot-password')
+  @ApiOperation({
+    summary: 'Solicitar link de redefinição de senha por e-mail',
+  })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.usersService.requestPasswordResetByEmail(dto.email);
+  }
+
+  /**
+   * Só pra mostrar o e-mail da conta na tela de "definir senha", antes
+   * de digitar a senha nova — confirma visualmente pra qual conta é o
+   * link. Exige o token certo (mesma checagem do set-password), então
+   * não dá pra descobrir e-mail de ninguém só chutando um userId.
+   */
+  @Public()
+  @Get('reset-info')
+  @ApiOperation({
+    summary: 'E-mail da conta a partir do token de redefinição',
+  })
+  async resetInfo(
+    @Query('userId') userId: string,
+    @Query('token') token: string,
+  ) {
+    return this.usersService.getResetInfo(userId, token);
   }
 
   /**

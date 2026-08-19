@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 
 import { cn } from "@/lib";
 import { useMenu } from "@/hooks/useMenu";
@@ -55,6 +55,7 @@ function TopLeaf({
     <>
       {Icon ? <Icon size={16} className="shrink-0" /> : null}
       {item.title}
+      {item.locked && <Lock size={12} className="shrink-0 opacity-70" />}
     </>
   );
 
@@ -71,6 +72,23 @@ function TopLeaf({
       >
         {content}
       </span>
+    );
+  }
+
+  if (item.locked) {
+    return (
+      <Link
+        href="/erp/licenciamento"
+        title="Módulo não contratado — clique para adquirir"
+        onClick={onNavigate}
+        className={cn(
+          itemClass,
+          fullWidth && "w-full",
+          "opacity-60 hover:opacity-100"
+        )}
+      >
+        {content}
+      </Link>
     );
   }
 

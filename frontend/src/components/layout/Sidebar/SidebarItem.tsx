@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 
 import { cn } from "@/lib";
 import { useTabs } from "@/providers/TabsProvider";
@@ -88,6 +88,10 @@ function LeafItem({
       {!collapsed && (
         <span className="truncate">{item.title}</span>
       )}
+
+      {item.locked && !collapsed && (
+        <Lock size={13} className="ml-auto shrink-0 opacity-70" />
+      )}
     </>
   );
 
@@ -117,6 +121,23 @@ function LeafItem({
       >
         {content}
       </span>
+    );
+  }
+
+  if (item.locked) {
+    return (
+      <Link
+        href="/erp/licenciamento"
+        title={
+          collapsed
+            ? `${item.title} — clique para adquirir`
+            : "Módulo não contratado — clique para adquirir"
+        }
+        className={cn(baseClassName, "opacity-60 hover:opacity-100")}
+        onClick={onNavigate}
+      >
+        {content}
+      </Link>
     );
   }
 

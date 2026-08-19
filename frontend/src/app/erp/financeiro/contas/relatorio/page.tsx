@@ -133,7 +133,10 @@ function RelatorioContasContent() {
       ],
       entries.map((e) => [
         e.documentNumber ?? "",
-        e.partner?.tradeName || e.partner?.legalName || "",
+        e.partner?.tradeName ||
+          e.partner?.legalName ||
+          e.employee?.name ||
+          "",
         date(e.issueDate),
         date(e.dueDate),
         money(e.amount),
@@ -373,6 +376,7 @@ function RelatorioContasContent() {
                   <td className="px-3 py-2 font-medium text-[var(--text-primary)] print:border print:border-black print:text-black">
                     {e.partner?.tradeName ||
                       e.partner?.legalName ||
+                      e.employee?.name ||
                       "—"}
                   </td>
                   <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">

@@ -7,7 +7,9 @@ import {
   Monitor,
   Plug,
   Settings,
+  Settings2,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 
 import { OsCardLink, OsShell } from "@/components";
@@ -76,6 +78,20 @@ export default function OsHomePage() {
       href: "/erp/licenciamento",
       icon: BadgeCheck,
       visible: can("license.view"),
+    },
+    {
+      title: "Administrar planos e preços",
+      description: "Catálogo comercial — só o dono da plataforma",
+      href: "/erp/licenciamento/planos",
+      icon: Settings2,
+      visible: can("platform.license.manage"),
+    },
+    {
+      title: "Clientes e faturamento",
+      description: "Quem comprou, planos e valores mês a mês — só o dono da plataforma",
+      href: "/erp/licenciamento/clientes",
+      icon: Users,
+      visible: can("platform.license.manage"),
     },
   ].filter((card) => card.visible);
 

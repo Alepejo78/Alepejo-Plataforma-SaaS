@@ -6,6 +6,7 @@ import type { OsShellProps } from "./OsShell.types";
 
 import { AppTabsBar } from "../TopBar";
 import { TabsBar } from "../TabsBar";
+import { SubscriptionBanner } from "../SubscriptionBanner/SubscriptionBanner";
 
 /**
  * Moldura do app "OS" — guias de app + guias de telas abertas + conteúdo,
@@ -22,6 +23,8 @@ export function OsShell({ children }: OsShellProps) {
       <AppTabsBar />
 
       <TabsBar app="os" />
+
+      <SubscriptionBanner />
 
       {sessionError && (
         <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">

@@ -52,21 +52,39 @@ export class CompanyAdditionalDto {
   @MaxLength(30)
   phone?: string;
 
-  @ApiProperty({
-    example: 'Fulano de Tal',
-    description: 'Nome do administrador desta empresa nova',
-  })
-  @IsString({ message: 'O nome do administrador deve ser um texto.' })
-  @IsNotEmpty({ message: 'O nome do administrador é obrigatório.' })
-  @MaxLength(150)
-  adminName: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  zipCode?: string;
 
-  @ApiProperty({
-    example: 'admin@filial.com.br',
-    description: 'E-mail de login do administrador desta empresa nova',
-  })
-  @IsEmail({}, { message: 'E-mail do administrador inválido.' })
-  @IsNotEmpty({ message: 'O e-mail do administrador é obrigatório.' })
-  @MaxLength(150)
-  adminEmail: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  street?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  number?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  district?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  state?: string;
 }

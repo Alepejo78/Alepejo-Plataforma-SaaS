@@ -29,6 +29,7 @@ import { SalesModule } from './modules/sales/sales.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
 import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { QuotationsModule } from './modules/quotations/quotations.module';
+import { PayrollModule } from './modules/payroll/payroll.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-accounts.module';
 import { ChartOfAccountClassificationsModule } from './modules/chart-of-account-classifications/chart-of-account-classifications.module';
@@ -48,6 +49,8 @@ import { EmployeeExamsModule } from './modules/employee-exams/employee-exams.mod
 import { ScheduledNotificationsModule } from './modules/scheduled-notifications/scheduled-notifications.module';
 import { ProductionModule } from './modules/production/production.module';
 import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module';
+import { MarketingModule } from './modules/marketing/marketing.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 @Module({
   imports: [
@@ -72,6 +75,7 @@ import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module
     QuotesModule,
     SalesOrdersModule,
     QuotationsModule,
+    PayrollModule,
     PurchaseOrdersModule,
     ChartOfAccountsModule,
     ChartOfAccountClassificationsModule,
@@ -91,6 +95,8 @@ import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module
     ScheduledNotificationsModule,
     ProductionModule,
     TimeTrackingModule,
+    MarketingModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [

@@ -9,6 +9,7 @@ import { Sidebar } from "../Sidebar";
 import { HorizontalNav } from "../HorizontalNav/HorizontalNav";
 import { AppTabsBar } from "../TopBar";
 import { TabsBar } from "../TabsBar";
+import { SubscriptionBanner } from "../SubscriptionBanner/SubscriptionBanner";
 
 /**
  * `workspaceLabel` não aparece mais em lugar nenhum aqui — a guia de
@@ -39,6 +40,8 @@ export function AppShell({ children }: AppShellProps) {
         />
 
         {isMenuOpen && <HorizontalNav />}
+
+        <SubscriptionBanner />
 
         {sessionError && (
           <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">
@@ -74,6 +77,8 @@ export function AppShell({ children }: AppShellProps) {
         isMenuOpen={isMenuOpen}
         onOpenMenu={toggleMenu}
       />
+
+      <SubscriptionBanner />
 
       {sessionError && (
         <div className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">

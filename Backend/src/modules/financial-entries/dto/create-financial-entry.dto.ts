@@ -2,13 +2,13 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -22,9 +22,15 @@ export class CreateFinancialEntryDto {
   @IsEnum(FinancialEntryType)
   type: FinancialEntryType;
 
-  @IsString()
-  @IsNotEmpty()
-  partnerId: string;
+  /// Cliente/fornecedor OU colaborador (folha) — exatamente um dos
+  /// dois, nunca os dois nem nenhum (ver CHECK no banco).
+  @ValidateIf((dto) => !dto.employeeId)
+  @IsString({ message: 'Informe o parceiro ou o colaborador.' })
+  partnerId?: string;
+
+  @ValidateIf((dto) => !dto.partnerId)
+  @IsString({ message: 'Informe o parceiro ou o colaborador.' })
+  employeeId?: string;
 
   @IsOptional()
   @IsString()

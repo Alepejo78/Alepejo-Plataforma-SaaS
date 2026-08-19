@@ -31,6 +31,10 @@ export class FinancialEntryFilterDto {
 
   @IsOptional()
   @IsString()
+  employeeId?: string;
+
+  @IsOptional()
+  @IsString()
   search?: string;
 
   /** Vencimento a partir de (inclusive). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Tags } from "lucide-react";
+import { ClipboardList, Percent, Tags, Wallet } from "lucide-react";
 
 import { OsCardLink, OsShell } from "@/components";
 import { useAuth } from "@/providers/AuthProvider";
@@ -22,6 +22,20 @@ export default function OsConfiguracoesRhPage() {
       href: "/erp/rh/cadastros",
       icon: Tags,
       visible: can("sector.view"),
+    },
+    {
+      title: "Benefícios",
+      description: "Cadastro de apoio de Recursos Humanos",
+      href: "/erp/rh/beneficios",
+      icon: Wallet,
+      visible: can("benefit.view"),
+    },
+    {
+      title: "Parâmetros fiscais (INSS/IRRF/FGTS)",
+      description: "Tabelas da Folha de Pagamento, por vigência",
+      href: "/erp/rh/parametros-fiscais",
+      icon: Percent,
+      visible: can("payroll-tax-table.view"),
     },
   ].filter((card) => card.visible);
 

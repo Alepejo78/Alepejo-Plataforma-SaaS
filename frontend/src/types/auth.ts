@@ -17,6 +17,7 @@ export type SidebarLayout = "vertical" | "horizontal";
 export interface AuthCompany {
   id: string;
   code: string;
+  slug: string;
   legalName: string;
   tradeName: string;
   /** Personalização (módulo BRANDING) — null quando não configurada. */

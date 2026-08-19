@@ -1,0 +1,140 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
+import { Module } from '../../identity/license/decorators/module.decorator';
+
+import { ThirteenthSalaryService } from '../services/thirteenth-salary.service';
+
+import { GenerateThirteenthSalaryDto } from '../dto/generate-thirteenth-salary.dto';
+import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
+
+@ApiTags('ThirteenthSalary')
+@Controller('thirteenth-salary')
+@Module('LABOR')
+export class ThirteenthSalaryController {
+  constructor(private readonly service: ThirteenthSalaryService) {}
+
+  @Post('generate')
+  @Permissions('thirteenth-salary.generate')
+  @ApiOperation({ summary: 'Gerar parcela de 13º salário' })
+  generate(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
+    @Body() dto: GenerateThirteenthSalaryDto,
+  ) {
+    return this.service.generate(companyId, rootCompanyId, dto);
+  }
+
+  @Get()
+  @Permissions('thirteenth-salary.view')
+  @ApiOperation({ summary: 'Listar 13º salário' })
+  findAll(
+    @CurrentUser('companyId') companyId: string,
+    @Query('year') year?: string,
+    @Query('installment') installment?: string,
+  ) {
+    return this.service.findAll(companyId, {
+      year: year ? Number(year) : undefined,
+      installment: installment ? Number(installment) : undefined,
+    });
+  }
+
+  @Get(':id')
+  @Permissions('thirteenth-salary.view')
+  @ApiOperation({ summary: 'Detalhar 13º salário' })
+  findOne(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.findOne(companyId, id);
+  }
+
+  @Get(':id/items/:itemId')
+  @Permissions('thirteenth-salary.view')
+  @ApiOperation({ summary: 'Detalhar item do 13º (recibo)' })
+  findItem(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.service.findItem(companyId, id, itemId);
+  }
+
+  @Patch(':id/items/:itemId')
+  @Permissions('thirteenth-salary.update')
+  @ApiOperation({ summary: 'Ajustar proventos/descontos manuais de um item' })
+  adjustItem(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: AdjustPayrollItemDto,
+  ) {
+    return this.service.adjustItem(companyId, id, itemId, dto);
+  }
+
+  @Patch(':id/items/:itemId/exclude')
+  @Permissions('thirteenth-salary.update')
+  @ApiOperation({ summary: 'Excluir um colaborador deste 13º' })
+  excludeItem(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.service.excludeItem(companyId, id, itemId);
+  }
+
+  @Patch(':id/items/:itemId/include')
+  @Permissions('thirteenth-salary.update')
+  @ApiOperation({ summary: 'Reincluir um colaborador neste 13º' })
+  includeItem(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.service.includeItem(companyId, id, itemId);
+  }
+
+  @Patch(':id/approve')
+  @Permissions('thirteenth-salary.approve')
+  @ApiOperation({ summary: 'Aprovar 13º (gera os títulos a pagar)' })
+  approve(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.approve(companyId, id, userId);
+  }
+
+  @Patch(':id/reverse')
+  @Permissions('thirteenth-salary.approve')
+  @ApiOperation({
+    summary: 'Estornar aprovação (volta a rascunho, apaga os títulos gerados)',
+  })
+  reverse(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.reverse(companyId, id);
+  }
+
+  @Patch(':id/cancel')
+  @Permissions('thirteenth-salary.cancel')
+  @ApiOperation({ summary: 'Cancelar 13º' })
+  cancel(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.cancel(companyId, id);
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   Building2,
@@ -16,13 +16,12 @@ import {
   companyService,
   type Company,
 } from "@/services/company.service";
-import { lookupService } from "@/services/lookup.service";
+import { maskCEP, maskDocument, onlyDigits } from "@/lib/masks";
 import {
-  maskCEP,
-  maskDocument,
-  isValidCEPLength,
-  onlyDigits,
-} from "@/lib/masks";
+  AddressFields,
+  emptyAddress,
+  type AddressFormState,
+} from "@/components/company/AddressFields";
 
 function extractMessage(err: unknown, fallback: string) {
   const message = (
@@ -45,408 +44,6 @@ const fieldClass = `
 const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
-interface AddressFormState {
-  zipCode: string;
-  street: string;
-  number: string;
-  district: string;
-  city: string;
-  state: string;
-}
-
-const emptyAddress: AddressFormState = {
-  zipCode: "",
-  street: "",
-  number: "",
-  district: "",
-  city: "",
-  state: "",
-};
-
-/**
- * Campos de endereço reaproveitáveis (empresa própria + editar empresa
- * do grupo) — busca automática por CEP (ViaCEP) com foco em "Número"
- * depois de achar, mesmo padrão já usado no cadastro de Parceiro.
- */
-function AddressFields({
-  idPrefix,
-  value,
-  onChange,
-}: {
-  idPrefix: string;
-  value: AddressFormState;
-  onChange: (next: AddressFormState) => void;
-}) {
-  const [loadingCep, setLoadingCep] = useState(false);
-  const [cepError, setCepError] = useState("");
-  const numberRef = useRef<HTMLInputElement>(null);
-
-  async function handleCepLookup(cep: string) {
-    setLoadingCep(true);
-    setCepError("");
-
-    try {
-      const result = await lookupService.cep(cep);
-
-      onChange({
-        ...value,
-        street: result.street || value.street,
-        district: result.district || value.district,
-        city: result.city || value.city,
-        state: result.state || value.state,
-      });
-
-      numberRef.current?.focus();
-    } catch (err) {
-      setCepError(
-        extractMessage(err, "CEP não encontrado.")
-      );
-    } finally {
-      setLoadingCep(false);
-    }
-  }
-
-  return (
-    <>
-      <div>
-        <label
-          className={labelClass}
-          htmlFor={`${idPrefix}-zipCode`}
-        >
-          CEP
-        </label>
-
-        <input
-          id={`${idPrefix}-zipCode`}
-          inputMode="numeric"
-          placeholder="00000-000"
-          className={fieldClass}
-          value={value.zipCode}
-          onChange={(e) => {
-            const masked = maskCEP(e.target.value);
-
-            onChange({ ...value, zipCode: masked });
-
-            if (isValidCEPLength(masked)) {
-              void handleCepLookup(masked);
-            }
-          }}
-        />
-
-        {loadingCep && (
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Buscando endereço...
-          </p>
-        )}
-
-        {cepError && (
-          <p className="mt-1 text-xs text-[var(--danger)]">
-            {cepError}
-          </p>
-        )}
-      </div>
-
-      <div className="sm:col-span-2">
-        <label
-          className={labelClass}
-          htmlFor={`${idPrefix}-street`}
-        >
-          Rua
-        </label>
-
-        <input
-          id={`${idPrefix}-street`}
-          className={fieldClass}
-          value={value.street}
-          onChange={(e) =>
-            onChange({ ...value, street: e.target.value })
-          }
-        />
-      </div>
-
-      <div>
-        <label
-          className={labelClass}
-          htmlFor={`${idPrefix}-number`}
-        >
-          Número
-        </label>
-
-        <input
-          id={`${idPrefix}-number`}
-          ref={numberRef}
-          className={fieldClass}
-          value={value.number}
-          onChange={(e) =>
-            onChange({ ...value, number: e.target.value })
-          }
-        />
-      </div>
-
-      <div>
-        <label
-          className={labelClass}
-          htmlFor={`${idPrefix}-district`}
-        >
-          Bairro
-        </label>
-
-        <input
-          id={`${idPrefix}-district`}
-          className={fieldClass}
-          value={value.district}
-          onChange={(e) =>
-            onChange({ ...value, district: e.target.value })
-          }
-        />
-      </div>
-
-      <div>
-        <label
-          className={labelClass}
-          htmlFor={`${idPrefix}-city`}
-        >
-          Cidade
-        </label>
-
-        <input
-          id={`${idPrefix}-city`}
-          className={fieldClass}
-          value={value.city}
-          onChange={(e) =>
-            onChange({ ...value, city: e.target.value })
-          }
-        />
-      </div>
-
-      <div>
-        <label
-          className={labelClass}
-          htmlFor={`${idPrefix}-state`}
-        >
-          UF
-        </label>
-
-        <input
-          id={`${idPrefix}-state`}
-          maxLength={2}
-          className={`${fieldClass} uppercase`}
-          value={value.state}
-          onChange={(e) =>
-            onChange({
-              ...value,
-              state: e.target.value.toUpperCase(),
-            })
-          }
-        />
-      </div>
-    </>
-  );
-}
-
-/** Formulário com os dados da própria empresa logada — Razão social/Nome fantasia/contato/endereço editáveis, documento fixo. */
-function MyCompanySection() {
-  const [company, setCompany] = useState<Company | null>(null);
-  const [form, setForm] = useState({
-    legalName: "",
-    tradeName: "",
-    email: "",
-    phone: "",
-  });
-  const [address, setAddress] =
-    useState<AddressFormState>(emptyAddress);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    companyService
-      .getMine()
-      .then((data) => {
-        setCompany(data);
-        setForm({
-          legalName: data.legalName,
-          tradeName: data.tradeName ?? "",
-          email: data.email ?? "",
-          phone: data.phone ?? "",
-        });
-        setAddress({
-          zipCode: data.zipCode ? maskCEP(data.zipCode) : "",
-          street: data.street ?? "",
-          number: data.number ?? "",
-          district: data.district ?? "",
-          city: data.city ?? "",
-          state: data.state ?? "",
-        });
-      })
-      .catch(() =>
-        setLoadError("Não foi possível carregar os dados da empresa.")
-      )
-      .finally(() => setLoading(false));
-  }, []);
-
-  async function handleSave() {
-    setSaving(true);
-    setSaveError("");
-    setSaved(false);
-
-    try {
-      const updated = await companyService.updateMine({
-        legalName: form.legalName.trim(),
-        tradeName: form.tradeName.trim() || undefined,
-        email: form.email.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-        zipCode: onlyDigits(address.zipCode) || undefined,
-        street: address.street.trim() || undefined,
-        number: address.number.trim() || undefined,
-        district: address.district.trim() || undefined,
-        city: address.city.trim() || undefined,
-        state: address.state.trim() || undefined,
-      });
-
-      setCompany(updated);
-      setSaved(true);
-    } catch (err) {
-      setSaveError(
-        extractMessage(err, "Não foi possível salvar os dados.")
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="h-48 animate-pulse rounded-2xl bg-[var(--surface-hover)]" />
-    );
-  }
-
-  if (loadError || !company) {
-    return (
-      <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-        {loadError}
-      </div>
-    );
-  }
-
-  return (
-    <section className="rounded-2xl border border-[var(--border)] p-6">
-      <h2 className="mb-4 text-sm font-medium text-[var(--text-muted)]">
-        Dados da empresa
-      </h2>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <label className={labelClass} htmlFor="my-legalName">
-            Razão social
-          </label>
-
-          <input
-            id="my-legalName"
-            className={fieldClass}
-            value={form.legalName}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, legalName: e.target.value }))
-            }
-          />
-        </div>
-
-        <div>
-          <label className={labelClass} htmlFor="my-tradeName">
-            Nome fantasia
-          </label>
-
-          <input
-            id="my-tradeName"
-            className={fieldClass}
-            value={form.tradeName}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, tradeName: e.target.value }))
-            }
-          />
-        </div>
-
-        <div>
-          <label className={labelClass} htmlFor="my-document">
-            {onlyDigits(company.document).length === 11
-              ? "CPF"
-              : "CNPJ"}
-          </label>
-
-          <input
-            id="my-document"
-            disabled
-            className={`${fieldClass} cursor-not-allowed opacity-60`}
-            value={maskDocument(company.document)}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass} htmlFor="my-email">
-            E-mail
-          </label>
-
-          <input
-            id="my-email"
-            type="email"
-            className={fieldClass}
-            value={form.email}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, email: e.target.value }))
-            }
-          />
-        </div>
-
-        <div>
-          <label className={labelClass} htmlFor="my-phone">
-            Telefone
-          </label>
-
-          <input
-            id="my-phone"
-            className={fieldClass}
-            value={form.phone}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, phone: e.target.value }))
-            }
-          />
-        </div>
-
-        <AddressFields
-          idPrefix="my"
-          value={address}
-          onChange={setAddress}
-        />
-      </div>
-
-      {saveError && (
-        <div className="mt-4 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-          {saveError}
-        </div>
-      )}
-
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void handleSave()}
-          className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
-        >
-          {saving ? "Salvando..." : "Salvar"}
-        </button>
-
-        {saved && !saving && (
-          <span className="text-sm text-[var(--success)]">
-            Salvo.
-          </span>
-        )}
-      </div>
-    </section>
-  );
-}
-
 const emptyAdditionalForm = {
   legalName: "",
   tradeName: "",
@@ -455,12 +52,12 @@ const emptyAdditionalForm = {
   isGroupCompany: false,
   email: "",
   phone: "",
-  adminName: "",
-  adminEmail: "",
 };
 
 function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
   const [form, setForm] = useState(emptyAdditionalForm);
+  const [address, setAddress] =
+    useState<AddressFormState>(emptyAddress);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
@@ -493,11 +90,15 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
         legalName: form.legalName.trim(),
         tradeName: form.tradeName.trim() || undefined,
         document: onlyDigits(form.document),
-        isGroupCompany: !isCompany ? form.isGroupCompany : undefined,
+        isGroupCompany: form.isGroupCompany || undefined,
         email: form.email.trim() || undefined,
         phone: form.phone.trim() || undefined,
-        adminName: form.adminName.trim(),
-        adminEmail: form.adminEmail.trim(),
+        zipCode: onlyDigits(address.zipCode) || undefined,
+        street: address.street.trim() || undefined,
+        number: address.number.trim() || undefined,
+        district: address.district.trim() || undefined,
+        city: address.city.trim() || undefined,
+        state: address.state.trim() || undefined,
       });
 
       setDone(true);
@@ -512,7 +113,7 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-8 w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+      <div className="my-8 w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[var(--text-primary)]">
             Cadastrar empresa
@@ -533,10 +134,9 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
             <p className="text-sm text-[var(--success)]">
               Empresa cadastrada — herdou o mesmo plano e módulos da
               sua empresa, e o seu usuário já ganhou acesso a ela
-              (veja o seletor de empresa no topo da tela). Se{" "}
-              <strong>{form.adminEmail}</strong> for um e-mail
-              diferente do seu, também enviamos um link pra essa
-              pessoa definir a própria senha.
+              (veja o seletor de empresa no topo da tela). Pra dar
+              acesso a outra pessoa nessa empresa, use Configurações
+              &gt; Usuários.
             </p>
 
             <button
@@ -550,15 +150,33 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-[var(--text-muted)]">
-              Com CNPJ, só é possível cadastrar empresas com a mesma
-              raiz (8 primeiros dígitos) do CNPJ da empresa que já tem
-              a licença. Com CPF não existe essa raiz pra conferir
-              automaticamente — confirme manualmente que é empresa do
-              grupo.
+              Com CNPJ da mesma raiz (8 primeiros dígitos) da empresa
+              que já tem a licença, o vínculo é confirmado sozinho. Em
+              qualquer outro caso — CNPJ de raiz diferente ou CPF, que
+              não tem raiz pra conferir — marque a caixa abaixo
+              confirmando manualmente que é empresa do mesmo grupo.
             </p>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+            <div className="grid gap-4 sm:grid-cols-6">
+              <div className="sm:col-span-6">
+                <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                  <input
+                    type="checkbox"
+                    checked={form.isGroupCompany}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        isGroupCompany: e.target.checked,
+                      }))
+                    }
+                  />
+                  Esta é uma empresa do mesmo grupo (confirmação
+                  manual — CPF não tem raiz, e CNPJ pode não ter a
+                  mesma raiz da empresa já licenciada).
+                </label>
+              </div>
+
+              <div className="sm:col-span-3">
                 <label className={labelClass} htmlFor="add-legalName">
                   Razão social{" "}
                   <span className="text-[var(--danger)]">*</span>
@@ -574,22 +192,7 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
                 />
               </div>
 
-              <div>
-                <label className={labelClass} htmlFor="add-tradeName">
-                  Nome fantasia
-                </label>
-
-                <input
-                  id="add-tradeName"
-                  className={fieldClass}
-                  value={form.tradeName}
-                  onChange={(e) =>
-                    setField("tradeName", e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
+              <div className="sm:col-span-1">
                 <label
                   className={labelClass}
                   htmlFor="add-personType"
@@ -622,7 +225,7 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
                 </select>
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="add-document">
                   {isCompany ? "CNPJ" : "CPF"}{" "}
                   <span className="text-[var(--danger)]">*</span>
@@ -647,26 +250,22 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
                 />
               </div>
 
-              {!isCompany && (
-                <div className="sm:col-span-2">
-                  <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                    <input
-                      type="checkbox"
-                      checked={form.isGroupCompany}
-                      onChange={(e) =>
-                        setForm((p) => ({
-                          ...p,
-                          isGroupCompany: e.target.checked,
-                        }))
-                      }
-                    />
-                    Esta é uma empresa do mesmo grupo (CPF não tem
-                    raiz pra confirmar isso sozinho).
-                  </label>
-                </div>
-              )}
+              <div className="sm:col-span-3">
+                <label className={labelClass} htmlFor="add-tradeName">
+                  Nome fantasia
+                </label>
 
-              <div>
+                <input
+                  id="add-tradeName"
+                  className={fieldClass}
+                  value={form.tradeName}
+                  onChange={(e) =>
+                    setField("tradeName", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="add-email">
                   E-mail da empresa
                 </label>
@@ -680,7 +279,7 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
                 />
               </div>
 
-              <div>
+              <div className="sm:col-span-1">
                 <label className={labelClass} htmlFor="add-phone">
                   Telefone
                 </label>
@@ -693,41 +292,11 @@ function AddCompanyModal({ onClose }: { onClose: (created: boolean) => void }) {
                 />
               </div>
 
-              <div>
-                <label className={labelClass} htmlFor="add-adminName">
-                  Nome do administrador{" "}
-                  <span className="text-[var(--danger)]">*</span>
-                </label>
-
-                <input
-                  id="add-adminName"
-                  className={fieldClass}
-                  value={form.adminName}
-                  onChange={(e) =>
-                    setField("adminName", e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label
-                  className={labelClass}
-                  htmlFor="add-adminEmail"
-                >
-                  E-mail do administrador{" "}
-                  <span className="text-[var(--danger)]">*</span>
-                </label>
-
-                <input
-                  id="add-adminEmail"
-                  type="email"
-                  className={fieldClass}
-                  value={form.adminEmail}
-                  onChange={(e) =>
-                    setField("adminEmail", e.target.value)
-                  }
-                />
-              </div>
+              <AddressFields
+                idPrefix="add"
+                value={address}
+                onChange={setAddress}
+              />
             </div>
 
             {error && (
@@ -815,7 +384,7 @@ function EditCompanyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-8 w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+      <div className="my-8 w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[var(--text-primary)]">
             Editar empresa
@@ -832,27 +401,36 @@ function EditCompanyModal({
         </div>
 
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
+          <div className="grid gap-4 sm:grid-cols-6">
+            <div className="sm:col-span-4">
               <label className={labelClass} htmlFor="edit-legalName">
-                Razão social{" "}
-                <span className="text-[var(--danger)]">*</span>
+                Razão social
               </label>
 
               <input
                 id="edit-legalName"
-                className={fieldClass}
+                disabled
+                className={`${fieldClass} cursor-not-allowed opacity-60`}
                 value={form.legalName}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    legalName: e.target.value,
-                  }))
-                }
               />
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
+              <label className={labelClass} htmlFor="edit-document">
+                {onlyDigits(company.document).length === 11
+                  ? "CPF"
+                  : "CNPJ"}
+              </label>
+
+              <input
+                id="edit-document"
+                disabled
+                className={`${fieldClass} cursor-not-allowed opacity-60`}
+                value={maskDocument(company.document)}
+              />
+            </div>
+
+            <div className="sm:col-span-3">
               <label className={labelClass} htmlFor="edit-tradeName">
                 Nome fantasia
               </label>
@@ -870,9 +448,9 @@ function EditCompanyModal({
               />
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
               <label className={labelClass} htmlFor="edit-email">
-                E-mail
+                E-mail da empresa
               </label>
 
               <input
@@ -886,7 +464,7 @@ function EditCompanyModal({
               />
             </div>
 
-            <div>
+            <div className="sm:col-span-1">
               <label className={labelClass} htmlFor="edit-phone">
                 Telefone
               </label>
@@ -938,11 +516,111 @@ function EditCompanyModal({
   );
 }
 
-function GroupCompaniesSection({
-  refreshKey,
+/** Tabela reutilizada tanto pra empresa raiz quanto pras empresas do grupo. */
+function CompanyTable({
+  companies,
+  onEdit,
+  onToggleActive,
+  busyId,
 }: {
-  refreshKey: number;
+  companies: Company[];
+  onEdit: (company: Company) => void;
+  onToggleActive: (company: Company) => void;
+  busyId: string;
 }) {
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+          <tr>
+            <th className="px-4 py-3 font-semibold">Empresa</th>
+            <th className="px-4 py-3 font-semibold">Documento</th>
+            <th className="px-4 py-3 font-semibold">E-mail</th>
+            <th className="px-4 py-3 font-semibold">Telefone</th>
+            <th className="px-4 py-3 font-semibold">Situação</th>
+            <th className="px-4 py-3" />
+          </tr>
+        </thead>
+
+        <tbody>
+          {companies.map((company) => (
+            <tr
+              key={company.id}
+              className="border-t border-[var(--border)]"
+            >
+              <td className="px-4 py-3">
+                <p className="font-medium text-[var(--text-primary)]">
+                  {company.legalName}
+                  {!company.rootCompanyId && (
+                    <span className="ml-2 rounded bg-[var(--primary-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--primary-text)]">
+                      Raiz
+                    </span>
+                  )}
+                </p>
+              </td>
+
+              <td className="px-4 py-3 whitespace-nowrap text-[var(--text-secondary)]">
+                {maskDocument(company.document)}
+              </td>
+
+              <td className="px-4 py-3 text-[var(--text-secondary)]">
+                {company.email || "—"}
+              </td>
+
+              <td className="px-4 py-3 whitespace-nowrap text-[var(--text-secondary)]">
+                {company.phone || "—"}
+              </td>
+
+              <td className="px-4 py-3">
+                <span
+                  className={
+                    company.active
+                      ? "text-[var(--success)]"
+                      : "text-[var(--text-muted)]"
+                  }
+                >
+                  {company.active ? "Ativa" : "Inativa"}
+                </span>
+              </td>
+
+              <td className="px-4 py-3">
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(company)}
+                    aria-label="Editar"
+                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                  >
+                    <Pencil size={16} />
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={busyId === company.id}
+                    onClick={() => onToggleActive(company)}
+                    className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                  >
+                    {company.active ? "Desativar" : "Ativar"}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Substitui a antiga "Dados da empresa" (formulário fixo, editava
+ * sempre a empresa ativa da sessão) — agora "Empresa" mostra só a
+ * empresa RAIZ do grupo, em linha de tabela, e "Empresas do grupo" só
+ * as filiais (mesma raiz de CNPJ ou `isGroupCompany` pra CPF — já
+ * filtrado pelo backend em `GET /companies/group`). Editar qualquer
+ * uma abre o mesmo modal completo (`EditCompanyModal`).
+ */
+function CompaniesSection({ refreshKey }: { refreshKey: number }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -957,7 +635,7 @@ function GroupCompaniesSection({
       .listGroup()
       .then(setCompanies)
       .catch(() =>
-        setError("Não foi possível carregar as empresas do grupo.")
+        setError("Não foi possível carregar as empresas.")
       )
       .finally(() => setLoading(false));
   }
@@ -995,107 +673,50 @@ function GroupCompaniesSection({
     }
   }
 
-  if (companies.length <= 1 && !loading) {
-    // Cliente com uma empresa só — nada de "grupo" a mostrar ainda.
-    return null;
-  }
+  const root = companies.find((c) => !c.rootCompanyId) ?? null;
+  const groupCompanies = companies.filter((c) => c.rootCompanyId);
 
   return (
-    <section>
-      <h2 className="mb-3 text-sm font-medium text-[var(--text-muted)]">
-        Empresas do grupo
-      </h2>
-
+    <div className="space-y-8">
       {error && (
-        <div className="mb-3 flex items-center gap-3 rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]">
+        <div className="flex items-center gap-3 rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]">
           <AlertTriangle size={18} />
           {error}
         </div>
       )}
 
-      {loading ? (
-        <div className="h-24 animate-pulse rounded-2xl bg-[var(--surface-hover)]" />
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Empresa</th>
-                <th className="px-4 py-3 font-semibold">Documento</th>
-                <th className="px-4 py-3 font-semibold">E-mail</th>
-                <th className="px-4 py-3 font-semibold">Telefone</th>
-                <th className="px-4 py-3 font-semibold">Situação</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
+      <section>
+        <h2 className="mb-3 text-sm font-medium text-[var(--text-muted)]">
+          Empresa
+        </h2>
 
-            <tbody>
-              {companies.map((company) => (
-                <tr
-                  key={company.id}
-                  className="border-t border-[var(--border)]"
-                >
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-[var(--text-primary)]">
-                      {company.legalName}
-                      {!company.rootCompanyId && (
-                        <span className="ml-2 rounded bg-[var(--primary-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--primary-text)]">
-                          Raiz
-                        </span>
-                      )}
-                    </p>
-                  </td>
+        {loading ? (
+          <div className="h-24 animate-pulse rounded-2xl bg-[var(--surface-hover)]" />
+        ) : (
+          root && (
+            <CompanyTable
+              companies={[root]}
+              onEdit={setEditing}
+              onToggleActive={(c) => void toggleActive(c)}
+              busyId={busyId}
+            />
+          )
+        )}
+      </section>
 
-                  <td className="px-4 py-3 whitespace-nowrap text-[var(--text-secondary)]">
-                    {maskDocument(company.document)}
-                  </td>
+      {!loading && groupCompanies.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-sm font-medium text-[var(--text-muted)]">
+            Empresas do grupo
+          </h2>
 
-                  <td className="px-4 py-3 text-[var(--text-secondary)]">
-                    {company.email || "—"}
-                  </td>
-
-                  <td className="px-4 py-3 whitespace-nowrap text-[var(--text-secondary)]">
-                    {company.phone || "—"}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <span
-                      className={
-                        company.active
-                          ? "text-[var(--success)]"
-                          : "text-[var(--text-muted)]"
-                      }
-                    >
-                      {company.active ? "Ativa" : "Inativa"}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditing(company)}
-                        aria-label="Editar"
-                        className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
-                      >
-                        <Pencil size={16} />
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={busyId === company.id}
-                        onClick={() => void toggleActive(company)}
-                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
-                      >
-                        {company.active ? "Desativar" : "Ativar"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          <CompanyTable
+            companies={groupCompanies}
+            onEdit={setEditing}
+            onToggleActive={(c) => void toggleActive(c)}
+            busyId={busyId}
+          />
+        </section>
       )}
 
       {editing && (
@@ -1109,7 +730,7 @@ function GroupCompaniesSection({
           }}
         />
       )}
-    </section>
+    </div>
   );
 }
 
@@ -1143,9 +764,7 @@ export default function Configuracoes() {
           </Can>
         </header>
 
-        <MyCompanySection />
-
-        <GroupCompaniesSection refreshKey={groupRefreshKey} />
+        <CompaniesSection refreshKey={groupRefreshKey} />
       </div>
 
       {modalOpen && (

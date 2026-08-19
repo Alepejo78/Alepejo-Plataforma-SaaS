@@ -10,10 +10,8 @@ import { SearchSelect } from "@/components/ui/SearchSelect";
 import { maskAccountCode } from "@/lib/masks";
 
 import {
-  CHART_OF_ACCOUNT_TYPE_LABELS,
   chartOfAccountService,
   type ChartOfAccount,
-  type ChartOfAccountType,
 } from "@/services/chart-of-account.service";
 
 import {
@@ -42,17 +40,11 @@ const fieldClass = `
 const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
-const TYPE_BADGE_CLASS: Record<ChartOfAccountType, string> = {
-  RECEITA: "bg-[var(--success-soft)] text-[var(--success)]",
-  DESPESA: "bg-[var(--danger-soft)] text-[var(--danger)]",
-};
-
 interface Form {
   code: string;
   classificationId: string;
   classificationLabel: string;
   description: string;
-  type: ChartOfAccountType;
 }
 
 function emptyForm(): Form {
@@ -61,7 +53,6 @@ function emptyForm(): Form {
     classificationId: "",
     classificationLabel: "",
     description: "",
-    type: "DESPESA",
   };
 }
 
@@ -71,7 +62,6 @@ export default function PlanoContasPage() {
   );
 
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -93,9 +83,6 @@ export default function PlanoContasPage() {
     try {
       const result = await chartOfAccountService.list({
         search: search || undefined,
-        type: (typeFilter || undefined) as
-          | ChartOfAccountType
-          | undefined,
       });
 
       setAccounts(result.data ?? []);
@@ -109,7 +96,7 @@ export default function PlanoContasPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, typeFilter]);
+  }, [search]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -148,7 +135,6 @@ export default function PlanoContasPage() {
       classificationId: account.classification.id,
       classificationLabel: account.classification.name,
       description: account.description,
-      type: account.type,
     });
     setFormError("");
     setFormOpen(true);
@@ -175,7 +161,6 @@ export default function PlanoContasPage() {
         code: form.code,
         classificationId: form.classificationId,
         description: form.description,
-        type: form.type,
       };
 
       if (editingId) {
@@ -284,16 +269,6 @@ export default function PlanoContasPage() {
               onChange={(e) => setSearch(e.target.value)}
               className={`${fieldClass} min-w-64 flex-1`}
             />
-
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className={`${fieldClass} max-w-48`}
-            >
-              <option value="">Todos os tipos</option>
-              <option value="DESPESA">Despesa</option>
-              <option value="RECEITA">Receita</option>
-            </select>
           </div>
 
           {listError && (
@@ -352,18 +327,6 @@ export default function PlanoContasPage() {
 
                           <td className="px-4 py-2.5 text-[var(--text-primary)]">
                             {account.description}
-                          </td>
-
-                          <td className="whitespace-nowrap px-4 py-2.5">
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${TYPE_BADGE_CLASS[account.type]}`}
-                            >
-                              {
-                                CHART_OF_ACCOUNT_TYPE_LABELS[
-                                  account.type
-                                ]
-                              }
-                            </span>
                           </td>
 
                           <td className="px-4 py-2.5">
@@ -425,7 +388,7 @@ export default function PlanoContasPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>
                     Código
@@ -445,25 +408,6 @@ export default function PlanoContasPage() {
                       })
                     }
                   />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Tipo</label>
-
-                  <select
-                    className={fieldClass}
-                    value={form.type}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        type: e.target
-                          .value as ChartOfAccountType,
-                      })
-                    }
-                  >
-                    <option value="DESPESA">Despesa</option>
-                    <option value="RECEITA">Receita</option>
-                  </select>
                 </div>
 
                 <div>

@@ -120,6 +120,23 @@ export class CreateEmployeeDto {
   @MaxLength(20)
   pis?: string;
 
+  @ApiPropertyOptional({
+    description: 'Número da CNH (documento de habilitação).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  driverLicense?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Categorias marcadas, concatenadas sem separador (ex.: "AB").',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  driverLicenseCategory?: string;
+
   // --- Contato ---
   @ApiPropertyOptional()
   @IsOptional()

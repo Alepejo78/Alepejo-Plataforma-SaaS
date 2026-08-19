@@ -46,6 +46,25 @@ export class CompanyService {
     return company;
   }
 
+  /**
+   * Só o essencial pra montar a página pública de login com o nome da
+   * empresa (`/<slug>/login`) — sem sessão, então nada sensível aqui.
+   */
+  async findPublicBySlug(
+    slug: string,
+  ): Promise<{ legalName: string; tradeName: string | null }> {
+    const company = await this.companyRepository.findBySlug(slug);
+
+    if (!company) {
+      throw new NotFoundException('Empresa não encontrada.');
+    }
+
+    return {
+      legalName: company.legalName,
+      tradeName: company.tradeName,
+    };
+  }
+
   async update(
     id: string,
     dto: UpdateCompanyDto,

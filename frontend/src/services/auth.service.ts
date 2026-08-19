@@ -48,6 +48,15 @@ export const authService = {
     await api.post("/auth/logout");
   },
 
+  /**
+   * "Esqueci minha senha". O backend responde igual exista o e-mail ou
+   * não (evita descobrir quais e-mails têm conta), então a tela também
+   * não deve prometer que o e-mail foi enviado de fato.
+   */
+  async forgotPassword(email: string) {
+    await api.post("/auth/forgot-password", { email });
+  },
+
   /** Login cruzado: troca a empresa ativa da sessão. */
   async switchCompany(companyId: string) {
     const { data } = await api.post<ApiEnvelope<LoginResponse>>(

@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
 import { maskDocument, onlyDigits } from "@/lib/masks";
-import { companyOnboardingService } from "@/services/company-onboarding.service";
+import {
+  companyOnboardingService,
+  type PublicPlan,
+} from "@/services/company-onboarding.service";
+import {
+  AddressFields,
+  emptyAddress,
+  type AddressFormState,
+} from "@/components/company/AddressFields";
 
 function extractMessage(err: unknown, fallback: string) {
   const message = (
@@ -37,15 +46,52 @@ const emptyForm = {
   email: "",
   phone: "",
   adminName: "",
+  adminEmail: "",
 };
 
-export default function CadastroEmpresaPage() {
+function money(value: string | number | null | undefined) {
+  return Number(value ?? 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function CadastroEmpresaForm() {
+  const searchParams = useSearchParams();
+  const planId = searchParams.get("planId") ?? "";
+  const moduleIds = (searchParams.get("modules") ?? "")
+    .split(",")
+    .filter(Boolean);
+
+  const [plan, setPlan] = useState<PublicPlan | null>(null);
+  const [planError, setPlanError] = useState(false);
+
   const [form, setForm] = useState(emptyForm);
+  const [address, setAddress] = useState<AddressFormState>(emptyAddress);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
   const isCompany = form.personType === "COMPANY";
+
+  useEffect(() => {
+    if (!planId) {
+      return;
+    }
+
+    companyOnboardingService
+      .listPublicPlans()
+      .then((plans) => {
+        const found = plans.find((p) => p.id === planId);
+
+        if (found) {
+          setPlan(found);
+        } else {
+          setPlanError(true);
+        }
+      })
+      .catch(() => setPlanError(true));
+  }, [planId]);
 
   function setField(
     field: Exclude<keyof typeof emptyForm, "personType">,
@@ -67,9 +113,18 @@ export default function CadastroEmpresaPage() {
         legalName: form.legalName.trim(),
         tradeName: form.tradeName.trim() || undefined,
         document: onlyDigits(form.document),
-        email: form.email.trim(),
+        email: form.email.trim() || undefined,
         phone: form.phone.trim() || undefined,
+        zipCode: onlyDigits(address.zipCode) || undefined,
+        street: address.street.trim() || undefined,
+        number: address.number.trim() || undefined,
+        district: address.district.trim() || undefined,
+        city: address.city.trim() || undefined,
+        state: address.state.trim() || undefined,
         adminName: form.adminName.trim(),
+        adminEmail: form.adminEmail.trim(),
+        planId,
+        moduleIds: moduleIds.length > 0 ? moduleIds : undefined,
       });
 
       setDone(true);
@@ -82,9 +137,34 @@ export default function CadastroEmpresaPage() {
     }
   }
 
+  if (!planId || planError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-8">
+        <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
+          <h1 className="mb-2 text-xl font-bold text-[var(--text-primary)]">
+            Escolha um plano pra começar
+          </h1>
+
+          <p className="mb-6 text-sm text-[var(--text-muted)]">
+            {planError
+              ? "Esse plano não foi encontrado. Escolha um na página de preços."
+              : "O cadastro começa a partir da escolha do plano."}
+          </p>
+
+          <Link
+            href="/planos"
+            className="inline-block rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+          >
+            Ver planos
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-8">
-      <div className="w-full max-w-2xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
+      <div className="w-full max-w-4xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
         <h1 className="mb-1 text-2xl font-bold text-[var(--text-primary)]">
           Cadastrar empresa
         </h1>
@@ -92,6 +172,40 @@ export default function CadastroEmpresaPage() {
         <p className="mb-6 text-sm text-[var(--text-muted)]">
           Comece a usar o AlePejo ERP Cloud.
         </p>
+
+        {plan && !done && (
+          <div className="mb-6 flex items-center justify-between rounded-xl border border-[var(--primary)] p-4">
+            <div>
+              <p className="text-sm text-[var(--text-muted)]">
+                Plano escolhido
+              </p>
+              <p className="font-semibold text-[var(--text-primary)]">
+                {plan.name}
+              </p>
+            </div>
+
+            <div className="text-right">
+              {plan.code === "CUSTOM" ? (
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {moduleIds.length} módulo(s) selecionado(s)
+                </p>
+              ) : (
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {money(plan.monthlyPrice)}
+                  <span className="text-xs font-normal text-[var(--text-muted)]">
+                    /mês
+                  </span>
+                </p>
+              )}
+              <Link
+                href="/planos"
+                className="text-xs text-[var(--text-secondary)] hover:underline"
+              >
+                Trocar plano
+              </Link>
+            </div>
+          </div>
+        )}
 
         {done ? (
           <div className="space-y-4">
@@ -103,9 +217,9 @@ export default function CadastroEmpresaPage() {
             </div>
 
             <p className="text-sm text-[var(--text-secondary)]">
-              Enviamos um e-mail para <strong>{form.email}</strong>{" "}
+              Enviamos um e-mail para <strong>{form.adminEmail}</strong>{" "}
               com o link para definir a senha e começar a usar o
-              sistema.
+              sistema. Seu teste grátis de 14 dias já começou.
             </p>
 
             <Link
@@ -117,8 +231,8 @@ export default function CadastroEmpresaPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+            <div className="grid gap-4 sm:grid-cols-6">
+              <div className="sm:col-span-3">
                 <label className={labelClass} htmlFor="legalName">
                   Razão social{" "}
                   <span className="text-[var(--danger)]">*</span>
@@ -134,22 +248,7 @@ export default function CadastroEmpresaPage() {
                 />
               </div>
 
-              <div>
-                <label className={labelClass} htmlFor="tradeName">
-                  Nome fantasia
-                </label>
-
-                <input
-                  id="tradeName"
-                  className={fieldClass}
-                  value={form.tradeName}
-                  onChange={(e) =>
-                    setField("tradeName", e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
+              <div className="sm:col-span-1">
                 <label className={labelClass} htmlFor="personType">
                   Tipo de documento
                 </label>
@@ -179,7 +278,7 @@ export default function CadastroEmpresaPage() {
                 </select>
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="document">
                   {isCompany ? "CNPJ" : "CPF"}{" "}
                   <span className="text-[var(--danger)]">*</span>
@@ -204,10 +303,24 @@ export default function CadastroEmpresaPage() {
                 />
               </div>
 
-              <div>
+              <div className="sm:col-span-3">
+                <label className={labelClass} htmlFor="tradeName">
+                  Nome fantasia
+                </label>
+
+                <input
+                  id="tradeName"
+                  className={fieldClass}
+                  value={form.tradeName}
+                  onChange={(e) =>
+                    setField("tradeName", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="email">
-                  E-mail{" "}
-                  <span className="text-[var(--danger)]">*</span>
+                  E-mail da empresa
                 </label>
 
                 <input
@@ -217,13 +330,9 @@ export default function CadastroEmpresaPage() {
                   value={form.email}
                   onChange={(e) => setField("email", e.target.value)}
                 />
-
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Também será o e-mail de login do administrador.
-                </p>
               </div>
 
-              <div>
+              <div className="sm:col-span-1">
                 <label className={labelClass} htmlFor="phone">
                   Telefone
                 </label>
@@ -236,20 +345,51 @@ export default function CadastroEmpresaPage() {
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="adminName">
-                  Nome do administrador{" "}
-                  <span className="text-[var(--danger)]">*</span>
-                </label>
+              <AddressFields
+                idPrefix="signup"
+                value={address}
+                onChange={setAddress}
+              />
+            </div>
 
-                <input
-                  id="adminName"
-                  className={fieldClass}
-                  value={form.adminName}
-                  onChange={(e) =>
-                    setField("adminName", e.target.value)
-                  }
-                />
+            <div className="border-t border-[var(--border)] pt-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass} htmlFor="adminName">
+                    Nome do administrador{" "}
+                    <span className="text-[var(--danger)]">*</span>
+                  </label>
+
+                  <input
+                    id="adminName"
+                    className={fieldClass}
+                    value={form.adminName}
+                    onChange={(e) =>
+                      setField("adminName", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass} htmlFor="adminEmail">
+                    E-mail do administrador{" "}
+                    <span className="text-[var(--danger)]">*</span>
+                  </label>
+
+                  <input
+                    id="adminEmail"
+                    type="email"
+                    className={fieldClass}
+                    value={form.adminEmail}
+                    onChange={(e) =>
+                      setField("adminEmail", e.target.value)
+                    }
+                  />
+
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Será o e-mail de login do sistema.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -280,5 +420,13 @@ export default function CadastroEmpresaPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CadastroEmpresaPage() {
+  return (
+    <Suspense fallback={null}>
+      <CadastroEmpresaForm />
+    </Suspense>
   );
 }

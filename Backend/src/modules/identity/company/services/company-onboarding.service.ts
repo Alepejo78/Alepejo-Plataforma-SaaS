@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  NotFoundException,
   Injectable,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -8,12 +9,19 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../../../../core/prisma/prisma.service';
 import { UsersService } from '../../users/services/users.service';
 import { LicenseService } from '../../license/services/license.service';
+import {
+  CUSTOM_PLAN_CODE,
+  MINIMUM_CUSTOM_MODULE_CODES,
+} from '../../license/constants/custom-plan.constants';
 
 import { CompanyRepository } from '../repositories/company.repository';
 import { CompanySignupDto } from '../dto/company-signup.dto';
 import { CompanyAdditionalDto } from '../dto/company-additional.dto';
 
 const DEFAULT_PLAN_CODE = 'ENTERPRISE';
+
+/** Duração do teste grátis pra quem se cadastra escolhendo um plano comercial (decisão do usuário). */
+const TRIAL_DAYS = 14;
 
 /** Menor código raiz gerado pra cliente novo — os manuais (ex.: "ALEPEJO") ficam fora dessa faixa. */
 const GROUP_CODE_BASE = 1000;
@@ -61,6 +69,14 @@ export class CompanyOnboardingService {
       );
     }
 
+    const plan = await this.prisma.plan.findUnique({
+      where: { id: dto.planId },
+    });
+
+    if (!plan || !plan.active) {
+      throw new NotFoundException('Plano não encontrado.');
+    }
+
     const companyExists = await this.companyRepository.findByDocument(
       dto.document,
     );
@@ -78,19 +94,64 @@ export class CompanyOnboardingService {
       document: dto.document,
       email: dto.email,
       phone: dto.phone,
+      zipCode: dto.zipCode,
+      street: dto.street,
+      number: dto.number,
+      district: dto.district,
+      city: dto.city,
+      state: dto.state,
       active: true,
     });
 
-    await this.provisionPlan(company.id);
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+
+    await this.licenseService.assignPlan(company.id, plan.id, trialEndsAt);
+
+    if (plan.code === CUSTOM_PLAN_CODE) {
+      await this.enableCustomModules(company.id, dto.moduleIds ?? []);
+    }
+
     const roleId = await this.provisionAdminRole(company.id);
     await this.provisionAdminUser(
       company.id,
       dto.adminName,
-      dto.email,
+      dto.adminEmail,
       roleId,
     );
 
     return { companyId: company.id };
+  }
+
+  /**
+   * Plano Customizado não tem planModules fixo — o acesso vem inteiro
+   * dos CompanyModule habilitados aqui. O mínimo
+   * (`MINIMUM_CUSTOM_MODULE_CODES`) sempre entra, mesmo que o
+   * montador não tenha mandado (defesa contra bug no front ou
+   * chamada direta da API).
+   */
+  private async enableCustomModules(
+    companyId: string,
+    moduleIds: string[],
+  ) {
+    const minimumModules = await this.prisma.module.findMany({
+      where: { code: { in: MINIMUM_CUSTOM_MODULE_CODES }, active: true },
+      select: { id: true },
+    });
+
+    const chosenModules = await this.prisma.module.findMany({
+      where: { id: { in: moduleIds }, active: true },
+      select: { id: true },
+    });
+
+    const allIds = new Set([
+      ...minimumModules.map((m) => m.id),
+      ...chosenModules.map((m) => m.id),
+    ]);
+
+    for (const moduleId of allIds) {
+      await this.licenseService.enableModule(companyId, moduleId);
+    }
   }
 
   /**
@@ -100,11 +161,16 @@ export class CompanyOnboardingService {
    * rastro de raiz, então exige a confirmação manual
    * (`dto.isGroupCompany`) em vez disso. A empresa nova herda o mesmo
    * plano/módulos da raiz, não precisa comprar de novo.
+   *
+   * Não cria usuário nenhum aqui — só vincula quem já está logado
+   * (login cruzado) à empresa nova. Convidar outra pessoa pra essa
+   * empresa é decisão separada do administrador, feita depois em
+   * Configurações > Usuários, não algo automático no cadastro da
+   * empresa.
    */
   async createAdditional(
     requesterCompanyId: string,
     requesterUserId: string,
-    requesterEmail: string,
     dto: CompanyAdditionalDto,
   ) {
     const docType = documentType(dto.document);
@@ -144,9 +210,15 @@ export class CompanyOnboardingService {
     }
 
     if (docType === 'CNPJ') {
-      if (cnpjRoot(dto.document) !== cnpjRoot(rootCompany.document)) {
+      const sameRoot =
+        cnpjRoot(dto.document) === cnpjRoot(rootCompany.document);
+
+      // Nem toda empresa do grupo compartilha a raiz do CNPJ (grupos
+      // econômicos com CNPJs de raízes diferentes existem) — sem raiz
+      // batendo, exige a mesma confirmação manual que o CPF já usa.
+      if (!sameRoot && !dto.isGroupCompany) {
         throw new BadRequestException(
-          'O CNPJ precisa ter a mesma raiz (8 primeiros dígitos) do CNPJ da empresa que já tem a licença.',
+          'O CNPJ não tem a mesma raiz (8 primeiros dígitos) do CNPJ da empresa que já tem a licença — confirme que esta é uma empresa do grupo.',
         );
       }
     } else if (!dto.isGroupCompany) {
@@ -162,6 +234,12 @@ export class CompanyOnboardingService {
       document: dto.document,
       email: dto.email,
       phone: dto.phone,
+      zipCode: dto.zipCode,
+      street: dto.street,
+      number: dto.number,
+      district: dto.district,
+      city: dto.city,
+      state: dto.state,
       active: true,
       rootCompany: {
         connect: { id: rootCompanyId },
@@ -192,23 +270,6 @@ export class CompanyOnboardingService {
       create: { userId: requesterUserId, roleId },
       update: {},
     });
-
-    // Se o "e-mail do administrador" informado for o mesmo de quem
-    // está cadastrando, o vínculo acima já basta — criar um usuário
-    // separado colidiria com o e-mail único (@unique) e duplicaria a
-    // conta da mesma pessoa.
-    const sameEmailAsRequester =
-      dto.adminEmail.trim().toLowerCase() ===
-      requesterEmail.trim().toLowerCase();
-
-    if (!sameEmailAsRequester) {
-      await this.provisionAdminUser(
-        company.id,
-        dto.adminName,
-        dto.adminEmail,
-        roleId,
-      );
-    }
 
     return { companyId: company.id };
   }
@@ -291,7 +352,15 @@ export class CompanyOnboardingService {
     }
   }
 
-  /** Cria a Role "Administrador" com todas as permissions do catálogo — mesma lógica de prisma/seed.ts. */
+  /**
+   * Cria a Role "Administrador" com todas as permissions do catálogo,
+   * EXCETO as `platform.*` — essas são de administração da plataforma
+   * como um todo (gerenciar o catálogo global de planos/módulos,
+   * gerenciar o catálogo de permissions), reservadas pra quem opera o
+   * AlePejo ERP Cloud (empresa ALEPEJO do seed), nunca pro admin de um
+   * cliente que assinou o sistema. Conceder isso a cada empresa nova
+   * dava acesso de dono da plataforma pra qualquer cliente.
+   */
   private async provisionAdminRole(companyId: string): Promise<string> {
     const role = await this.prisma.role.create({
       data: {
@@ -303,7 +372,9 @@ export class CompanyOnboardingService {
       },
     });
 
-    const permissions = await this.prisma.permission.findMany();
+    const permissions = await this.prisma.permission.findMany({
+      where: { NOT: { code: { startsWith: 'platform.' } } },
+    });
 
     await this.prisma.rolePermission.createMany({
       data: permissions.map((permission) => ({

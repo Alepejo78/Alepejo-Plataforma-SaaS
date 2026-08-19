@@ -2,9 +2,11 @@ import {
   IsBoolean,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateModuleDto {
@@ -40,4 +42,15 @@ export class CreateModuleDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  /** Preço quando contratado avulso (add-on), fora de um plano. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  monthlyPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  yearlyPrice?: number;
 }

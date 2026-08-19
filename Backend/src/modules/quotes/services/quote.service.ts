@@ -9,6 +9,7 @@ import { BusinessPartnerRole, QuoteStatus } from '@prisma/client';
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
+import { SalesOrderService } from '../../sales-orders/services/sales-order.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
@@ -30,6 +31,7 @@ export class QuoteService {
     private readonly documentSequence: DocumentSequenceService,
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
+    private readonly salesOrderService: SalesOrderService,
   ) {}
 
   async create(companyId: string, dto: CreateQuoteDto) {
@@ -271,5 +273,51 @@ export class QuoteService {
     }
 
     return this.repository.cancel(id);
+  }
+
+  /**
+   * Aprova o orçamento e gera o Pedido de Venda sozinho (mesmos
+   * itens/valores/cliente/depósito), reaproveitando
+   * `SalesOrderService.create` — mesma lógica de negócio de um pedido
+   * criado manualmente (numeração, notificação ao cliente, geração de
+   * ordem de produção quando falta saldo). O pedido gerado fica
+   * vinculado ao orçamento (SalesOrder.quoteId) só como referência; a
+   * venda em si continua nascendo do Pedido (ou direto), nunca direto
+   * do Orçamento aprovado.
+   */
+  async approve(companyId: string, id: string) {
+    const quote = await this.findOne(companyId, id);
+
+    if (quote.status !== QuoteStatus.DRAFT) {
+      throw new BadRequestException(
+        'Somente orçamentos em rascunho podem ser aprovados.',
+      );
+    }
+
+    const quoteNumber = `ORC-${String(quote.number).padStart(6, '0')}`;
+    const generatedNote = `Gerado automaticamente a partir do Orçamento ${quoteNumber}.`;
+
+    const salesOrder = await this.salesOrderService.create(companyId, {
+      partnerId: quote.partnerId,
+      warehouseId: quote.warehouseId,
+      observation: quote.observation
+        ? `${quote.observation}\n\n${generatedNote}`
+        : generatedNote,
+      discountValue: Number(quote.discountValue),
+      freightValue: Number(quote.freightValue),
+      otherExpenses: Number(quote.otherExpenses),
+      items: quote.items.map((item) => ({
+        productId: item.productId,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+      })),
+    });
+
+    await this.prisma.salesOrder.update({
+      where: { id: salesOrder.id },
+      data: { quoteId: quote.id },
+    });
+
+    return this.repository.approve(id);
   }
 }

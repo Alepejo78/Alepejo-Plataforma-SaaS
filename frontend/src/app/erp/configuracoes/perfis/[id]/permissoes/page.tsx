@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 
 import { OsShell } from "@/components";
+import { useAuth } from "@/providers/AuthProvider";
 
 import { roleService, type Role } from "@/services/role.service";
 import {
@@ -45,6 +46,7 @@ const BUSINESS_COLUMNS: {
 }[] = [
   { key: "purchaseApprove", label: "Aprovador Compras", codes: ["purchase.approve"] },
   { key: "saleApprove", label: "Aprovador vendas", codes: ["sale.approve"] },
+  { key: "quoteApprove", label: "Aprovador orçamentos", codes: ["quote.approve"] },
   { key: "inventoryEntryExit", label: "Entrada e saída Estoque", codes: ["inventory.entry", "inventory.exit"] },
   { key: "productionComplete", label: "Concluir produção", codes: ["production-order.complete"] },
   { key: "inventoryAdjust", label: "Ajustes de estoque", codes: ["inventory.adjust"] },
@@ -94,6 +96,43 @@ const SCOPE_LABEL: Record<"APP" | "ERP", string> = {
   ERP: "ERP — Operação do dia a dia",
 };
 
+/**
+ * Grupo de permissão -> módulo licenciado exigido pra poder MARCAR
+ * (não só ver) essas permissões num perfil. Grupos fora deste mapa
+ * (SYSTEM, COMPANY, USER, ROLE, PERMISSION, LICENSE, WHATSAPP, EMAIL,
+ * CRM, cadastros de apoio...) não dependem de módulo — sempre
+ * marcáveis, igual já era antes.
+ *
+ * Vários grupos de permissão caem no mesmo módulo (ex.: PARTNER,
+ * CLIENT e SUPPLIER são todos BPS) — os grupos não batem 1:1 com os
+ * módulos vendáveis, então o mapa é manual em vez de derivado do
+ * código do grupo.
+ */
+const GROUP_MODULE: Record<string, string> = {
+  PARTNER: "BPS",
+  CLIENT: "BPS",
+  SUPPLIER: "BPS",
+  PRODUCT: "PRODUCTS",
+  PRODUCT_CATEGORY: "PRODUCTS",
+  BRAND: "PRODUCTS",
+  UNIT_OF_MEASURE: "PRODUCTS",
+  INVENTORY: "INVENTORY",
+  STOCK_MOVEMENT: "INVENTORY",
+  WAREHOUSE: "INVENTORY",
+  PURCHASE: "PURCHASE",
+  SALES: "SALES",
+  FINANCIAL: "FINANCE",
+  FINANCIAL_ENTRY: "FINANCE",
+  BUDGET: "FINANCE",
+  CHART_OF_ACCOUNT: "FINANCE",
+  CHART_OF_ACCOUNT_CLASSIFICATION: "FINANCE",
+  HR: "HR",
+  LABOR: "LABOR",
+  PAYROLL: "LABOR",
+  PRODUCTION: "PRODUCTION",
+  COMPANY_BRANDING: "BRANDING",
+};
+
 interface GroupRow {
   groupId: string;
   groupCode: string;
@@ -105,10 +144,15 @@ function scopeOf(row: GroupRow): "APP" | "ERP" {
   return GROUP_SCOPE[row.groupCode] ?? "ERP";
 }
 
+function moduleOf(row: GroupRow): string | null {
+  return GROUP_MODULE[row.groupCode] ?? null;
+}
+
 export default function ConfigurarPerfilPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const roleId = params.id;
+  const { hasModule } = useAuth();
 
   const [role, setRole] = useState<Role | null>(null);
   const [roleName, setRoleName] = useState("");
@@ -346,15 +390,27 @@ export default function ConfigurarPerfilPage() {
     2 + GENERIC_COLUMNS.length + BUSINESS_COLUMNS.length;
 
   function renderGroupRow(row: GroupRow) {
+    const requiredModule = moduleOf(row);
+    const locked = Boolean(requiredModule && !hasModule(requiredModule));
+
     const rowIds = getRowPermissionIds(row);
     const rowChecked =
-      rowIds.length > 0 && rowIds.every((id) => grants.has(id));
+      !locked && rowIds.length > 0 && rowIds.every((id) => grants.has(id));
     const rowPending = rowIds.some((id) => pending.has(id));
 
     return (
-      <tr key={row.groupId}>
+      <tr key={row.groupId} className={locked ? "opacity-60" : undefined}>
         <td className="border-t border-[var(--border)] px-4 py-2 font-medium text-[var(--text-primary)]">
-          {row.groupName}
+          <span className="flex items-center gap-1.5">
+            {row.groupName}
+            {locked && (
+              <Lock
+                size={12}
+                className="shrink-0 text-[var(--text-muted)]"
+                aria-label="Módulo não licenciado"
+              />
+            )}
+          </span>
         </td>
 
         <td className="border-t border-[var(--border)] px-2 py-2 text-center">
@@ -362,26 +418,31 @@ export default function ConfigurarPerfilPage() {
             <input
               type="checkbox"
               checked={rowChecked}
-              disabled={rowPending}
-              title="Marcar/desmarcar todas as caixas desta linha"
+              disabled={rowPending || locked}
+              title={
+                locked
+                  ? "Módulo não licenciado — adquira em Licenciamento para liberar"
+                  : "Marcar/desmarcar todas as caixas desta linha"
+              }
               onChange={() => void toggle(rowIds)}
             />
           )}
         </td>
 
         {GENERIC_COLUMNS.map((column) =>
-          renderCell(column.key, findBySuffix(row, column.key))
+          renderCell(column.key, findBySuffix(row, column.key), locked)
         )}
 
         {BUSINESS_COLUMNS.map((column) => {
           if (column.key === "reverse") {
-            return renderCell(column.key, findReverse(row));
+            return renderCell(column.key, findReverse(row), locked);
           }
 
           if (column.codes.length > 1) {
             return renderCell(
               column.key,
-              findByCodes(row, column.codes)
+              findByCodes(row, column.codes),
+              locked
             );
           }
 
@@ -390,7 +451,7 @@ export default function ConfigurarPerfilPage() {
               (p) => p.code === column.codes[0]
             ) ?? null;
 
-          return renderCell(column.key, match);
+          return renderCell(column.key, match, locked);
         })}
       </tr>
     );
@@ -411,7 +472,8 @@ export default function ConfigurarPerfilPage() {
 
   function renderCell(
     key: string,
-    permission: Permission | Permission[] | null
+    permission: Permission | Permission[] | null,
+    locked: boolean
   ) {
     const list = Array.isArray(permission)
       ? permission
@@ -431,8 +493,13 @@ export default function ConfigurarPerfilPage() {
     }
 
     const ids = list.map((p) => p.id);
-    const checked = ids.every((id) => grants.has(id));
     const isPending = ids.some((id) => pending.has(id));
+
+    // Módulo não licenciado: sempre desmarcado e sem opção de marcar,
+    // mesmo que o perfil já tivesse essa permissão concedida antes de
+    // perder a licença (o vínculo continua existindo no banco — quem
+    // bloqueia de verdade é o LicenseGuard — só a marcação some daqui).
+    const checked = !locked && ids.every((id) => grants.has(id));
 
     return (
       <td
@@ -442,7 +509,12 @@ export default function ConfigurarPerfilPage() {
         <input
           type="checkbox"
           checked={checked}
-          disabled={isPending}
+          disabled={isPending || locked}
+          title={
+            locked
+              ? "Módulo não licenciado — adquira em Licenciamento para liberar"
+              : undefined
+          }
           onChange={() => void toggle(ids)}
         />
       </td>

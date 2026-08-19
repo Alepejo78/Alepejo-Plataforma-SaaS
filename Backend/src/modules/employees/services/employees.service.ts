@@ -7,6 +7,7 @@ import {
 import { Employee, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { EmployeesRepository } from '../repositories/employees.repository';
 
@@ -15,12 +16,14 @@ import { UpdateEmployeeDto } from '../dto/update-employee.dto';
 import { EmployeeFilterDto } from '../dto/employee-filter.dto';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const SEQUENCE_TYPE = 'EMPLOYEE';
 
 @Injectable()
 export class EmployeesService {
   constructor(
     private readonly repository: EmployeesRepository,
     private readonly prisma: PrismaService,
+    private readonly documentSequence: DocumentSequenceService,
   ) {}
 
   /**
@@ -245,7 +248,20 @@ export class EmployeesService {
     this.applyBusinessRules(dto);
 
     try {
-      return await this.repository.create(targetCompanyId, dto);
+      return await this.prisma.$transaction(async (tx) => {
+        const employeeNumber = await this.documentSequence.next(
+          tx,
+          targetCompanyId,
+          SEQUENCE_TYPE,
+        );
+
+        return this.repository.create(
+          tx,
+          targetCompanyId,
+          employeeNumber,
+          dto,
+        );
+      });
     } catch (err) {
       this.handleUniqueConstraint(err);
     }

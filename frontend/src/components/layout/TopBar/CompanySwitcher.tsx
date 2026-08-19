@@ -82,10 +82,27 @@ export function CompanySwitcher() {
 
     try {
       await authService.switchCompany(companyId);
+
       // Recarrega a página inteira: praticamente toda tela busca dados
       // assumindo uma empresa fixa por sessão, então invalidar cache
       // tela por tela seria mais arriscado que só recarregar.
-      window.location.reload();
+      //
+      // Troca também o nome da empresa na URL pro da empresa nova —
+      // sem isso a barra de endereço ficava mostrando o slug da
+      // empresa antiga até a próxima navegação (o middleware só
+      // reescreve com base no cookie, que essa própria tela acabou de
+      // desatualizar).
+      const targetSlug = companies?.find((c) => c.id === companyId)?.slug;
+      const segments = window.location.pathname
+        .split("/")
+        .filter(Boolean);
+      const rest = segments.slice(1).join("/");
+
+      const newPath = targetSlug
+        ? `/${targetSlug}/${rest}`
+        : window.location.pathname;
+
+      window.location.href = `${newPath}${window.location.search}`;
     } catch {
       setSwitching(false);
       setOpen(false);

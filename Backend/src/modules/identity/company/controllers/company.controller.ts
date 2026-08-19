@@ -20,6 +20,7 @@ import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user
 
 import { CompanyService } from '../services/company.service';
 import { CompanyOnboardingService } from '../services/company-onboarding.service';
+import { LicenseService } from '../../license/services/license.service';
 
 import { CreateCompanyDto } from '../dto/create-company.dto';
 import { UpdateCompanyDto } from '../dto/update-company.dto';
@@ -45,7 +46,45 @@ export class CompanyController {
   constructor(
     private readonly companyService: CompanyService,
     private readonly onboardingService: CompanyOnboardingService,
+    private readonly licenseService: LicenseService,
   ) {}
+
+  /**
+   * Página pública de preços (`/planos`) não tem sessão — precisa de
+   * uma rota sem autenticação pra listar os planos. Mesmos dados de
+   * `GET /identity/license/plans` (autenticado), só que aberta.
+   */
+  @Public()
+  @Get('plans')
+  @ApiOperation({ summary: 'Listar planos comerciais (público, pra página de preços)' })
+  getPublicPlans() {
+    return this.licenseService.getPlans();
+  }
+
+  /**
+   * Catálogo de módulos avulsos (público) — alimenta o montador do
+   * plano Customizado em `/planos`, que precisa do preço de cada
+   * módulo antes de qualquer cadastro/sessão existir.
+   */
+  @Public()
+  @Get('modules')
+  @ApiOperation({ summary: 'Listar módulos avulsos (público, pro montador de plano customizado)' })
+  getPublicModules() {
+    return this.licenseService.getModules();
+  }
+
+  /**
+   * Página pública de login com o nome da empresa na URL
+   * (`/<slug>/login`) também não tem sessão — só o nome, nada sensível.
+   */
+  @Public()
+  @Get('by-slug/:slug')
+  @ApiOperation({
+    summary: 'Nome da empresa a partir do slug (público, pra tela de login com o nome da empresa)',
+  })
+  getPublicBySlug(@Param('slug') slug: string) {
+    return this.companyService.findPublicBySlug(slug);
+  }
 
   @Public()
   @Post('signup')
@@ -86,7 +125,6 @@ export class CompanyController {
     return this.onboardingService.createAdditional(
       user.companyId,
       user.id,
-      user.email,
       dto,
     );
   }

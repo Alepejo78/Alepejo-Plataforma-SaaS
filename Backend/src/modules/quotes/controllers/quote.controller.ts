@@ -76,4 +76,16 @@ export class QuoteController {
   ) {
     return this.service.cancel(companyId, id);
   }
+
+  @Patch(':id/approve')
+  @Permissions('quote.approve')
+  @ApiOperation({
+    summary: 'Aprovar orçamento (gera Pedido de Venda automaticamente)',
+  })
+  approve(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.approve(companyId, id);
+  }
 }
