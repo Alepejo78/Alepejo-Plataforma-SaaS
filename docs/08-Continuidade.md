@@ -3,6 +3,28 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 E-mail de produção migrado pro Resend — confirmado entregando (19-08-2026)
+
+Continuação do item logo abaixo: o fix de IPv4 resolveu o
+`ENETUNREACH`, mas expôs o problema de verdade — Railway bloqueia
+porta SMTP (465/587) pra quem não está no plano Pro (confirmado na
+doc oficial do Railway). Solução: `EmailNotificationsService` ganhou
+um segundo caminho de envio, por HTTPS via **Resend**
+(`sendViaResend()`), usado automaticamente no fallback global sempre
+que `RESEND_API_KEY` estiver setada — sem ela, continua tudo por
+SMTP/nodemailer exatamente como antes (dev local nunca precisou
+mudar). SMTP customizado por empresa (`Company.smtp*`) não foi
+mexido — continua só nodemailer; **fica em aberto** que, em produção
+no Railway, qualquer empresa cliente que configurar SMTP próprio vai
+esbarrar no mesmo bloqueio de porta — só o fallback global da
+plataforma foi migrado pro Resend por enquanto.
+
+Domínio `alepejo.com.br` verificado no Resend (DKIM, SPF/MX, DMARC —
+4 registros no Registro.br). Variáveis novas no Railway:
+`RESEND_API_KEY`, `RESEND_FROM_EMAIL` ("AlePejo ERP Cloud
+<naoresponda@alepejo.com.br>"). Testado de ponta a ponta: "Esqueci
+minha senha" em produção → e-mail chegou de verdade.
+
 ## 🟢 E-mail (SMTP Gmail) não saía em produção — ENETUNREACH IPv6 (19-08-2026)
 
 Sintoma: "Reenviar meu link de acesso" (`/esqueci-senha`) respondia
