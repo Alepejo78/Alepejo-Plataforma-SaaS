@@ -1,7 +1,9 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { LicenseRepository } from '../repositories/license.repository';
 import { CreatePlanDto } from '../dto/create-plan.dto';
@@ -292,7 +294,29 @@ async updatePlan(id: string, dto: UpdatePlanDto) {
 }
 
 async removePlan(id: string) {
-  return this.repository.removePlan(id);
+  try {
+    return await this.repository.removePlan(id);
+  } catch (err) {
+    // A violação de FK (empresa presa nesse plano, `onDelete:
+    // Restrict` no schema) às vezes chega como
+    // `PrismaClientKnownRequestError` (P2003) e às vezes como
+    // `PrismaClientUnknownRequestError` (erro cru do Postgres,
+    // código 23001/23503) — depende de como o Postgres devolve o
+    // erro. Por isso checa pela mensagem em vez de só pelo tipo.
+    const message = err instanceof Error ? err.message : String(err);
+    const isForeignKeyViolation =
+      (err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2003') ||
+      /foreign key constraint|violates.*RESTRICT/i.test(message);
+
+    if (isForeignKeyViolation) {
+      throw new ConflictException(
+        'Não é possível excluir: existem empresas usando este plano. Desative-o em vez de excluir, ou mude essas empresas de plano antes.',
+      );
+    }
+
+    throw err;
+  }
 }
 
 async getModule(id: string) {
