@@ -3,6 +3,55 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Login com senha certa não entrava em produção (19-08-2026)
+
+Sintoma: após trocar a senha pelo link de redefinição, digitar a senha
+certa e clicar em Entrar não dava erro nenhum, mas também não
+navegava — ficava preso na mesma tela de login. Senha errada
+funcionava normal (mostrava "Usuário ou senha inválidos."). Duas
+causas em sequência:
+
+1. **`LoginPage.tsx`**: depois do login, o código chamava
+   `router.replace(destino)` seguido de `router.refresh()` — essa
+   combinação entra em corrida no App Router e a navegação nunca
+   comitava (a URL não mudava nem um pouco). Trocado por
+   `window.location.href = destino` (navegação de verdade, mesmo
+   padrão já usado no resto do `AuthProvider` pra esse tipo de
+   redirecionamento).
+
+2. **Causa raiz de verdade**: a Vercel ainda tinha a variável de
+   ambiente `NEXT_PUBLIC_API_URL` apontando direto pra URL do Railway
+   (`https://...up.railway.app/api`), sobrando de antes do proxy
+   same-origin existir (ver `env.ts` — o padrão correto é `/api`,
+   relativo). Como `NEXT_PUBLIC_*` é embutida no bundle JS no momento
+   do build, o navegador ignorava totalmente o proxy do
+   `next.config.ts` e chamava o Railway direto (cross-origin) — login
+   e `/auth/me` pareciam funcionar (por isso nenhum erro aparecia),
+   mas o cookie de sessão ficava gravado no domínio do Railway, não no
+   `app.alepejo.com.br`, então o middleware nunca via a sessão pra
+   liberar a navegação. Corrigido removendo `NEXT_PUBLIC_API_URL` das
+   variáveis de ambiente da Vercel e forçando reimplantação sem cache
+   de build. Confirmado: bundle novo passou a usar `/api`, login
+   funcionando de ponta a ponta.
+
+**Lição pra próxima vez que a Vercel fizer algo estranho com variável
+de ambiente**: baixar os chunks JS servidos (`curl` na página +
+`grep` nos `.js` de `/_next/static/chunks/`) é a forma mais rápida de
+confirmar o que **realmente** foi embutido no build, sem depender do
+que a variável "deveria" estar valendo no painel.
+
+## 🟢 Aba de e-mail/SMTP por empresa ocultada (19-08-2026)
+
+Decisão do usuário: como o SMTP customizado por empresa não funciona
+em produção no plano atual do Railway (mesmo bloqueio de porta do
+item abaixo), a aba de configuração de e-mail em
+Configurações → Notificações foi ocultada, deixando só WhatsApp
+visível. `EmailSettingsTab` (componente) e as rotas de backend
+continuam existindo, só não são mais alcançáveis pela UI — reativar é
+só importar de volta em
+`frontend/src/app/erp/configuracoes/notificacoes/page.tsx`. Também
+removidas as referências a "e-mail" nos cards de `/os` e `/os/apis`.
+
 ## 🟢 E-mail de produção migrado pro Resend — confirmado entregando (19-08-2026)
 
 Continuação do item logo abaixo: o fix de IPv4 resolveu o
