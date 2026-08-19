@@ -3,6 +3,153 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Login não persistia em produção — frontend/backend em domínios diferentes (19-08-2026)
+
+Depois de tudo no ar (Railway + Vercel + domínio + CORS +
+`sameSite: none`), o login ainda "funcionava" (POST retornava 201,
+`/auth/me` retornava 200 via `fetch` direto) mas ao navegar pra
+qualquer tela protegida, voltava pro `/login` — o middleware achava
+que não tinha sessão.
+
+**Causa raiz**: o cookie httpOnly de sessão é gravado pelo domínio que
+RESPONDE ao login — em produção, esse domínio é o do backend
+(`up.railway.app`), não o do frontend (`app.alepejo.com.br`). O
+middleware do Next roda no frontend e só enxerga cookies que o
+navegador manda PRA ELE — como o cookie pertence a outro domínio, o
+navegador nunca envia. `sameSite: none` resolve chamadas `fetch` feitas
+pelo JS da página (por isso os testes diretos "funcionavam"), mas não
+resolve o middleware, que roda antes de qualquer JS de cliente.
+
+**Correção de verdade — mesma origem pro navegador**: adicionado
+`rewrites()` em `frontend/next.config.ts` (`/api/*` e `/uploads/*`
+repassados por baixo dos panos pro backend real via `BACKEND_URL`, env
+var só de servidor, nunca exposta ao navegador). `NEXT_PUBLIC_API_URL`
+passou a ser `/api` (relativo) por padrão — o navegador sempre chama o
+próprio domínio do frontend, nunca o backend direto. Com isso o cookie
+de sessão passa a pertencer ao domínio do frontend também, e o
+middleware consegue lê-lo. `middleware.ts` matcher ganhou `uploads` na
+lista de exclusão (senão a checagem de login bloquearia logo/avatar
+público). Testado local com o proxy ativo: login → `/os` sem cair de
+volta pro login.
+
+Variável de ambiente nova pro Vercel: `BACKEND_URL=https://alepejo-
+plataforma-saas-production.up.railway.app` (SEM `NEXT_PUBLIC_` — só o
+servidor do Next usa, pro rewrite). Precisa cadastrar essa e trocar
+`NEXT_PUBLIC_API_URL` pra `/api` nas Variáveis de Ambiente do projeto
+no Vercel.
+
+**Nota de arquitetura pra próxima vez**: sempre que frontend e backend
+ficarem em domínios de fato diferentes (não apenas subdomínios), cookie
+de sessão httpOnly PRECISA passar por rewrite/proxy de mesma origem —
+`sameSite: none` sozinho não basta pro middleware do lado do servidor
+funcionar, só resolve chamadas feitas por JS já carregado.
+
+## 🟢 Domínio próprio no ar — alepejo.com.br (19-08-2026)
+
+Sistema 100% em produção, domínio real funcionando:
+- **`alepejo.com.br`** e **`www.alepejo.com.br`** → página institucional
+  (rewrite por host, ver `frontend/src/middleware.ts`,
+  `MARKETING_HOSTNAMES`).
+- **`app.alepejo.com.br`** → sistema/login (o app de sempre).
+- Backend: `https://alepejo-plataforma-saas-production.up.railway.app`
+  (Railway, projeto `stunning-acceptance`).
+
+Domínio comprado no **Registro.br**. Registros DNS cadastrados lá:
+
+| Tipo | Nome | Valor |
+|---|---|---|
+| A | `@` | `216.198.79.1` |
+| CNAME | `www` | `1df34919b64c143c.vercel-dns-017.com.` |
+| CNAME | `app` | `1df34919b64c143c.vercel-dns-017.com.` |
+
+**Cuidado pra próxima vez**: a interface do Vercel em português traduz
+alguns valores técnicos por engano — "A" (tipo de registro DNS) virou
+"UM", e o nome do subdomínio "app" virou "aplicativo". Sempre
+conferir o valor literal antes de copiar pro DNS quando a tela estiver
+em português.
+
+**Falta ainda**: atualizar `CORS_ORIGINS`/`FRONTEND_URL` no Railway
+pra incluir os domínios novos (`https://alepejo.com.br`,
+`https://www.alepejo.com.br`, `https://app.alepejo.com.br`) — hoje só
+tem o `.vercel.app` antigo. Sem isso, login pelo domínio novo vai
+falhar por CORS.
+
+## 🟢 Frontend em produção no Vercel — funcionando (19-08-2026)
+
+`https://alepejo-plataforma-saa-s.vercel.app` — confirmado: `/`
+redireciona (307) pro `/login` do próprio middleware, página carrega
+200. Projeto Vercel `alepejo-plataforma-saa-s`, time `Alepejo`, Root
+Directory `frontend`, variável `NEXT_PUBLIC_API_URL` apontando pro
+backend do Railway.
+
+Problemas encontrados nesse primeiro deploy (documentando pra não
+repetir):
+1. **Framework Preset veio como "Other"** em vez de "Next.js" — o
+   Vercel não detectou sozinho na importação inicial. Corrigido em
+   Settings → Build and Deployment, e forçou um redeploy sem cache
+   pra pegar a configuração nova.
+2. **"Autenticação Vercel" (Deployment Protection) bloqueando acesso
+   público** — todo projeto em Team no Vercel vem com isso ligado por
+   padrão, mostra uma tela de login DO VERCEL antes de qualquer
+   visitante ver o site. Desativado em Settings → Proteção de
+   Implantação.
+3. **URL de deploy individual (com hash tipo `-3hqwv3ex6-`) sempre
+   protegida por essa autenticação, mesmo desativando** — o domínio de
+   produção "limpo" (`alepejo-plataforma-saa-s.vercel.app`, visível em
+   Settings → Domains, fora do menu de Settings normal — fica como aba
+   própria no topo do projeto) é o que deve ser usado/testado, não o
+   link de cada deploy individual.
+
+Falta: setar `CORS_ORIGINS` e `FRONTEND_URL` no backend (Railway) com
+esse domínio do Vercel — sem isso o navegador bloqueia as chamadas de
+API por CORS.
+
+## 🟢 Backend em produção no Railway — funcionando (19-08-2026)
+
+Deploy concluído: `https://alepejo-plataforma-saas-production.up.railway.app`
+responde 200 em `/api/companies/plans` com o catálogo real (seed
+rodado). Projeto Railway: `stunning-acceptance`, ambiente `production`,
+serviço `Alepejo-Plataforma-SaaS` (Root Directory `/Backend`, branch
+`main`) + `Postgres` com `postgres-volume`, mais `alepejo-plataforma-
+saas-vol` (volume novo, montado em `/data`, `DATA_DIR=/data`).
+
+Problemas encontrados e corrigidos nessa primeira subida (documentando
+pra não repetir em outro deploy/serviço):
+
+1. **`JavaScript heap out of memory`** — o `"start"` do
+   `Backend/package.json` era `nest start` (compila TypeScript toda
+   vez que liga, pesado). Corrigido pra `node dist/src/main` (usa o
+   build já pronto). Também corrigido o CAMINHO: `nest build` gera
+   `dist/src/main.js`, não `dist/main.js` como o `start:prod` antigo
+   assumia — os dois scripts (`start` e `start:prod`) agora apontam
+   pro caminho certo.
+2. **`DATABASE_URL` ausente** — variável não existe sozinha, precisa
+   ser referenciada do serviço Postgres:
+   `DATABASE_URL=${{Postgres.DATABASE_URL}}` nas Variables do backend
+   (`Postgres` = nome exato do serviço no canvas).
+3. **502 mesmo com o app rodando** — o Railway injeta a própria
+   `PORT` (nesse caso, 8080) e o app respeita (`Number(process.env.
+   PORT) || 3001` em `main.ts`), mas o domínio público criado
+   manualmente ("Generate Service Domain") tinha sido apontado pra
+   3001. Corrigido editando a porta em Settings → Networking pra 8080.
+4. **500 genérico** — banco sem tabela nenhuma. Resolvido pelo
+   Console do próprio serviço no Railway: `npx prisma migrate deploy`
+   seguido de `npx prisma db seed`.
+
+Variáveis de ambiente configuradas no backend (Raw Editor): JWT_SECRET,
+JWT_REFRESH_SECRET, ENCRYPTION_KEY, ASAAS_WEBHOOK_TOKEN, ASAAS_API_KEY
+(chave de produção), ASAAS_API_URL (`https://api.asaas.com/v3`),
+SMTP_HOST/PORT/USER/PASS (mesmos do Gmail já usado em dev), DATA_DIR
+(`/data`), DATABASE_URL (referência ao Postgres). **Faltam ainda**
+`CORS_ORIGINS` e `FRONTEND_URL` — dependem do domínio do frontend
+(Vercel), que é o próximo passo.
+
+**Login Dono em produção**: seed criou com a MESMA senha de teste
+usada em dev local (`Lore@251378`, ver seed.ts) — precisa trocar via
+"Esqueci minha senha" assim que o frontend estiver no ar (o link do
+e-mail de redefinição aponta pro `FRONTEND_URL`, que ainda não está
+configurado).
+
 ## 🟢 DATA_DIR — uploads e WhatsApp prontos pra disco persistente (19-08-2026)
 
 Continuação do deploy: escolhido Railway (usuário já criou o projeto

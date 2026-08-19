@@ -1,6 +1,8 @@
-const apiUrl =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:3001/api";
+// Caminho relativo por padrão: o navegador sempre chama o próprio
+// domínio do frontend, que repassa pro backend de verdade por baixo
+// dos panos (ver `rewrites()` em next.config.ts) — assim cookie de
+// sessão e CORS nunca viram problema entre domínios diferentes.
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 export const env = {
   apiUrl,
