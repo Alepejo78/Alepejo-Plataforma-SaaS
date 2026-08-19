@@ -12,7 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { authService } from "@/services/auth.service";
-import { isPublicRoute } from "@/lib/publicRoutes";
+import { isPublicRoute, isMarketingHomepage } from "@/lib/publicRoutes";
 import { rememberCompanySlug } from "@/lib/companyLogin";
 
 import type {
@@ -89,7 +89,11 @@ export function AuthProvider({
         // criar senha, deixando-o sem nenhuma forma de entrar.
         if (
           typeof window !== "undefined" &&
-          !isPublicRoute(window.location.pathname)
+          !isPublicRoute(window.location.pathname) &&
+          !isMarketingHomepage(
+            window.location.pathname,
+            window.location.hostname
+          )
         ) {
           const { pathname, search } = window.location;
 

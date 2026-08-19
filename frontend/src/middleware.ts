@@ -19,7 +19,8 @@ const REFRESH_TOKEN_COOKIE = "alepejo_rt";
  * de teste/preview.
  */
 const MARKETING_HOSTNAMES = (
-  process.env.MARKETING_HOSTNAMES ?? "alepejo.com.br,www.alepejo.com.br"
+  process.env.NEXT_PUBLIC_MARKETING_HOSTNAMES ??
+  "alepejo.com.br,www.alepejo.com.br"
 )
   .split(",")
   .map((host) => host.trim())

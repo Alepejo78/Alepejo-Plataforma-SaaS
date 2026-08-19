@@ -4,7 +4,7 @@ import axios, {
 } from "axios";
 
 import { env } from "@/lib/env";
-import { isPublicRoute } from "@/lib/publicRoutes";
+import { isPublicRoute, isMarketingHomepage } from "@/lib/publicRoutes";
 
 /**
  * Cliente HTTP da aplicação.
@@ -61,7 +61,10 @@ const redirectToLogin = () => {
   // Rotas públicas (definir senha, criar conta) não têm sessão por
   // definição — o 401 ali é esperado, não é sessão perdida. Sem esta
   // guarda, o usuário novo era expulso da própria tela de criar senha.
-  if (isPublicRoute(pathname)) {
+  if (
+    isPublicRoute(pathname) ||
+    isMarketingHomepage(pathname, window.location.hostname)
+  ) {
     return;
   }
 

@@ -48,3 +48,32 @@ export function isPublicRoute(pathname: string): boolean {
     ) || COMPANY_LOGIN_PATTERN.test(pathname)
   );
 }
+
+/**
+ * Mesma lista usada em `middleware.ts` pra decidir quando reescrever
+ * "/" pra `/institucional` — precisa ser `NEXT_PUBLIC_*` porque
+ * também é lida no cliente (ver `isMarketingHomepage` abaixo).
+ */
+const MARKETING_HOSTNAMES = (
+  process.env.NEXT_PUBLIC_MARKETING_HOSTNAMES ??
+  "alepejo.com.br,www.alepejo.com.br"
+)
+  .split(",")
+  .map((host) => host.trim())
+  .filter(Boolean);
+
+/**
+ * A "/" do domínio principal é institucional por baixo dos panos
+ * (reescrita no middleware), mas a URL que o navegador mostra continua
+ * sendo só "/" — que não está em `PUBLIC_ROUTES`. Sem esse caso
+ * especial, o `AuthProvider` e o `api.ts` viam o 401 de `/auth/me` (a
+ * página institucional nunca tem sessão) e mandavam o visitante direto
+ * pro `/login`, atropelando a página institucional antes dela nem
+ * terminar de carregar.
+ */
+export function isMarketingHomepage(
+  pathname: string,
+  hostname: string
+): boolean {
+  return pathname === "/" && MARKETING_HOSTNAMES.includes(hostname);
+}
