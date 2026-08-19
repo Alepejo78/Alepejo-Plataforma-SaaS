@@ -399,6 +399,18 @@ function CadastroEmpresaForm() {
               </div>
             )}
 
+            <p className="text-xs text-[var(--text-muted)]">
+              Ao cadastrar, você concorda com nossa{" "}
+              <Link
+                href="/privacidade"
+                target="_blank"
+                className="font-medium text-[var(--primary)] hover:underline"
+              >
+                Política de Privacidade
+              </Link>
+              .
+            </p>
+
             <div className="flex items-center justify-between">
               <Link
                 href="/login"

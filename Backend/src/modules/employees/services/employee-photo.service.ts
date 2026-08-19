@@ -7,9 +7,9 @@ import { extname, join } from 'path';
 import { mkdirSync, readdirSync, unlinkSync } from 'fs';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { dataPath } from '../../../core/storage/data-dir';
 
-export const EMPLOYEE_PHOTO_UPLOAD_ROOT = join(
-  process.cwd(),
+export const EMPLOYEE_PHOTO_UPLOAD_ROOT = dataPath(
   'uploads',
   'employees',
 );

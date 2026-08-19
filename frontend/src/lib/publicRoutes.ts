@@ -13,6 +13,8 @@
  * - `/institucional`: página pública de apresentação do sistema
  *   (funcionalidades, demonstração e contato), porta de entrada antes
  *   de `/planos`.
+ * - `/privacidade`: Política de Privacidade — precisa ser acessível sem
+ *   login (é referenciada no cadastro, antes de qualquer conta existir).
  * - `/<empresa>/login`: login com o nome da empresa fixo na URL — o
  *   link que o e-mail de "definir senha" passa a mostrar como o
  *   acesso permanente do usuário (ver `sendPasswordResetLink` no
@@ -33,6 +35,7 @@ export const PUBLIC_ROUTES = [
   "/esqueci-senha",
   "/planos",
   "/institucional",
+  "/privacidade",
 ] as const;
 
 /** `/<slug>/login` — exatamente dois segmentos, o segundo literalmente "login". */

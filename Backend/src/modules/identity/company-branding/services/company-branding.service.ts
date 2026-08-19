@@ -7,12 +7,9 @@ import { extname, join } from 'path';
 import { mkdirSync, readdirSync, unlinkSync } from 'fs';
 
 import { PrismaService } from '../../../../core/prisma/prisma.service';
+import { dataPath } from '../../../../core/storage/data-dir';
 
-export const BRANDING_UPLOAD_ROOT = join(
-  process.cwd(),
-  'uploads',
-  'branding',
-);
+export const BRANDING_UPLOAD_ROOT = dataPath('uploads', 'branding');
 
 export type BrandingTheme = 'light' | 'dark';
 

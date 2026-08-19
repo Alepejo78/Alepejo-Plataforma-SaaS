@@ -473,6 +473,12 @@ export default function PlanosPage() {
             Entrar
           </Link>
         </p>
+
+        <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
+          <Link href="/privacidade" className="hover:underline">
+            Política de Privacidade
+          </Link>
+        </p>
       </div>
 
       {customOpen && customPlan && (

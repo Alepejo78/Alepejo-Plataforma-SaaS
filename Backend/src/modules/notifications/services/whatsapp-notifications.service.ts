@@ -5,13 +5,15 @@ import * as path from 'path';
 import pino from 'pino';
 import * as QRCode from 'qrcode';
 
+import { dataPath } from '../../../core/storage/data-dir';
+
 export type WhatsAppStatus =
   | 'DISCONNECTED'
   | 'CONNECTING'
   | 'QR_PENDING'
   | 'CONNECTED';
 
-const AUTH_BASE_DIR = path.join(process.cwd(), 'whatsapp-auth');
+const AUTH_BASE_DIR = dataPath('whatsapp-auth');
 
 interface SessionState {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

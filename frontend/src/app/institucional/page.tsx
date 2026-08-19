@@ -1095,6 +1095,23 @@ function FinalCta() {
   );
 }
 
+function Footer() {
+  return (
+    <footer className="border-t border-[var(--border)] py-8">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-[var(--text-muted)]">
+        <p>© {new Date().getFullYear()} AlePejo Tecnologia Ltda.</p>
+
+        <Link
+          href="/privacidade"
+          className="font-medium hover:text-[var(--text-primary)] hover:underline"
+        >
+          Política de Privacidade
+        </Link>
+      </div>
+    </footer>
+  );
+}
+
 export default function InstitucionalPage() {
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -1105,6 +1122,7 @@ export default function InstitucionalPage() {
       <Implantacao />
       <Contact />
       <FinalCta />
+      <Footer />
     </div>
   );
 }

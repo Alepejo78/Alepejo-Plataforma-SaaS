@@ -7,12 +7,12 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
-import { join } from 'path';
 
 import { AppModule } from './app.module';
 
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
 import { ResponseInterceptor } from './core/interceptors/response.interceptor';
+import { dataPath } from './core/storage/data-dir';
 
 async function bootstrap() {
   const app =
@@ -24,7 +24,7 @@ async function bootstrap() {
 
   // Logos enviadas pelo módulo de personalização (BRANDING). Fora do
   // prefixo /api de propósito: são arquivos estáticos, não rotas da API.
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+  app.useStaticAssets(dataPath('uploads'), {
     prefix: '/uploads/',
   });
 

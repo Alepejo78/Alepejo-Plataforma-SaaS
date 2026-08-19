@@ -3,7 +3,6 @@
 import {
   BadgeCheck,
   Building2,
-  Compass,
   Monitor,
   Plug,
   Settings,
@@ -19,14 +18,6 @@ export default function OsHomePage() {
   const { can, hasModule } = useAuth();
 
   const cards = [
-    {
-      title: "Portal",
-      description: "Painel inicial do app OS",
-      href: "/os/portal",
-      icon: Compass,
-      visible: true,
-      comingSoon: true,
-    },
     {
       title: "Segurança",
       description: "Usuários e perfis de acesso",
@@ -117,7 +108,6 @@ export default function OsHomePage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
-              comingSoon={card.comingSoon}
             />
           ))}
         </section>

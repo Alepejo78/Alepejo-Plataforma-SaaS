@@ -3,12 +3,9 @@ import { extname, join } from 'path';
 import { mkdirSync, readdirSync, unlinkSync } from 'fs';
 
 import { PrismaService } from '../../../../core/prisma/prisma.service';
+import { dataPath } from '../../../../core/storage/data-dir';
 
-export const AVATAR_UPLOAD_ROOT = join(
-  process.cwd(),
-  'uploads',
-  'avatars',
-);
+export const AVATAR_UPLOAD_ROOT = dataPath('uploads', 'avatars');
 
 const avatarSelect = {
   avatar: true,

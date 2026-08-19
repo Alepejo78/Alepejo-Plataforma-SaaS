@@ -3,6 +3,125 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 DATA_DIR — uploads e WhatsApp prontos pra disco persistente (19-08-2026)
+
+Continuação do deploy: escolhido Railway (usuário já criou o projeto
+`stunning-acceptance`, com Postgres + `postgres-volume` já rodando, e
+o serviço do backend conectado ao GitHub com Root Directory `/Backend`).
+Faltava anexar um volume ao serviço do backend, mas os 5 pontos do
+código que gravam arquivo em disco usavam `process.cwd()` direto
+(uploads de logo/foto/avatar em 4 lugares + sessão do WhatsApp) — sem
+saber o caminho exato que o Railway usa dentro do container, ia dar
+pra adivinhar errado o "mount path" do volume.
+
+Corrigido criando `Backend/src/core/storage/data-dir.ts`
+(`DATA_DIR` env var, cai em `process.cwd()` se vazia — comportamento
+de dev local inalterado) e trocando os 5 pontos
+(`company-branding.service.ts`, `employee-photo.service.ts`,
+`profile.service.ts`, `main.ts` static assets, `whatsapp-notifications.
+service.ts`) pra usar `dataPath(...)` em vez de `join(process.cwd(), ...)`.
+Agora basta UM volume no Railway, montado em `/data` (ou qualquer
+caminho), com `DATA_DIR=/data` nas variáveis de ambiente — sem
+depender de adivinhar a estrutura interna do container. Documentado
+em `Backend/.env` (`DATA_DIR=` vazio, comentário explicando).
+
+Próximo passo: no Railway, criar o volume (Ctrl+K → "Create Volume"
+ou botão direito no canvas), anexar ao serviço do backend, montar em
+`/data`, e setar `DATA_DIR=/data` nas Variables desse serviço.
+
+## 🟡 Planejamento de produção — domínio, checklist e política de privacidade (19-08-2026)
+
+Início da conversa sobre subir o sistema pra produção. Decisões e
+descobertas até agora:
+
+- **Domínio do cliente**: `alepejo.com.br`.
+- **Descoberta importante**: WhatsApp (sessão Baileys,
+  `whatsapp-notifications.service.ts`, pasta `whatsapp-auth/<companyId>`)
+  e uploads de logo (`personalização`, pasta `uploads/`) ficam salvos em
+  **arquivo no disco do servidor**, não no banco. Isso descarta hospedar
+  o backend em algo "sem servidor" (ex.: funções serverless) — precisa
+  de disco persistente (Railway/Render com disco, ou VPS).
+- Recomendação dada: Vercel pro frontend (Next.js) + Railway pro
+  backend+Postgres+disco. Ainda não decidido/contratado.
+- **Conta Asaas de produção**: usuário vai verificar por conta própria
+  (hoje o sistema roda 100% em sandbox — `ASAAS_API_URL` não setado).
+- **Senha do Dono antes de produção**: `Lore@251378` foi digitada
+  várias vezes no chat pra teste — precisa trocar antes do sistema ir
+  ao ar. Confirmado que `/esqueci-senha` → `/alepejo/login` funciona
+  pra isso: SMTP GLOBAL já está configurado no `.env` local
+  (`SMTP_HOST/PORT/USER/PASS`), e a empresa ALEPEJO não tem SMTP
+  próprio configurado (cai no global) — então o e-mail de redefinição
+  realmente é entregue. Em produção, o SMTP de produção precisa estar
+  configurado do mesmo jeito antes de contar com esse fluxo.
+- **Política de Privacidade criada** (`/privacidade`,
+  `frontend/src/app/privacidade/page.tsx`) — rascunho LGPD cobrindo os
+  12 pontos padrão (papéis controladora/operadora, dados coletados,
+  finalidade, bases legais, compartilhamento com Asaas, retenção,
+  direitos do titular, cookies, contato). Tem 3 pontos marcados
+  `[preencher]` no próprio texto (CNPJ real da AlePejo, prazo exato de
+  retenção pós-cancelamento, nome do encarregado/DPO) — **usuário
+  avisado que precisa de revisão de advogado antes de publicar
+  oficialmente**. Linkada em `/institucional` (rodapé novo), `/planos`
+  (rodapé) e `/cadastro-empresa` (aviso de consentimento antes do
+  botão Cadastrar). Adicionada a `PUBLIC_ROUTES`.
+
+Ainda faltam decidir: onde hospedar de fato (aguardando usuário
+decidir/criar contas — Claude não pode criar conta nem pagar por
+hospedagem/domínio), e os demais itens do checklist (variáveis de
+ambiente de produção, `prisma migrate deploy` no banco de produção,
+etc.) — nada disso foi feito ainda, só planejado.
+
+## 🟢 Cartão de crédito de volta na contratação (18-08-2026)
+
+`erp/licenciamento` → "Contratar assinatura" só mostrava PIX/Boleto/
+"Escolher na fatura" — Cartão de crédito tinha sumido da lista de
+opções (`BILLING_OPTIONS`), mesmo o backend já suportando (`Asaas
+Service.createPayment/createSubscription` só repassa o `billingType`
+que mandar, sem tratamento especial por tipo). Não precisou de nada no
+backend: card volta a aparecer, e o pagamento acontece na página
+hospedada do próprio Asaas (`result.invoiceUrl`, botão "Abrir fatura")
+— o sistema nunca vê número de cartão, sem custo de conformidade PCI
+pra nós.
+
+## 🟢 Card "Portal" removido do OS (18-08-2026)
+
+Era só um placeholder "Em breve" (`os/portal`) sem nenhuma função —
+usuário apontou que não faz sentido, já que as permissões já
+decidem o que aparece ou não no app OS. Removido o card de
+`frontend/src/app/os/page.tsx` e a rota `os/portal` inteira.
+
+## 🟡 Módulo futuro: Contabilidade e Controladoria — só proposta, não iniciado (18-08-2026)
+
+Usuário pediu um módulo novo que não está na planilha de escopo:
+"Contabilidade e Controladoria". Pesquisei como isso costuma ser
+estruturado em ERPs (Livro Diário/Razão, Balancete, DRE, Balanço
+Patrimonial, partida dobrada) e propus 3 fases; usuário decidiu adiar
+("deixar isso pra fazer mais pra frente, por enquanto não vamos
+mexer") — **nada foi implementado**, nem cadastro no catálogo de
+módulos/permissões/planos/institucional. Ficam só as notas pra quando
+for retomado:
+
+O "Plano de Contas" que já existe (`erp/financeiro/plano-contas`) é
+só classificação de despesa/receita pro Financeiro — não é
+contabilidade de partida dobrada. Um módulo de Contabilidade de
+verdade seria outra coisa, complementar:
+
+- **Fase 1 (base)**: Plano de Contas Contábil (Ativo/Passivo/PL/
+  Receita/Despesa, hierarquia sintética/analítica), Centro de Custo,
+  Lançamentos Contábeis manuais com partida dobrada validada (débito =
+  crédito obrigatório), Livro Diário, Livro Razão, Balancete de
+  Verificação.
+- **Fase 2 (automação)**: todo lançamento pago/recebido no Financeiro
+  gera o lançamento contábil sozinho; DRE automático; Balanço
+  Patrimonial automático; fechamento de período (trava mês fechado).
+- **Fase 3 (controladoria)**: painel de indicadores (margem, liquidez,
+  ponto de equilíbrio) a partir da DRE/Balanço.
+
+Quando for retomado: perguntar de novo qual fase construir primeiro
+(a Fase 1 sozinha já é um módulo contábil usável) antes de cadastrar
+no catálogo/permissões/planos — registrar o módulo sem nenhuma tela
+funcionando deixaria um item morto no menu.
+
 ## 🟢 Preço de módulo avulso não deixava digitar (18-08-2026)
 
 `erp/licenciamento/planos` → tabela "Módulos avulsos" — cada dígito

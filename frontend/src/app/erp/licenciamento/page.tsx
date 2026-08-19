@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle,
+  Barcode,
   CheckCircle2,
   Clock,
   Copy,
@@ -10,6 +11,7 @@ import {
   Loader2,
   Package,
   QrCode,
+  Wallet,
   X,
 } from "lucide-react";
 
@@ -108,10 +110,15 @@ function extractMessage(err: unknown, fallback: string) {
   return typeof message === "string" ? message : fallback;
 }
 
-const BILLING_OPTIONS: { value: BillingType; label: string }[] = [
-  { value: "PIX", label: "PIX" },
-  { value: "BOLETO", label: "Boleto" },
-  { value: "UNDEFINED", label: "Escolher na fatura" },
+const BILLING_OPTIONS: {
+  value: BillingType;
+  label: string;
+  icon: typeof QrCode;
+}[] = [
+  { value: "PIX", label: "PIX", icon: QrCode },
+  { value: "BOLETO", label: "Boleto", icon: Barcode },
+  { value: "CREDIT_CARD", label: "Cartão de crédito", icon: CreditCard },
+  { value: "UNDEFINED", label: "Escolher na fatura", icon: Wallet },
 ];
 
 function ContractModal({
@@ -182,7 +189,7 @@ function ContractModal({
               assim que confirmado, sua assinatura fica ativa automaticamente.
             </p>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {BILLING_OPTIONS.map((option) => (
                 <button
                   key={option.value}
@@ -194,7 +201,7 @@ function ContractModal({
                       : "border-[var(--border)] hover:border-[var(--border-strong)]"
                   }`}
                 >
-                  <QrCode
+                  <option.icon
                     size={20}
                     className="mb-2 text-[var(--primary)]"
                   />
