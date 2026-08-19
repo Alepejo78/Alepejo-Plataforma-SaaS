@@ -112,11 +112,14 @@ export default function LoginPage({ companyName }: LoginPageProps) {
       await login({ email, password });
 
       // Volta para a rota que o usuário tentou acessar antes do login.
+      // Navegação "de verdade" (não router.replace) de propósito: força
+      // uma ida real ao servidor, que já chega com o cookie de sessão
+      // recém-criado — evita corrida entre replace()+refresh() do Next
+      // que fazia o clique em Entrar não navegar pra lugar nenhum.
       const from = searchParams.get("from");
 
-      router.replace(from && from.startsWith("/") ? from : "/");
-
-      router.refresh();
+      window.location.href =
+        from && from.startsWith("/") ? from : "/";
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })

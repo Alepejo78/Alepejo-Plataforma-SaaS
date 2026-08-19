@@ -27,12 +27,11 @@ export default function OsHomePage() {
     },
     {
       title: "APIs",
-      description: "WhatsApp, e-mail e chave do relógio de ponto",
+      description: "WhatsApp e chave do relógio de ponto",
       href: "/os/apis",
       icon: Plug,
       visible:
         can("whatsapp.view") ||
-        can("email.view") ||
         (hasModule("LABOR") && can("time-clock.manage-api-key")),
     },
     {

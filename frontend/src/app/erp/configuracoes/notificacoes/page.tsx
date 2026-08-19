@@ -1,26 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Mail, MessageCircle } from "lucide-react";
-
 import { OsShell } from "@/components";
-import { EmailSettingsTab } from "@/components/settings/EmailSettingsTab";
 import { WhatsappSettingsTab } from "@/components/settings/WhatsappSettingsTab";
 
-type TabKey = "email" | "whatsapp";
-
-const TABS: { key: TabKey; label: string; icon: typeof Mail }[] = [
-  { key: "email", label: "Configuração E-mail", icon: Mail },
-  {
-    key: "whatsapp",
-    label: "Configuração WhatsApp",
-    icon: MessageCircle,
-  },
-];
-
+/**
+ * Configuração de e-mail (SMTP por empresa) ocultada por decisão do
+ * usuário (19-08-2026): a hospedagem atual (Railway, fora do plano
+ * Pro) bloqueia a porta SMTP pra qualquer servidor, então o SMTP
+ * customizado por empresa não funcionaria em produção mesmo
+ * configurado certinho. `EmailSettingsTab` continua existindo — só
+ * não é mais importado aqui — pra reativar fácil se um dia isso for
+ * resolvido (upgrade de plano, ou trocar o recurso por chave de API
+ * tipo Resend por empresa). Ver docs/08-Continuidade.md.
+ */
 export default function NotificacoesPage() {
-  const [tab, setTab] = useState<TabKey>("email");
-
   return (
     <OsShell workspaceLabel="Notificações">
       <div className="mx-auto max-w-5xl space-y-6 p-6">
@@ -28,38 +21,8 @@ export default function NotificacoesPage() {
           Notificações
         </h1>
 
-        <div className="flex gap-2 border-b border-[var(--border)]">
-          {TABS.map((item) => {
-            const Icon = item.icon;
-            const active = tab === item.key;
-
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setTab(item.key)}
-                className={`
-                  flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors
-                  ${
-                    active
-                      ? "border-[var(--primary)] text-[var(--primary-text)]"
-                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                  }
-                `}
-              >
-                <Icon size={16} />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-          {tab === "email" ? (
-            <EmailSettingsTab />
-          ) : (
-            <WhatsappSettingsTab />
-          )}
+          <WhatsappSettingsTab />
         </div>
       </div>
     </OsShell>

@@ -10,11 +10,11 @@ export default function OsApisPage() {
 
   const cards = [
     {
-      title: "WhatsApp e E-mail",
-      description: "Sessão do WhatsApp e servidor de e-mail (SMTP)",
+      title: "WhatsApp",
+      description: "Sessão de WhatsApp conectada ao sistema",
       href: "/erp/configuracoes/notificacoes",
       icon: MessageCircle,
-      visible: can("whatsapp.view") || can("email.view"),
+      visible: can("whatsapp.view"),
     },
     {
       title: "Chave de API (relógio de ponto)",
