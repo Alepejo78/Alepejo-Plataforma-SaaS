@@ -15,15 +15,15 @@ export function PublicNav({
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2">
         <Link href="/institucional" className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={systemConfig.company.logo}
             alt={systemConfig.company.name}
-            width={48}
-            height={48}
-            className="h-12 w-12 object-contain"
+            width={72}
+            height={72}
+            className="h-14 w-14 object-contain sm:h-[72px] sm:w-[72px]"
           />
 
           <div className="leading-tight">
