@@ -28,18 +28,7 @@ const MARKETING_HOSTNAMES = (
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-
-  // Domínio principal (vitrine): raiz mostra a página institucional,
-  // reescrita por baixo — a URL visível continua sendo só o domínio,
-  // sem `/institucional` aparecendo. Roda ANTES de qualquer checagem
-  // de sessão: institucional é sempre pública, em qualquer domínio.
   const hostname = request.headers.get("host") ?? "";
-
-  if (MARKETING_HOSTNAMES.includes(hostname) && pathname === "/") {
-    return NextResponse.rewrite(
-      new URL("/institucional", request.url)
-    );
-  }
 
   const accessToken = request.cookies.get(
     ACCESS_TOKEN_COOKIE
@@ -62,6 +51,24 @@ export function middleware(request: NextRequest) {
   const companySlug = request.cookies.get(
     COMPANY_SLUG_COOKIE
   )?.value;
+
+  // Domínio principal (vitrine): raiz mostra a página institucional,
+  // reescrita por baixo — a URL visível continua sendo só o domínio,
+  // sem `/institucional` aparecendo. SÓ pra quem não tem sessão —
+  // alguém que logou a partir desse mesmo domínio (ex.: clicou
+  // "Entrar" na institucional em vez de ir direto no app.<domínio>)
+  // tem cookie válido AQUI, e cair de novo na institucional depois de
+  // logar parecia "o login não funcionou". Com sessão, cai pro fluxo
+  // normal abaixo, que leva pro sistema de verdade.
+  if (
+    MARKETING_HOSTNAMES.includes(hostname) &&
+    pathname === "/" &&
+    !hasSession
+  ) {
+    return NextResponse.rewrite(
+      new URL("/institucional", request.url)
+    );
+  }
 
   if (!hasSession && !isPublicRoute(pathname)) {
     const loginUrl = new URL(
