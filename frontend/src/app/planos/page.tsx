@@ -11,6 +11,7 @@ import {
   type PublicPlan,
 } from "@/services/company-onboarding.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
+import { Faq } from "@/components/marketing/Faq";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -510,6 +511,8 @@ export default function PlanosPage() {
           </Link>
         </p>
       </div>
+
+      <Faq contactHref="/institucional#contato" />
 
       {customOpen && customPlan && (
         <CustomPlanModal
