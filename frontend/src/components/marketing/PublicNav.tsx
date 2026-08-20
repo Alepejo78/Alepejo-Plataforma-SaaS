@@ -18,19 +18,17 @@ export function PublicNav({
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2">
         <Link href="/institucional" className="flex items-center gap-2.5">
           {/*
-            Versão escura da logo (fundo preto, letras branco/dourado)
-            — pedido do usuário pras páginas públicas. Como a arte já
-            vem com o fundo preto, o `rounded-2xl` transforma o quadrado
-            numa plaquinha, que é como ela fica bonita sobre o fundo
-            claro da aurora.
+            A arte agora vem com fundo transparente e sem moldura vazia
+            (~1,57:1), então a altura manda e a largura acompanha — em
+            caixa quadrada sobraria buraco dos dois lados.
           */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={systemConfig.company.logoDark}
+            src={systemConfig.company.logo}
             alt={systemConfig.company.name}
-            width={72}
-            height={72}
-            className="h-14 w-14 rounded-2xl object-contain shadow-md ring-1 ring-black/10 sm:h-[72px] sm:w-[72px]"
+            width={101}
+            height={64}
+            className="h-12 w-auto object-contain sm:h-16"
           />
 
           <div className="leading-tight">

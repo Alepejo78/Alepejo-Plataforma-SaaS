@@ -285,9 +285,9 @@ function AppPreview({
             <img
               src={systemConfig.company.logo}
               alt={systemConfig.company.name}
-              width={22}
+              width={35}
               height={22}
-              className="h-[22px] w-[22px] object-contain"
+              className="h-[22px] w-auto object-contain"
             />
             <span className="text-sm font-bold text-[var(--text-primary)]">
               {systemConfig.company.name}
@@ -465,9 +465,9 @@ function DashboardPreview() {
           <img
             src={systemConfig.company.logo}
             alt={systemConfig.company.name}
-            width={22}
+            width={35}
             height={22}
-            className="h-[22px] w-[22px] object-contain"
+            className="h-[22px] w-auto object-contain"
           />
           <div className="leading-tight">
             <p className="text-xs font-bold text-[var(--text-primary)]">

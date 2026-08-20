@@ -13,8 +13,8 @@ export function AuthBrandHeader() {
         src={systemConfig.company.logo}
         alt={systemConfig.company.name}
         width={224}
-        height={224}
-        className="mb-2 h-56 w-56 object-contain"
+        height={142}
+        className="mb-2 h-auto w-56 object-contain"
       />
 
       <h1 className="text-lg font-bold text-[var(--text-primary)]">
