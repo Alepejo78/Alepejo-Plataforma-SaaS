@@ -21,9 +21,9 @@ export function PublicNav({
           <img
             src={systemConfig.company.logo}
             alt={systemConfig.company.name}
-            width={36}
-            height={36}
-            className="h-9 w-9 object-contain"
+            width={48}
+            height={48}
+            className="h-12 w-12 object-contain"
           />
 
           <div className="leading-tight">
