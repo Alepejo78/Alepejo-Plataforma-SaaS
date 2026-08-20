@@ -10,6 +10,8 @@
  * - `/esqueci-senha`: quem esqueceu a senha não consegue logar pra
  *   pedir o link.
  * - `/planos`: página pública de preços, antes de qualquer cadastro.
+ * - `/checkout`: "Comprar agora" — paga antes do cadastro existir, então
+ *   por definição não há sessão nenhuma aqui.
  * - `/institucional`: página pública de apresentação do sistema
  *   (funcionalidades, demonstração e contato), porta de entrada antes
  *   de `/planos`.
@@ -34,6 +36,7 @@ export const PUBLIC_ROUTES = [
   "/cadastro-empresa",
   "/esqueci-senha",
   "/planos",
+  "/checkout",
   "/institucional",
   "/privacidade",
 ] as const;

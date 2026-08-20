@@ -4,6 +4,7 @@ import {
   Get,
   Headers,
   HttpCode,
+  Param,
   Post,
   Query,
   UnauthorizedException,
@@ -16,6 +17,7 @@ import { Permissions } from '../../identity/auth/decorators/permissions.decorato
 
 import { BillingService } from '../services/billing.service';
 import { SubscribeDto } from '../dto/subscribe.dto';
+import { CreateCheckoutDto } from '../dto/create-checkout.dto';
 
 @ApiTags('Billing')
 @Controller('billing')
@@ -33,6 +35,31 @@ export class BillingController {
     @Body() dto: SubscribeDto,
   ) {
     return this.billingService.subscribe(companyId, dto.billingType);
+  }
+
+  /**
+   * "Comprar agora" de /planos — cobra ANTES do cadastro existir, por
+   * isso é público (não há sessão nem empresa ainda). O que protege
+   * aqui não é autenticação, é o próprio desenho: só cria cobrança
+   * (nada é liberado sem o pagamento cair) e recusa documento que já
+   * tem empresa.
+   */
+  @Public()
+  @Post('checkout')
+  @ApiOperation({
+    summary: 'Iniciar compra de um plano antes do cadastro da empresa',
+  })
+  createCheckout(@Body() dto: CreateCheckoutDto) {
+    return this.billingService.createCheckout(dto);
+  }
+
+  @Public()
+  @Get('checkout/:id')
+  @ApiOperation({
+    summary: 'Dados da compra, pra tela de cadastro preencher e travar o plano',
+  })
+  getCheckout(@Param('id') id: string) {
+    return this.billingService.getCheckout(id);
   }
 
   @Get('customers')

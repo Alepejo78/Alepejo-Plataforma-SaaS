@@ -22,11 +22,12 @@ export type CompanySignupPayload = {
   adminName: string;
   /** E-mail de login do primeiro usuário (administrador). */
   adminEmail: string;
-  planId: string;
+  /** Ignorado quando `checkoutId` vem preenchido — aí o plano vem da compra. */
+  planId?: string;
   /** Só pro plano Customizado (code CUSTOM) — ids dos módulos escolhidos no montador. */
   moduleIds?: string[];
-  /** true = pular o teste e ir direto pro pagamento — a resposta já vem com sessão ativa. */
-  payNow?: boolean;
+  /** Compra já feita antes do cadastro (ver /checkout) — a resposta já vem com sessão ativa. */
+  checkoutId?: string;
 };
 
 export interface PublicPlanModule {

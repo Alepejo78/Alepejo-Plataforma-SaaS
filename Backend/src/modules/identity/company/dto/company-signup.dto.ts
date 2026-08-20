@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
-  IsBoolean,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -97,13 +96,14 @@ export class CompanySignupDto {
   @MaxLength(150)
   adminEmail: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
-      'Id do plano escolhido em /planos — a conta nasce em período de teste com os módulos desse plano.',
+      'Id do plano escolhido em /planos — a conta nasce em período de teste com os módulos desse plano. Ignorado quando `checkoutId` é informado (aí o plano vem da compra).',
   })
+  @IsOptional()
   @IsString({ message: 'Selecione um plano.' })
   @IsNotEmpty({ message: 'Selecione um plano.' })
-  planId: string;
+  planId?: string;
 
   @ApiPropertyOptional({
     description:
@@ -117,9 +117,9 @@ export class CompanySignupDto {
 
   @ApiPropertyOptional({
     description:
-      'true = pular o teste e ir direto pro pagamento (a resposta já vem com sessão ativa, pra chamar /billing/me/subscribe em seguida).',
+      'Compra já paga/emitida antes do cadastro (ver POST /billing/checkout). Quando informado, o plano/ciclo/módulos vêm da compra e a resposta já abre sessão.',
   })
   @IsOptional()
-  @IsBoolean()
-  payNow?: boolean;
+  @IsString()
+  checkoutId?: string;
 }

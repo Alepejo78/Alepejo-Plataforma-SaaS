@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,10 +10,17 @@ import { BillingChargeStatus, type BillingCharge } from '@prisma/client';
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { AsaasService } from './asaas.service';
 import type { BillingTypeValue } from '../dto/subscribe.dto';
-import { MINIMUM_CUSTOM_MODULE_CODES } from '../../identity/license/constants/custom-plan.constants';
+import type { CreateCheckoutDto } from '../dto/create-checkout.dto';
+import {
+  CUSTOM_PLAN_CODE,
+  MINIMUM_CUSTOM_MODULE_CODES,
+} from '../../identity/license/constants/custom-plan.constants';
 
 /** Tolerância após o vencimento antes de bloquear — decisão do usuário. */
 const GRACE_DAYS = 7;
+
+/** Prazo de validade de uma compra sem cadastro concluído. */
+const CHECKOUT_EXPIRES_DAYS = 7;
 
 export type MonthStatus = 'PAGO' | 'A_PAGAR' | 'VENCIDO' | 'VAZIO';
 
@@ -109,11 +117,16 @@ export class BillingService {
   /**
    * Plano Customizado não tem monthlyPrice/yearlyPrice próprio (varia
    * por empresa) — o valor é o preço-base do Essencial (cobre os
-   * mesmos módulos mínimos) + o preço de cada módulo extra habilitado
-   * (`CompanyModule`), no ciclo escolhido.
+   * mesmos módulos mínimos) + o preço de cada módulo extra escolhido,
+   * no ciclo escolhido.
+   *
+   * Recebe os ids dos módulos direto (em vez de buscar por empresa)
+   * porque o mesmo cálculo serve pra dois momentos: empresa que já
+   * existe (módulos vêm de `CompanyModule`) e compra feita antes do
+   * cadastro (módulos vêm do montador de /planos, sem empresa nenhuma).
    */
-  private async customPlanPrice(
-    companyId: string,
+  private async customPlanPriceFromModules(
+    moduleIds: string[],
     billingCycle: 'MONTHLY' | 'YEARLY',
   ): Promise<number> {
     const basePlan = await this.prisma.plan.findUnique({
@@ -128,25 +141,191 @@ export class BillingService {
         )
       : 0;
 
-    const companyModules = await this.prisma.companyModule.findMany({
+    if (moduleIds.length === 0) {
+      return base;
+    }
+
+    // Os mínimos já estão cobertos pelo preço-base — só os extras somam.
+    const addOnModules = await this.prisma.module.findMany({
       where: {
-        companyId,
-        enabled: true,
-        module: { code: { notIn: MINIMUM_CUSTOM_MODULE_CODES } },
+        id: { in: moduleIds },
+        active: true,
+        code: { notIn: MINIMUM_CUSTOM_MODULE_CODES },
       },
-      include: { module: true },
     });
 
-    const addOns = companyModules.reduce((sum, item) => {
+    const addOns = addOnModules.reduce((sum, mod) => {
       const price =
-        billingCycle === 'YEARLY'
-          ? item.module.yearlyPrice
-          : item.module.monthlyPrice;
+        billingCycle === 'YEARLY' ? mod.yearlyPrice : mod.monthlyPrice;
 
       return sum + Number(price ?? 0);
     }, 0);
 
     return base + addOns;
+  }
+
+  /** Mesmo cálculo acima, pros módulos que a empresa já tem habilitados. */
+  private async customPlanPrice(
+    companyId: string,
+    billingCycle: 'MONTHLY' | 'YEARLY',
+  ): Promise<number> {
+    const companyModules = await this.prisma.companyModule.findMany({
+      where: { companyId, enabled: true },
+      select: { moduleId: true },
+    });
+
+    return this.customPlanPriceFromModules(
+      companyModules.map((item) => item.moduleId),
+      billingCycle,
+    );
+  }
+
+  /**
+   * "Comprar agora" de /planos: cobra ANTES da empresa existir. Cria o
+   * cliente + assinatura no Asaas e guarda um `PendingCheckout` com o
+   * plano e os dados do comprador — a empresa só nasce depois, no
+   * cadastro (ver CompanyOnboardingService.signup, campo checkoutId).
+   * Assim quem desiste no pagamento não deixa cadastro à toa.
+   */
+  async createCheckout(dto: CreateCheckoutDto) {
+    const plan = await this.prisma.plan.findUnique({
+      where: { id: dto.planId },
+    });
+
+    if (!plan || !plan.active) {
+      throw new NotFoundException('Plano não encontrado.');
+    }
+
+    const document = dto.document.replace(/\D/g, '');
+
+    // Recusa ANTES de gerar qualquer cobrança — não faz sentido cobrar
+    // alguém por uma conta que o cadastro depois vai rejeitar (mesma
+    // checagem do CompanyOnboardingService.signup).
+    const existingCompany = await this.prisma.company.findFirst({
+      where: { document, deletedAt: null },
+    });
+
+    if (existingCompany) {
+      throw new ConflictException(
+        'Já existe uma empresa cadastrada com este documento. Faça login em vez de comprar de novo.',
+      );
+    }
+
+    const moduleIds = dto.moduleIds ?? [];
+
+    const price =
+      plan.code === CUSTOM_PLAN_CODE
+        ? await this.customPlanPriceFromModules(moduleIds, dto.billingCycle)
+        : Number(
+            (dto.billingCycle === 'YEARLY'
+              ? plan.yearlyPrice
+              : plan.monthlyPrice) ?? 0,
+          );
+
+    if (!price) {
+      throw new BadRequestException(
+        'O plano escolhido ainda não tem preço definido — fale com o suporte.',
+      );
+    }
+
+    const customer = await this.asaas.createCustomer({
+      externalReference: `checkout:${document}`,
+      name: dto.name,
+      email: dto.email,
+      cpfCnpj: document,
+      phone: dto.phone,
+    });
+
+    const nextDueDate = formatDate(addDays(new Date(), 1));
+
+    const subscription = await this.asaas.createSubscription({
+      customer: customer.id,
+      billingType: dto.billingType,
+      value: price,
+      nextDueDate,
+      cycle: dto.billingCycle,
+      externalReference: `checkout:${document}`,
+      description: `Assinatura ${plan.name} (${
+        dto.billingCycle === 'YEARLY' ? 'anual' : 'mensal'
+      })`,
+    });
+
+    const payments = await this.asaas.listSubscriptionPayments(
+      subscription.id,
+    );
+
+    const firstPayment =
+      payments.find((p) => p.status === 'PENDING') ?? payments[0];
+
+    const checkout = await this.prisma.pendingCheckout.create({
+      data: {
+        planId: plan.id,
+        billingCycle: dto.billingCycle,
+        moduleIds,
+        document,
+        name: dto.name,
+        email: dto.email,
+        phone: dto.phone,
+        asaasCustomerId: customer.id,
+        asaasSubscriptionId: subscription.id,
+        asaasPaymentId: firstPayment?.id,
+        billingType: dto.billingType,
+        value: price,
+        expiresAt: addDays(new Date(), CHECKOUT_EXPIRES_DAYS),
+      },
+    });
+
+    const pix =
+      dto.billingType === 'PIX' && firstPayment
+        ? await this.asaas.getPixQrCode(firstPayment.id)
+        : null;
+
+    return {
+      checkoutId: checkout.id,
+      billingType: dto.billingType,
+      value: firstPayment?.value ?? price,
+      dueDate: firstPayment?.dueDate ?? nextDueDate,
+      invoiceUrl: firstPayment?.invoiceUrl,
+      bankSlipUrl: firstPayment?.bankSlipUrl,
+      pixPayload: pix?.payload,
+      pixQrCodeImage: pix?.encodedImage,
+    };
+  }
+
+  /**
+   * Dados do checkout pra tela de cadastro preencher e travar o plano.
+   * Público (não existe sessão ainda) — o id é um cuid não adivinhável
+   * e só devolve o que o próprio comprador acabou de digitar.
+   */
+  async getCheckout(id: string) {
+    const checkout = await this.prisma.pendingCheckout.findUnique({
+      where: { id },
+      include: { plan: true },
+    });
+
+    if (!checkout) {
+      throw new NotFoundException('Compra não encontrada.');
+    }
+
+    if (checkout.companyId) {
+      throw new ConflictException(
+        'Esta compra já foi usada para cadastrar uma empresa.',
+      );
+    }
+
+    return {
+      id: checkout.id,
+      planId: checkout.planId,
+      planName: checkout.plan.name,
+      planCode: checkout.plan.code,
+      billingCycle: checkout.billingCycle,
+      value: Number(checkout.value),
+      document: checkout.document,
+      name: checkout.name,
+      email: checkout.email,
+      phone: checkout.phone,
+      paid: checkout.paid,
+    };
   }
 
   async subscribe(companyId: string, billingType: BillingTypeValue) {
@@ -347,6 +526,36 @@ export class BillingService {
     });
 
     if (!companyPlan) {
+      // Pode ser uma compra feita antes do cadastro ("Comprar agora"):
+      // aí ainda não existe CompanyPlan, só o PendingCheckout. Marca
+      // como pago pra que o cadastro seguinte já nasça ATIVO. Quando a
+      // empresa existir, o CompanyPlan carrega os mesmos ids do Asaas e
+      // casa antes daqui.
+      const pending = await this.prisma.pendingCheckout.findFirst({
+        where: {
+          companyId: null,
+          OR: [
+            { asaasSubscriptionId: payment.subscription },
+            { asaasCustomerId: payment.customer },
+          ],
+        },
+      });
+
+      if (pending) {
+        const isPaid =
+          payload.event === 'PAYMENT_CONFIRMED' ||
+          payload.event === 'PAYMENT_RECEIVED';
+
+        if (isPaid) {
+          await this.prisma.pendingCheckout.update({
+            where: { id: pending.id },
+            data: { paid: true, paidAt: new Date() },
+          });
+        }
+
+        return { processed: true, pendingCheckout: true };
+      }
+
       this.logger.warn(
         `Webhook ${payload.event} pra pagamento ${payment.id} sem CompanyPlan correspondente.`,
       );

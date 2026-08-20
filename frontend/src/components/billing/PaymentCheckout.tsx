@@ -68,12 +68,22 @@ export function PaymentCheckout({
   onCharged,
   finalLabel,
   onFinal,
+  charge,
+  submitLabel = "Gerar cobrança",
 }: {
   /** Chamado assim que a cobrança é gerada (antes de mostrar o resultado) — ex.: atualizar dados da licença/sessão. */
-  onCharged?: () => void;
+  onCharged?: (result: SubscribeResult) => void;
   /** Texto do botão final, depois da cobrança gerada. */
   finalLabel: string;
   onFinal: () => void;
+  /**
+   * Como gerar a cobrança. Sem isso, usa a assinatura da empresa
+   * logada (`/billing/me/subscribe`, tela de Licenciamento); a compra
+   * pública de /planos passa a sua própria função, que fala com o
+   * endpoint de checkout (sem sessão).
+   */
+  charge?: (billingType: BillingType) => Promise<SubscribeResult>;
+  submitLabel?: string;
 }) {
   const [billingType, setBillingType] = useState<BillingType>("PIX");
   const [loading, setLoading] = useState(false);
@@ -86,9 +96,12 @@ export function PaymentCheckout({
     setError("");
 
     try {
-      const data = await billingService.subscribe(billingType);
+      const data = charge
+        ? await charge(billingType)
+        : await billingService.subscribe(billingType);
+
       setResult(data);
-      onCharged?.();
+      onCharged?.(data);
     } catch (err) {
       setError(
         extractMessage(
@@ -152,7 +165,7 @@ export function PaymentCheckout({
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
         >
           {loading && <Loader2 size={16} className="animate-spin" />}
-          {loading ? "Gerando cobrança..." : "Gerar cobrança"}
+          {loading ? "Gerando cobrança..." : submitLabel}
         </button>
       </div>
     );

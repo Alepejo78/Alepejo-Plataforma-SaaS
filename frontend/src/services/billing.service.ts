@@ -41,11 +41,64 @@ export interface CustomerReportRow {
   total: number;
 }
 
+export type BillingCycle = "MONTHLY" | "YEARLY";
+
+export interface CreateCheckoutPayload {
+  planId: string;
+  billingCycle: BillingCycle;
+  billingType: BillingType;
+  document: string;
+  name: string;
+  email: string;
+  phone?: string;
+  moduleIds?: string[];
+}
+
+/** Compra iniciada antes do cadastro — mesmo resultado do subscribe, mais o id do checkout. */
+export interface CheckoutResult extends SubscribeResult {
+  checkoutId: string;
+}
+
+export interface PendingCheckout {
+  id: string;
+  planId: string;
+  planName: string;
+  planCode: string;
+  billingCycle: BillingCycle;
+  value: number;
+  document: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  paid: boolean;
+}
+
 export const billingService = {
   async subscribe(billingType: BillingType): Promise<SubscribeResult> {
     const { data } = await api.post<ApiEnvelope<SubscribeResult>>(
       "/billing/me/subscribe",
       { billingType }
+    );
+
+    return data.data;
+  },
+
+  /** Pública (sem sessão) — "Comprar agora" de /planos, antes do cadastro existir. */
+  async createCheckout(
+    payload: CreateCheckoutPayload
+  ): Promise<CheckoutResult> {
+    const { data } = await api.post<ApiEnvelope<CheckoutResult>>(
+      "/billing/checkout",
+      payload
+    );
+
+    return data.data;
+  },
+
+  /** Pública (sem sessão) — dados da compra, pra tela de cadastro preencher. */
+  async getCheckout(id: string): Promise<PendingCheckout> {
+    const { data } = await api.get<ApiEnvelope<PendingCheckout>>(
+      `/billing/checkout/${encodeURIComponent(id)}`
     );
 
     return data.data;

@@ -1895,11 +1895,12 @@ model Plan {
   /// Marca o plano "recomendado" com destaque visual na página de preços.
   highlighted    Boolean          @default(false)
   active         Boolean          @default(true)
-  planModules    PlanModule[]
-  companyPlans   CompanyPlan[]
-  licenseHistory LicenseHistory[]
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  planModules      PlanModule[]
+  companyPlans     CompanyPlan[]
+  licenseHistory   LicenseHistory[]
+  pendingCheckouts PendingCheckout[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@map("plans")
 }
@@ -2025,6 +2026,49 @@ model BillingCharge {
 
   @@index([companyPlanId])
   @@map("billing_charges")
+}
+
+/// Compra feita ANTES do cadastro da empresa existir ("Comprar agora"
+/// em /planos): guarda o plano escolhido e os dados mínimos do
+/// comprador enquanto a cobrança do Asaas é gerada e paga. Só depois
+/// disso a empresa é criada de verdade (ver CompanyOnboardingService.
+/// signup, campo checkoutId) — assim quem desiste no pagamento não
+/// deixa empresa nenhuma cadastrada à toa.
+model PendingCheckout {
+  id           String       @id @default(cuid())
+  planId       String
+  plan         Plan         @relation(fields: [planId], references: [id], onDelete: Restrict)
+  billingCycle BillingCycle @default(MONTHLY)
+  /// Só pro plano Customizado — módulos escolhidos no montador de /planos.
+  moduleIds    String[]
+
+  /// Dados mínimos exigidos pelo Asaas pra emitir a cobrança.
+  document String  @db.VarChar(20)
+  name     String  @db.VarChar(200)
+  email    String  @db.VarChar(150)
+  phone    String? @db.VarChar(30)
+
+  asaasCustomerId     String? @db.VarChar(50)
+  asaasSubscriptionId String? @db.VarChar(50)
+  asaasPaymentId      String? @unique @db.VarChar(50)
+
+  billingType String  @db.VarChar(20)
+  value       Decimal @db.Decimal(18, 2)
+
+  paid   Boolean   @default(false)
+  paidAt DateTime?
+
+  /// Empresa criada a partir deste checkout. Único de propósito: impede
+  /// que o mesmo pagamento abra mais de uma conta.
+  companyId String? @unique
+
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
+  @@index([asaasSubscriptionId])
+  @@map("pending_checkouts")
 }
 
 /// Log de todo evento de webhook recebido do Asaas, pra idempotência —

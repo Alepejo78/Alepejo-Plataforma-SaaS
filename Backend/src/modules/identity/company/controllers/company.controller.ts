@@ -125,15 +125,15 @@ export class CompanyController {
   ) {
     const { companyId, userId } = await this.onboardingService.signup(dto);
 
-    if (!dto.payNow) {
+    if (!dto.checkoutId) {
       return { companyId };
     }
 
-    // Pagar na hora exige sessão pra chamar POST /billing/me/subscribe
-    // em seguida — abre aqui, na mesma resposta que acabou de criar a
-    // conta (ver AuthService.issueSessionForUser). O fluxo de definir
-    // senha por e-mail continua acontecendo do mesmo jeito, pra quando
-    // essa sessão inicial expirar.
+    // Quem chegou aqui já comprou (a cobrança foi emitida antes do
+    // cadastro) — entra direto, sem esperar o e-mail de definir senha.
+    // A sessão é aberta na mesma resposta que criou a conta (ver
+    // AuthService.issueSessionForUser); o e-mail continua sendo
+    // enviado normalmente, pra quando essa sessão expirar.
     const tokens = await this.authService.issueSessionForUser(userId);
     setSessionCookies(res, tokens);
 

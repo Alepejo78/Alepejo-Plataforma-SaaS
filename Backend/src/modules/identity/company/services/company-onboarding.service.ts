@@ -69,8 +69,18 @@ export class CompanyOnboardingService {
       );
     }
 
+    // Compra feita antes do cadastro ("Comprar agora" em /planos): o
+    // plano, o ciclo e os módulos vêm do checkout, NUNCA do que o
+    // navegador mandou — senão daria pra pagar o plano barato e se
+    // cadastrar no caro.
+    const checkout = dto.checkoutId
+      ? await this.loadUsableCheckout(dto.checkoutId)
+      : null;
+
+    const planId = checkout?.planId ?? dto.planId;
+
     const plan = await this.prisma.plan.findUnique({
-      where: { id: dto.planId },
+      where: { id: planId },
     });
 
     if (!plan || !plan.active) {
@@ -106,16 +116,28 @@ export class CompanyOnboardingService {
     const platformSettings =
       await this.prisma.platformSettings.findFirst();
 
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(
-      trialEndsAt.getDate() +
-        (platformSettings?.trialDays ?? FALLBACK_TRIAL_DAYS),
-    );
+    // Quem comprou não ganha período de teste — já pagou (ou vai pagar
+    // a cobrança que já está emitida).
+    const trialEndsAt = checkout ? undefined : new Date();
+
+    if (trialEndsAt) {
+      trialEndsAt.setDate(
+        trialEndsAt.getDate() +
+          (platformSettings?.trialDays ?? FALLBACK_TRIAL_DAYS),
+      );
+    }
 
     await this.licenseService.assignPlan(company.id, plan.id, trialEndsAt);
 
+    if (checkout) {
+      await this.applyCheckoutToCompanyPlan(company.id, checkout);
+    }
+
     if (plan.code === CUSTOM_PLAN_CODE) {
-      await this.enableCustomModules(company.id, dto.moduleIds ?? []);
+      await this.enableCustomModules(
+        company.id,
+        checkout ? checkout.moduleIds : (dto.moduleIds ?? []),
+      );
     }
 
     const roleId = await this.provisionAdminRole(company.id);
@@ -127,6 +149,74 @@ export class CompanyOnboardingService {
     );
 
     return { companyId: company.id, userId: user.id };
+  }
+
+  /** Checkout precisa existir, não ter expirado e ainda não ter virado empresa. */
+  private async loadUsableCheckout(checkoutId: string) {
+    const checkout = await this.prisma.pendingCheckout.findUnique({
+      where: { id: checkoutId },
+    });
+
+    if (!checkout) {
+      throw new NotFoundException('Compra não encontrada.');
+    }
+
+    if (checkout.companyId) {
+      throw new ConflictException(
+        'Esta compra já foi usada para cadastrar uma empresa.',
+      );
+    }
+
+    if (checkout.expiresAt < new Date()) {
+      throw new BadRequestException(
+        'Esta compra expirou. Faça uma nova compra em /planos.',
+      );
+    }
+
+    return checkout;
+  }
+
+  /**
+   * Liga a empresa recém-criada à cobrança que já existe no Asaas e
+   * marca o checkout como usado.
+   *
+   * Pagamento já confirmado → ACTIVE. Ainda pendente (boleto, PIX não
+   * pago) → PAST_DUE com `graceUntil` nulo, que o
+   * `LicenseService.isSubscriptionBlocked()` trata como bloqueado: a
+   * pessoa entra no sistema e acompanha o pagamento, mas os módulos só
+   * liberam quando o webhook confirmar.
+   */
+  private async applyCheckoutToCompanyPlan(
+    companyId: string,
+    checkout: {
+      id: string;
+      billingCycle: 'MONTHLY' | 'YEARLY';
+      asaasCustomerId: string | null;
+      asaasSubscriptionId: string | null;
+      paid: boolean;
+    },
+  ) {
+    const periodDays = checkout.billingCycle === 'YEARLY' ? 365 : 30;
+    const currentPeriodEnd = new Date();
+    currentPeriodEnd.setDate(currentPeriodEnd.getDate() + periodDays);
+
+    await this.prisma.companyPlan.update({
+      where: { companyId },
+      data: {
+        billingCycle: checkout.billingCycle,
+        asaasCustomerId: checkout.asaasCustomerId,
+        asaasSubscriptionId: checkout.asaasSubscriptionId,
+        status: checkout.paid ? 'ACTIVE' : 'PAST_DUE',
+        currentPeriodEnd: checkout.paid ? currentPeriodEnd : null,
+        graceUntil: null,
+        trialEndsAt: null,
+      },
+    });
+
+    await this.prisma.pendingCheckout.update({
+      where: { id: checkout.id },
+      data: { companyId },
+    });
   }
 
   /**

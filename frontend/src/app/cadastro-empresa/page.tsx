@@ -15,7 +15,10 @@ import {
   emptyAddress,
   type AddressFormState,
 } from "@/components/company/AddressFields";
-import { PaymentCheckout } from "@/components/billing/PaymentCheckout";
+import {
+  billingService,
+  type PendingCheckout,
+} from "@/services/billing.service";
 import { useAuth } from "@/providers/AuthProvider";
 
 function extractMessage(err: unknown, fallback: string) {
@@ -60,14 +63,14 @@ function money(value: string | number | null | undefined) {
 
 function CadastroEmpresaForm() {
   const searchParams = useSearchParams();
-  const planId = searchParams.get("planId") ?? "";
-  const payNow = searchParams.get("payNow") === "1";
+  const checkoutId = searchParams.get("checkout") ?? "";
   const moduleIds = (searchParams.get("modules") ?? "")
     .split(",")
     .filter(Boolean);
 
   const { refreshUser } = useAuth();
 
+  const [checkout, setCheckout] = useState<PendingCheckout | null>(null);
   const [plan, setPlan] = useState<PublicPlan | null>(null);
   const [planError, setPlanError] = useState(false);
   const [trialDays, setTrialDays] = useState(14);
@@ -79,6 +82,34 @@ function CadastroEmpresaForm() {
   const [done, setDone] = useState(false);
 
   const isCompany = form.personType === "COMPANY";
+
+  // Compra feita antes do cadastro: o plano vem do checkout (o backend
+  // também ignora qualquer planId da URL nesse caso), e os dados que a
+  // pessoa já digitou pra pagar vêm preenchidos.
+  const planId = checkout?.planId ?? searchParams.get("planId") ?? "";
+
+  useEffect(() => {
+    if (!checkoutId) {
+      return;
+    }
+
+    billingService
+      .getCheckout(checkoutId)
+      .then((data) => {
+        setCheckout(data);
+
+        setForm((previous) => ({
+          ...previous,
+          personType:
+            data.document.length > 11 ? "COMPANY" : "INDIVIDUAL",
+          document: maskDocument(data.document),
+          legalName: data.name,
+          email: data.email,
+          phone: data.phone ?? "",
+        }));
+      })
+      .catch(() => setPlanError(true));
+  }, [checkoutId]);
 
   useEffect(() => {
     if (!planId) {
@@ -136,15 +167,16 @@ function CadastroEmpresaForm() {
         state: address.state.trim() || undefined,
         adminName: form.adminName.trim(),
         adminEmail: form.adminEmail.trim(),
-        planId,
+        planId: checkoutId ? undefined : planId,
         moduleIds: moduleIds.length > 0 ? moduleIds : undefined,
-        payNow: payNow || undefined,
+        checkoutId: checkoutId || undefined,
       });
 
-      if (payNow) {
-        // A resposta já veio com sessão ativa (ver CompanyController.
-        // signup) — atualiza o AuthProvider pra ele saber disso
-        // (também grava a empresa lembrada, igual um login normal).
+      if (checkoutId) {
+        // Quem comprou já entra logado: a resposta veio com sessão
+        // ativa (ver CompanyController.signup) — atualiza o
+        // AuthProvider pra ele saber disso (também grava a empresa
+        // lembrada, igual um login normal).
         await refreshUser();
       }
 
@@ -206,7 +238,14 @@ function CadastroEmpresaForm() {
             </div>
 
             <div className="text-right">
-              {plan.code === "CUSTOM" ? (
+              {checkout ? (
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {money(checkout.value)}
+                  <span className="text-xs font-normal text-[var(--text-muted)]">
+                    {checkout.billingCycle === "YEARLY" ? "/ano" : "/mês"}
+                  </span>
+                </p>
+              ) : plan.code === "CUSTOM" ? (
                 <p className="text-sm font-medium text-[var(--text-primary)]">
                   {moduleIds.length} módulo(s) selecionado(s)
                 </p>
@@ -218,39 +257,49 @@ function CadastroEmpresaForm() {
                   </span>
                 </p>
               )}
-              <Link
-                href="/planos"
-                className="text-xs text-[var(--text-secondary)] hover:underline"
-              >
-                Trocar plano
-              </Link>
+
+              {/* Plano já comprado não pode ser trocado aqui — o
+                  pagamento foi emitido pra ele. */}
+              {!checkout && (
+                <Link
+                  href="/planos"
+                  className="text-xs text-[var(--text-secondary)] hover:underline"
+                >
+                  Trocar plano
+                </Link>
+              )}
             </div>
           </div>
         )}
 
         {done ? (
-          payNow ? (
+          checkoutId ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-[var(--success)]">
                 <CheckCircle2 size={20} />
                 <p className="text-sm font-medium">
-                  Empresa cadastrada — falta só pagar.
+                  Tudo pronto! Sua empresa foi cadastrada.
                 </p>
               </div>
 
               <p className="text-sm text-[var(--text-secondary)]">
+                {checkout?.paid
+                  ? "Pagamento confirmado — seu plano já está ativo."
+                  : "Assim que o pagamento for confirmado, seu plano é liberado automaticamente. Você já pode entrar e acompanhar."}{" "}
                 Também enviamos um e-mail para{" "}
-                <strong>{form.adminEmail}</strong> com o link pra
-                definir sua senha (pra próxima vez que entrar) — por
-                enquanto, já dá pra usar o sistema normalmente.
+                <strong>{form.adminEmail}</strong> com o link pra definir
+                sua senha, pra próxima vez que for entrar.
               </p>
 
-              <PaymentCheckout
-                finalLabel="Ir para o sistema"
-                onFinal={() => {
+              <button
+                type="button"
+                onClick={() => {
                   window.location.href = "/";
                 }}
-              />
+                className="inline-block rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+              >
+                Ir para o sistema
+              </button>
             </div>
           ) : (
             <div className="space-y-4">

@@ -102,8 +102,12 @@ function CustomPlanModal({
       modules: Array.from(selected).join(","),
     });
 
+    // Comprar agora paga ANTES de cadastrar (ver /checkout) — o teste
+    // grátis continua indo direto pro cadastro.
     if (payNow) {
-      query.set("payNow", "1");
+      query.set("cycle", billingCycle);
+      router.push(`/checkout?${query.toString()}`);
+      return;
     }
 
     router.push(`/cadastro-empresa?${query.toString()}`);
@@ -462,7 +466,7 @@ export default function PlanosPage() {
                   </Link>
 
                   <Link
-                    href={`/cadastro-empresa?planId=${plan.id}&payNow=1`}
+                    href={`/checkout?planId=${plan.id}&cycle=${billingCycle}`}
                     className="rounded-xl px-4 py-3 text-center text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:underline"
                   >
                     Comprar agora
