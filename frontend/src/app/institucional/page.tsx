@@ -12,13 +12,20 @@ import {
   YAxis,
 } from "recharts";
 import {
+  BadgeCheck,
   Banknote,
   Bell,
   Boxes,
+  BarChart3,
+  Building2,
+  CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Clock,
+  Cloud,
   Factory,
   GraduationCap,
+  KeyRound,
   LayoutDashboard,
   LayoutGrid,
   Layers,
@@ -29,11 +36,16 @@ import {
   MessageCircle,
   Moon,
   Package,
+  Palette,
   PiggyBank,
+  Plug,
   Plus,
   Search,
+  Settings2,
+  ShieldCheck,
   ShoppingCart,
   Sparkles,
+  Store,
   Truck,
   UserCog,
   Users,
@@ -668,51 +680,241 @@ const spotlightFeatures = [
   },
 ];
 
-const features = [
+/** Um card por módulo, com a lista de telas/recursos de verdade dele — igual ao que existe no sistema. */
+const moduleGroups = [
   {
     icon: Users,
     title: "Cadastros",
-    description: "Clientes, fornecedores e transportadoras num cadastro único.",
+    items: [
+      "Clientes, fornecedores e transportadoras",
+      "Representantes — tudo em um só lugar",
+    ],
   },
   {
     icon: Package,
     title: "Produtos",
-    description: "Produtos e serviços, com categorias, marcas e unidades de medida.",
-  },
-  {
-    icon: Boxes,
-    title: "Estoque",
-    description: "Saldo por depósito e movimentações em tempo real.",
-  },
-  {
-    icon: ShoppingCart,
-    title: "Vendas",
-    description: "Orçamento, pedido e venda até o faturamento.",
-  },
-  {
-    icon: Truck,
-    title: "Compras",
-    description: "Cotação com fornecedores, pedido e recebimento.",
-  },
-  {
-    icon: Banknote,
-    title: "Financeiro",
-    description: "Contas a pagar/receber, fluxo de caixa e dashboard com gráficos.",
-  },
-  {
-    icon: Factory,
-    title: "Produção",
-    description: "Ordens de produção em etapas, do início ao acompanhamento.",
+    items: [
+      "Cadastro de categoria",
+      "Marca",
+      "Unidade de medida",
+      "Produto",
+    ],
   },
   {
     icon: UserCog,
     title: "Recursos Humanos",
-    description: "Colaboradores, benefícios, exames e EPIs num só lugar.",
+    items: [
+      "Cadastro de funções e cargos",
+      "Setores e horários",
+      "EPI",
+      "Colaboradores com função, salário e horário de trabalho",
+      "Controle de exames médicos e acompanhamento",
+      "Avisos de aniversariantes do mês",
+      "Ponto, com acompanhamento de horas positivas e negativas",
+      "Faltas e abonos",
+      "Folha de pagamento e 13º salário",
+      "Programação de férias",
+      "Dashboard de RH",
+    ],
   },
   {
-    icon: Clock,
-    title: "Ponto e Folha",
-    description: "Marcação de ponto, folha mensal, 13º e férias.",
+    icon: Truck,
+    title: "Compras",
+    items: ["Cotações", "Pedidos", "Compras", "Recebimento"],
+  },
+  {
+    icon: ShoppingCart,
+    title: "Vendas",
+    items: ["Orçamento", "Pedido", "Vendas"],
+  },
+  {
+    icon: Boxes,
+    title: "Estoque",
+    items: ["Movimentações", "Saldo em estoque"],
+  },
+  {
+    icon: Banknote,
+    title: "Financeiro",
+    items: [
+      "Contas a receber",
+      "Contas a pagar",
+      "Fluxo de caixa",
+      "Orçamento mês a mês",
+    ],
+  },
+  {
+    icon: Factory,
+    title: "Produção",
+    items: ["Ordem de produção", "Acompanhamento de produção"],
+  },
+  {
+    icon: BarChart3,
+    title: "Dashboard e relatórios",
+    items: [
+      "Gráficos de colaboradores",
+      "Gráfico de fluxo de caixa",
+      "Relatórios para todos os módulos",
+    ],
+  },
+];
+
+/** Configurações que ficam sob controle do administrador da empresa — não são "módulos" de operação, mas de gestão do próprio sistema. */
+const adminGroups = [
+  {
+    icon: ShieldCheck,
+    title: "Segurança",
+    items: ["Cadastro de usuários com acesso ao sistema", "Perfis de acesso"],
+  },
+  {
+    icon: Plug,
+    title: "APIs",
+    items: ["Opcionalidade para configurar avisos automáticos no WhatsApp"],
+  },
+  {
+    icon: Building2,
+    title: "Empresa",
+    items: [
+      "Alteração de dados da empresa",
+      "Cadastro de empresas do grupo — filiais ou outra empresa raiz",
+    ],
+  },
+  {
+    icon: Settings2,
+    title: "Configurações",
+    items: ["Manutenção das bases de apoio de cada módulo"],
+  },
+  {
+    icon: Palette,
+    title: "Personalização",
+    items: [
+      "Tema escuro",
+      "Sua própria logo e marca",
+      "Nome da sua empresa",
+      "Forma de visão do menu inicial",
+    ],
+  },
+  {
+    icon: KeyRound,
+    title: "Licenciamento",
+    items: ["Plano atual, com possibilidade de incluir novos módulos"],
+  },
+];
+
+/** Quem essa página tenta convencer — pequenas empresas ainda em planilha, e comércio/indústria em geral. */
+const audienceItems = [
+  {
+    icon: Store,
+    title: "Quem está começando",
+    description:
+      "Pequenas empresas que ainda controlam tudo em planilha e precisam migrar pra um sistema de verdade.",
+  },
+  {
+    icon: Factory,
+    title: "Comércio, indústria e muito mais",
+    description:
+      "Comércio em geral, fábricas e outros negócios que precisam de cadastros, estoque, vendas, compras e financeiro integrados.",
+  },
+];
+
+const valueProps = [
+  {
+    icon: Palette,
+    title: "Configure com a sua marca",
+    description: "Logo, nome e cores da sua empresa — o sistema fica com a sua cara.",
+  },
+  {
+    icon: Cloud,
+    title: "100% online",
+    description: "Nada fica instalado no computador — acesse de onde estiver.",
+  },
+  {
+    icon: Users,
+    title: "Usuários ilimitados",
+    description: "Sem taxa por usuário — cadastre quantos precisar.",
+  },
+];
+
+const demoBullets = [
+  { icon: LayoutDashboard, label: "Veja o sistema funcionando na prática" },
+  { icon: Layers, label: "Tire dúvidas sobre os módulos" },
+  { icon: BadgeCheck, label: "Entenda qual módulo atende sua empresa" },
+  { icon: List, label: "Conheça os planos e funcionalidades" },
+  { icon: ShieldCheck, label: "Receba orientação pra começar com segurança" },
+];
+
+interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+const faqItems: FaqItem[] = [
+  {
+    question: "O sistema é online?",
+    answer:
+      "Sim, o sistema AlePejo ERP Cloud é 100% online e pode ser acessado de qualquer lugar, sem necessidade de instalação na sua máquina.",
+  },
+  {
+    question: "O sistema tem limite de usuários?",
+    answer:
+      "Não. Com a compra realizada, usuários são ilimitados, podendo parametrizar o que cada usuário terá acesso e permissão para executar.",
+  },
+  {
+    question: "Se adquirir um plano, a licença é só para a empresa matriz?",
+    answer:
+      "Não, é ilimitado. Após a compra você pode cadastrar quantas filiais quiser, cada filial tem a sua visão no sistema, e o administrador consegue ver o resultado de todas as empresas, sem precisar de um módulo novo pra isso.",
+  },
+  {
+    question: "Consigo emitir nota fiscal?",
+    answer:
+      "Não, esse sistema não oferece emissão de notas — mas tem controle das emissões, vinculando a nota fiscal de compra ou venda aos seus módulos.",
+  },
+  {
+    question: "A implantação é gratuita?",
+    answer:
+      "Sim. Por ser 100% online, não precisa instalar nada em servidor ou computador.",
+  },
+  {
+    question: "Vocês oferecem treinamento?",
+    answer:
+      "Sim, treinamento gratuito em acesso remoto. Treinamento presencial também é possível, assistido, com custo de deslocamento.",
+  },
+  {
+    question: "O sistema tem suporte?",
+    answer: "Sim, temos suporte 24h.",
+  },
+  {
+    question: "O sistema tem controle financeiro?",
+    answer:
+      "Sim, o sistema AlePejo ERP Cloud possui vínculos automáticos em compras e vendas, gerando títulos a pagar e a receber com acompanhamento — pra não esquecer nenhum título.",
+  },
+  {
+    question: "O sistema tem controle de estoque?",
+    answer:
+      "Sim, o sistema conta com estoque online: comprou e recebeu, o produto já entra no estoque; confirmou uma venda, o material já é retirado do estoque — com possibilidade de ajustes.",
+  },
+  {
+    question: "O sistema tem controle de RH?",
+    answer:
+      "Sim, é bem completo pra quem quer controlar colaboradores: função, salários, horas, exames médicos e muito mais.",
+  },
+  {
+    question: "O sistema tem controle de marcação de horas?",
+    answer:
+      "Sim — além do controle de gestão de RH, o sistema também tem controle de marcação de ponto.",
+  },
+  {
+    question: "O sistema possui controle de banco de horas?",
+    answer:
+      "Sim. No acompanhamento de horas você consegue controlar horas positivas e negativas. Como não há vínculo a sindicatos, se as horas não forem compensadas durante o mês até o cálculo da folha, elas entram como pagamento de horas extras.",
+  },
+  {
+    question: "O sistema tem geração de holerites?",
+    answer: "Sim, esse módulo é mais um diferencial do sistema AlePejo.",
+  },
+  {
+    question: "E se eu não souber qual plano escolher?",
+    answer:
+      "É só entrar em contato que avaliamos a sua necessidade e quais módulos seriam mais adequados pra sua empresa.",
   },
 ];
 
@@ -725,12 +927,15 @@ function Features() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-            Um sistema, todos os processos da empresa
+            O que esperar do sistema AlePejo ERP Cloud
           </h2>
 
           <p className="mt-3 text-[var(--text-muted)]">
-            Cada módulo conversa com os outros — o que entra em Vendas
-            reflete no Estoque e no Financeiro, sem digitar duas vezes.
+            O Sistema AlePejo ERP Cloud oferece funcionalidades essenciais
+            para empresas que querem manter a operação em dia com mais
+            simplicidade. Cada módulo conversa com os outros — o que entra
+            em Vendas reflete no Estoque e no Financeiro, sem digitar duas
+            vezes.
           </p>
         </div>
 
@@ -755,26 +960,259 @@ function Features() {
           ))}
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {moduleGroups.map((mod) => (
             <div
-              key={feature.title}
-              className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 transition-colors hover:border-[var(--primary)]"
+              key={mod.title}
+              className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5 transition-colors hover:border-[var(--primary)]"
             >
-              <feature.icon
-                size={18}
-                className="mt-0.5 shrink-0 text-[var(--primary)]"
-              />
-              <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  {feature.title}
+              <div className="flex items-center gap-2.5">
+                <span className="inline-flex rounded-lg bg-[var(--primary)]/10 p-2 text-[var(--primary)]">
+                  <mod.icon size={16} />
+                </span>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  {mod.title}
                 </p>
-                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                  {feature.description}
+              </div>
+
+              <ul className="mt-3 space-y-1.5">
+                {mod.items.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2 text-xs text-[var(--text-muted)]"
+                  >
+                    <CheckCircle2
+                      size={13}
+                      className="mt-0.5 shrink-0 text-[var(--success)]"
+                    />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Recursos de gestão do próprio sistema (não são módulos de operação
+ * do dia a dia) — mesmo layout de card do Features(), seção separada
+ * pra deixar claro que é outra categoria de funcionalidade.
+ */
+function AdminSection() {
+  return (
+    <section className="border-t border-[var(--border)] py-20">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
+            Administração do sistema
+          </h2>
+
+          <p className="mt-3 text-[var(--text-muted)]">
+            O administrador da empresa tem controle total sobre quem acessa
+            o quê, e sobre a cara do sistema.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {adminGroups.map((group) => (
+            <div
+              key={group.title}
+              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors hover:border-[var(--primary)]"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="inline-flex rounded-lg bg-[var(--primary)]/10 p-2 text-[var(--primary)]">
+                  <group.icon size={16} />
+                </span>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  {group.title}
+                </p>
+              </div>
+
+              <ul className="mt-3 space-y-1.5">
+                {group.items.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2 text-xs text-[var(--text-muted)]"
+                  >
+                    <CheckCircle2
+                      size={13}
+                      className="mt-0.5 shrink-0 text-[var(--success)]"
+                    />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** "Quer configurar sua marca / 100% online / usuários ilimitados" — os 3 diferenciais logo abaixo do Hero. */
+function ValueProps() {
+  return (
+    <section className="border-t border-[var(--border)] bg-[var(--surface)] py-14">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="grid gap-6 sm:grid-cols-3">
+          {valueProps.map((item) => (
+            <div key={item.title} className="flex items-start gap-3">
+              <span className="inline-flex shrink-0 rounded-xl bg-[var(--primary)]/10 p-2.5 text-[var(--primary)]">
+                <item.icon size={20} />
+              </span>
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">
+                  {item.title}
+                </p>
+                <p className="mt-0.5 text-sm text-[var(--text-muted)]">
+                  {item.description}
                 </p>
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** "Quem pode usar essa ferramenta?" */
+function Audience() {
+  return (
+    <section className="py-20">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
+            Quem pode usar essa ferramenta?
+          </h2>
+        </div>
+
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {audienceItems.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-7"
+            >
+              <span className="inline-flex rounded-xl bg-[var(--primary)]/10 p-3 text-[var(--primary)]">
+                <item.icon size={22} />
+              </span>
+
+              <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">
+                {item.title}
+              </h3>
+
+              <p className="mt-1.5 text-sm text-[var(--text-muted)]">
+                {item.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Banner de chamada pra demonstração personalizada, com botão levando pro formulário de contato. */
+function DemoCta() {
+  return (
+    <section className="border-t border-[var(--border)] py-20">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="overflow-hidden rounded-3xl bg-[var(--primary)] px-6 py-12 text-center sm:px-14">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary-contrast)]/15 px-3 py-1 text-xs font-semibold text-[var(--primary-contrast)]">
+            <CalendarClock size={13} />
+            Demonstração personalizada
+          </span>
+
+          <h2 className="mt-4 text-3xl font-bold text-[var(--primary-contrast)]">
+            Agende agora mesmo uma demonstração do Sistema AlePejo
+          </h2>
+
+          <p className="mx-auto mt-3 max-w-xl text-[var(--primary-contrast)]/85">
+            Nossa equipe vai te mostrar na prática como o sistema pode
+            ajudar sua empresa a organizar informações e simplificar a
+            gestão.
+          </p>
+
+          <div className="mx-auto mt-8 grid max-w-2xl gap-3 text-left sm:grid-cols-2">
+            {demoBullets.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-2.5 rounded-xl bg-[var(--primary-contrast)]/10 px-4 py-3 text-sm font-medium text-[var(--primary-contrast)]"
+              >
+                <item.icon size={16} className="shrink-0" />
+                {item.label}
+              </div>
+            ))}
+          </div>
+
+          <a
+            href="#contato"
+            className="mt-8 inline-block rounded-xl bg-[var(--primary-contrast)] px-6 py-3 text-sm font-semibold text-[var(--primary)] transition-opacity hover:opacity-90"
+          >
+            Agendar demonstração
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Perguntas frequentes — sanfona, só uma aberta por vez. */
+function Faq() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  return (
+    <section
+      id="perguntas-frequentes"
+      className="border-t border-[var(--border)] bg-[var(--surface)] py-20"
+    >
+      <div className="mx-auto max-w-3xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
+            Perguntas frequentes
+          </h2>
+        </div>
+
+        <div className="mt-10 space-y-3">
+          {faqItems.map((item, index) => {
+            const isOpen = openIndex === index;
+
+            return (
+              <div
+                key={item.question}
+                className="rounded-2xl border border-[var(--border)] bg-[var(--background)]"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenIndex(isOpen ? null : index)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                >
+                  <span className="font-medium text-[var(--text-primary)]">
+                    {item.question}
+                  </span>
+
+                  <ChevronDown
+                    size={18}
+                    className={`shrink-0 text-[var(--text-muted)] transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {isOpen && (
+                  <p className="px-5 pb-4 text-sm text-[var(--text-muted)]">
+                    {item.answer}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -1130,9 +1568,14 @@ export default function InstitucionalPage() {
     <div className="min-h-screen bg-[var(--background)]">
       <PublicNav />
       <Hero />
+      <ValueProps />
+      <Audience />
       <Features />
+      <AdminSection />
       <Demo />
+      <DemoCta />
       <Implantacao />
+      <Faq />
       <Contact />
       <FinalCta />
       <Footer />
