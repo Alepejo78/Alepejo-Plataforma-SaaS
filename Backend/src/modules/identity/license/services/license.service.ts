@@ -31,7 +31,67 @@ export class LicenseService {
       );
     }
 
-    return company;
+    return {
+      ...company,
+      companyPlan: company.companyPlan
+        ? {
+            ...company.companyPlan,
+            // "TRIAL com a data já vencida" é teste terminado, não
+            // teste em andamento — a tela precisa saber pra não
+            // anunciar "Período de teste" logo abaixo do aviso de que
+            // o teste acabou.
+            expired: this.isSubscriptionBlocked(company.companyPlan),
+          }
+        : null,
+      companyModules: company.companyModules.map((item) => ({
+        ...item,
+        licenseStatus: this.moduleLicenseStatus(
+          company.companyPlan,
+          item,
+        ),
+      })),
+    };
+  }
+
+  /**
+   * Situação de cada módulo pra mostrar na tela de Licenciamento. A
+   * regra pedida pelo usuário: "Ativo" só quando existe compra paga —
+   * antes disso é "A contratar", e quando a assinatura vence tudo o
+   * que estava contratado vira "Expirou".
+   *
+   * - DISABLED    — desmarcado pelo próprio cliente.
+   * - TO_CONTRACT — habilitado mas ainda sem contratação que o cubra
+   *                 (`licensed: false`): módulo escolhido depois, que
+   *                 só vira contratado quando o pagamento é confirmado.
+   * - EXPIRED     — contratado, mas a assinatura venceu/bloqueou.
+   * - TRIAL       — dentro do período de teste.
+   * - ACTIVE      — contratado e com assinatura paga em dia.
+   */
+  moduleLicenseStatus(
+    companyPlan: {
+      status: string;
+      trialEndsAt: Date | null;
+      graceUntil: Date | null;
+    } | null,
+    companyModule: { enabled: boolean; licensed: boolean },
+  ): 'ACTIVE' | 'TRIAL' | 'EXPIRED' | 'TO_CONTRACT' | 'DISABLED' {
+    if (!companyModule.enabled) {
+      return 'DISABLED';
+    }
+
+    if (!companyModule.licensed) {
+      return 'TO_CONTRACT';
+    }
+
+    if (this.isSubscriptionBlocked(companyPlan)) {
+      return 'EXPIRED';
+    }
+
+    if (companyPlan?.status === 'TRIAL') {
+      return 'TRIAL';
+    }
+
+    return companyPlan?.status === 'ACTIVE' ? 'ACTIVE' : 'EXPIRED';
   }
 
   async getPlans() {
@@ -58,11 +118,13 @@ export class LicenseService {
     companyId: string,
     moduleId: string,
     expiresAt?: Date,
+    licensed = true,
   ) {
     return this.repository.enableModule(
       companyId,
       moduleId,
       expiresAt,
+      licensed,
     );
   }
 
@@ -115,8 +177,21 @@ export class LicenseService {
 
     await this.repository.assignPlan(companyId, customPlan.id);
 
+    // Módulo que já estava na empresa mantém a situação que tinha; o
+    // que entra agora nasce "a contratar" (`licensed: false`), porque
+    // marcar aqui não paga nada — quem paga é o BillingService, e é o
+    // webhook do pagamento que promove todo mundo pra contratado.
+    const previous = new Map(
+      company.companyModules.map((item) => [item.moduleId, item]),
+    );
+
     for (const moduleId of finalIds) {
-      await this.enableModule(companyId, moduleId);
+      const existing = previous.get(moduleId);
+      const licensed = existing
+        ? existing.licensed
+        : minimumIds.includes(moduleId);
+
+      await this.enableModule(companyId, moduleId, undefined, licensed);
     }
 
     const currentlyEnabled = company.companyModules
@@ -251,9 +326,17 @@ export class LicenseService {
       return false;
     }
 
+    if (!companyModule.enabled) {
+      return false;
+    }
+
+    // Módulo ainda "a contratar" (`licensed: false`): durante o teste
+    // vale mesmo assim — o período de avaliação libera o sistema
+    // inteiro de propósito, pra pessoa experimentar antes de comprar.
+    // Terminado o teste, só libera depois de pago.
     if (
-      !companyModule.enabled ||
-      !companyModule.licensed
+      !companyModule.licensed &&
+      company.companyPlan?.status !== 'TRIAL'
     ) {
       return false;
     }

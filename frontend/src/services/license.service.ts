@@ -18,11 +18,26 @@ export interface LicenseModule {
   yearlyPrice?: string | number | null;
 }
 
+/**
+ * Situação do módulo, calculada no backend
+ * (`LicenseService.moduleLicenseStatus`) pra tela e servidor nunca
+ * discordarem: "Ativo" só com assinatura paga, "A contratar" enquanto
+ * não houver compra que cubra o módulo.
+ */
+export type ModuleLicenseStatus =
+  | "ACTIVE"
+  | "TRIAL"
+  | "EXPIRED"
+  | "TO_CONTRACT"
+  | "DISABLED";
+
 export interface CompanyModuleLicense {
   id: string;
   moduleId: string;
   active: boolean;
   trial: boolean;
+  licensed: boolean;
+  licenseStatus: ModuleLicenseStatus;
   expiresAt: string | null;
   module: LicenseModule;
 }
@@ -90,6 +105,8 @@ export interface CompanyPlanLicense {
   billingCycle: "MONTHLY" | "YEARLY";
   currentPeriodEnd?: string | null;
   graceUntil?: string | null;
+  /** Assinatura sem acesso válido — teste vencido, tolerância vencida, bloqueada ou cancelada. */
+  expired: boolean;
   plan: LicensePlan;
 }
 

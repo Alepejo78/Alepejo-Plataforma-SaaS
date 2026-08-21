@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleDashed,
   Clock,
   CreditCard,
   Loader2,
   Package,
   X,
+  type LucideIcon,
 } from "lucide-react";
 
 import { OsShell } from "@/components";
@@ -19,6 +21,7 @@ import {
   type CompanyPlanLicense,
   type CompanyPlanStatus,
   type LicenseModule,
+  type ModuleLicenseStatus,
   type MyLicense,
 } from "@/services/license.service";
 
@@ -36,6 +39,42 @@ const STATUS_BADGE_CLASS: Record<CompanyPlanStatus, string> = {
   PAST_DUE: "bg-[var(--warning-soft)] text-[var(--warning)]",
   BLOCKED: "bg-[var(--danger-soft)] text-[var(--danger)]",
   CANCELLED: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+};
+
+/**
+ * Como cada situação de módulo aparece na lista. Quem decide a
+ * situação é o backend (`LicenseService.moduleLicenseStatus`) — aqui
+ * só traduz pra texto/cor/ícone.
+ */
+const MODULE_STATE: Record<
+  ModuleLicenseStatus,
+  { label: string; color: string; icon: LucideIcon }
+> = {
+  ACTIVE: {
+    label: "Ativo",
+    color: "text-[var(--success)]",
+    icon: CheckCircle2,
+  },
+  TRIAL: {
+    label: "Período de teste",
+    color: "text-[var(--warning)]",
+    icon: Clock,
+  },
+  EXPIRED: {
+    label: "Expirou",
+    color: "text-[var(--danger)]",
+    icon: AlertTriangle,
+  },
+  TO_CONTRACT: {
+    label: "A contratar",
+    color: "text-[var(--text-muted)]",
+    icon: CircleDashed,
+  },
+  DISABLED: {
+    label: "Inativo",
+    color: "text-[var(--text-muted)]",
+    icon: CircleDashed,
+  },
 };
 
 function formatDate(value?: string | null) {
@@ -456,9 +495,17 @@ export default function LicenciamentoPage() {
                     </p>
 
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASS[license.companyPlan.status]}`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        license.companyPlan.expired
+                          ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                          : STATUS_BADGE_CLASS[license.companyPlan.status]
+                      }`}
                     >
-                      {STATUS_LABELS[license.companyPlan.status]}
+                      {license.companyPlan.expired
+                        ? license.companyPlan.status === "TRIAL"
+                          ? "Teste expirado"
+                          : "Expirado"
+                        : STATUS_LABELS[license.companyPlan.status]}
                     </span>
                   </div>
 
@@ -500,7 +547,7 @@ export default function LicenciamentoPage() {
 
             <section>
               <h2 className="mb-3 text-sm font-medium text-[var(--text-muted)]">
-                Módulos habilitados
+                Módulos da sua empresa
               </h2>
 
               {license.companyModules.length === 0 ? (
@@ -510,41 +557,37 @@ export default function LicenciamentoPage() {
                 </p>
               ) : (
                 <ul className="grid gap-3 md:grid-cols-2">
-                  {license.companyModules.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-start gap-3 rounded-2xl border border-[var(--border)] p-4"
-                    >
-                      {item.trial ? (
-                        <Clock
+                  {license.companyModules.map((item) => {
+                    const state = MODULE_STATE[item.licenseStatus];
+                    const Icon = state.icon;
+
+                    return (
+                      <li
+                        key={item.id}
+                        className="flex items-start gap-3 rounded-2xl border border-[var(--border)] p-4"
+                      >
+                        <Icon
                           size={18}
-                          className="mt-0.5 shrink-0 text-[var(--warning)]"
+                          className={`mt-0.5 shrink-0 ${state.color}`}
                         />
-                      ) : (
-                        <CheckCircle2
-                          size={18}
-                          className="mt-0.5 shrink-0 text-[var(--success)]"
-                        />
-                      )}
 
-                      <div className="min-w-0">
-                        <p className="font-medium text-[var(--text-primary)]">
-                          {item.module.name}
-                        </p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-[var(--text-primary)]">
+                            {item.module.name}
+                          </p>
 
-                        <p className="text-sm text-[var(--text-muted)]">
-                          {item.trial
-                            ? "Período de avaliação"
-                            : "Ativo"}
+                          <p className={`text-sm ${state.color}`}>
+                            {state.label}
 
-                          {item.expiresAt &&
-                            ` · até ${formatDate(
-                              item.expiresAt
-                            )}`}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
+                            {item.expiresAt &&
+                              ` · até ${formatDate(
+                                item.expiresAt
+                              )}`}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>

@@ -608,6 +608,13 @@ export class BillingService {
           graceUntil: null,
         },
       });
+
+      // O que estava marcado como "a contratar" passa a ser contratado
+      // de fato — é este pagamento que cobre os módulos escolhidos.
+      await this.prisma.companyModule.updateMany({
+        where: { companyId: companyPlan.companyId, enabled: true },
+        data: { licensed: true },
+      });
     } else if (payload.event === 'PAYMENT_OVERDUE') {
       await this.prisma.companyPlan.update({
         where: { id: companyPlan.id },

@@ -444,6 +444,9 @@ export class CompanyOnboardingService {
         companyId,
         mod.moduleId,
         mod.expiresAt ?? undefined,
+        // Herda inclusive o "a contratar": a empresa do grupo não
+        // pode ter mais do que a raiz já pagou.
+        mod.licensed,
       );
     }
   }

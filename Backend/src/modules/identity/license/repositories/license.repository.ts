@@ -87,10 +87,17 @@ export class LicenseRepository {
     });
   }
 
+  /**
+   * `licensed` = "está coberto por uma contratação". Módulo que o
+   * cliente marca sozinho depois (autoatendimento) entra como `false`
+   * — é o que faz a tela mostrar "A contratar" em vez de "Ativo" até
+   * o pagamento cair (ver `BillingService.handleWebhook`).
+   */
   enableModule(
     companyId: string,
     moduleId: string,
     expiresAt?: Date,
+    licensed = true,
   ) {
     return this.prisma.companyModule.upsert({
       where: {
@@ -103,12 +110,12 @@ export class LicenseRepository {
         companyId,
         moduleId,
         enabled: true,
-        licensed: true,
+        licensed,
         expiresAt,
       },
       update: {
         enabled: true,
-        licensed: true,
+        licensed,
         expiresAt,
       },
     });
