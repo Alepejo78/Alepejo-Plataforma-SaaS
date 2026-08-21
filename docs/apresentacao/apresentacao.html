@@ -287,16 +287,14 @@
     margin-bottom: 8px;
   }
 
-  .plan .price {
-    margin-top: 10px;
-    font-size: 22pt;
-    font-weight: 700;
-    letter-spacing: -0.5px;
+  .plan .kicker {
+    margin-top: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: var(--gold);
   }
-
-  .plan .price small { font-size: 10pt; font-weight: 600; color: var(--muted); }
-
-  .plan .year { margin-top: 3px; font-size: 9.5pt; color: var(--muted); }
 
   .plan ul { margin-top: 12px; list-style: none; }
 
@@ -341,8 +339,13 @@
   }
 
   td.name { color: var(--ink); font-weight: 600; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
   tr.free td { color: var(--gold); font-weight: 600; }
+
+  /* Links de verdade: o Chrome transforma <a href> em link clicável
+     dentro do PDF, então o e-mail que a empresa recebe já leva pro site. */
+  a { color: inherit; }
+  a.link { color: var(--gold); font-weight: 600; text-decoration: none; }
+  .dark a.link { color: var(--gold-light); }
 
   /* ---------- FAQ ---------- */
 
@@ -363,19 +366,33 @@
   .close h2 { color: #fff; font-size: 30pt; }
   .close .lead { color: #b8c4d8; text-align: center; }
 
+  .cta {
+    margin-top: 30px;
+    display: inline-block;
+    border-radius: 999px;
+    padding: 14px 38px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    color: #16233a;
+    font-size: 13pt;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
   .contact {
-    margin-top: 34px;
+    margin-top: 22px;
     display: flex;
     gap: 14px;
     justify-content: center;
     flex-wrap: wrap;
   }
 
-  .contact div {
+  .contact a {
+    display: block;
     border: 1px solid rgba(227, 184, 94, 0.35);
     border-radius: 14px;
     padding: 14px 26px;
     min-width: 2.6in;
+    text-decoration: none;
   }
 
   .contact .k {
@@ -403,7 +420,7 @@
     <span class="chip">Sua marca no sistema</span>
   </div>
 
-  <p class="site">alepejo.com.br</p>
+  <p class="site"><a href="https://alepejo.com.br">alepejo.com.br</a></p>
 </section>
 
 <!-- 2 · O PROBLEMA -->
@@ -437,7 +454,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 3 · DIFERENCIAIS -->
@@ -475,7 +492,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 4 · FLUXO -->
@@ -530,7 +547,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 5 · MÓDULOS 1 -->
@@ -614,7 +631,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 6 · MÓDULOS 2 (RH) -->
@@ -667,7 +684,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 7 · ADMINISTRAÇÃO -->
@@ -723,7 +740,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 8 · PLANOS -->
@@ -736,8 +753,7 @@
     <div class="plans">
       <div class="plan">
         <span class="name">Essencial</span>
-        <div class="price">R$ 119,90<small> /mês</small></div>
-        <div class="year">ou R$ 1.151,04/ano — 20% off</div>
+        <div class="kicker">Para começar a organizar</div>
         <ul>
           <li>Cadastros</li>
           <li>Produtos</li>
@@ -750,8 +766,7 @@
       <div class="plan featured">
         <span class="badge">Mais escolhido</span>
         <span class="name">Profissional</span>
-        <div class="price">R$ 179,80<small> /mês</small></div>
-        <div class="year">ou R$ 1.726,08/ano — 20% off</div>
+        <div class="kicker">Com o dinheiro sob controle</div>
         <ul>
           <li>Tudo do Essencial</li>
           <li>Financeiro completo</li>
@@ -762,8 +777,7 @@
 
       <div class="plan">
         <span class="name">Completo</span>
-        <div class="price">R$ 339,50<small> /mês</small></div>
-        <div class="year">ou R$ 3.259,20/ano — 20% off</div>
+        <div class="kicker">A empresa inteira no sistema</div>
         <ul>
           <li>Tudo do Profissional</li>
           <li>Recursos Humanos</li>
@@ -775,12 +789,11 @@
 
       <div class="plan">
         <span class="name">Customizado</span>
-        <div class="price">Você monta<small></small></div>
-        <div class="year">base + só os módulos que usar</div>
+        <div class="kicker">Você monta do seu jeito</div>
         <ul>
           <li>Parte da base do Essencial</li>
           <li>Escolha módulo a módulo</li>
-          <li>Preço somado na hora</li>
+          <li>Pague só pelo que usar</li>
           <li>Acrescente mais depois</li>
         </ul>
       </div>
@@ -789,17 +802,18 @@
     <p class="lead" style="margin-top:20px;font-size:11.5pt;">
       Todos os planos incluem usuários ilimitados, filiais ilimitadas, suporte 24h e treinamento remoto gratuito.
       Sem taxa de instalação — por ser 100% online, não há nada para instalar em servidor ou computador.
+      Valores e condições atualizados em <a class="link" href="https://alepejo.com.br/planos">alepejo.com.br/planos</a>.
     </p>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 9 · MÓDULOS AVULSOS -->
 <section class="slide">
   <span class="eyebrow">Plano customizado</span>
-  <h2>Pague só pelo que a sua empresa usa</h2>
-  <p class="lead">A base já vem com o que todo negócio precisa. A partir dela, você acrescenta módulo por módulo.</p>
+  <h2>Use só o que a sua empresa precisa</h2>
+  <p class="lead">A base já vem com o que todo negócio usa. A partir dela, você acrescenta módulo por módulo — e monta o preço no site, na hora.</p>
   <div class="rule"></div>
 
   <div class="body">
@@ -807,26 +821,27 @@
       <thead>
         <tr>
           <th>Módulo</th>
-          <th class="num">Mensal</th>
-          <th class="num">Anual (20% off)</th>
+          <th>O que ele resolve</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="free"><td class="name">Cadastros, Produtos, Estoque, Vendas e Compras</td><td class="num">Base inclusa</td><td class="num">Base inclusa</td></tr>
-        <tr><td class="name">Financeiro</td><td class="num">R$ 59,90</td><td class="num">R$ 575,04</td></tr>
-        <tr><td class="name">Recursos Humanos</td><td class="num">R$ 59,90</td><td class="num">R$ 575,04</td></tr>
-        <tr><td class="name">Ponto e Folha de Pagamento</td><td class="num">R$ 69,90</td><td class="num">R$ 671,04</td></tr>
-        <tr><td class="name">Produção</td><td class="num">R$ 49,90</td><td class="num">R$ 479,04</td></tr>
-        <tr><td class="name">Personalização (marca própria)</td><td class="num">R$ 39,90</td><td class="num">R$ 383,04</td></tr>
+        <tr class="free"><td class="name">Cadastros, Produtos, Estoque, Vendas e Compras</td><td>Base inclusa — o fluxo do pedido ao recebimento</td></tr>
+        <tr><td class="name">Financeiro</td><td>Contas a pagar e a receber, fluxo de caixa e orçamento</td></tr>
+        <tr><td class="name">Recursos Humanos</td><td>Colaboradores, cargos, exames, EPI e férias</td></tr>
+        <tr><td class="name">Ponto e Folha de Pagamento</td><td>Marcações, banco de horas, folha, 13º e holerite</td></tr>
+        <tr><td class="name">Produção</td><td>Ordem de produção e acompanhamento da fábrica</td></tr>
+        <tr><td class="name">Personalização (marca própria)</td><td>Sua logo, o nome da sua empresa e o tema do sistema</td></tr>
       </tbody>
     </table>
 
     <p class="lead" style="font-size:11pt;margin-top:16px;">
+      Monte o seu plano e veja o valor na hora em
+      <a class="link" href="https://alepejo.com.br/planos">alepejo.com.br/planos</a>.
       Não sabe por onde começar? A gente avalia a sua operação e indica quais módulos fazem sentido para o seu negócio.
     </p>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 10 · COMO COMEÇAR -->
@@ -880,7 +895,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 11 · FAQ 1 -->
@@ -901,7 +916,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 12 · FAQ 2 -->
@@ -922,7 +937,7 @@
     </div>
   </div>
 
-  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+  <div class="foot"><span>AlePejo ERP Cloud</span><span><a href="https://alepejo.com.br">alepejo.com.br</a></span></div>
 </section>
 
 <!-- 13 · FECHAMENTO -->
@@ -931,15 +946,17 @@
   <h2>Comece hoje com o teste grátis</h2>
   <p class="lead">Sem cartão, sem instalação. Crie a conta, use o sistema e decida depois — e, se preferir, agende uma demonstração com a nossa equipe.</p>
 
+  <a class="cta" href="https://alepejo.com.br">Acessar alepejo.com.br</a>
+
   <div class="contact">
-    <div>
-      <p class="k">Site</p>
-      <p class="v">alepejo.com.br</p>
-    </div>
-    <div>
+    <a href="https://alepejo.com.br/planos">
+      <p class="k">Planos e teste grátis</p>
+      <p class="v">alepejo.com.br/planos</p>
+    </a>
+    <a href="mailto:suporte@alepejo.com.br">
       <p class="k">E-mail</p>
       <p class="v">suporte@alepejo.com.br</p>
-    </div>
+    </a>
   </div>
 
   <p class="site" style="position:absolute;bottom:0.5in;font-size:9.5pt;color:#6b7a94;">

@@ -62,6 +62,7 @@ import { contactService } from "@/services/contact.service";
 import { companyOnboardingService } from "@/services/company-onboarding.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
 import { Faq } from "@/components/marketing/Faq";
+import { Mascote } from "@/components/marketing/Mascote";
 import "@/components/marketing/aurora.css";
 
 /** Dias de teste grátis vigente (Administrar planos) — usado nos textos de chamada pra ação abaixo. */
@@ -1225,6 +1226,126 @@ function stepDuration(narration: string) {
 }
 
 /**
+ * Vozes femininas em português que os navegadores costumam ter. As do
+ * Edge marcadas como "Natural"/"Online" são neurais e soam bem melhor
+ * que a voz robótica antiga do Windows — por isso valem pontos extras.
+ */
+const FEMALE_PT_VOICES = [
+  "francisca",
+  "thalita",
+  "brenda",
+  "elza",
+  "giovanna",
+  "leila",
+  "leticia",
+  "letícia",
+  "manuela",
+  "yara",
+  "maria",
+  "luciana",
+  "joana",
+  "camila",
+  "vitoria",
+  "vitória",
+  "helena",
+];
+
+const MALE_PT_VOICES = [
+  "daniel",
+  "antonio",
+  "antônio",
+  "fabio",
+  "fábio",
+  "julio",
+  "júlio",
+  "nicolau",
+  "valerio",
+  "valério",
+  "donato",
+  "humberto",
+  "duarte",
+  "felipe",
+];
+
+/**
+ * Escolhe a melhor voz disponível: em português, feminina e o mais
+ * natural possível. Cada navegador tem um conjunto diferente, então em
+ * vez de fixar um nome a gente pontua e fica com a melhor colocada.
+ */
+function pickVoice(voices: SpeechSynthesisVoice[]) {
+  const candidates = voices.filter((v) =>
+    v.lang?.toLowerCase().startsWith("pt")
+  );
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  function score(voice: SpeechSynthesisVoice) {
+    const name = voice.name.toLowerCase();
+    let points = 0;
+
+    if (FEMALE_PT_VOICES.some((n) => name.includes(n))) {
+      points += 60;
+    }
+
+    if (MALE_PT_VOICES.some((n) => name.includes(n))) {
+      points -= 60;
+    }
+
+    // Neurais do Edge — as mais naturais que aparecem no navegador.
+    if (name.includes("natural") || name.includes("online")) {
+      points += 40;
+    }
+
+    if (name.includes("google")) {
+      points += 25;
+    }
+
+    if (voice.lang.toLowerCase().replace("_", "-") === "pt-br") {
+      points += 20;
+    }
+
+    if (voice.localService) {
+      points += 2;
+    }
+
+    return points;
+  }
+
+  return [...candidates].sort((a, b) => score(b) - score(a))[0];
+}
+
+/**
+ * As vozes chegam de forma assíncrona no Chrome: na primeira chamada
+ * `getVoices()` volta vazio e só depois o evento `voiceschanged`
+ * avisa. Sem esperar por ele, o tour começaria com a voz padrão do
+ * sistema (masculina, em inglês) em vez da feminina em português.
+ */
+function useSpeechVoices() {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+
+    function refresh() {
+      setVoices(window.speechSynthesis.getVoices());
+    }
+
+    refresh();
+    window.speechSynthesis.addEventListener("voiceschanged", refresh);
+
+    return () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", refresh);
+    };
+  }, []);
+
+  return voices;
+}
+
+/**
  * Demonstração guiada — o "vídeo" do sistema, montado com as próprias
  * telas em vez de um arquivo gravado: passa módulo por módulo sozinho,
  * mostra a tela de cada um e conta o que ele faz.
@@ -1247,6 +1368,8 @@ function DemoTour() {
   const [canSpeak, setCanSpeak] = useState(false);
 
   const step = demoTabs[index];
+  const voices = useSpeechVoices();
+  const voice = pickVoice(voices);
 
   useEffect(() => {
     setCanSpeak(
@@ -1278,16 +1401,15 @@ function DemoTour() {
 
     if (sound && canSpeak) {
       const utterance = new SpeechSynthesisUtterance(step.narration);
-      const voice = window.speechSynthesis
-        .getVoices()
-        .find((v) => v.lang?.toLowerCase().startsWith("pt"));
 
       if (voice) {
         utterance.voice = voice;
       }
 
       utterance.lang = "pt-BR";
+      // Ritmo normal de fala: abaixo disso a leitura fica arrastada.
       utterance.rate = 1;
+      utterance.pitch = 1.05;
       utterance.onend = advance;
       // Se a fala falhar (aba sem permissão, voz indisponível), o tour
       // não pode travar parado nesse módulo pra sempre.
@@ -1308,7 +1430,7 @@ function DemoTour() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [playing, sound, index, step.narration, canSpeak]);
+  }, [playing, sound, index, step.narration, canSpeak, voice]);
 
   // Sair da página falando seria constrangedor pro visitante.
   useEffect(() => {
@@ -1345,9 +1467,9 @@ function DemoTour() {
           </h2>
 
           <p className="mt-3 text-[var(--text-muted)]">
-            Aperte o play e acompanhe o passeio pelo sistema, com
-            narração explicando o que cada módulo faz. Dados de exemplo,
-            só pra ilustrar.
+            Aperte o play e deixe o Pejo, nosso assistente, te levar
+            módulo por módulo, explicando em voz alta o que cada um
+            faz. Dados de exemplo, só pra ilustrar.
           </p>
         </div>
 
@@ -1381,14 +1503,16 @@ function DemoTour() {
             <button
               type="button"
               onClick={play}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-3xl bg-[color:rgb(9_13_25_/_0.55)] backdrop-blur-[2px] transition-colors hover:bg-[color:rgb(9_13_25_/_0.62)]"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-[color:rgb(9_13_25_/_0.55)] backdrop-blur-[2px] transition-colors hover:bg-[color:rgb(9_13_25_/_0.62)]"
             >
-              <span className="aurora-banner flex h-20 w-20 items-center justify-center rounded-full text-white shadow-2xl">
-                <Play size={32} className="ml-1" fill="currentColor" />
+              <Mascote className="h-auto w-[110px] sm:w-[150px]" />
+
+              <span className="aurora-banner flex h-16 w-16 items-center justify-center rounded-full text-white shadow-2xl">
+                <Play size={26} className="ml-1" fill="currentColor" />
               </span>
 
               <span className="text-lg font-semibold text-white">
-                Assistir à demonstração
+                Assistir à demonstração com o Pejo
               </span>
 
               <span className="text-sm text-white/80">
@@ -1417,14 +1541,34 @@ function DemoTour() {
             </span>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-start gap-4">
-            <span className="aurora-icon-badge flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-              <step.icon size={19} />
-            </span>
+          <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+            <Mascote
+              speaking={playing && sound && canSpeak}
+              className="h-auto w-[92px] shrink-0 sm:w-[104px]"
+            />
 
-            <p className="min-w-0 flex-1 text-[15px] leading-relaxed text-[var(--text-secondary)]">
-              {step.narration}
-            </p>
+            {/* Balão de fala: a pontinha à esquerda liga o texto ao
+                mascote, deixando claro que a voz é dele. */}
+            <div className="relative min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+              <span
+                aria-hidden
+                className="absolute -left-[7px] top-8 hidden h-3 w-3 rotate-45 border-b border-l border-[var(--border)] bg-[var(--background)] sm:block"
+              />
+
+              <div className="flex items-center gap-2">
+                <span className="aurora-icon-badge flex h-7 w-7 items-center justify-center rounded-lg">
+                  <step.icon size={15} />
+                </span>
+
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {step.label}
+                </p>
+              </div>
+
+              <p className="mt-2 text-[15px] leading-relaxed text-[var(--text-secondary)]">
+                {step.narration}
+              </p>
+            </div>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-4">

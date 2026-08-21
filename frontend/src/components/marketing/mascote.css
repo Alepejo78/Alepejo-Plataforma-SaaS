@@ -1,0 +1,86 @@
+/*
+ * Animações do Pejo, o mascote (ver `Mascote.tsx`). Ficam em CSS puro
+ * porque são laços infinitos — em JS custariam re-render a cada quadro
+ * à toa, e aqui o navegador anima sozinho.
+ */
+
+@keyframes pejo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Piscada: fecha o olho num instante e passa a maior parte do ciclo
+   aberto — por isso os quadros da piscada ficam espremidos no fim. */
+@keyframes pejo-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95%,
+  97% {
+    transform: scaleY(0.08);
+  }
+}
+
+@keyframes pejo-antenna {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes pejo-talk {
+  0%,
+  100% {
+    transform: scaleY(0.55);
+  }
+  50% {
+    transform: scaleY(1.35);
+  }
+}
+
+.pejo-float {
+  animation: pejo-float 3.6s ease-in-out infinite;
+}
+
+.pejo-eyes {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: pejo-blink 5.5s ease-in-out infinite;
+}
+
+.pejo-antenna {
+  animation: pejo-antenna 2s ease-in-out infinite;
+}
+
+.pejo-wave {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: pejo-talk 0.5s ease-in-out infinite;
+}
+
+.pejo-wave-2 {
+  animation-delay: 0.12s;
+}
+
+.pejo-wave-3 {
+  animation-delay: 0.24s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pejo-float,
+  .pejo-eyes,
+  .pejo-antenna,
+  .pejo-wave {
+    animation: none;
+  }
+}
