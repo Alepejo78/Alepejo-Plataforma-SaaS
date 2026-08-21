@@ -2,6 +2,9 @@
  * Animações do Pejo, o mascote (ver `Mascote.tsx`). Ficam em CSS puro
  * porque são laços infinitos — em JS custariam re-render a cada quadro
  * à toa, e aqui o navegador anima sozinho.
+ *
+ * Todo grupo que gira usa `transform-box: fill-box`, senão o SVG mede
+ * a origem pelo canvas inteiro e o braço sai rodando longe do ombro.
  */
 
 @keyframes pejo-float {
@@ -48,8 +51,69 @@
   }
 }
 
+@keyframes pejo-wave-arm {
+  0%,
+  100% {
+    transform: rotate(8deg);
+  }
+  50% {
+    transform: rotate(-34deg);
+  }
+}
+
+@keyframes pejo-hop {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-14px) rotate(-4deg);
+  }
+  55% {
+    transform: translateY(0) rotate(3deg);
+  }
+  75% {
+    transform: translateY(-6px) rotate(0deg);
+  }
+}
+
+@keyframes pejo-spin {
+  0% {
+    transform: perspective(600px) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(600px) rotateY(360deg);
+  }
+}
+
+@keyframes pejo-slump {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    transform: translateY(6px) rotate(-3deg);
+  }
+}
+
+.pejo {
+  display: block;
+  overflow: visible;
+}
+
 .pejo-float {
   animation: pejo-float 3.6s ease-in-out infinite;
+}
+
+.pejo-hop {
+  animation: pejo-hop 0.9s ease-in-out 2;
+}
+
+.pejo-spin {
+  animation: pejo-spin 1.1s ease-in-out 1;
+}
+
+.pejo-sad {
+  animation: pejo-slump 0.5s ease-out forwards;
 }
 
 .pejo-eyes {
@@ -76,11 +140,39 @@
   animation-delay: 0.24s;
 }
 
+/* Braços: a origem fica no topo (o ombro) pra girarem pendurados. */
+.pejo-arm {
+  transform-box: fill-box;
+  transform-origin: 50% 12%;
+  transition: transform 0.45s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.pejo-arm-waving {
+  animation: pejo-wave-arm 0.6s ease-in-out infinite;
+}
+
+/* Aponta pra tela do sistema, que fica acima do mascote. */
+.pejo-arm-pointing {
+  transform: rotate(-62deg);
+}
+
+.pejo-arm-sad {
+  transform: rotate(14deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pejo-float,
   .pejo-eyes,
   .pejo-antenna,
-  .pejo-wave {
+  .pejo-wave,
+  .pejo-hop,
+  .pejo-spin,
+  .pejo-sad,
+  .pejo-arm-waving {
     animation: none;
+  }
+
+  .pejo-arm {
+    transition: none;
   }
 }
