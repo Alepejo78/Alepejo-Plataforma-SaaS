@@ -4,6 +4,7 @@ import { ThemeProvider } from "../providers/theme-provider";
 import { AuthProvider } from "../providers/AuthProvider";
 import { TabsProvider } from "../providers/TabsProvider";
 import { BrandFooter } from "../components/layout/BrandFooter";
+import { MascoteFlutuante } from "../components/marketing/MascoteFlutuante";
 
 export default function RootLayout({
   children,
@@ -17,6 +18,7 @@ export default function RootLayout({
           <TabsProvider>
             <ThemeProvider>
               {children}
+              <MascoteFlutuante />
               <BrandFooter />
             </ThemeProvider>
           </TabsProvider>
