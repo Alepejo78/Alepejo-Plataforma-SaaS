@@ -36,7 +36,10 @@ import {
   Moon,
   Package,
   Palette,
+  Pause,
   PiggyBank,
+  Play,
+  PlayCircle,
   Plug,
   Plus,
   Search,
@@ -48,6 +51,8 @@ import {
   Truck,
   UserCog,
   Users,
+  Volume2,
+  VolumeX,
   Wallet,
   Workflow,
 } from "lucide-react";
@@ -126,7 +131,81 @@ const BADGE_CLASS: Record<BadgeTone, string> = {
  * título e botão "Novo", busca, tabela com cabeçalho fixo e badge de
  * situação. Nada de cartões de indicador — as telas reais não têm.
  */
+/**
+ * Roteiro da demonstração guiada (ver `DemoTour`): cada item é uma
+ * parada do tour — a tela simulada daquele módulo mais a narração que
+ * o navegador lê em voz alta. A ordem segue o fluxo real da empresa
+ * (cadastra → compra → estoca → vende → recebe), que é justamente o
+ * argumento de venda: uma etapa alimenta a próxima.
+ *
+ * `narration` é texto puro de propósito: é o que a voz lê e o que
+ * aparece na legenda, então nada de abreviação que a leitura estrague.
+ */
 const demoTabs = [
+  {
+    id: "cadastros",
+    icon: Users,
+    label: "Cadastros",
+    pageTitle: "Clientes e fornecedores",
+    subtitle: "Quem compra de você e de quem você compra.",
+    newLabel: "Novo cadastro",
+    narration:
+      "Tudo começa nos cadastros. Clientes, fornecedores, transportadoras e representantes ficam em um lugar só, e são usados por todos os outros módulos do sistema. Você cadastra uma vez e não digita a mesma informação de novo.",
+    columns: ["Nome", "Tipo", "Cidade", "Situação"],
+    rows: [
+      ["Comércio Silva Ltda", "Cliente", "Curitiba - PR", { label: "Ativo", tone: "success" as BadgeTone }],
+      ["Distribuidora Norte", "Fornecedor", "Londrina - PR", { label: "Ativo", tone: "success" as BadgeTone }],
+      ["Transportes Rápido", "Transportadora", "Maringá - PR", { label: "Ativo", tone: "success" as BadgeTone }],
+    ],
+  },
+  {
+    id: "produtos",
+    icon: Package,
+    label: "Produtos",
+    pageTitle: "Produtos",
+    subtitle: "Categoria, marca e unidade de medida.",
+    newLabel: "Novo produto",
+    narration:
+      "Em produtos você organiza o que a empresa vende ou fabrica, com categoria, marca e unidade de medida. É esse cadastro que alimenta o estoque, as compras e as vendas.",
+    columns: ["Produto", "Categoria", "Unidade", "Preço de venda"],
+    rows: [
+      ["Cabo elétrico 2,5mm", "Elétrica", "Metro", "R$ 4,90"],
+      ["Disjuntor 20A", "Elétrica", "Unidade", "R$ 28,50"],
+      ["Luminária LED 40W", "Iluminação", "Unidade", "R$ 89,00"],
+    ],
+  },
+  {
+    id: "compras",
+    icon: Truck,
+    label: "Compras",
+    pageTitle: "Pedidos de compra",
+    subtitle: "Da cotação ao recebimento do fornecedor.",
+    newLabel: "Novo pedido",
+    narration:
+      "No módulo de compras você faz a cotação, gera o pedido e registra o recebimento. Assim que o material é recebido, ele entra no estoque automaticamente e o valor vira uma conta a pagar no financeiro.",
+    columns: ["Pedido", "Fornecedor", "Data", "Valor", "Situação"],
+    rows: [
+      ["#308", "Distribuidora Norte", "14/08", "R$ 6.480,00", { label: "Recebido", tone: "success" as BadgeTone }],
+      ["#307", "Elétrica Sul", "11/08", "R$ 2.115,00", { label: "Em cotação", tone: "warning" as BadgeTone }],
+      ["#306", "Distribuidora Norte", "05/08", "R$ 4.020,00", { label: "Recebido", tone: "success" as BadgeTone }],
+    ],
+  },
+  {
+    id: "estoque",
+    icon: Boxes,
+    label: "Estoque",
+    pageTitle: "Estoque",
+    subtitle: "Saldo por depósito, sempre atualizado.",
+    newLabel: "Nova movimentação",
+    narration:
+      "O estoque se move sozinho. Comprou e recebeu, o produto entra. Confirmou a venda, o produto sai. E quando o saldo fica abaixo do mínimo, o sistema avisa antes de faltar material para atender o cliente.",
+    columns: ["Produto", "Depósito", "Saldo", "Situação"],
+    rows: [
+      ["Cabo elétrico 2,5mm", "Depósito Central", "420 m", { label: "OK", tone: "success" as BadgeTone }],
+      ["Disjuntor 20A", "Depósito Central", "8 un", { label: "Abaixo do mínimo", tone: "danger" as BadgeTone }],
+      ["Luminária LED 40W", "Filial Norte", "132 un", { label: "OK", tone: "success" as BadgeTone }],
+    ],
+  },
   {
     id: "vendas",
     icon: ShoppingCart,
@@ -134,11 +213,13 @@ const demoTabs = [
     pageTitle: "Vendas",
     subtitle: "Orçamentos, pedidos e vendas da sua empresa.",
     newLabel: "Novo pedido",
+    narration:
+      "Nas vendas o orçamento vira pedido e o pedido vira venda, sem redigitar nada. Ao confirmar, o material sai do estoque e o título a receber é criado no financeiro na mesma hora.",
     columns: ["Pedido", "Cliente", "Data", "Valor", "Situação"],
     rows: [
-      ["#1042", "Cliente A", "12/08", "R$ 3.240,00", { label: "Faturado", tone: "success" as BadgeTone }],
-      ["#1041", "Cliente B", "10/08", "R$ 1.890,00", { label: "Em aberto", tone: "warning" as BadgeTone }],
-      ["#1040", "Cliente C", "08/08", "R$ 970,00", { label: "Faturado", tone: "success" as BadgeTone }],
+      ["#1042", "Comércio Silva Ltda", "12/08", "R$ 3.240,00", { label: "Faturado", tone: "success" as BadgeTone }],
+      ["#1041", "Construtora Alfa", "10/08", "R$ 1.890,00", { label: "Em aberto", tone: "warning" as BadgeTone }],
+      ["#1040", "Mercado Central", "08/08", "R$ 970,00", { label: "Faturado", tone: "success" as BadgeTone }],
     ],
   },
   {
@@ -148,26 +229,30 @@ const demoTabs = [
     pageTitle: "Contas a pagar e a receber",
     subtitle: "Lançamentos financeiros da sua empresa.",
     newLabel: "Novo lançamento",
+    narration:
+      "O financeiro recebe tudo pronto: os títulos a pagar e a receber nascem das compras e das vendas, com o vencimento em dia. E o gráfico de fluxo de caixa mostra receita e despesa mês a mês, para você enxergar o resultado sem montar planilha.",
     columns: ["Descrição", "Vencimento", "Valor", "Situação"],
     rows: [
-      ["Recebimento — Cliente A", "22/08", "R$ 2.100,00", { label: "A vencer", tone: "warning" as BadgeTone }],
-      ["Pagamento — Fornecedor B", "24/08", "R$ 3.400,00", { label: "A vencer", tone: "warning" as BadgeTone }],
-      ["Recebimento — Cliente C", "10/08", "R$ 1.560,00", { label: "Pago", tone: "success" as BadgeTone }],
+      ["Recebimento — Comércio Silva", "22/08", "R$ 2.100,00", { label: "A vencer", tone: "warning" as BadgeTone }],
+      ["Pagamento — Distribuidora Norte", "24/08", "R$ 3.400,00", { label: "A vencer", tone: "warning" as BadgeTone }],
+      ["Recebimento — Mercado Central", "10/08", "R$ 1.560,00", { label: "Pago", tone: "success" as BadgeTone }],
     ],
     hasDashboard: true,
   },
   {
-    id: "estoque",
-    icon: Boxes,
-    label: "Estoque",
-    pageTitle: "Estoque",
-    subtitle: "Saldo por depósito, sempre atualizado.",
-    newLabel: "Nova movimentação",
-    columns: ["Produto", "Depósito", "Saldo", "Situação"],
+    id: "producao",
+    icon: Factory,
+    label: "Produção",
+    pageTitle: "Ordens de produção",
+    subtitle: "Acompanhamento do que está sendo produzido.",
+    newLabel: "Nova ordem",
+    narration:
+      "Para quem fabrica, o módulo de produção abre a ordem, consome o material do estoque e acompanha cada etapa até o produto ficar pronto para a venda.",
+    columns: ["Ordem", "Produto", "Quantidade", "Situação"],
     rows: [
-      ["Produto A", "Depósito Central", "420 un", { label: "OK", tone: "success" as BadgeTone }],
-      ["Produto B", "Depósito Central", "8 un", { label: "Abaixo do mínimo", tone: "danger" as BadgeTone }],
-      ["Produto C", "Filial Norte", "132 un", { label: "OK", tone: "success" as BadgeTone }],
+      ["OP-215", "Luminária LED 40W", "150 un", { label: "Em produção", tone: "warning" as BadgeTone }],
+      ["OP-214", "Chicote elétrico", "80 un", { label: "Concluída", tone: "success" as BadgeTone }],
+      ["OP-213", "Painel de comando", "12 un", { label: "Concluída", tone: "success" as BadgeTone }],
     ],
   },
   {
@@ -177,11 +262,45 @@ const demoTabs = [
     pageTitle: "Colaboradores",
     subtitle: "Cadastro e situação de cada colaborador.",
     newLabel: "Novo colaborador",
-    columns: ["Colaborador", "Cargo", "Situação"],
+    narration:
+      "O módulo de recursos humanos guarda função, cargo, salário, horário e setor de cada colaborador. Também controla exames médicos, entrega de equipamento de proteção, férias e até os aniversariantes do mês.",
+    columns: ["Colaborador", "Cargo", "Setor", "Situação"],
     rows: [
-      ["Colaborador A", "Vendedor", { label: "Ativo", tone: "success" as BadgeTone }],
-      ["Colaborador B", "Analista Financeiro", { label: "Férias", tone: "neutral" as BadgeTone }],
-      ["Colaborador C", "Auxiliar de Estoque", { label: "Experiência", tone: "warning" as BadgeTone }],
+      ["Ana Ribeiro", "Vendedora", "Comercial", { label: "Ativo", tone: "success" as BadgeTone }],
+      ["Carlos Menezes", "Analista Financeiro", "Financeiro", { label: "Férias", tone: "neutral" as BadgeTone }],
+      ["Juliana Prado", "Auxiliar de Estoque", "Logística", { label: "Experiência", tone: "warning" as BadgeTone }],
+    ],
+  },
+  {
+    id: "folha",
+    icon: Clock,
+    label: "Ponto e Folha",
+    pageTitle: "Ponto e folha de pagamento",
+    subtitle: "Marcações, banco de horas e holerite.",
+    newLabel: "Calcular folha",
+    narration:
+      "Ponto e folha é o diferencial do AlePejo. O sistema controla as marcações, soma as horas positivas e negativas do mês e leva o saldo direto para o cálculo da folha. O que não foi compensado entra como hora extra, e o holerite sai pronto.",
+    columns: ["Colaborador", "Horas no mês", "Saldo", "Situação"],
+    rows: [
+      ["Ana Ribeiro", "176h", "+ 4h20", { label: "Hora extra", tone: "warning" as BadgeTone }],
+      ["Carlos Menezes", "176h", "0h00", { label: "Em dia", tone: "success" as BadgeTone }],
+      ["Juliana Prado", "168h", "- 2h10", { label: "A compensar", tone: "neutral" as BadgeTone }],
+    ],
+  },
+  {
+    id: "administracao",
+    icon: ShieldCheck,
+    label: "Administração",
+    pageTitle: "Usuários e perfis de acesso",
+    subtitle: "Quem entra no sistema e o que cada um pode fazer.",
+    newLabel: "Novo usuário",
+    narration:
+      "Por fim, a administração fica com você. Usuários ilimitados, cada um com um perfil que define exatamente o que pode ver e fazer. E na personalização você coloca a sua logo, o nome da sua empresa e escolhe o tema — o sistema fica com a cara do seu negócio.",
+    columns: ["Usuário", "Perfil de acesso", "Situação"],
+    rows: [
+      ["Ana Ribeiro", "Vendas", { label: "Ativo", tone: "success" as BadgeTone }],
+      ["Carlos Menezes", "Financeiro", { label: "Ativo", tone: "success" as BadgeTone }],
+      ["Juliana Prado", "Estoque", { label: "Ativo", tone: "success" as BadgeTone }],
     ],
   },
 ];
@@ -1094,31 +1213,152 @@ function DemoCta() {
   );
 }
 
-function Demo() {
-  const [active, setActive] = useState(demoTabs[0].id);
+/**
+ * Tempo que cada parada fica no ar quando a narração está no mudo.
+ * Calculado pelo tamanho do texto (~2,6 palavras por segundo, ritmo de
+ * locução em português) pra a legenda não sumir antes de dar pra ler.
+ */
+function stepDuration(narration: string) {
+  const words = narration.trim().split(/\s+/).length;
+
+  return Math.max(7000, Math.round((words / 2.6) * 1000) + 900);
+}
+
+/**
+ * Demonstração guiada — o "vídeo" do sistema, montado com as próprias
+ * telas em vez de um arquivo gravado: passa módulo por módulo sozinho,
+ * mostra a tela de cada um e conta o que ele faz.
+ *
+ * A voz sai do próprio navegador (Web Speech API, pt-BR). É o único
+ * jeito de ter narração sem hospedar áudio, e tem uma vantagem real:
+ * quando o texto de um módulo mudar, a narração muda junto — não fica
+ * um vídeo velho contando o sistema errado. Onde a API não existe (ou
+ * não tem voz em português), o tour roda igual, só sem som.
+ *
+ * Começa parado de propósito: navegador nenhum deixa um site falar
+ * sem o visitante clicar antes, e som automático espantaria mais gente
+ * do que convenceria.
+ */
+function DemoTour() {
+  const [index, setIndex] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [sound, setSound] = useState(true);
+  const [started, setStarted] = useState(false);
+  const [canSpeak, setCanSpeak] = useState(false);
+
+  const step = demoTabs[index];
+
+  useEffect(() => {
+    setCanSpeak(
+      typeof window !== "undefined" && "speechSynthesis" in window
+    );
+  }, []);
+
+  // Uma parada por vez: fala (ou conta o tempo) e avança sozinho. O
+  // cleanup corta a fala pendente — sem ele, pausar ou trocar de
+  // módulo deixaria a voz anterior terminando por cima da nova.
+  useEffect(() => {
+    if (!playing) {
+      return;
+    }
+
+    let cancelled = false;
+
+    function advance() {
+      if (cancelled) {
+        return;
+      }
+
+      if (index < demoTabs.length - 1) {
+        setIndex(index + 1);
+      } else {
+        setPlaying(false);
+      }
+    }
+
+    if (sound && canSpeak) {
+      const utterance = new SpeechSynthesisUtterance(step.narration);
+      const voice = window.speechSynthesis
+        .getVoices()
+        .find((v) => v.lang?.toLowerCase().startsWith("pt"));
+
+      if (voice) {
+        utterance.voice = voice;
+      }
+
+      utterance.lang = "pt-BR";
+      utterance.rate = 1;
+      utterance.onend = advance;
+      // Se a fala falhar (aba sem permissão, voz indisponível), o tour
+      // não pode travar parado nesse módulo pra sempre.
+      utterance.onerror = advance;
+
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+
+      return () => {
+        cancelled = true;
+        window.speechSynthesis.cancel();
+      };
+    }
+
+    const timer = setTimeout(advance, stepDuration(step.narration));
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [playing, sound, index, step.narration, canSpeak]);
+
+  // Sair da página falando seria constrangedor pro visitante.
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  function play() {
+    setStarted(true);
+    setPlaying(true);
+  }
+
+  function goTo(next: number) {
+    setIndex(next);
+    setStarted(true);
+  }
+
+  const finished = started && !playing && index === demoTabs.length - 1;
 
   return (
     <section id="demonstracao" className="py-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-            Veja como fica na prática
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+            <PlayCircle size={13} className="text-[var(--primary)]" />
+            Demonstração guiada
+          </span>
+
+          <h2 className="mt-4 text-3xl font-bold text-[var(--text-primary)]">
+            Veja o sistema funcionando, módulo por módulo
           </h2>
 
           <p className="mt-3 text-[var(--text-muted)]">
-            Uma prévia de como cada módulo aparece dentro do sistema —
-            dados de exemplo, só pra ilustrar.
+            Aperte o play e acompanhe o passeio pelo sistema, com
+            narração explicando o que cada módulo faz. Dados de exemplo,
+            só pra ilustrar.
           </p>
         </div>
 
-        <div className="mx-auto mt-10 flex max-w-xl flex-wrap justify-center gap-2">
-          {demoTabs.map((t) => (
+        <div className="mx-auto mt-10 flex flex-wrap justify-center gap-2">
+          {demoTabs.map((t, position) => (
             <button
               key={t.id}
               type="button"
-              onClick={() => setActive(t.id)}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-                active === t.id
+              onClick={() => goTo(position)}
+              className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors ${
+                position === index
                   ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
                   : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
               }`}
@@ -1128,8 +1368,128 @@ function Demo() {
           ))}
         </div>
 
-        <div className="mx-auto mt-8 max-w-6xl">
-          <AppPreview activeId={active} onSelect={setActive} interactive />
+        <div className="relative mx-auto mt-8">
+          <AppPreview
+            activeId={step.id}
+            onSelect={(id) =>
+              goTo(demoTabs.findIndex((t) => t.id === id))
+            }
+            interactive
+          />
+
+          {!started && (
+            <button
+              type="button"
+              onClick={play}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-3xl bg-[color:rgb(9_13_25_/_0.55)] backdrop-blur-[2px] transition-colors hover:bg-[color:rgb(9_13_25_/_0.62)]"
+            >
+              <span className="aurora-banner flex h-20 w-20 items-center justify-center rounded-full text-white shadow-2xl">
+                <Play size={32} className="ml-1" fill="currentColor" />
+              </span>
+
+              <span className="text-lg font-semibold text-white">
+                Assistir à demonstração
+              </span>
+
+              <span className="text-sm text-white/80">
+                {demoTabs.length} módulos · cerca de 3 minutos
+                {canSpeak ? " · com narração" : ""}
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* Legenda + controles: a narração também vem escrita, pra quem
+            assiste no mudo, no trabalho ou não ouve. */}
+        <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+          <div className="flex items-center gap-3">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-hover)]">
+              <div
+                className="aurora-banner h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${((index + 1) / demoTabs.length) * 100}%`,
+                }}
+              />
+            </div>
+
+            <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">
+              {index + 1} de {demoTabs.length}
+            </span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-start gap-4">
+            <span className="aurora-icon-badge flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+              <step.icon size={19} />
+            </span>
+
+            <p className="min-w-0 flex-1 text-[15px] leading-relaxed text-[var(--text-secondary)]">
+              {step.narration}
+            </p>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                if (finished) {
+                  setIndex(0);
+                  setPlaying(true);
+
+                  return;
+                }
+
+                if (playing) {
+                  setPlaying(false);
+
+                  return;
+                }
+
+                play();
+              }}
+              className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+            >
+              {playing ? (
+                <>
+                  <Pause size={16} fill="currentColor" />
+                  Pausar
+                </>
+              ) : (
+                <>
+                  <Play size={16} fill="currentColor" />
+                  {finished ? "Assistir de novo" : "Continuar"}
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={index === 0}
+              onClick={() => goTo(index - 1)}
+              className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] disabled:opacity-40"
+            >
+              Anterior
+            </button>
+
+            <button
+              type="button"
+              disabled={index === demoTabs.length - 1}
+              onClick={() => goTo(index + 1)}
+              className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] disabled:opacity-40"
+            >
+              Próximo
+            </button>
+
+            {canSpeak && (
+              <button
+                type="button"
+                onClick={() => setSound(!sound)}
+                className="ml-auto flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)]"
+              >
+                {sound ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                {sound ? "Som ligado" : "Som desligado"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </section>
@@ -1447,7 +1807,7 @@ export default function InstitucionalPage() {
       <Audience />
       <Features />
       <AdminSection />
-      <Demo />
+      <DemoTour />
       <DemoCta />
       <Implantacao />
       <Faq />

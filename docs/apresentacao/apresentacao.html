@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>AlePejo ERP Cloud — Apresentação</title>
+<style>
+  /*
+   * Fonte do PDF comercial. Gerado por `node gerar-pdf.js`, que troca
+   * {{LOGO_DARK}}/{{LOGO_LIGHT}} pelas imagens em base64 e imprime pelo
+   * Chrome headless. Uma <section class="slide"> = uma página.
+   *
+   * Slides claros de propósito: o material é pra encaminhar por e-mail e
+   * muita empresa imprime — fundo preto gastaria tinta à toa. Só a capa
+   * e o fechamento são escuros, que é onde a logo aparece grande.
+   */
+  @page { size: 13.333in 7.5in; margin: 0; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0e1726;
+    --ink-soft: #33415c;
+    --muted: #64748b;
+    --gold: #b8862f;
+    --gold-light: #e3b85e;
+    --line: #e2e8f0;
+    --bg: #ffffff;
+    --bg-soft: #f6f8fb;
+  }
+
+  html, body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .slide {
+    position: relative;
+    width: 13.333in;
+    height: 7.5in;
+    padding: 0.72in 0.85in;
+    background: var(--bg);
+    overflow: hidden;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .slide:last-child { page-break-after: auto; }
+
+  .slide.dark {
+    background: radial-gradient(circle at 20% 15%, #16233a 0%, #0a1120 55%, #05080f 100%);
+    color: #eef2f8;
+  }
+
+  /* ---------- cabeçalho / rodapé ---------- */
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+
+  h1 { font-size: 34pt; line-height: 1.1; letter-spacing: -0.5px; }
+  h2 { font-size: 25pt; line-height: 1.15; letter-spacing: -0.3px; }
+  h3 { font-size: 13pt; line-height: 1.3; }
+
+  .lead {
+    font-size: 13pt;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    max-width: 8.6in;
+    margin-top: 14px;
+  }
+
+  .dark .lead { color: #b8c4d8; }
+
+  .rule {
+    width: 74px;
+    height: 4px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    margin: 16px 0 26px;
+  }
+
+  .foot {
+    position: absolute;
+    left: 0.85in;
+    right: 0.85in;
+    bottom: 0.4in;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9pt;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+  }
+
+  /* Centraliza o conteúdo no espaço que sobra: sem isso os slides mais
+     curtos empurram tudo pro topo e deixam um vazio grande no rodapé. */
+  .body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-bottom: 0.35in;
+  }
+
+  /* ---------- capa ---------- */
+
+  .cover {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .cover img { width: 4.6in; margin-bottom: 34px; }
+  .cover h1 { font-size: 40pt; color: #ffffff; }
+  .cover .tag { margin-top: 16px; font-size: 15pt; color: #c9d4e6; }
+
+  .cover .chips {
+    margin-top: 40px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    border: 1px solid rgba(227, 184, 94, 0.45);
+    border-radius: 999px;
+    padding: 9px 20px;
+    font-size: 11.5pt;
+    font-weight: 600;
+    color: #e3b85e;
+  }
+
+  .cover .site {
+    position: absolute;
+    bottom: 0.55in;
+    font-size: 11pt;
+    color: #8b9ab4;
+    letter-spacing: 0.05em;
+  }
+
+  /* ---------- grades ---------- */
+
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .g5 { grid-template-columns: repeat(5, 1fr); }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    background: var(--bg-soft);
+  }
+
+  .card .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--ink);
+    color: var(--gold-light);
+    font-size: 10.5pt;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .card h3 { color: var(--ink); }
+
+  .card p {
+    margin-top: 7px;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  .card ul { margin-top: 9px; padding-left: 0; list-style: none; }
+
+  .card li {
+    font-size: 10pt;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    padding-left: 15px;
+    position: relative;
+  }
+
+  .card li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+    background: var(--gold);
+  }
+
+  .card.tight { padding: 15px 15px 13px; }
+  .card.tight h3 { font-size: 12pt; }
+  .card.tight li { font-size: 9.5pt; line-height: 1.45; }
+
+  /* ---------- fluxo ---------- */
+
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .flow .step {
+    flex: 1;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 14px;
+    background: var(--bg-soft);
+    text-align: center;
+  }
+
+  .flow .step .k {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .flow .step h3 { margin-top: 6px; font-size: 12.5pt; }
+
+  .flow .step p {
+    margin-top: 6px;
+    font-size: 9.5pt;
+    line-height: 1.4;
+    color: var(--ink-soft);
+  }
+
+  .flow .arrow {
+    align-self: center;
+    color: var(--gold);
+    font-size: 18pt;
+    font-weight: 700;
+  }
+
+  /* ---------- planos ---------- */
+
+  .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  .plan {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px 18px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .plan.featured {
+    border: 2px solid var(--gold);
+    background: linear-gradient(180deg, #fffdf7, #fff);
+  }
+
+  .plan .name { font-size: 14pt; font-weight: 700; }
+
+  .plan .badge {
+    display: inline-block;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8a6318;
+    background: #fbf0d8;
+    border-radius: 999px;
+    padding: 3px 10px;
+    margin-bottom: 8px;
+  }
+
+  .plan .price {
+    margin-top: 10px;
+    font-size: 22pt;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .plan .price small { font-size: 10pt; font-weight: 600; color: var(--muted); }
+
+  .plan .year { margin-top: 3px; font-size: 9.5pt; color: var(--muted); }
+
+  .plan ul { margin-top: 12px; list-style: none; }
+
+  .plan li {
+    font-size: 9.5pt;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    padding-left: 15px;
+    position: relative;
+  }
+
+  .plan li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+    background: var(--gold);
+  }
+
+  /* ---------- tabela de preços avulsos ---------- */
+
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+
+  th {
+    text-align: left;
+    font-size: 9.5pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 9px 12px;
+    border-bottom: 2px solid var(--line);
+  }
+
+  td {
+    font-size: 11pt;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft);
+  }
+
+  td.name { color: var(--ink); font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.free td { color: var(--gold); font-weight: 600; }
+
+  /* ---------- FAQ ---------- */
+
+  .qa { break-inside: avoid; }
+  .qa .q { font-size: 11pt; font-weight: 700; color: var(--ink); }
+
+  .qa .a {
+    margin-top: 4px;
+    font-size: 10pt;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- fechamento ---------- */
+
+  .close { justify-content: center; align-items: center; text-align: center; }
+  .close img { width: 3in; margin-bottom: 26px; }
+  .close h2 { color: #fff; font-size: 30pt; }
+  .close .lead { color: #b8c4d8; text-align: center; }
+
+  .contact {
+    margin-top: 34px;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .contact div {
+    border: 1px solid rgba(227, 184, 94, 0.35);
+    border-radius: 14px;
+    padding: 14px 26px;
+    min-width: 2.6in;
+  }
+
+  .contact .k {
+    font-size: 9pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8b9ab4;
+  }
+
+  .contact .v { margin-top: 5px; font-size: 13pt; font-weight: 600; color: #e3b85e; }
+</style>
+</head>
+<body>
+
+<!-- 1 · CAPA -->
+<section class="slide dark cover">
+  <img src="{{LOGO_DARK}}" alt="AlePejo ERP Cloud" />
+  <h1>O ERP que organiza<br />a sua empresa inteira</h1>
+  <p class="tag">Cadastros, compras, vendas, estoque, financeiro, produção e RH — em um sistema só.</p>
+
+  <div class="chips">
+    <span class="chip">100% online</span>
+    <span class="chip">Usuários ilimitados</span>
+    <span class="chip">Filiais sem custo extra</span>
+    <span class="chip">Sua marca no sistema</span>
+  </div>
+
+  <p class="site">alepejo.com.br</p>
+</section>
+
+<!-- 2 · O PROBLEMA -->
+<section class="slide">
+  <span class="eyebrow">O problema</span>
+  <h2>A informação existe. Ela só está espalhada.</h2>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="grid g3">
+      <div class="card">
+        <span class="num">1</span>
+        <h3>Planilha para cada coisa</h3>
+        <p>Uma para vendas, outra para estoque, outra para as contas. Nenhuma conversa com a outra e ninguém sabe qual é a versão certa.</p>
+      </div>
+      <div class="card">
+        <span class="num">2</span>
+        <h3>A mesma informação, três vezes</h3>
+        <p>O pedido é digitado na venda, de novo para baixar o estoque e mais uma vez para lançar o que a empresa tem a receber.</p>
+      </div>
+      <div class="card">
+        <span class="num">3</span>
+        <h3>Decisão no escuro</h3>
+        <p>Quando o número finalmente aparece, ele já está velho — e a conversa vira discussão sobre o dado, não sobre o negócio.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;background:#0e1726;border-color:#0e1726;">
+      <h3 style="color:#fff;font-size:15pt;">O AlePejo ERP Cloud fecha esse ciclo</h3>
+      <p style="color:#c9d4e6;font-size:11.5pt;">Um sistema só, com os módulos conversando entre si: a venda baixa o estoque e gera o título a receber sozinha. Você digita uma vez — o resto acontece.</p>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 3 · DIFERENCIAIS -->
+<section class="slide">
+  <span class="eyebrow">Por que o AlePejo</span>
+  <h2>Feito para a pequena empresa que quer crescer</h2>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="grid g3">
+      <div class="card">
+        <h3>100% online</h3>
+        <p>Nada é instalado no computador. Acesse do escritório, de casa ou do celular, com os dados sempre na nuvem.</p>
+      </div>
+      <div class="card">
+        <h3>Usuários ilimitados</h3>
+        <p>Sem taxa por usuário. Cadastre o time inteiro e defina, por perfil, o que cada pessoa pode ver e fazer.</p>
+      </div>
+      <div class="card">
+        <h3>Filiais incluídas</h3>
+        <p>Cadastre quantas filiais quiser. Cada uma tem a sua visão, e o administrador enxerga o resultado de todas.</p>
+      </div>
+      <div class="card">
+        <h3>Com a sua marca</h3>
+        <p>Sua logo, o nome da sua empresa e tema claro ou escuro. O sistema fica com a cara do seu negócio.</p>
+      </div>
+      <div class="card">
+        <h3>Cresce com você</h3>
+        <p>Comece com o essencial e acrescente Produção, RH ou Folha quando precisar — sem trocar de sistema.</p>
+      </div>
+      <div class="card">
+        <h3>Suporte e treinamento</h3>
+        <p>Suporte 24h e treinamento remoto gratuito. Treinamento presencial na sua empresa também é possível.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 4 · FLUXO -->
+<section class="slide">
+  <span class="eyebrow">Como funciona</span>
+  <h2>Um fluxo só, do pedido ao caixa</h2>
+  <p class="lead">Cada etapa alimenta a próxima automaticamente. Ninguém redigita nada, e nenhum título se perde no caminho.</p>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="flow">
+      <div class="step">
+        <span class="k">Passo 1</span>
+        <h3>Compra</h3>
+        <p>Cotação, pedido e recebimento do fornecedor.</p>
+      </div>
+      <span class="arrow">›</span>
+      <div class="step">
+        <span class="k">Passo 2</span>
+        <h3>Estoque</h3>
+        <p>Recebeu, o produto entra no estoque na hora.</p>
+      </div>
+      <span class="arrow">›</span>
+      <div class="step">
+        <span class="k">Passo 3</span>
+        <h3>Venda</h3>
+        <p>Orçamento vira pedido e o pedido vira venda.</p>
+      </div>
+      <span class="arrow">›</span>
+      <div class="step">
+        <span class="k">Passo 4</span>
+        <h3>Baixa automática</h3>
+        <p>Venda confirmada retira o material do estoque.</p>
+      </div>
+      <span class="arrow">›</span>
+      <div class="step">
+        <span class="k">Passo 5</span>
+        <h3>Financeiro</h3>
+        <p>Títulos a pagar e a receber gerados sozinhos.</p>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:22px;">
+      <div class="card">
+        <h3>Nada digitado duas vezes</h3>
+        <p>A informação entra uma única vez, no momento em que acontece, e percorre os módulos seguintes sem retrabalho.</p>
+      </div>
+      <div class="card">
+        <h3>Nenhum título esquecido</h3>
+        <p>Compras e vendas geram automaticamente o que a empresa tem a pagar e a receber, com acompanhamento de vencimento.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 5 · MÓDULOS 1 -->
+<section class="slide">
+  <span class="eyebrow">Módulos · 1 de 2</span>
+  <h2>A operação do dia a dia</h2>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="grid g5">
+      <div class="card tight">
+        <h3>Cadastros</h3>
+        <ul>
+          <li>Clientes</li>
+          <li>Fornecedores</li>
+          <li>Transportadoras</li>
+          <li>Representantes</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Produtos</h3>
+        <ul>
+          <li>Produto</li>
+          <li>Categoria</li>
+          <li>Marca</li>
+          <li>Unidade de medida</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Compras</h3>
+        <ul>
+          <li>Cotações</li>
+          <li>Pedidos</li>
+          <li>Compras</li>
+          <li>Recebimento</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Vendas</h3>
+        <ul>
+          <li>Orçamento</li>
+          <li>Pedido</li>
+          <li>Vendas</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Estoque</h3>
+        <ul>
+          <li>Movimentações</li>
+          <li>Saldo em estoque</li>
+          <li>Aviso de mínimo</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid g3" style="margin-top:18px;">
+      <div class="card tight">
+        <h3>Financeiro</h3>
+        <ul>
+          <li>Contas a receber</li>
+          <li>Contas a pagar</li>
+          <li>Fluxo de caixa</li>
+          <li>Orçamento mês a mês</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Produção</h3>
+        <ul>
+          <li>Ordem de produção</li>
+          <li>Acompanhamento de produção</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Dashboard e relatórios</h3>
+        <ul>
+          <li>Gráfico de fluxo de caixa</li>
+          <li>Gráficos de colaboradores</li>
+          <li>Relatórios em todos os módulos</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 6 · MÓDULOS 2 (RH) -->
+<section class="slide">
+  <span class="eyebrow">Módulos · 2 de 2</span>
+  <h2>Recursos Humanos, Ponto e Folha</h2>
+  <p class="lead">O diferencial que a maioria dos sistemas dessa faixa não tem: da admissão ao holerite, dentro do mesmo ERP.</p>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="grid g4">
+      <div class="card tight">
+        <h3>Estrutura</h3>
+        <ul>
+          <li>Funções e cargos</li>
+          <li>Setores e horários</li>
+          <li>EPI</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Colaboradores</h3>
+        <ul>
+          <li>Função, salário e horário</li>
+          <li>Exames médicos e acompanhamento</li>
+          <li>Aniversariantes do mês</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Ponto</h3>
+        <ul>
+          <li>Marcação de ponto</li>
+          <li>Horas positivas e negativas</li>
+          <li>Faltas e abonos</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h3>Folha</h3>
+        <ul>
+          <li>Folha de pagamento</li>
+          <li>13º salário</li>
+          <li>Holerites</li>
+          <li>Programação de férias</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;background:#0e1726;border-color:#0e1726;">
+      <h3 style="color:#fff;font-size:14pt;">Banco de horas do jeito que a pequena empresa precisa</h3>
+      <p style="color:#c9d4e6;font-size:11pt;">O acompanhamento mostra horas positivas e negativas ao longo do mês. O que não for compensado até o cálculo da folha entra automaticamente como pagamento de horas extras.</p>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 7 · ADMINISTRAÇÃO -->
+<section class="slide">
+  <span class="eyebrow">Administração</span>
+  <h2>Você no controle do próprio sistema</h2>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="grid g3">
+      <div class="card">
+        <h3>Segurança</h3>
+        <ul>
+          <li>Cadastro de usuários com acesso ao sistema</li>
+          <li>Perfis de acesso — o que cada um vê e pode fazer</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Empresa e grupo</h3>
+        <ul>
+          <li>Alteração dos dados da empresa</li>
+          <li>Cadastro de filiais ou de outra empresa raiz</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Personalização</h3>
+        <ul>
+          <li>Sua própria logo e marca</li>
+          <li>Nome da sua empresa</li>
+          <li>Tema claro ou escuro</li>
+          <li>Forma de visão do menu inicial</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Integrações</h3>
+        <ul>
+          <li>Avisos automáticos por WhatsApp (opcional)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Configurações</h3>
+        <ul>
+          <li>Manutenção das bases de apoio de cada módulo</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Licenciamento</h3>
+        <ul>
+          <li>Plano atual sempre à vista</li>
+          <li>Inclusão de novos módulos quando a empresa crescer</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 8 · PLANOS -->
+<section class="slide">
+  <span class="eyebrow">Planos</span>
+  <h2>Escolha o tamanho que a sua empresa precisa hoje</h2>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="plans">
+      <div class="plan">
+        <span class="name">Essencial</span>
+        <div class="price">R$ 119,90<small> /mês</small></div>
+        <div class="year">ou R$ 1.151,04/ano — 20% off</div>
+        <ul>
+          <li>Cadastros</li>
+          <li>Produtos</li>
+          <li>Compras</li>
+          <li>Vendas</li>
+          <li>Estoque</li>
+        </ul>
+      </div>
+
+      <div class="plan featured">
+        <span class="badge">Mais escolhido</span>
+        <span class="name">Profissional</span>
+        <div class="price">R$ 179,80<small> /mês</small></div>
+        <div class="year">ou R$ 1.726,08/ano — 20% off</div>
+        <ul>
+          <li>Tudo do Essencial</li>
+          <li>Financeiro completo</li>
+          <li>Contas a pagar e a receber</li>
+          <li>Fluxo de caixa</li>
+        </ul>
+      </div>
+
+      <div class="plan">
+        <span class="name">Completo</span>
+        <div class="price">R$ 339,50<small> /mês</small></div>
+        <div class="year">ou R$ 3.259,20/ano — 20% off</div>
+        <ul>
+          <li>Tudo do Profissional</li>
+          <li>Recursos Humanos</li>
+          <li>Produção</li>
+          <li>Ponto e Folha de Pagamento</li>
+          <li>Personalização (marca própria)</li>
+        </ul>
+      </div>
+
+      <div class="plan">
+        <span class="name">Customizado</span>
+        <div class="price">Você monta<small></small></div>
+        <div class="year">base + só os módulos que usar</div>
+        <ul>
+          <li>Parte da base do Essencial</li>
+          <li>Escolha módulo a módulo</li>
+          <li>Preço somado na hora</li>
+          <li>Acrescente mais depois</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="lead" style="margin-top:20px;font-size:11.5pt;">
+      Todos os planos incluem usuários ilimitados, filiais ilimitadas, suporte 24h e treinamento remoto gratuito.
+      Sem taxa de instalação — por ser 100% online, não há nada para instalar em servidor ou computador.
+    </p>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 9 · MÓDULOS AVULSOS -->
+<section class="slide">
+  <span class="eyebrow">Plano customizado</span>
+  <h2>Pague só pelo que a sua empresa usa</h2>
+  <p class="lead">A base já vem com o que todo negócio precisa. A partir dela, você acrescenta módulo por módulo.</p>
+  <div class="rule"></div>
+
+  <div class="body">
+    <table>
+      <thead>
+        <tr>
+          <th>Módulo</th>
+          <th class="num">Mensal</th>
+          <th class="num">Anual (20% off)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="free"><td class="name">Cadastros, Produtos, Estoque, Vendas e Compras</td><td class="num">Base inclusa</td><td class="num">Base inclusa</td></tr>
+        <tr><td class="name">Financeiro</td><td class="num">R$ 59,90</td><td class="num">R$ 575,04</td></tr>
+        <tr><td class="name">Recursos Humanos</td><td class="num">R$ 59,90</td><td class="num">R$ 575,04</td></tr>
+        <tr><td class="name">Ponto e Folha de Pagamento</td><td class="num">R$ 69,90</td><td class="num">R$ 671,04</td></tr>
+        <tr><td class="name">Produção</td><td class="num">R$ 49,90</td><td class="num">R$ 479,04</td></tr>
+        <tr><td class="name">Personalização (marca própria)</td><td class="num">R$ 39,90</td><td class="num">R$ 383,04</td></tr>
+      </tbody>
+    </table>
+
+    <p class="lead" style="font-size:11pt;margin-top:16px;">
+      Não sabe por onde começar? A gente avalia a sua operação e indica quais módulos fazem sentido para o seu negócio.
+    </p>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 10 · COMO COMEÇAR -->
+<section class="slide">
+  <span class="eyebrow">Como começar</span>
+  <h2>Da primeira tela ao sistema rodando</h2>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="flow">
+      <div class="step">
+        <span class="k">Passo 1</span>
+        <h3>Teste grátis</h3>
+        <p>Crie a conta em minutos e use o sistema completo, sem cartão.</p>
+      </div>
+      <span class="arrow">›</span>
+      <div class="step">
+        <span class="k">Passo 2</span>
+        <h3>Escolha o plano</h3>
+        <p>Pronto ou montado por você, mensal ou anual com 20% de desconto.</p>
+      </div>
+      <span class="arrow">›</span>
+      <div class="step">
+        <span class="k">Passo 3</span>
+        <h3>Configure</h3>
+        <p>Cadastros iniciais, usuários, perfis de acesso e a sua marca.</p>
+      </div>
+      <span class="arrow">›</span>
+      <div class="step">
+        <span class="k">Passo 4</span>
+        <h3>Treine o time</h3>
+        <p>Treinamento remoto gratuito. Presencial na sua empresa, se preferir.</p>
+      </div>
+      <span class="arrow">›</span>
+      <div class="step">
+        <span class="k">Passo 5</span>
+        <h3>Opere</h3>
+        <p>Suporte 24h enquanto a equipe pega o jeito do sistema.</p>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:22px;">
+      <div class="card">
+        <h3>Implantação e treinamento presencial</h3>
+        <p>Se preferir não configurar sozinho, fazemos a implantação na sua empresa: cadastros de apoio, parametrização, migração de dados e acompanhamento até o time dominar o sistema. Serviço opcional, com custo de deslocamento.</p>
+      </div>
+      <div class="card">
+        <h3>Demonstração sem compromisso</h3>
+        <p>Agende uma demonstração e veja o sistema funcionando com o cenário da sua empresa. A gente mostra os módulos, tira dúvidas e indica qual plano atende o seu caso.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 11 · FAQ 1 -->
+<section class="slide">
+  <span class="eyebrow">Perguntas frequentes · 1 de 2</span>
+  <h2>O que as empresas mais perguntam</h2>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="grid g2">
+      <div class="qa"><p class="q">O sistema é online?</p><p class="a">Sim, 100% online. Pode ser acessado de qualquer lugar, sem instalação na sua máquina.</p></div>
+      <div class="qa"><p class="q">Tem limite de usuários?</p><p class="a">Não. Com a compra realizada os usuários são ilimitados, e você define o que cada um pode acessar e executar.</p></div>
+      <div class="qa"><p class="q">A licença vale só para a matriz?</p><p class="a">Não, é ilimitada. Cadastre quantas filiais quiser: cada uma tem a sua visão e o administrador vê o resultado de todas, sem módulo extra.</p></div>
+      <div class="qa"><p class="q">Consigo emitir nota fiscal?</p><p class="a">Não. O sistema não emite notas, mas controla as emissões, vinculando a nota de compra ou venda aos seus módulos.</p></div>
+      <div class="qa"><p class="q">A implantação é gratuita?</p><p class="a">Sim. Por ser 100% online, não precisa instalar nada em servidor ou computador.</p></div>
+      <div class="qa"><p class="q">Vocês oferecem treinamento?</p><p class="a">Sim, treinamento gratuito em acesso remoto. Presencial também é possível, assistido, com custo de deslocamento.</p></div>
+      <div class="qa"><p class="q">O sistema tem suporte?</p><p class="a">Sim, suporte 24h.</p></div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 12 · FAQ 2 -->
+<section class="slide">
+  <span class="eyebrow">Perguntas frequentes · 2 de 2</span>
+  <h2>Controle, estoque e pessoas</h2>
+  <div class="rule"></div>
+
+  <div class="body">
+    <div class="grid g2">
+      <div class="qa"><p class="q">O sistema tem controle financeiro?</p><p class="a">Sim, com vínculos automáticos em compras e vendas: os títulos a pagar e a receber são gerados com acompanhamento, para não esquecer nenhum.</p></div>
+      <div class="qa"><p class="q">E controle de estoque?</p><p class="a">Sim, estoque online: comprou e recebeu, o produto entra; confirmou a venda, o material sai — com possibilidade de ajustes.</p></div>
+      <div class="qa"><p class="q">O sistema tem controle de RH?</p><p class="a">Sim, bem completo: função, salários, horas, exames médicos e muito mais.</p></div>
+      <div class="qa"><p class="q">Tem marcação de horas?</p><p class="a">Sim. Além da gestão de RH, o sistema tem controle de marcação de ponto.</p></div>
+      <div class="qa"><p class="q">Possui banco de horas?</p><p class="a">Sim. O acompanhamento controla horas positivas e negativas; o que não for compensado até o cálculo da folha entra como pagamento de horas extras.</p></div>
+      <div class="qa"><p class="q">Gera holerites?</p><p class="a">Sim — esse módulo é mais um diferencial do sistema AlePejo.</p></div>
+      <div class="qa"><p class="q">E se eu não souber qual plano escolher?</p><p class="a">É só entrar em contato: avaliamos a sua necessidade e indicamos quais módulos são mais adequados para a sua empresa.</p></div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AlePejo ERP Cloud</span><span>alepejo.com.br</span></div>
+</section>
+
+<!-- 13 · FECHAMENTO -->
+<section class="slide dark close">
+  <img src="{{LOGO_DARK}}" alt="AlePejo ERP Cloud" />
+  <h2>Comece hoje com o teste grátis</h2>
+  <p class="lead">Sem cartão, sem instalação. Crie a conta, use o sistema e decida depois — e, se preferir, agende uma demonstração com a nossa equipe.</p>
+
+  <div class="contact">
+    <div>
+      <p class="k">Site</p>
+      <p class="v">alepejo.com.br</p>
+    </div>
+    <div>
+      <p class="k">E-mail</p>
+      <p class="v">suporte@alepejo.com.br</p>
+    </div>
+  </div>
+
+  <p class="site" style="position:absolute;bottom:0.5in;font-size:9.5pt;color:#6b7a94;">
+    © AlePejo Tecnologia Ltda.
+  </p>
+</section>
+
+</body>
+</html>
