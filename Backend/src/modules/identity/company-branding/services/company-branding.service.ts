@@ -15,6 +15,8 @@ export type BrandingTheme = 'light' | 'dark';
 
 const brandingSelect = {
   systemName: true,
+  brandColor: true,
+  brandingColorEnabled: true,
   logo: true,
   logoDark: true,
   brandingLogoLightEnabled: true,
@@ -26,6 +28,8 @@ const brandingSelect = {
 
 export interface UpdateCompanyBrandingInput {
   systemName?: string;
+  brandColor?: string | null;
+  colorEnabled?: boolean;
   logoLightEnabled?: boolean;
   logoDarkEnabled?: boolean;
   systemNameEnabled?: boolean;
@@ -58,6 +62,8 @@ export class CompanyBrandingService {
       where: { id: companyId },
       data: {
         systemName: dto.systemName,
+        brandColor: dto.brandColor,
+        brandingColorEnabled: dto.colorEnabled,
         brandingLogoLightEnabled: dto.logoLightEnabled,
         brandingLogoDarkEnabled: dto.logoDarkEnabled,
         brandingSystemNameEnabled: dto.systemNameEnabled,

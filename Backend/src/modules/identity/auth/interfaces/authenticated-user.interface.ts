@@ -22,6 +22,8 @@ export interface AuthenticatedCompany {
   logo: string | null;
   logoDark: string | null;
   systemName: string | null;
+  brandColor: string | null;
+  brandingColorEnabled: boolean;
   brandingLogoLightEnabled: boolean;
   brandingLogoDarkEnabled: boolean;
   brandingSystemNameEnabled: boolean;

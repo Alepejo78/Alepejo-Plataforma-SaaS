@@ -10,6 +10,8 @@ interface ApiEnvelope<T> {
 
 export interface CompanyBranding {
   systemName: string | null;
+  brandColor: string | null;
+  brandingColorEnabled: boolean;
   logo: string | null;
   logoDark: string | null;
   brandingLogoLightEnabled: boolean;
@@ -21,6 +23,8 @@ export interface CompanyBranding {
 
 export interface UpdateCompanyBrandingPayload {
   systemName?: string;
+  brandColor?: string;
+  colorEnabled?: boolean;
   logoLightEnabled?: boolean;
   logoDarkEnabled?: boolean;
   systemNameEnabled?: boolean;

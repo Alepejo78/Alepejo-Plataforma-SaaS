@@ -21,6 +21,7 @@ import {
   type UpdateCompanyBrandingPayload,
 } from "@/services/company-branding.service";
 import { profileService } from "@/services/profile.service";
+import { brandPalette, parseHex } from "@/lib/brandColor";
 import type { SidebarLayout } from "@/types/auth";
 
 const SYSTEM_NAME_MAX_LENGTH = 40;
@@ -74,6 +75,57 @@ function Switch({
         }`}
       />
     </button>
+  );
+}
+
+/** Azul do sistema — ponto de partida quando a empresa ainda não escolheu. */
+const DEFAULT_BRAND_COLOR = "#2563eb";
+
+/**
+ * Mostra como a cor escolhida fica de verdade: o botão com o texto por
+ * cima e o fundo suave. É o que evita o cliente salvar um amarelo claro
+ * e só descobrir depois que o texto sumiu.
+ */
+function BrandColorPreview({ hex }: { hex: string }) {
+  const palette = brandPalette(hex);
+
+  if (!palette) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className="rounded-xl px-4 py-2.5 text-sm font-semibold"
+        style={{
+          background: palette.light["--primary"],
+          color: palette.light["--primary-contrast"],
+        }}
+      >
+        Exemplo
+      </span>
+
+      <span
+        className="rounded-xl px-4 py-2.5 text-sm font-semibold"
+        style={{
+          background: palette.light["--primary-soft"],
+          color: palette.light["--primary-text"],
+        }}
+      >
+        Destaque
+      </span>
+
+      <span
+        className="rounded-xl px-4 py-2.5 text-sm font-semibold"
+        style={{
+          background: palette.dark["--primary"],
+          color: palette.dark["--primary-contrast"],
+        }}
+        title="Como fica no tema escuro"
+      >
+        Escuro
+      </span>
+    </div>
   );
 }
 
@@ -410,6 +462,10 @@ function BrandingSection() {
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
 
+  const [color, setColor] = useState(DEFAULT_BRAND_COLOR);
+  const [savingColor, setSavingColor] = useState(false);
+  const [colorSaved, setColorSaved] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError("");
@@ -422,6 +478,7 @@ function BrandingSection() {
       // empresa logada — só quando ainda não foi customizado, pra não
       // sobrescrever o que a empresa já escreveu ali.
       setSystemName(result.systemName || user?.company.legalName || "");
+      setColor(result.brandColor || DEFAULT_BRAND_COLOR);
     } catch (err) {
       setLoadError(
         extractMessage(
@@ -446,6 +503,33 @@ function BrandingSection() {
   function applyBranding(updated: CompanyBranding) {
     setBranding(updated);
     void refreshUser();
+  }
+
+  async function saveColor() {
+    if (!parseHex(color)) {
+      setActionError("Informe uma cor em hexadecimal, como #2563eb.");
+
+      return;
+    }
+
+    setSavingColor(true);
+    setActionError("");
+    setColorSaved(false);
+
+    try {
+      const updated = await companyBrandingService.update({
+        brandColor: color,
+      });
+
+      applyBranding(updated);
+      setColorSaved(true);
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível salvar a cor.")
+      );
+    } finally {
+      setSavingColor(false);
+    }
   }
 
   async function saveToggle(patch: UpdateCompanyBrandingPayload) {
@@ -512,6 +596,68 @@ function BrandingSection() {
         exista logo enviada ou nome salvo. Prepare o que quiser e
         só ligue quando estiver pronto.
       </p>
+
+      <ToggleRow
+        title="Cor do sistema"
+        description="Usar a cor da sua marca no lugar do azul padrão, em botões, links e destaques."
+        checked={branding.brandingColorEnabled}
+        disabled={updating}
+        onChange={(value) => void saveToggle({ colorEnabled: value })}
+      >
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label
+              className="mb-1 block text-xs font-medium text-[var(--text-secondary)]"
+              htmlFor="brandColor"
+            >
+              Cor principal
+            </label>
+
+            <div className="flex items-center gap-2">
+              {/* Seletor nativo do sistema operacional: o cliente
+                  escolhe no olho, sem precisar saber hexadecimal. */}
+              <input
+                id="brandColor"
+                type="color"
+                value={parseHex(color) ? color : "#2563eb"}
+                onChange={(e) => setColor(e.target.value)}
+                className="h-11 w-14 cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1"
+              />
+
+              <input
+                type="text"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                placeholder="#2563eb"
+                className="h-11 w-32 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={savingColor}
+            onClick={() => void saveColor()}
+            className="h-11 shrink-0 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+          >
+            {savingColor ? "Salvando..." : "Salvar"}
+          </button>
+
+          <BrandColorPreview hex={color} />
+        </div>
+
+        {colorSaved && (
+          <p className="mt-2 text-xs text-[var(--success)]">
+            Cor salva. Ligue a chave acima para o sistema passar a usá-la.
+          </p>
+        )}
+
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          As variações (passar o mouse, fundos suaves e a cor do texto
+          sobre a sua cor) são calculadas sozinhas, inclusive no tema
+          escuro.
+        </p>
+      </ToggleRow>
 
       <ToggleRow
         title="Nome do sistema"

@@ -4,6 +4,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
 } from 'class-validator';
 
@@ -18,6 +19,24 @@ export class UpdateCompanyBrandingDto {
     message: 'O nome do sistema deve ter no máximo 40 caracteres.',
   })
   systemName?: string;
+
+  @ApiPropertyOptional({
+    example: '#2563eb',
+    description:
+      'Cor de destaque da empresa em hexadecimal (#RGB ou #RRGGBB). Vazio limpa a cor.',
+  })
+  @IsOptional()
+  @Matches(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, {
+    message: 'Informe uma cor em hexadecimal, como #2563eb.',
+  })
+  brandColor?: string;
+
+  @ApiPropertyOptional({
+    description: 'Usar a cor de destaque da empresa no lugar do azul padrão.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  colorEnabled?: boolean;
 
   @ApiPropertyOptional({
     description: 'Usar a logo enviada para o tema claro.',

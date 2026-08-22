@@ -24,7 +24,10 @@ export interface AuthCompany {
   logo: string | null;
   logoDark: string | null;
   systemName: string | null;
+  /** Cor de destaque escolhida pela empresa (#RRGGBB). */
+  brandColor: string | null;
   /** Cada item só vale se o módulo BRANDING estiver licenciado. */
+  brandingColorEnabled: boolean;
   brandingLogoLightEnabled: boolean;
   brandingLogoDarkEnabled: boolean;
   brandingSystemNameEnabled: boolean;

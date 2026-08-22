@@ -194,6 +194,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         logo: user.company.logo,
         logoDark: user.company.logoDark,
         systemName: user.company.systemName,
+        brandColor: user.company.brandColor,
+        brandingColorEnabled: user.company.brandingColorEnabled,
         brandingLogoLightEnabled:
           user.company.brandingLogoLightEnabled,
         brandingLogoDarkEnabled:

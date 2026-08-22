@@ -111,9 +111,16 @@ model Company {
   /// Nome exibido no lugar de "AlePejo ERP Cloud" (módulo BRANDING).
   systemName String? @db.VarChar(150)
 
+  /// Cor de destaque da empresa em hexadecimal (#RRGGBB) — substitui o
+  /// azul do sistema em botões, links e realces (módulo BRANDING). As
+  /// variações (hover, fundo suave, cor do texto sobre ela) são
+  /// calculadas a partir dela, então o cliente escolhe uma cor só.
+  brandColor String? @db.VarChar(9)
+
   /// Chaves liga/desliga do módulo BRANDING — cada uma independente:
   /// desligada, usa o padrão AlePejo naquele item mesmo que exista
   /// arquivo/nome salvo (permite deixar algo pronto sem publicar).
+  brandingColorEnabled       Boolean @default(false)
   brandingLogoLightEnabled   Boolean @default(false)
   brandingLogoDarkEnabled    Boolean @default(false)
   brandingLoginVideoEnabled  Boolean @default(false)
