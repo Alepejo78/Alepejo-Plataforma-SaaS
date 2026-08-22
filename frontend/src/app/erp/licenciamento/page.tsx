@@ -486,7 +486,7 @@ function ChooseModulesModal({
                   <p className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
                     ou {money(totalYearly)}/ano
                     <span className="rounded-full bg-[var(--success-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--success)]">
-                      20% off
+                      com desconto
                     </span>
                   </p>
                 )}
@@ -563,7 +563,7 @@ export default function LicenciamentoPage() {
 
     const aviso = anual
       ? "Voltar para a cobrança mensal?\n\nVocê continua no plano anual até o fim do período já pago. A partir daí, a cobrança passa a ser mensal. Nada é cobrado agora e nada é devolvido."
-      : "Mudar para a cobrança anual?\n\nUma cobrança do valor anual, com 20% de desconto, é gerada agora para pagamento. O período mensal que você já pagou continua valendo até vencer.";
+      : "Mudar para a cobrança anual?\n\nUma cobrança do valor anual, já com desconto, é gerada agora para pagamento. O período mensal que você já pagou continua valendo até vencer.";
 
     if (!window.confirm(aviso)) {
       return;
@@ -718,7 +718,7 @@ export default function LicenciamentoPage() {
                         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
                           {anual
                             ? "Voltando para o mensal, a mudança só vale quando o período já pago terminar — nada é cobrado agora."
-                            : "No plano anual você paga 12 meses de uma vez com 20% de desconto. A cobrança sai na hora."}
+                            : "No plano anual você paga 12 meses de uma vez, com desconto. A cobrança sai na hora."}
                         </p>
                       </div>
 
@@ -733,7 +733,7 @@ export default function LicenciamentoPage() {
                         )}
                         {anual
                           ? "Voltar para mensal"
-                          : "Mudar para anual (20% off)"}
+                          : "Mudar para anual"}
                       </button>
                     </div>
                   )}
