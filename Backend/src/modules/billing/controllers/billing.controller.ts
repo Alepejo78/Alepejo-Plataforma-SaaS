@@ -4,6 +4,7 @@ import {
   Get,
   Headers,
   HttpCode,
+  Logger,
   Param,
   Post,
   Query,
@@ -22,6 +23,8 @@ import { CreateCheckoutDto } from '../dto/create-checkout.dto';
 @ApiTags('Billing')
 @Controller('billing')
 export class BillingController {
+  private readonly logger = new Logger(BillingController.name);
+
   constructor(private readonly billingService: BillingService) {}
 
   @Post('me/subscribe')
@@ -88,12 +91,31 @@ export class BillingController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Webhook de eventos de pagamento do Asaas' })
   webhook(
-    @Headers('asaas-access-token') token: string | undefined,
+    @Headers() headers: Record<string, string | undefined>,
     @Body() body: { id?: string; event: string; payment?: { id: string } },
   ) {
     const expected = process.env.ASAAS_WEBHOOK_TOKEN;
+    const token = headers['asaas-access-token'];
 
     if (!expected || !token || token !== expected) {
+      /*
+       * Diagnóstico de 401: sem isso, "o token não bate" é um beco sem
+       * saída — não dá pra saber se o cabeçalho chegou, se veio com
+       * outro nome ou se o valor é que está diferente. Registra só o
+       * TAMANHO dos valores e os nomes dos cabeçalhos; o segredo em si
+       * nunca vai pro log, que fica visível pra quem abrir o painel.
+       */
+      this.logger.warn(
+        `Webhook recusado (401). ` +
+          `Cabeçalho asaas-access-token ${
+            token === undefined ? 'NÃO veio' : `veio com ${token.length} caractere(s)`
+          }; ` +
+          `ASAAS_WEBHOOK_TOKEN no servidor ${
+            expected ? `tem ${expected.length} caractere(s)` : 'NÃO está definido'
+          }. ` +
+          `Cabeçalhos recebidos: ${Object.keys(headers).join(', ')}`,
+      );
+
       throw new UnauthorizedException('Token de webhook inválido.');
     }
 
