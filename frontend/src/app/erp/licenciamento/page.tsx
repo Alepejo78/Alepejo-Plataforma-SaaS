@@ -41,6 +41,76 @@ const STATUS_BADGE_CLASS: Record<CompanyPlanStatus, string> = {
   CANCELLED: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
 };
 
+/** Uma linha da lista de módulos, venha ela do plano ou de um módulo avulso. */
+interface ModuleRow {
+  key: string;
+  name: string;
+  status: ModuleLicenseStatus;
+  expiresAt: string | null;
+}
+
+/**
+ * A situação dos módulos que vêm do plano é a situação do próprio
+ * plano — mesma regra do backend (`moduleLicenseStatus`) para quem já
+ * está coberto por uma contratação.
+ */
+function planModuleStatus(
+  companyPlan: CompanyPlanLicense
+): ModuleLicenseStatus {
+  if (companyPlan.expired) {
+    return "EXPIRED";
+  }
+
+  if (companyPlan.status === "TRIAL") {
+    return "TRIAL";
+  }
+
+  return companyPlan.status === "ACTIVE" ? "ACTIVE" : "EXPIRED";
+}
+
+/**
+ * A lista que o cliente vê junta as duas origens do acesso:
+ *
+ * - os módulos que o plano contratado já dá (Essencial, Profissional…),
+ * - os habilitados individualmente (Customizado, ou extra acrescentado
+ *   depois — esses trazem o próprio status, incluindo "A contratar").
+ *
+ * Sem juntar, quem assina um plano pronto via a seção vazia com um
+ * "nenhum módulo habilitado individualmente" — verdadeiro, mas parecia
+ * que a compra não tinha valido nada.
+ */
+function moduleRows(license: MyLicense): ModuleRow[] {
+  const rows: ModuleRow[] = [];
+  const jaListados = new Set<string>();
+
+  for (const item of license.companyModules) {
+    jaListados.add(item.moduleId);
+    rows.push({
+      key: item.id,
+      name: item.module.name,
+      status: item.licenseStatus,
+      expiresAt: item.expiresAt,
+    });
+  }
+
+  const doPlano = license.companyPlan?.plan?.planModules ?? [];
+
+  for (const item of doPlano) {
+    if (!item.included || jaListados.has(item.module.id)) {
+      continue;
+    }
+
+    rows.push({
+      key: `plano-${item.module.id}`,
+      name: item.module.name,
+      status: planModuleStatus(license.companyPlan!),
+      expiresAt: null,
+    });
+  }
+
+  return rows.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
+
 /**
  * Como cada situação de módulo aparece na lista. Quem decide a
  * situação é o backend (`LicenseService.moduleLicenseStatus`) — aqui
@@ -422,6 +492,7 @@ export default function LicenciamentoPage() {
 
   const status = license?.companyPlan?.status;
   const canContract = status && status !== "ACTIVE";
+  const modules = license ? moduleRows(license) : [];
 
   return (
     <OsShell workspaceLabel="Licenciamento">
@@ -550,20 +621,19 @@ export default function LicenciamentoPage() {
                 Módulos da sua empresa
               </h2>
 
-              {license.companyModules.length === 0 ? (
+              {modules.length === 0 ? (
                 <p className="text-[var(--text-muted)]">
-                  Nenhum módulo habilitado individualmente.
-                  O acesso vem do plano contratado.
+                  Nenhum módulo habilitado ainda.
                 </p>
               ) : (
                 <ul className="grid gap-3 md:grid-cols-2">
-                  {license.companyModules.map((item) => {
-                    const state = MODULE_STATE[item.licenseStatus];
+                  {modules.map((item) => {
+                    const state = MODULE_STATE[item.status];
                     const Icon = state.icon;
 
                     return (
                       <li
-                        key={item.id}
+                        key={item.key}
                         className="flex items-start gap-3 rounded-2xl border border-[var(--border)] p-4"
                       >
                         <Icon
@@ -573,7 +643,7 @@ export default function LicenciamentoPage() {
 
                         <div className="min-w-0">
                           <p className="font-medium text-[var(--text-primary)]">
-                            {item.module.name}
+                            {item.name}
                           </p>
 
                           <p className={`text-sm ${state.color}`}>
