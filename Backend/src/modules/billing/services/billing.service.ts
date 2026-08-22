@@ -74,6 +74,20 @@ function chargeStatusToMonthStatus(
  */
 const CUSTOM_PLAN_BASE_CODES = ['BASICO', 'ESSENCIAL'];
 
+/** Código do plano sem acento e em maiúsculas — ver comentário acima. */
+function planCode(code: string): string {
+  return code
+    .normalize('NFD')
+    .split('')
+    .filter((letra) => {
+      const codigo = letra.charCodeAt(0);
+
+      return codigo < 0x300 || codigo > 0x36f;
+    })
+    .join('')
+    .toUpperCase();
+}
+
 function addDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
@@ -122,9 +136,9 @@ export class BillingService {
 
   /**
    * Plano Customizado não tem monthlyPrice/yearlyPrice próprio (varia
-   * por empresa) — o valor é o preço-base do Essencial (cobre os
-   * mesmos módulos mínimos) + o preço de cada módulo extra escolhido,
-   * no ciclo escolhido.
+   * por empresa) — o valor é o preço do plano de entrada (que já cobre
+   * os módulos mínimos, ver `CUSTOM_PLAN_BASE_CODES`) + o preço de
+   * cada módulo extra escolhido, no ciclo escolhido.
    *
    * Recebe os ids dos módulos direto (em vez de buscar por empresa)
    * porque o mesmo cálculo serve pra dois momentos: empresa que já
@@ -135,12 +149,14 @@ export class BillingService {
     moduleIds: string[],
     billingCycle: 'MONTHLY' | 'YEARLY',
   ): Promise<number> {
-    const basePlans = await this.prisma.plan.findMany({
-      where: { code: { in: CUSTOM_PLAN_BASE_CODES } },
-    });
+    // Compara sem acento: o código é digitado à mão em Administrar
+    // planos, e em produção ele foi cadastrado como "BÁSICO". Filtrar
+    // pelo texto cru no banco deixava esse plano de fora e a base caía
+    // pro Essencial, cobrando mais caro do que a tela mostrava.
+    const todosPlanos = await this.prisma.plan.findMany();
 
     const basePlan = CUSTOM_PLAN_BASE_CODES.map((code) =>
-      basePlans.find((plan) => plan.code === code),
+      todosPlanos.find((plan) => planCode(plan.code) === code),
     ).find(Boolean);
 
     const base = basePlan

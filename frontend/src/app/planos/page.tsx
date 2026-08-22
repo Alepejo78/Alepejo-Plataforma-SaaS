@@ -25,6 +25,27 @@ function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
 
+/**
+ * Código de plano sem acento e em maiúsculas. O código é digitado à
+ * mão em Administrar planos, e "BÁSICO" e "BASICO" são o mesmo plano
+ * pra quem cadastrou — comparar o texto cru fazia o de produção
+ * (com acento) não bater e o montador voltar pro preço do Essencial.
+ */
+function codigoPlano(code: string | undefined | null) {
+  // NFD separa a letra do acento; sobra filtrar os acentos soltos,
+  // que ficam todos na faixa 0x300-0x36f da tabela Unicode.
+  return (code ?? "")
+    .normalize("NFD")
+    .split("")
+    .filter((letra) => {
+      const codigo = letra.charCodeAt(0);
+
+      return codigo < 0x300 || codigo > 0x36f;
+    })
+    .join("")
+    .toUpperCase();
+}
+
 function money(value: string | number | null | undefined) {
   return num(value).toLocaleString("pt-BR", {
     style: "currency",
@@ -378,8 +399,8 @@ export default function PlanosPage() {
    * discordarem, a tela mostra um preço e a cobrança sai outro.
    */
   const planoBase =
-    plans.find((p) => p.code === "BASICO") ??
-    plans.find((p) => p.code === "ESSENCIAL");
+    plans.find((p) => codigoPlano(p.code) === "BASICO") ??
+    plans.find((p) => codigoPlano(p.code) === "ESSENCIAL");
 
   const customBasePrice = {
     monthly: num(planoBase?.monthlyPrice),
