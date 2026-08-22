@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Sliders, Star, X } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Sliders,
+  Star,
+  X,
+} from "lucide-react";
 
 import {
   companyOnboardingService,
@@ -265,6 +272,47 @@ export default function PlanosPage() {
     "MONTHLY"
   );
 
+  /*
+   * Os planos ficam numa faixa única que rola de lado, com setas — em
+   * grade eles quebravam de linha assim que passavam de três, e a
+   * comparação entre eles ficava picotada. As setas só aparecem quando
+   * há mesmo o que rolar.
+   */
+  const faixa = useRef<HTMLDivElement>(null);
+  const [podeVoltar, setPodeVoltar] = useState(false);
+  const [podeAvancar, setPodeAvancar] = useState(false);
+
+  const atualizarSetas = useCallback(() => {
+    const el = faixa.current;
+
+    if (!el) {
+      return;
+    }
+
+    setPodeVoltar(el.scrollLeft > 8);
+    setPodeAvancar(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+  }, []);
+
+  function rolar(direcao: 1 | -1) {
+    const el = faixa.current;
+
+    if (!el) {
+      return;
+    }
+
+    // Anda de cartão em cartão: rolar por "uma tela" pularia planos
+    // no meio do caminho quando cabem dois e meio na largura.
+    const cartao = el.querySelector<HTMLElement>("[data-plano]");
+    const passo = cartao ? cartao.offsetWidth + 24 : el.clientWidth * 0.8;
+
+    el.scrollBy({ left: passo * direcao, behavior: "smooth" });
+
+    // Reconfere as setas quando a rolagem suave termina. O `onScroll`
+    // normalmente já dá conta, mas depender só dele deixaria a seta
+    // acesa no fim da faixa se algum evento se perder no caminho.
+    setTimeout(atualizarSetas, 450);
+  }
+
   useEffect(() => {
     function carregar() {
       companyOnboardingService
@@ -304,16 +352,38 @@ export default function PlanosPage() {
     };
   }, []);
 
+  // Depois que os planos chegam (ou a janela muda de tamanho) a faixa
+  // passa a ter largura de verdade — só aí dá pra saber se há o que
+  // rolar e, portanto, se as setas devem aparecer.
+  useEffect(() => {
+    atualizarSetas();
+
+    window.addEventListener("resize", atualizarSetas);
+
+    return () => window.removeEventListener("resize", atualizarSetas);
+  }, [plans, loading, atualizarSetas]);
+
   const sortedPlans = [...plans]
     .filter((p) => p.code !== "ENTERPRISE" && p.code !== "CUSTOM")
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   const customPlan = plans.find((p) => p.code === "CUSTOM");
 
-  const essencialPlan = plans.find((p) => p.code === "ESSENCIAL");
+  /*
+   * O montador parte do plano de entrada, que já traz os módulos
+   * mínimos (Cadastros, Produtos, Estoque, Vendas e Compras) — a partir
+   * dele só somam os extras. É o BASICO; ESSENCIAL fica de reserva pra
+   * quem ainda não criou o Básico no catálogo. Mesma regra do backend
+   * (`CUSTOM_PLAN_BASE_CODES` em billing.service.ts): se as duas pontas
+   * discordarem, a tela mostra um preço e a cobrança sai outro.
+   */
+  const planoBase =
+    plans.find((p) => p.code === "BASICO") ??
+    plans.find((p) => p.code === "ESSENCIAL");
+
   const customBasePrice = {
-    monthly: num(essencialPlan?.monthlyPrice),
-    yearly: num(essencialPlan?.yearlyPrice),
+    monthly: num(planoBase?.monthlyPrice),
+    yearly: num(planoBase?.yearlyPrice),
   };
 
   return (
@@ -385,7 +455,40 @@ export default function PlanosPage() {
         )}
 
         {!loading && !error && (
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => rolar(-1)}
+              aria-label="Ver planos anteriores"
+              className={`absolute -left-3 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] shadow-lg transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] md:flex ${
+                podeVoltar ? "" : "pointer-events-none opacity-0"
+              }`}
+            >
+              <ChevronLeft size={22} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => rolar(1)}
+              aria-label="Ver próximos planos"
+              className={`absolute -right-3 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] shadow-lg transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] md:flex ${
+                podeAvancar ? "" : "pointer-events-none opacity-0"
+              }`}
+            >
+              <ChevronRight size={22} />
+            </button>
+
+            {/* `pt-5` dá espaço pro selo "Mais escolhido", que fica pra
+                fora do cartão e seria cortado pelo overflow da faixa. */}
+            <div
+              ref={faixa}
+              onScroll={atualizarSetas}
+              /* `snap-proximity`, não `mandatory`: quando sobra menos de
+                 um cartão de rolagem, o encaixe obrigatório não acha
+                 ponto válido pra frente e joga a faixa de volta pro
+                 começo — as setas paravam de funcionar. */
+              className="faixa-planos flex snap-x snap-proximity gap-6 overflow-x-auto scroll-smooth px-1 pb-4 pt-5"
+            >
             {sortedPlans.map((plan) => {
               const planMonthly = num(plan.monthlyPrice);
               const planYearly = num(plan.yearlyPrice);
@@ -398,7 +501,8 @@ export default function PlanosPage() {
               return (
               <div
                 key={plan.id}
-                className={`relative flex flex-col rounded-2xl border bg-[var(--surface)] p-6 ${
+                data-plano
+                className={`relative flex w-[280px] shrink-0 snap-start flex-col rounded-2xl border bg-[var(--surface)] p-6 sm:w-[300px] ${
                   plan.highlighted
                     ? "border-transparent shadow-2xl shadow-[color:rgb(124_58_237_/_0.25)] ring-2 ring-[#7c3aed]/40"
                     : "border-[var(--border)]"
@@ -499,6 +603,7 @@ export default function PlanosPage() {
               </div>
               );
             })}
+            </div>
           </div>
         )}
 

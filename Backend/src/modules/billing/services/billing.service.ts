@@ -61,12 +61,18 @@ function chargeStatusToMonthStatus(
 }
 
 /**
- * O Customizado inclui de base os mesmos módulos mínimos do Essencial
- * — então parte do mesmo preço dele, e soma só os módulos extras
- * escolhidos. Evita ter um "preço-base" hardcoded e desalinhado se o
- * Essencial mudar de preço na tela de administração.
+ * O Customizado já inclui os módulos mínimos, então parte do preço do
+ * plano de entrada que traz exatamente esses módulos e soma só os
+ * extras escolhidos. Assim o preço-base acompanha o que estiver
+ * cadastrado em Administrar planos, em vez de ficar fixo no código.
+ *
+ * Em ordem de preferência: o Básico é o plano de entrada de hoje; o
+ * Essencial fica de reserva pros catálogos que ainda não têm Básico
+ * (era ele o plano de entrada antes). A mesma ordem está na tela de
+ * planos — se as duas discordarem, o cliente vê um preço e é cobrado
+ * outro.
  */
-const CUSTOM_PLAN_BASE_CODE = 'ESSENCIAL';
+const CUSTOM_PLAN_BASE_CODES = ['BASICO', 'ESSENCIAL'];
 
 function addDays(date: Date, days: number): Date {
   const result = new Date(date);
@@ -129,9 +135,13 @@ export class BillingService {
     moduleIds: string[],
     billingCycle: 'MONTHLY' | 'YEARLY',
   ): Promise<number> {
-    const basePlan = await this.prisma.plan.findUnique({
-      where: { code: CUSTOM_PLAN_BASE_CODE },
+    const basePlans = await this.prisma.plan.findMany({
+      where: { code: { in: CUSTOM_PLAN_BASE_CODES } },
     });
+
+    const basePlan = CUSTOM_PLAN_BASE_CODES.map((code) =>
+      basePlans.find((plan) => plan.code === code),
+    ).find(Boolean);
 
     const base = basePlan
       ? Number(
