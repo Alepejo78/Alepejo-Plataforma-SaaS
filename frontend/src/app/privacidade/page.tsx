@@ -32,7 +32,10 @@ export default function PrivacidadePage() {
             </h2>
             <p className="mt-2">
               Esta Política de Privacidade descreve como a{" "}
-              <strong>AlePejo Tecnologia Ltda</strong> (CNPJ [preencher]),
+              <strong>
+                AlePejo Assessoria e Prestação de Serviço Ltda
+              </strong>{" "}
+              (CNPJ [preencher]),
               responsável pelo sistema <strong>AlePejo ERP Cloud</strong>{" "}
               ("nós", "AlePejo", "sistema"), coleta, usa, armazena e protege
               dados pessoais de quem usa a plataforma — tanto as empresas

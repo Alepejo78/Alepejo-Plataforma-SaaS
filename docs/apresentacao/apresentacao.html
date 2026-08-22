@@ -256,12 +256,12 @@
 
   /* ---------- planos ---------- */
 
-  .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .plans { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 
   .plan {
     border: 1px solid var(--line);
     border-radius: 16px;
-    padding: 20px 18px;
+    padding: 18px 15px;
     background: #fff;
     display: flex;
     flex-direction: column;
@@ -272,7 +272,7 @@
     background: linear-gradient(180deg, #fffdf7, #fff);
   }
 
-  .plan .name { font-size: 14pt; font-weight: 700; }
+  .plan .name { font-size: 13pt; font-weight: 700; }
 
   .plan .badge {
     display: inline-block;
@@ -288,10 +288,10 @@
   }
 
   .plan .kicker {
-    margin-top: 8px;
-    padding-bottom: 12px;
+    margin-top: 7px;
+    padding-bottom: 10px;
     border-bottom: 1px solid var(--line);
-    font-size: 10.5pt;
+    font-size: 9.5pt;
     font-weight: 600;
     color: var(--gold);
   }
@@ -752,8 +752,8 @@
   <div class="body">
     <div class="plans">
       <div class="plan">
-        <span class="name">Essencial</span>
-        <div class="kicker">Para começar a organizar</div>
+        <span class="name">Básico</span>
+        <div class="kicker">Para sair da planilha</div>
         <ul>
           <li>Cadastros</li>
           <li>Produtos</li>
@@ -763,24 +763,34 @@
         </ul>
       </div>
 
-      <div class="plan featured">
-        <span class="badge">Mais escolhido</span>
-        <span class="name">Profissional</span>
+      <div class="plan">
+        <span class="name">Essencial</span>
         <div class="kicker">Com o dinheiro sob controle</div>
         <ul>
-          <li>Tudo do Essencial</li>
+          <li>Tudo do Básico</li>
           <li>Financeiro completo</li>
           <li>Contas a pagar e a receber</li>
           <li>Fluxo de caixa</li>
         </ul>
       </div>
 
+      <div class="plan featured">
+        <span class="badge">Mais escolhido</span>
+        <span class="name">Profissional</span>
+        <div class="kicker">Com o RH no sistema</div>
+        <ul>
+          <li>Tudo do Essencial</li>
+          <li>Recursos Humanos</li>
+          <li>Colaboradores e cargos</li>
+          <li>Exames, EPI e férias</li>
+        </ul>
+      </div>
+
       <div class="plan">
         <span class="name">Completo</span>
-        <div class="kicker">A empresa inteira no sistema</div>
+        <div class="kicker">A empresa inteira</div>
         <ul>
           <li>Tudo do Profissional</li>
-          <li>Recursos Humanos</li>
           <li>Produção</li>
           <li>Ponto e Folha de Pagamento</li>
           <li>Personalização (marca própria)</li>
@@ -791,7 +801,7 @@
         <span class="name">Customizado</span>
         <div class="kicker">Você monta do seu jeito</div>
         <ul>
-          <li>Parte da base do Essencial</li>
+          <li>Parte da base do Básico</li>
           <li>Escolha módulo a módulo</li>
           <li>Pague só pelo que usar</li>
           <li>Acrescente mais depois</li>
@@ -813,7 +823,7 @@
 <section class="slide">
   <span class="eyebrow">Plano customizado</span>
   <h2>Use só o que a sua empresa precisa</h2>
-  <p class="lead">A base já vem com o que todo negócio usa. A partir dela, você acrescenta módulo por módulo — e monta o preço no site, na hora.</p>
+  <p class="lead">O Customizado parte do plano Básico, que já traz o que todo negócio usa. A partir dele, você acrescenta módulo por módulo — e monta o preço no site, na hora.</p>
   <div class="rule"></div>
 
   <div class="body">
@@ -825,7 +835,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr class="free"><td class="name">Cadastros, Produtos, Estoque, Vendas e Compras</td><td>Base inclusa — o fluxo do pedido ao recebimento</td></tr>
+        <tr class="free"><td class="name">Cadastros, Produtos, Estoque, Vendas e Compras</td><td>Base do plano Básico — o fluxo do pedido ao recebimento</td></tr>
         <tr><td class="name">Financeiro</td><td>Contas a pagar e a receber, fluxo de caixa e orçamento</td></tr>
         <tr><td class="name">Recursos Humanos</td><td>Colaboradores, cargos, exames, EPI e férias</td></tr>
         <tr><td class="name">Ponto e Folha de Pagamento</td><td>Marcações, banco de horas, folha, 13º e holerite</td></tr>
@@ -960,7 +970,7 @@
   </div>
 
   <p class="site" style="position:absolute;bottom:0.5in;font-size:9.5pt;color:#6b7a94;">
-    © AlePejo Tecnologia Ltda.
+    © AlePejo Assessoria e Prestação de Serviço Ltda.
   </p>
 </section>
 

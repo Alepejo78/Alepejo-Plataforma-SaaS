@@ -1999,7 +1999,10 @@ function Footer() {
   return (
     <footer className="border-t border-[var(--border)] py-8">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-[var(--text-muted)]">
-        <p>© {new Date().getFullYear()} AlePejo Tecnologia Ltda.</p>
+        <p>
+          © {new Date().getFullYear()} AlePejo Assessoria e Prestação de
+          Serviço Ltda.
+        </p>
 
         <Link
           href="/privacidade"
