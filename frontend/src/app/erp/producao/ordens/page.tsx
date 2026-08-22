@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   Edit,
+  Eye,
   Play,
   Plus,
   Settings,
@@ -153,6 +154,12 @@ export default function OrdensDeProducaoPage() {
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
 
+  /**
+   * Abre o mesmo formulário só pra consulta: ordem em produção,
+   * concluída ou cancelada não pode mais ser editada, mas continua
+   * precisando ser aberta pra conferir produto, quantidade e datas.
+   */
+  const [viewOnly, setViewOnly] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] =
     useState<ProductionOrder | null>(null);
@@ -218,7 +225,13 @@ export default function OrdensDeProducaoPage() {
     void load();
   }, [load]);
 
+  function openView(order: ProductionOrder) {
+    openEdit(order);
+    setViewOnly(true);
+  }
+
   function openCreate() {
+    setViewOnly(false);
     setEditingOrder(null);
     setForm({
       ...emptyForm(),
@@ -229,6 +242,7 @@ export default function OrdensDeProducaoPage() {
   }
 
   function openEdit(order: ProductionOrder) {
+    setViewOnly(false);
     setEditingOrder(order);
     setForm({
       productId: order.productId,
@@ -596,6 +610,17 @@ export default function OrdensDeProducaoPage() {
 
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
+                          {/* Sempre disponível: consultar não altera nada. */}
+                          <button
+                            type="button"
+                            onClick={() => openView(o)}
+                            title="Consultar"
+                            aria-label="Consultar"
+                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                          >
+                            <Eye size={16} />
+                          </button>
+
                           {o.status === "AGUARDANDO_PRODUCAO" && (
                             <>
                               <Can permission="production-order.update">
@@ -745,9 +770,11 @@ export default function OrdensDeProducaoPage() {
           <div className="my-8 w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editingOrder
-                  ? "Editar ordem de produção"
-                  : "Nova ordem de produção"}
+                {viewOnly
+                  ? "Ordem de produção"
+                  : editingOrder
+                    ? "Editar ordem de produção"
+                    : "Nova ordem de produção"}
               </h2>
 
               <button
@@ -760,7 +787,13 @@ export default function OrdensDeProducaoPage() {
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* `fieldset disabled` trava todos os campos de uma vez; o
+                pointer-events cobre os componentes de busca, que não
+                são campos nativos. */}
+            <fieldset
+              disabled={viewOnly}
+              className={`space-y-4 ${viewOnly ? "pointer-events-none" : ""}`}
+            >
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="sm:col-span-2">
                   <label className={labelClass}>Produto</label>
@@ -899,15 +932,18 @@ export default function OrdensDeProducaoPage() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
+            </fieldset>
 
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+              >
+                {viewOnly ? "Fechar" : "Cancelar"}
+              </button>
+
+              {!viewOnly && (
                 <button
                   type="button"
                   disabled={saving}
@@ -916,7 +952,7 @@ export default function OrdensDeProducaoPage() {
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </button>
-              </div>
+              )}
             </div>
           </div>
         </div>

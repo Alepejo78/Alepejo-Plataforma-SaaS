@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   Check,
+  Eye,
   FileText,
   Pencil,
   Plus,
@@ -159,6 +160,12 @@ export function FinancialEntriesScreen({
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
 
+  /**
+   * Abre o mesmo formulário só pra consulta. Título baixado, cancelado
+   * ou vindo de compra/venda não pode ser editado, mas continua
+   * precisando ser aberto pra conferir o que foi lançado.
+   */
+  const [viewOnly, setViewOnly] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(
     null
@@ -241,13 +248,20 @@ export function FinancialEntriesScreen({
   );
 
   function openCreate() {
+    setViewOnly(false);
     setEditingId(null);
     setForm(emptyForm());
     setFormError("");
     setFormOpen(true);
   }
 
+  function openView(entry: FinancialEntry) {
+    openEdit(entry);
+    setViewOnly(true);
+  }
+
   function openEdit(entry: FinancialEntry) {
+    setViewOnly(false);
     setEditingId(entry.id);
     setForm({
       partnerId: entry.partnerId ?? "",
@@ -626,6 +640,19 @@ export function FinancialEntriesScreen({
 
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
+                          {/* Sempre disponível: consultar não altera nada,
+                              e é a única forma de rever um título já
+                              baixado ou cancelado. */}
+                          <button
+                            type="button"
+                            onClick={() => openView(entry)}
+                            title="Consultar"
+                            aria-label="Consultar"
+                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                          >
+                            <Eye size={16} />
+                          </button>
+
                           {entry.status === "OPEN" && (
                             <>
                               {!entry.employeeId && (
@@ -745,7 +772,11 @@ export function FinancialEntriesScreen({
           <div className="my-8 w-full max-w-xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editingId ? "Editar título" : "Novo título"}
+                {viewOnly
+                  ? "Título"
+                  : editingId
+                    ? "Editar título"
+                    : "Novo título"}
               </h2>
 
               <button
@@ -758,7 +789,14 @@ export function FinancialEntriesScreen({
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* `fieldset disabled` trava todos os campos de uma vez, sem
+                ter que repetir a condição em cada input; o
+                pointer-events cobre os componentes de busca, que não
+                são campos nativos. */}
+            <fieldset
+              disabled={viewOnly}
+              className={`space-y-4 ${viewOnly ? "pointer-events-none" : ""}`}
+            >
               <div>
                 <label className={labelClass}>
                   {partnerLabel}
@@ -959,15 +997,18 @@ export function FinancialEntriesScreen({
                 </div>
               )}
 
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
+            </fieldset>
 
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+              >
+                {viewOnly ? "Fechar" : "Cancelar"}
+              </button>
+
+              {!viewOnly && (
                 <button
                   type="button"
                   disabled={saving}
@@ -976,7 +1017,7 @@ export function FinancialEntriesScreen({
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </button>
-              </div>
+              )}
             </div>
           </div>
         </div>

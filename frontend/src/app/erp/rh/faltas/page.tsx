@@ -5,6 +5,7 @@ import {
   CalendarX,
   CheckCircle2,
   Edit,
+  Eye,
   Plus,
   Trash2,
   Undo2,
@@ -81,6 +82,11 @@ export default function FaltasEAbonosPage() {
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
 
+  /**
+   * Registro já abonado ou cancelado não pode ser editado, mas continua
+   * precisando ser aberto pra consulta.
+   */
+  const [viewOnly, setViewOnly] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm());
@@ -125,7 +131,13 @@ export default function FaltasEAbonosPage() {
     void load();
   }, [load]);
 
+  function openView(record: AbsenceRecord) {
+    openEdit(record);
+    setViewOnly(true);
+  }
+
   function openCreate() {
+    setViewOnly(false);
     setEditingId(null);
     setForm(emptyForm());
     setFormError("");
@@ -133,6 +145,7 @@ export default function FaltasEAbonosPage() {
   }
 
   function openEdit(record: AbsenceRecord) {
+    setViewOnly(false);
     setEditingId(record.id);
     setForm({
       employeeId: record.employeeId,
@@ -341,6 +354,17 @@ export default function FaltasEAbonosPage() {
 
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
+                          {/* Sempre disponível: consultar não altera nada. */}
+                          <button
+                            type="button"
+                            onClick={() => openView(r)}
+                            title="Consultar"
+                            aria-label="Consultar"
+                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                          >
+                            <Eye size={16} />
+                          </button>
+
                           {r.status === "PENDENTE" && (
                             <>
                               <Can permission="absence-record.update">
@@ -463,7 +487,11 @@ export default function FaltasEAbonosPage() {
           <div className="my-8 w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editingId ? "Editar registro" : "Novo registro"}
+                {viewOnly
+                  ? "Registro"
+                  : editingId
+                    ? "Editar registro"
+                    : "Novo registro"}
               </h2>
 
               <button
@@ -476,7 +504,10 @@ export default function FaltasEAbonosPage() {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <fieldset
+              disabled={viewOnly}
+              className={`space-y-4 ${viewOnly ? "pointer-events-none" : ""}`}
+            >
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="sm:col-span-2">
                   <label className={labelClass}>
@@ -559,15 +590,18 @@ export default function FaltasEAbonosPage() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
+            </fieldset>
 
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+              >
+                {viewOnly ? "Fechar" : "Cancelar"}
+              </button>
+
+              {!viewOnly && (
                 <button
                   type="button"
                   disabled={saving}
@@ -576,7 +610,7 @@ export default function FaltasEAbonosPage() {
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
