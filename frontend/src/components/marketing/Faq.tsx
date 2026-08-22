@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
+// A pergunta aberta usa o mesmo gradiente dos botões de destaque
+// (`aurora-banner`); importado aqui pra sanfona não depender de quem a
+// coloca na página ter importado antes.
+import "./aurora.css";
+
 interface FaqItem {
   question: string;
   answer: string;
@@ -108,24 +113,41 @@ export function Faq({
             const isOpen = openIndex === index;
 
             return (
+              // `overflow-hidden` porque a pergunta aberta ganha o
+              // gradiente de ponta a ponta — sem isso ele vaza por cima
+              // dos cantos arredondados da caixa.
               <div
                 key={item.question}
-                className="rounded-2xl border border-[var(--border)] bg-[var(--background)]"
+                className={`overflow-hidden rounded-2xl border bg-[var(--background)] transition-shadow ${
+                  isOpen
+                    ? "border-transparent shadow-md"
+                    : "border-[var(--border)]"
+                }`}
               >
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? null : index)}
                   aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                  className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors ${
+                    isOpen
+                      ? "aurora-banner text-white"
+                      : "hover:bg-[var(--surface-hover)]"
+                  }`}
                 >
-                  <span className="font-medium text-[var(--text-primary)]">
+                  <span
+                    className={`font-medium ${
+                      isOpen ? "text-white" : "text-[var(--text-primary)]"
+                    }`}
+                  >
                     {item.question}
                   </span>
 
                   <ChevronDown
                     size={18}
-                    className={`shrink-0 text-[var(--text-muted)] transition-transform ${
-                      isOpen ? "rotate-180" : ""
+                    className={`shrink-0 transition-transform ${
+                      isOpen
+                        ? "rotate-180 text-white"
+                        : "text-[var(--text-muted)]"
                     }`}
                   />
                 </button>
