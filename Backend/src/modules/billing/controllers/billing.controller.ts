@@ -80,6 +80,15 @@ export class BillingController {
     return this.billingService.customerReport(resolvedYear);
   }
 
+  @Get('me/charges')
+  @Permissions('license.view')
+  @ApiOperation({
+    summary: 'Faturas da assinatura da minha empresa',
+  })
+  charges(@CurrentUser('companyId') companyId: string) {
+    return this.billingService.listCharges(companyId);
+  }
+
   /**
    * Pública por natureza (o Asaas chama de fora), mas protegida pelo
    * header `asaas-access-token` — sem ele (ou errado), 401. É a única

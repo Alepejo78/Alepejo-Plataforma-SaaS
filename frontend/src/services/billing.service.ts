@@ -73,6 +73,30 @@ export interface PendingCheckout {
   paid: boolean;
 }
 
+export type ChargeStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "RECEIVED"
+  | "OVERDUE"
+  | "REFUNDED"
+  | "CANCELLED";
+
+export type ChargeType = "SUBSCRIPTION" | "SETUP_FEE" | "ADDON";
+
+/** Uma fatura da assinatura — o que a tela de Cobranças lista. */
+export interface BillingChargeRow {
+  id: string;
+  type: ChargeType;
+  billingType: string | null;
+  value: string | number;
+  dueDate: string;
+  status: ChargeStatus;
+  paidAt: string | null;
+  /** Página de pagamento no Asaas: PIX, boleto e cartão no mesmo lugar. */
+  invoiceUrl: string | null;
+  bankSlipUrl: string | null;
+}
+
 export const billingService = {
   async subscribe(billingType: BillingType): Promise<SubscribeResult> {
     const { data } = await api.post<ApiEnvelope<SubscribeResult>>(
@@ -81,6 +105,15 @@ export const billingService = {
     );
 
     return data.data;
+  },
+
+  /** Faturas da assinatura da própria empresa. */
+  async listCharges(): Promise<BillingChargeRow[]> {
+    const { data } = await api.get<ApiEnvelope<BillingChargeRow[]>>(
+      "/billing/me/charges"
+    );
+
+    return data.data ?? [];
   },
 
   /** Pública (sem sessão) — "Comprar agora" de /planos, antes do cadastro existir. */

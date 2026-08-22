@@ -1378,6 +1378,12 @@ model FinancialEntry {
   vacationGrantId String?        @unique
   vacationGrant   VacationGrant? @relation(fields: [vacationGrantId], references: [id], onDelete: SetNull)
 
+  /// Preenchido quando o título é a mensalidade do próprio AlePejo ERP
+  /// Cloud: cada cobrança da assinatura vira uma conta a pagar na
+  /// empresa cliente. Único pra a mesma cobrança não gerar dois títulos.
+  billingChargeId String?        @unique
+  billingCharge   BillingCharge? @relation(fields: [billingChargeId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2020,6 +2026,9 @@ model BillingCharge {
   invoiceUrl  String? @db.VarChar(255)
   bankSlipUrl String? @db.VarChar(255)
   pixPayload  String?
+
+  /// Conta a pagar gerada na empresa cliente por esta cobrança.
+  financialEntry FinancialEntry?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -5,7 +5,11 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { BillingChargeStatus, type BillingCharge } from '@prisma/client';
+import {
+  BillingChargeStatus,
+  Prisma,
+  type BillingCharge,
+} from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { AsaasService } from './asaas.service';
@@ -18,6 +22,9 @@ import {
 
 /** Tolerância após o vencimento antes de bloquear — decisão do usuário. */
 const GRACE_DAYS = 7;
+
+/** Empresa dona da plataforma — é ela o "fornecedor" da mensalidade. */
+const PLATFORM_COMPANY_CODE = 'ALEPEJO';
 
 /** Prazo de validade de uma compra sem cadastro concluído. */
 const CHECKOUT_EXPIRES_DAYS = 7;
@@ -190,6 +197,104 @@ export class BillingService {
     return base + addOns;
   }
 
+  /**
+   * A mensalidade do ERP é uma despesa da empresa cliente, então cada
+   * cobrança vira uma conta a pagar no Financeiro dela — some com o
+   * "esqueci de lançar a mensalidade" e o fluxo de caixa fica certo.
+   *
+   * O fornecedor é a própria AlePejo: procura (ou cria) o parceiro com
+   * o CNPJ da empresa da plataforma. `financial_entries` exige parceiro
+   * OU colaborador por CHECK no banco, então esse cadastro não é
+   * opcional.
+   *
+   * Idempotente pelo `billingChargeId` único: o webhook do Asaas chega
+   * várias vezes pra mesma cobrança (criada, confirmada, recebida) e
+   * não pode gerar título repetido.
+   */
+  private async syncFinancialEntry(
+    companyId: string,
+    charge: {
+      id: string;
+      value: Prisma.Decimal | number;
+      dueDate: Date;
+      status: BillingChargeStatus;
+      paidAt: Date | null;
+      type: string;
+    },
+    planName: string,
+  ) {
+    const pago =
+      charge.status === 'RECEIVED' || charge.status === 'CONFIRMED';
+
+    const existing = await this.prisma.financialEntry.findUnique({
+      where: { billingChargeId: charge.id },
+    });
+
+    if (existing) {
+      // Só acompanha a baixa: valor e vencimento de um título já
+      // lançado são do cliente, não nossos pra reescrever.
+      if (pago && existing.status !== 'PAID') {
+        await this.prisma.financialEntry.update({
+          where: { id: existing.id },
+          data: {
+            status: 'PAID',
+            paidAmount: existing.amount,
+            paymentDate: charge.paidAt ?? new Date(),
+          },
+        });
+      }
+
+      return;
+    }
+
+    const plataforma = await this.prisma.company.findFirst({
+      where: { code: PLATFORM_COMPANY_CODE },
+      select: { legalName: true, tradeName: true, document: true },
+    });
+
+    if (!plataforma) {
+      this.logger.warn(
+        `Sem empresa ${PLATFORM_COMPANY_CODE} no banco — cobrança ${charge.id} ficou sem conta a pagar.`,
+      );
+
+      return;
+    }
+
+    const partner =
+      (await this.prisma.businessPartner.findFirst({
+        where: { companyId, document: plataforma.document },
+      })) ??
+      (await this.prisma.businessPartner.create({
+        data: {
+          companyId,
+          legalName: plataforma.legalName,
+          tradeName: plataforma.tradeName ?? 'AlePejo ERP Cloud',
+          document: plataforma.document,
+          personType: 'COMPANY',
+          roles: ['SUPPLIER'],
+        },
+      }));
+
+    await this.prisma.financialEntry.create({
+      data: {
+        companyId,
+        billingChargeId: charge.id,
+        partnerId: partner.id,
+        type: 'PAYABLE',
+        status: pago ? 'PAID' : 'OPEN',
+        issueDate: new Date(),
+        dueDate: charge.dueDate,
+        amount: charge.value,
+        paidAmount: pago ? charge.value : 0,
+        paymentDate: pago ? (charge.paidAt ?? new Date()) : null,
+        observation:
+          charge.type === 'SETUP_FEE'
+            ? `Taxa de implantação — ${planName}`
+            : `Assinatura ${planName} — AlePejo ERP Cloud`,
+      },
+    });
+  }
+
   /** Mesmo cálculo acima, pros módulos que a empresa já tem habilitados. */
   private async customPlanPrice(
     companyId: string,
@@ -204,6 +309,91 @@ export class BillingService {
       companyModules.map((item) => item.moduleId),
       billingCycle,
     );
+  }
+
+  /**
+   * Faturas da assinatura da empresa, pra tela de Cobranças.
+   *
+   * Antes de listar, reconsulta as cobranças da assinatura no Asaas e
+   * grava o que faltar. É a rede de segurança pro webhook: se um aviso
+   * se perder (fila pausada, token errado, servidor fora do ar), a
+   * fatura aparece assim que o cliente abrir a tela, em vez de sumir.
+   */
+  async listCharges(companyId: string) {
+    const companyPlan = await this.prisma.companyPlan.findUnique({
+      where: { companyId },
+      include: { plan: { select: { name: true } } },
+    });
+
+    if (!companyPlan) {
+      return [];
+    }
+
+    if (companyPlan.asaasSubscriptionId) {
+      try {
+        const payments = await this.asaas.listSubscriptionPayments(
+          companyPlan.asaasSubscriptionId,
+        );
+
+        for (const payment of payments) {
+          const charge = await this.prisma.billingCharge.upsert({
+            where: { asaasPaymentId: payment.id },
+            update: {
+              status: mapChargeStatus(payment.status),
+              paidAt: payment.paymentDate
+                ? new Date(payment.paymentDate)
+                : null,
+              invoiceUrl: payment.invoiceUrl,
+              bankSlipUrl: payment.bankSlipUrl,
+            },
+            create: {
+              companyPlanId: companyPlan.id,
+              asaasPaymentId: payment.id,
+              type: 'SUBSCRIPTION',
+              billingType: payment.billingType,
+              value: payment.value,
+              dueDate: new Date(payment.dueDate),
+              status: mapChargeStatus(payment.status),
+              paidAt: payment.paymentDate
+                ? new Date(payment.paymentDate)
+                : null,
+              invoiceUrl: payment.invoiceUrl,
+              bankSlipUrl: payment.bankSlipUrl,
+            },
+          });
+
+          void charge;
+        }
+      } catch (err) {
+        // Asaas fora do ar não pode derrubar a tela — mostra o que já
+        // está gravado e segue.
+        this.logger.warn(
+          `Não consegui sincronizar as cobranças com o Asaas: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+
+    const charges = await this.prisma.billingCharge.findMany({
+      where: { companyPlanId: companyPlan.id },
+      orderBy: { dueDate: 'desc' },
+    });
+
+    // Garante o título em contas a pagar pra toda cobrança da lista,
+    // não só pras que acabaram de chegar do Asaas: cobranças antigas
+    // (de antes deste recurso) e a primeira, criada na contratação,
+    // também precisam aparecer no Financeiro. `syncFinancialEntry` é
+    // idempotente, então rodar sempre não duplica nada.
+    for (const charge of charges) {
+      await this.syncFinancialEntry(
+        companyId,
+        charge,
+        companyPlan.plan.name,
+      );
+    }
+
+    return charges;
   }
 
   /**
@@ -596,11 +786,17 @@ export class BillingService {
         })
       )?.type ?? 'SUBSCRIPTION';
 
-    await this.prisma.billingCharge.upsert({
+    // Os links entram também no update: as cobranças dos meses
+    // seguintes nascem no Asaas (a assinatura gera sozinha) e chegam
+    // aqui só pelo webhook — sem guardar o link, a tela de Cobranças
+    // teria a fatura listada mas sem como pagar.
+    const charge = await this.prisma.billingCharge.upsert({
       where: { asaasPaymentId: payment.id },
       update: {
         status: mapChargeStatus(payment.status),
         paidAt: payment.paymentDate ? new Date(payment.paymentDate) : null,
+        invoiceUrl: payment.invoiceUrl,
+        bankSlipUrl: payment.bankSlipUrl,
       },
       create: {
         companyPlanId: companyPlan.id,
@@ -611,8 +807,21 @@ export class BillingService {
         dueDate: new Date(payment.dueDate),
         status: mapChargeStatus(payment.status),
         paidAt: payment.paymentDate ? new Date(payment.paymentDate) : null,
+        invoiceUrl: payment.invoiceUrl,
+        bankSlipUrl: payment.bankSlipUrl,
       },
     });
+
+    const plan = await this.prisma.plan.findUnique({
+      where: { id: companyPlan.planId },
+      select: { name: true },
+    });
+
+    await this.syncFinancialEntry(
+      companyPlan.companyId,
+      charge,
+      plan?.name ?? 'AlePejo ERP Cloud',
+    );
 
     // A taxa de implantação é cobrança avulsa — não representa o
     // ciclo da assinatura, então não deve mexer no status/prazo dela.

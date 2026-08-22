@@ -7,6 +7,7 @@ import {
   CircleDashed,
   Clock,
   CreditCard,
+  ExternalLink,
   Loader2,
   Package,
   X,
@@ -15,6 +16,13 @@ import {
 
 import { OsShell } from "@/components";
 import { PaymentCheckout } from "@/components/billing/PaymentCheckout";
+
+import {
+  billingService,
+  type BillingChargeRow,
+  type ChargeStatus,
+  type ChargeType,
+} from "@/services/billing.service";
 
 import {
   licenseService,
@@ -39,6 +47,43 @@ const STATUS_BADGE_CLASS: Record<CompanyPlanStatus, string> = {
   PAST_DUE: "bg-[var(--warning-soft)] text-[var(--warning)]",
   BLOCKED: "bg-[var(--danger-soft)] text-[var(--danger)]",
   CANCELLED: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+};
+
+/** Como cada situação de fatura aparece na tela de Cobranças. */
+const CHARGE_STATE: Record<
+  ChargeStatus,
+  { label: string; className: string }
+> = {
+  PENDING: {
+    label: "A pagar",
+    className: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  },
+  CONFIRMED: {
+    label: "Paga",
+    className: "bg-[var(--success-soft)] text-[var(--success)]",
+  },
+  RECEIVED: {
+    label: "Paga",
+    className: "bg-[var(--success-soft)] text-[var(--success)]",
+  },
+  OVERDUE: {
+    label: "Vencida",
+    className: "bg-[var(--danger-soft)] text-[var(--danger)]",
+  },
+  REFUNDED: {
+    label: "Estornada",
+    className: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  },
+  CANCELLED: {
+    label: "Cancelada",
+    className: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  },
+};
+
+const CHARGE_TYPE_LABEL: Record<ChargeType, string> = {
+  SUBSCRIPTION: "Mensalidade",
+  SETUP_FEE: "Taxa de implantação",
+  ADDON: "Módulo adicional",
 };
 
 /** Uma linha da lista de módulos, venha ela do plano ou de um módulo avulso. */
@@ -469,6 +514,7 @@ export default function LicenciamentoPage() {
     null
   );
 
+  const [charges, setCharges] = useState<BillingChargeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [contractOpen, setContractOpen] = useState(false);
@@ -484,6 +530,13 @@ export default function LicenciamentoPage() {
         );
       })
       .finally(() => setLoading(false));
+
+    // Falhar aqui não pode esconder o plano: a seção de cobranças
+    // some, o resto da tela continua.
+    billingService
+      .listCharges()
+      .then(setCharges)
+      .catch(() => setCharges([]));
   }
 
   useEffect(() => {
@@ -661,6 +714,94 @@ export default function LicenciamentoPage() {
                 </ul>
               )}
             </section>
+
+            {charges.length > 0 && (
+              <section>
+                <h2 className="mb-1 text-sm font-medium text-[var(--text-muted)]">
+                  Cobranças
+                </h2>
+
+                <p className="mb-3 text-sm text-[var(--text-muted)]">
+                  Cada cobrança também vira uma conta a pagar no
+                  Financeiro da sua empresa.
+                </p>
+
+                <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+                  <table className="w-full min-w-[640px] text-sm">
+                    <thead>
+                      <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
+                        <th className="px-4 py-3 font-medium">Vencimento</th>
+                        <th className="px-4 py-3 font-medium">Descrição</th>
+                        <th className="px-4 py-3 text-right font-medium">
+                          Valor
+                        </th>
+                        <th className="px-4 py-3 font-medium">Situação</th>
+                        <th className="px-4 py-3" />
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {charges.map((charge) => {
+                        const state = CHARGE_STATE[charge.status];
+                        const emAberto =
+                          charge.status === "PENDING" ||
+                          charge.status === "OVERDUE";
+                        const link =
+                          charge.invoiceUrl ?? charge.bankSlipUrl;
+
+                        return (
+                          <tr
+                            key={charge.id}
+                            className="border-b border-[var(--border)] last:border-0"
+                          >
+                            <td className="whitespace-nowrap px-4 py-3 text-[var(--text-primary)]">
+                              {formatDate(charge.dueDate)}
+                            </td>
+
+                            <td className="px-4 py-3 text-[var(--text-secondary)]">
+                              {CHARGE_TYPE_LABEL[charge.type]}
+                            </td>
+
+                            <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
+                              {money(num(charge.value))}
+                            </td>
+
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${state.className}`}
+                              >
+                                {state.label}
+                              </span>
+                            </td>
+
+                            <td className="px-4 py-3 text-right">
+                              {emAberto && link && (
+                                <a
+                                  href={link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                                >
+                                  Pagar
+                                  <ExternalLink size={13} />
+                                </a>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="mt-3 text-xs text-[var(--text-muted)]">
+                  As cobranças dos próximos períodos são geradas
+                  automaticamente antes do vencimento e também chegam
+                  por e-mail. Dá para pagar antes do vencimento por aqui
+                  mesmo, no botão Pagar.
+                </p>
+              </section>
+            )}
           </>
         )}
       </div>
