@@ -266,18 +266,42 @@ export default function PlanosPage() {
   );
 
   useEffect(() => {
-    companyOnboardingService
-      .listPublicPlans()
-      .then(setPlans)
-      .catch(() =>
-        setError("Não foi possível carregar os planos. Tente novamente.")
-      )
-      .finally(() => setLoading(false));
+    function carregar() {
+      companyOnboardingService
+        .listPublicPlans()
+        .then(setPlans)
+        .catch(() =>
+          setError("Não foi possível carregar os planos. Tente novamente.")
+        )
+        .finally(() => setLoading(false));
 
-    companyOnboardingService
-      .getPublicTrialDays()
-      .then(setTrialDays)
-      .catch(() => {});
+      companyOnboardingService
+        .getPublicTrialDays()
+        .then(setTrialDays)
+        .catch(() => {});
+    }
+
+    carregar();
+
+    /*
+     * Recarrega ao voltar pra aba. Quem administra os planos costuma
+     * deixar esta página aberta num monitor e o painel no outro —
+     * sem isso a página segura o preço antigo até alguém dar F5, e
+     * parece que a alteração não foi salva.
+     */
+    function aoVoltar() {
+      if (document.visibilityState === "visible") {
+        carregar();
+      }
+    }
+
+    document.addEventListener("visibilitychange", aoVoltar);
+    window.addEventListener("focus", carregar);
+
+    return () => {
+      document.removeEventListener("visibilitychange", aoVoltar);
+      window.removeEventListener("focus", carregar);
+    };
   }, []);
 
   const sortedPlans = [...plans]

@@ -60,14 +60,19 @@ export interface LicensePlan {
   }[];
 }
 
+/**
+ * `null` limpa o campo no banco; omitir deixa como está. O backend
+ * aceita os dois (`@IsOptional()` do class-validator ignora null), e é
+ * o que permite zerar uma taxa ou tirar o limite de usuários.
+ */
 export interface PlanPayload {
   code: string;
   name: string;
-  description?: string;
-  monthlyPrice?: number;
-  yearlyPrice?: number;
-  setupFee?: number;
-  maxUsers?: number;
+  description?: string | null;
+  monthlyPrice?: number | null;
+  yearlyPrice?: number | null;
+  setupFee?: number | null;
+  maxUsers?: number | null;
   sortOrder?: number;
   highlighted?: boolean;
   active?: boolean;

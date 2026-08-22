@@ -174,14 +174,19 @@ export default function PlanosAdminPage() {
     setSaving(true);
     setFormError("");
 
+    // Manda o valor como está, inclusive zero, e `null` pro que ficou
+    // em branco. Usar `|| undefined` aqui fazia o campo sumir do envio
+    // quando valia 0 — e campo ausente o Prisma não altera, então
+    // zerar um preço ou tirar a taxa de implantação simplesmente não
+    // pegava: a tela salvava sem erro e o valor antigo continuava lá.
     const payload = {
       code: form.code.trim().toUpperCase(),
       name: form.name.trim(),
-      description: form.description || undefined,
-      monthlyPrice: form.monthlyPrice || undefined,
-      yearlyPrice: form.yearlyPrice || undefined,
-      setupFee: form.setupFee || undefined,
-      maxUsers: form.maxUsers ? Number(form.maxUsers) : undefined,
+      description: form.description.trim() || null,
+      monthlyPrice: form.monthlyPrice,
+      yearlyPrice: form.yearlyPrice,
+      setupFee: form.setupFee,
+      maxUsers: form.maxUsers ? Number(form.maxUsers) : null,
       sortOrder: form.sortOrder,
       highlighted: form.highlighted,
       moduleIds: form.moduleIds,
