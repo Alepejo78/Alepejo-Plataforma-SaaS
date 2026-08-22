@@ -46,9 +46,12 @@ export const emptyAddress: AddressFormState = {
 
 /**
  * CEP | Rua | Numero na primeira linha, Bairro | Cidade | UF na
- * segunda — larguras proporcionais (CEP e Número pequenos, Rua e
- * Bairro maiores). O container precisa usar grid de 6 colunas
+ * segunda — larguras proporcionais (Número pequeno, Rua e Bairro
+ * maiores). O container precisa usar grid de 6 colunas
  * (`sm:grid-cols-6`) pros spans abaixo baterem certinho em cada linha.
+ *
+ * O CEP ocupa 2 colunas: com uma só, "00000-000" não cabia inteiro e o
+ * último dígito ficava escondido dentro do campo.
  */
 export function AddressFields({
   idPrefix,
@@ -88,7 +91,7 @@ export function AddressFields({
 
   return (
     <>
-      <div className="sm:col-span-1">
+      <div className="sm:col-span-2">
         <label className={labelClass} htmlFor={`${idPrefix}-zipCode`}>
           CEP
         </label>
@@ -121,7 +124,7 @@ export function AddressFields({
         )}
       </div>
 
-      <div className="sm:col-span-4">
+      <div className="sm:col-span-3">
         <label className={labelClass} htmlFor={`${idPrefix}-street`}>
           Rua
         </label>
