@@ -397,6 +397,162 @@ export class BillingService {
   }
 
   /**
+   * Troca o ciclo da assinatura (mensal ↔ anual). Não dá pra mudar o
+   * ciclo de uma assinatura no Asaas: encerra a atual e cria outra.
+   *
+   * A diferença está em QUANDO a nova começa a cobrar, e ela vem das
+   * regras decididas com o usuário:
+   *
+   * - **Mensal → anual**: cobra na hora. O cliente está trocando pra
+   *   pagar adiantado com desconto, então segurar a cobrança pro mês
+   *   que vem seria contra o próprio motivo da troca. O que ele já
+   *   pagou do mês corrente continua valendo até vencer.
+   *
+   * - **Anual → mensal**: só na renovação. A primeira mensalidade vence
+   *   no fim do período anual já pago, sem devolver nada e sem cobrar
+   *   duas vezes. É por isso que a data de vencimento sai do
+   *   `currentPeriodEnd` em vez de "amanhã".
+   */
+  async changeCycle(companyId: string, billingCycle: 'MONTHLY' | 'YEARLY') {
+    const companyPlan = await this.prisma.companyPlan.findUnique({
+      where: { companyId },
+      include: { plan: true, company: true },
+    });
+
+    if (!companyPlan) {
+      throw new NotFoundException(
+        'Sua empresa ainda não tem um plano — fale com o suporte.',
+      );
+    }
+
+    if (companyPlan.billingCycle === billingCycle) {
+      throw new BadRequestException(
+        billingCycle === 'YEARLY'
+          ? 'Sua assinatura já é anual.'
+          : 'Sua assinatura já é mensal.',
+      );
+    }
+
+    if (!companyPlan.asaasCustomerId) {
+      throw new BadRequestException(
+        'Sua assinatura ainda não foi contratada — use o botão Contratar.',
+      );
+    }
+
+    const price =
+      companyPlan.plan.code === CUSTOM_PLAN_CODE
+        ? await this.customPlanPrice(companyId, billingCycle)
+        : billingCycle === 'YEARLY'
+          ? companyPlan.plan.yearlyPrice
+          : companyPlan.plan.monthlyPrice;
+
+    if (!price) {
+      throw new BadRequestException(
+        billingCycle === 'YEARLY'
+          ? 'Este plano ainda não tem preço anual definido — fale com o suporte.'
+          : 'Este plano ainda não tem preço mensal definido — fale com o suporte.',
+      );
+    }
+
+    const amanha = addDays(new Date(), 1);
+
+    const proximoVencimento =
+      billingCycle === 'MONTHLY' &&
+      companyPlan.currentPeriodEnd &&
+      companyPlan.currentPeriodEnd > amanha
+        ? companyPlan.currentPeriodEnd
+        : amanha;
+
+    // Herda a forma de pagamento da última cobrança; sem histórico,
+    // UNDEFINED deixa o cliente escolher na própria fatura.
+    const ultima = await this.prisma.billingCharge.findFirst({
+      where: { companyPlanId: companyPlan.id },
+      orderBy: { createdAt: 'desc' },
+      select: { billingType: true },
+    });
+
+    const billingType = (ultima?.billingType ??
+      'UNDEFINED') as BillingTypeValue;
+
+    if (companyPlan.asaasSubscriptionId) {
+      try {
+        await this.asaas.deleteSubscription(companyPlan.asaasSubscriptionId);
+      } catch (err) {
+        // Assinatura já removida no Asaas não pode travar a troca — o
+        // que importa daqui pra frente é a nova.
+        this.logger.warn(
+          `Não consegui encerrar a assinatura ${companyPlan.asaasSubscriptionId}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+
+    const subscription = await this.asaas.createSubscription({
+      customer: companyPlan.asaasCustomerId,
+      billingType,
+      value: Number(price),
+      nextDueDate: formatDate(proximoVencimento),
+      cycle: billingCycle,
+      externalReference: companyPlan.id,
+      description: `Assinatura ${companyPlan.plan.name} (${
+        billingCycle === 'YEARLY' ? 'anual' : 'mensal'
+      })`,
+    });
+
+    await this.prisma.companyPlan.update({
+      where: { id: companyPlan.id },
+      data: {
+        billingCycle,
+        asaasSubscriptionId: subscription.id,
+      },
+    });
+
+    const payments = await this.asaas.listSubscriptionPayments(
+      subscription.id,
+    );
+
+    const primeira =
+      payments.find((p) => p.status === 'PENDING') ?? payments[0];
+
+    if (primeira) {
+      const charge = await this.prisma.billingCharge.upsert({
+        where: { asaasPaymentId: primeira.id },
+        update: {
+          invoiceUrl: primeira.invoiceUrl,
+          bankSlipUrl: primeira.bankSlipUrl,
+        },
+        create: {
+          companyPlanId: companyPlan.id,
+          asaasPaymentId: primeira.id,
+          type: 'SUBSCRIPTION',
+          billingType,
+          value: primeira.value,
+          dueDate: new Date(primeira.dueDate),
+          status: mapChargeStatus(primeira.status),
+          invoiceUrl: primeira.invoiceUrl,
+          bankSlipUrl: primeira.bankSlipUrl,
+        },
+      });
+
+      await this.syncFinancialEntry(
+        companyId,
+        charge,
+        companyPlan.plan.name,
+      );
+    }
+
+    return {
+      billingCycle,
+      value: Number(price),
+      dueDate: formatDate(proximoVencimento),
+      invoiceUrl: primeira?.invoiceUrl ?? null,
+      /** Anual → mensal não gera cobrança pra agora: a primeira vence no fim do período pago. */
+      cobrancaImediata: billingCycle === 'YEARLY',
+    };
+  }
+
+  /**
    * "Comprar agora" de /planos: cobra ANTES da empresa existir. Cria o
    * cliente + assinatura no Asaas e guarda um `PendingCheckout` com o
    * plano e os dados do comprador — a empresa só nasce depois, no

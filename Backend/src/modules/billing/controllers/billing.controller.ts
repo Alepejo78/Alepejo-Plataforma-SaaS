@@ -19,6 +19,7 @@ import { Permissions } from '../../identity/auth/decorators/permissions.decorato
 import { BillingService } from '../services/billing.service';
 import { SubscribeDto } from '../dto/subscribe.dto';
 import { CreateCheckoutDto } from '../dto/create-checkout.dto';
+import { ChangeCycleDto } from '../dto/change-cycle.dto';
 
 @ApiTags('Billing')
 @Controller('billing')
@@ -78,6 +79,18 @@ export class BillingController {
         : new Date().getFullYear();
 
     return this.billingService.customerReport(resolvedYear);
+  }
+
+  @Post('me/cycle')
+  @Permissions('license.view')
+  @ApiOperation({
+    summary: 'Trocar o ciclo da assinatura (mensal ↔ anual)',
+  })
+  changeCycle(
+    @CurrentUser('companyId') companyId: string,
+    @Body() dto: ChangeCycleDto,
+  ) {
+    return this.billingService.changeCycle(companyId, dto.billingCycle);
   }
 
   @Get('me/charges')

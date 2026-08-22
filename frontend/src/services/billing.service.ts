@@ -97,11 +97,35 @@ export interface BillingChargeRow {
   bankSlipUrl: string | null;
 }
 
+export interface ChangeCycleResult {
+  billingCycle: BillingCycle;
+  value: number;
+  dueDate: string;
+  invoiceUrl: string | null;
+  /** true = já existe cobrança pra pagar agora (troca pra anual). */
+  cobrancaImediata: boolean;
+}
+
 export const billingService = {
   async subscribe(billingType: BillingType): Promise<SubscribeResult> {
     const { data } = await api.post<ApiEnvelope<SubscribeResult>>(
       "/billing/me/subscribe",
       { billingType }
+    );
+
+    return data.data;
+  },
+
+  /**
+   * Troca o ciclo da assinatura. Anual cobra na hora; mensal só passa a
+   * valer no fim do período já pago (`cobrancaImediata` diz qual foi).
+   */
+  async changeCycle(
+    billingCycle: BillingCycle
+  ): Promise<ChangeCycleResult> {
+    const { data } = await api.post<ApiEnvelope<ChangeCycleResult>>(
+      "/billing/me/cycle",
+      { billingCycle }
     );
 
     return data.data;

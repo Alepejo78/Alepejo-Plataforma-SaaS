@@ -135,6 +135,17 @@ export class AsaasService {
     });
   }
 
+  /**
+   * Encerra a assinatura. As cobranças já emitidas continuam de pé —
+   * o Asaas só para de gerar as próximas, que é o que se quer ao
+   * trocar de ciclo.
+   */
+  async deleteSubscription(subscriptionId: string): Promise<void> {
+    await this.request(`/subscriptions/${subscriptionId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async createPayment(params: {
     customer: string;
     billingType: string;

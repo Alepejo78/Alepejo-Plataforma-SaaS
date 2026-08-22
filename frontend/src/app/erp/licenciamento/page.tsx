@@ -519,6 +519,9 @@ export default function LicenciamentoPage() {
   const [error, setError] = useState("");
   const [contractOpen, setContractOpen] = useState(false);
   const [modulesOpen, setModulesOpen] = useState(false);
+  const [changingCycle, setChangingCycle] = useState(false);
+  const [cycleMessage, setCycleMessage] = useState("");
+  const [cycleError, setCycleError] = useState("");
 
   function loadLicense() {
     licenseService
@@ -546,6 +549,48 @@ export default function LicenciamentoPage() {
   const status = license?.companyPlan?.status;
   const canContract = status && status !== "ACTIVE";
   const modules = license ? moduleRows(license) : [];
+
+  const anual = license?.companyPlan?.billingCycle === "YEARLY";
+
+  /*
+   * Só quem já assinou pode trocar de ciclo — em teste não existe
+   * assinatura no Asaas pra encerrar e recriar, e o backend recusaria.
+   */
+  const podeTrocarCiclo = status === "ACTIVE" || status === "PAST_DUE";
+
+  async function trocarCiclo() {
+    const destino = anual ? "MONTHLY" : "YEARLY";
+
+    const aviso = anual
+      ? "Voltar para a cobrança mensal?\n\nVocê continua no plano anual até o fim do período já pago. A partir daí, a cobrança passa a ser mensal. Nada é cobrado agora e nada é devolvido."
+      : "Mudar para a cobrança anual?\n\nUma cobrança do valor anual, com 20% de desconto, é gerada agora para pagamento. O período mensal que você já pagou continua valendo até vencer.";
+
+    if (!window.confirm(aviso)) {
+      return;
+    }
+
+    setChangingCycle(true);
+    setCycleMessage("");
+    setCycleError("");
+
+    try {
+      const result = await billingService.changeCycle(destino);
+
+      setCycleMessage(
+        result.cobrancaImediata
+          ? `Pronto. A cobrança anual de ${money(result.value)} foi gerada e aparece abaixo, em Cobranças.`
+          : `Pronto. A cobrança mensal de ${money(result.value)} começa em ${formatDate(result.dueDate)}.`
+      );
+
+      loadLicense();
+    } catch (err) {
+      setCycleError(
+        extractMessage(err, "Não foi possível trocar a forma de cobrança.")
+      );
+    } finally {
+      setChangingCycle(false);
+    }
+  }
 
   return (
     <OsShell workspaceLabel="Licenciamento">
@@ -661,6 +706,49 @@ export default function LicenciamentoPage() {
                         </span>
                       )}
                   </div>
+
+                  {podeTrocarCiclo && (
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--text-primary)]">
+                          Forma de cobrança:{" "}
+                          {anual ? "anual" : "mensal"}
+                        </p>
+
+                        <p className="mt-0.5 text-sm text-[var(--text-muted)]">
+                          {anual
+                            ? "Voltando para o mensal, a mudança só vale quando o período já pago terminar — nada é cobrado agora."
+                            : "No plano anual você paga 12 meses de uma vez com 20% de desconto. A cobrança sai na hora."}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={changingCycle}
+                        onClick={() => void trocarCiclo()}
+                        className="flex shrink-0 items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-60"
+                      >
+                        {changingCycle && (
+                          <Loader2 size={15} className="animate-spin" />
+                        )}
+                        {anual
+                          ? "Voltar para mensal"
+                          : "Mudar para anual (20% off)"}
+                      </button>
+                    </div>
+                  )}
+
+                  {cycleMessage && (
+                    <p className="mt-3 rounded-xl border border-[var(--success)] bg-[var(--success-soft)] p-3 text-sm text-[var(--success)]">
+                      {cycleMessage}
+                    </p>
+                  )}
+
+                  {cycleError && (
+                    <p className="mt-3 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                      {cycleError}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="mt-2 text-[var(--text-muted)]">
