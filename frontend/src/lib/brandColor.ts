@@ -160,6 +160,9 @@ export function brandPalette(hex: string): BrandPalette | null {
       "--primary-soft": claro.soft,
       "--primary-contrast": contraste,
       "--primary-text": claro.text,
+      // O anel de foco do teclado acompanha a marca: é o mesmo destaque
+      // visto em botão e aba ativa, agora também em quem navega por Tab.
+      "--focus-ring": claro.hover,
     },
     dark: {
       "--primary": escuro.primary,
@@ -167,6 +170,7 @@ export function brandPalette(hex: string): BrandPalette | null {
       "--primary-soft": escuro.soft,
       "--primary-contrast": "#0b1220",
       "--primary-text": escuro.text,
+      "--focus-ring": escuro.primary,
     },
   };
 }

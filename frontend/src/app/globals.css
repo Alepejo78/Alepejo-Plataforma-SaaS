@@ -122,15 +122,15 @@
   --color-surface: var(--surface);
   --color-border: var(--border);
   --color-primary: var(--primary);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans-app);
+  --font-mono: var(--font-mono-app);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family:
-    var(--font-geist-sans),
+    var(--font-sans-app),
     system-ui,
     -apple-system,
     "Segoe UI",
@@ -154,6 +154,29 @@ main {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 6px;
+}
+
+/* Números em fonte monoespaçada: as colunas de valor de uma tabela só
+   ficam alinhadas quando todo dígito ocupa a mesma largura. */
+td,
+th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Linha da tabela sob o cursor — realce na cor da marca, que segue a
+   cor escolhida em Personalização junto com o resto do sistema. */
+tbody tr {
+  transition: background-color 140ms ease;
+}
+
+tbody tr:hover {
+  background-color: var(--primary-soft);
+}
+
+/* Texto selecionado com o mouse, também na cor da marca. */
+::selection {
+  background: var(--primary-soft);
+  color: var(--primary-text);
 }
 
 /* Respeita quem pediu menos animação no sistema */
