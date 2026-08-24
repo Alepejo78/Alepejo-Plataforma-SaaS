@@ -424,6 +424,494 @@ export default function HomePage() {
           </div>
         )}
 
+        {/*
+          Duas colunas empilhadas: A pagar/receber, Colaboradores e o
+          perfil dos colaboradores numa; Fluxo de caixa e despesas por
+          tipo na outra, logo abaixo do cartão que já mostra os mesmos
+          números por período.
+        */}
+        <section className="grid gap-5 lg:grid-cols-2">
+          <div className="flex flex-col gap-5">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Wallet
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  A pagar/receber
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  {
+                    label: "A receber no mês",
+                    value: aReceberMes,
+                  },
+                  { label: "A pagar no mês", value: aPagarMes },
+                  {
+                    label: "Saldo previsto",
+                    value:
+                      aReceberMes !== null && aPagarMes !== null
+                        ? aReceberMes - aPagarMes
+                        : null,
+                  },
+                ].map((linha) => (
+                  <div
+                    key={linha.label}
+                    className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
+                  >
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {linha.label}
+                    </span>
+
+                    {cashFlowLoading ? (
+                      <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
+                    ) : (
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {linha.value !== null
+                          ? money(linha.value)
+                          : "—"}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!cashFlowLoading &&
+                (aReceberMes || aPagarMes) && (
+                  <div className="mt-4 h-24">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        layout="vertical"
+                        data={aPagarReceberChart}
+                        margin={{ top: 0, right: 12, bottom: 0, left: 0 }}
+                      >
+                        <XAxis type="number" hide />
+                        <YAxis
+                          type="category"
+                          dataKey="label"
+                          stroke="var(--text-muted)"
+                          fontSize={12}
+                          width={70}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <Tooltip
+                          contentStyle={dashboardTooltipStyle}
+                          formatter={(v, name) => [money(Number(v)), name]}
+                          cursor={{ fill: "var(--surface-hover)" }}
+                        />
+                        <Bar
+                          dataKey="emDia"
+                          name="Em aberto"
+                          stackId="valor"
+                          radius={[0, 0, 0, 0]}
+                        >
+                          {aPagarReceberChart.map((item) => (
+                            <Cell key={item.label} fill={item.fill} />
+                          ))}
+                        </Bar>
+                        <Bar
+                          dataKey="vencido"
+                          name="Vencido"
+                          stackId="valor"
+                          fill="var(--warning)"
+                          radius={[0, 6, 6, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                Valores em aberto do mês atual, calculados a
+                partir de Contas a Receber e a Pagar
+                {consolidated ? " de todas as empresas do grupo" : ""}.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Users
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  Colaboradores
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { label: "Ativos", value: colaboradoresAtivos },
+                  {
+                    label: "Em experiência",
+                    value: colaboradoresExperiencia,
+                  },
+                  {
+                    label: "Aniversariantes do mês",
+                    value: birthdaysMes.length,
+                  },
+                ].map((linha) => (
+                  <div
+                    key={linha.label}
+                    className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
+                  >
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {linha.label}
+                    </span>
+
+                    {hrLoading ? (
+                      <span className="h-5 w-8 animate-pulse rounded bg-[var(--surface-hover)]" />
+                    ) : (
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {linha.value !== null
+                          ? String(linha.value)
+                          : "—"}
+                      </span>
+                    )}
+                  </div>
+                ))}
+
+                {!hrLoading && birthdaysMes.length > 0 && (
+                  <div className="space-y-1.5 border-b border-[var(--border)] pb-2">
+                    {birthdaysMes.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <span className="text-[var(--text-secondary)]">
+                          {b.name}
+                        </span>
+
+                        <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                          dia {b.day}
+                          <span className="text-base leading-none">
+                            🎉
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pb-2">
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    Exames a vencer
+                  </span>
+
+                  {hrLoading ? (
+                    <span className="h-5 w-8 animate-pulse rounded bg-[var(--surface-hover)]" />
+                  ) : (
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {examesAVencer !== null
+                        ? String(examesAVencer)
+                        : "—"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                Exames com vencimento nos próximos 30 dias
+                (inclui atrasados)
+                {consolidated ? ", de todas as empresas do grupo" : ""}.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <UsersRound
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  Perfil dos colaboradores
+                </h2>
+              </div>
+
+              {hrLoading ? (
+                <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+              ) : genderChart.length === 0 &&
+                sectorChart.length === 0 ? (
+                <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+                  Nenhum colaborador ativo cadastrado ainda.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="mb-1 text-center text-xs font-medium text-[var(--text-muted)]">
+                      Por gênero
+                    </p>
+
+                    <div className="h-36">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={genderChart}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={28}
+                            outerRadius={52}
+                            paddingAngle={2}
+                          >
+                            {genderChart.map((item) => (
+                              <Cell key={item.name} fill={item.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={dashboardTooltipStyle}
+                            formatter={(v, name) => [
+                              `${v} colaborador(es)`,
+                              name,
+                            ]}
+                          />
+                          <Legend
+                            wrapperStyle={{ fontSize: 11 }}
+                            iconSize={8}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-1 text-center text-xs font-medium text-[var(--text-muted)]">
+                      Por setor
+                    </p>
+
+                    <div className="h-36">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={sectorChart}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={28}
+                            outerRadius={52}
+                            paddingAngle={2}
+                          >
+                            {sectorChart.map((item, i) => (
+                              <Cell key={`${item.name}-${i}`} fill={item.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={dashboardTooltipStyle}
+                            formatter={(v, name) => [
+                              `${v} colaborador(es)`,
+                              name,
+                            ]}
+                          />
+                          <Legend
+                            wrapperStyle={{ fontSize: 11 }}
+                            iconSize={8}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                Só colaboradores ativos{
+                  consolidated ? ", somando o grupo" : ""
+                }.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <PiggyBank
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  Fluxo de caixa
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { label: "Recebido", value: recebidoTotal },
+                  { label: "Pago", value: pagoTotal },
+                  {
+                    label: "Total em caixa",
+                    value:
+                      recebidoTotal !== null && pagoTotal !== null
+                        ? recebidoTotal - pagoTotal
+                        : null,
+                  },
+                ].map((linha) => (
+                  <div
+                    key={linha.label}
+                    className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
+                  >
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {linha.label}
+                    </span>
+
+                    {cashFlowLoading ? (
+                      <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
+                    ) : (
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {linha.value !== null
+                          ? money(linha.value)
+                          : "—"}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!cashFlowLoading && tendenciaMeses.length > 1 && (
+                <div className="mt-4 h-28">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={tendenciaMeses}
+                      margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                      barGap={2}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="mes"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        width={44}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => moneyCompact(Number(v))}
+                      />
+                      <Tooltip
+                        contentStyle={dashboardTooltipStyle}
+                        formatter={(v) => money(Number(v))}
+                      />
+                      <Bar
+                        dataKey="recebido"
+                        name="Recebido"
+                        fill="var(--success)"
+                        radius={[3, 3, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="pago"
+                        name="Pago"
+                        fill="var(--danger)"
+                        radius={[3, 3, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                Realizado no ano até o mês atual, a partir das
+                baixas em Contas a Receber e a Pagar
+                {consolidated ? " de todas as empresas do grupo" : ""}.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Receipt
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  Despesas por tipo
+                </h2>
+              </div>
+
+              {cashFlowLoading ? (
+                <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+              ) : despesasPorTipo.length === 0 ? (
+                <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+                  Nenhuma despesa lançada este ano ainda.
+                </p>
+              ) : (
+                <div
+                  style={{
+                    height: Math.max(
+                      160,
+                      Math.min(despesasPorTipo.length, 6) * 40 + 30
+                    ),
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={despesasPorTipo.slice(0, 6)}
+                      margin={{ top: 4, right: 16, bottom: 0, left: 0 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        horizontal={false}
+                      />
+                      <XAxis
+                        type="number"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        tickFormatter={(v) => moneyCompact(Number(v))}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="description"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        width={110}
+                      />
+                      <Tooltip
+                        contentStyle={dashboardTooltipStyle}
+                        formatter={(v) => money(Number(v))}
+                        cursor={{ fill: "var(--surface-hover)" }}
+                      />
+                      <Bar
+                        dataKey="pago"
+                        name="Pago"
+                        stackId="despesa"
+                        fill="var(--danger)"
+                        radius={[0, 0, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="emAberto"
+                        name="Em aberto"
+                        stackId="despesa"
+                        fill="var(--warning)"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                As {Math.min(despesasPorTipo.length, 6)} maiores contas do
+                plano de contas no ano{consolidated ? ", somando o grupo" : ""}.
+                Veja todas em Financeiro → Gráficos de fluxo de caixa.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="Parceiros"
@@ -470,499 +958,6 @@ export default function HomePage() {
             href="/erp/estoque"
             loading={loading}
           />
-        </section>
-
-        {/*
-          A pagar/receber e Fluxo de caixa lado a lado, largos — com
-          três colunas os mini-gráficos ficavam espremidos numa faixa
-          estreita e pareciam maiores do que precisavam ser.
-          Colaboradores vai numa seção própria logo abaixo.
-        */}
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Wallet
-                size={18}
-                className="text-[var(--text-secondary)]"
-              />
-
-              <h2 className="font-semibold text-[var(--text-primary)]">
-                A pagar/receber
-              </h2>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                {
-                  label: "A receber no mês",
-                  value: aReceberMes,
-                },
-                { label: "A pagar no mês", value: aPagarMes },
-                {
-                  label: "Saldo previsto",
-                  value:
-                    aReceberMes !== null && aPagarMes !== null
-                      ? aReceberMes - aPagarMes
-                      : null,
-                },
-              ].map((linha) => (
-                <div
-                  key={linha.label}
-                  className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
-                >
-                  <span className="text-sm text-[var(--text-secondary)]">
-                    {linha.label}
-                  </span>
-
-                  {cashFlowLoading ? (
-                    <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
-                  ) : (
-                    <span className="font-medium text-[var(--text-primary)]">
-                      {linha.value !== null
-                        ? money(linha.value)
-                        : "—"}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {!cashFlowLoading &&
-              (aReceberMes || aPagarMes) && (
-                <div className="mt-4 h-24">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={aPagarReceberChart}
-                      margin={{ top: 0, right: 12, bottom: 0, left: 0 }}
-                    >
-                      <XAxis type="number" hide />
-                      <YAxis
-                        type="category"
-                        dataKey="label"
-                        stroke="var(--text-muted)"
-                        fontSize={12}
-                        width={70}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={dashboardTooltipStyle}
-                        formatter={(v, name) => [money(Number(v)), name]}
-                        cursor={{ fill: "var(--surface-hover)" }}
-                      />
-                      <Bar
-                        dataKey="emDia"
-                        name="Em aberto"
-                        stackId="valor"
-                        radius={[0, 0, 0, 0]}
-                      >
-                        {aPagarReceberChart.map((item) => (
-                          <Cell key={item.label} fill={item.fill} />
-                        ))}
-                      </Bar>
-                      <Bar
-                        dataKey="vencido"
-                        name="Vencido"
-                        stackId="valor"
-                        fill="var(--warning)"
-                        radius={[0, 6, 6, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-            <p className="mt-4 text-xs text-[var(--text-muted)]">
-              Valores em aberto do mês atual, calculados a
-              partir de Contas a Receber e a Pagar
-              {consolidated ? " de todas as empresas do grupo" : ""}.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <PiggyBank
-                size={18}
-                className="text-[var(--text-secondary)]"
-              />
-
-              <h2 className="font-semibold text-[var(--text-primary)]">
-                Fluxo de caixa
-              </h2>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                { label: "Recebido", value: recebidoTotal },
-                { label: "Pago", value: pagoTotal },
-                {
-                  label: "Total em caixa",
-                  value:
-                    recebidoTotal !== null && pagoTotal !== null
-                      ? recebidoTotal - pagoTotal
-                      : null,
-                },
-              ].map((linha) => (
-                <div
-                  key={linha.label}
-                  className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
-                >
-                  <span className="text-sm text-[var(--text-secondary)]">
-                    {linha.label}
-                  </span>
-
-                  {cashFlowLoading ? (
-                    <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
-                  ) : (
-                    <span className="font-medium text-[var(--text-primary)]">
-                      {linha.value !== null
-                        ? money(linha.value)
-                        : "—"}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {!cashFlowLoading && tendenciaMeses.length > 1 && (
-              <div className="mt-4 h-28">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={tendenciaMeses}
-                    margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-                    barGap={2}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--border)"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="mes"
-                      stroke="var(--text-muted)"
-                      fontSize={11}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      stroke="var(--text-muted)"
-                      fontSize={11}
-                      width={44}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => moneyCompact(Number(v))}
-                    />
-                    <Tooltip
-                      contentStyle={dashboardTooltipStyle}
-                      formatter={(v) => money(Number(v))}
-                    />
-                    <Bar
-                      dataKey="recebido"
-                      name="Recebido"
-                      fill="var(--success)"
-                      radius={[3, 3, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="pago"
-                      name="Pago"
-                      fill="var(--danger)"
-                      radius={[3, 3, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            <p className="mt-4 text-xs text-[var(--text-muted)]">
-              Realizado no ano até o mês atual, a partir das
-              baixas em Contas a Receber e a Pagar
-              {consolidated ? " de todas as empresas do grupo" : ""}.
-            </p>
-          </div>
-        </section>
-
-        {/* Mesma grade de 2 colunas de cima, só que com 1 cartão só —
-            mantém a largura consistente com os outros em vez de
-            esticar de ponta a ponta da tela. */}
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Users
-                size={18}
-                className="text-[var(--text-secondary)]"
-              />
-
-              <h2 className="font-semibold text-[var(--text-primary)]">
-                Colaboradores
-              </h2>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                { label: "Ativos", value: colaboradoresAtivos },
-                {
-                  label: "Em experiência",
-                  value: colaboradoresExperiencia,
-                },
-                {
-                  label: "Aniversariantes do mês",
-                  value: birthdaysMes.length,
-                },
-              ].map((linha) => (
-                <div
-                  key={linha.label}
-                  className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
-                >
-                  <span className="text-sm text-[var(--text-secondary)]">
-                    {linha.label}
-                  </span>
-
-                  {hrLoading ? (
-                    <span className="h-5 w-8 animate-pulse rounded bg-[var(--surface-hover)]" />
-                  ) : (
-                    <span className="font-medium text-[var(--text-primary)]">
-                      {linha.value !== null
-                        ? String(linha.value)
-                        : "—"}
-                    </span>
-                  )}
-                </div>
-              ))}
-
-              {!hrLoading && birthdaysMes.length > 0 && (
-                <div className="space-y-1.5 border-b border-[var(--border)] pb-2">
-                  {birthdaysMes.map((b) => (
-                    <div
-                      key={b.id}
-                      className="flex items-center justify-between text-xs"
-                    >
-                      <span className="text-[var(--text-secondary)]">
-                        {b.name}
-                      </span>
-
-                      <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
-                        dia {b.day}
-                        <span className="text-base leading-none">
-                          🎉
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pb-2">
-                <span className="text-sm text-[var(--text-secondary)]">
-                  Exames a vencer
-                </span>
-
-                {hrLoading ? (
-                  <span className="h-5 w-8 animate-pulse rounded bg-[var(--surface-hover)]" />
-                ) : (
-                  <span className="font-medium text-[var(--text-primary)]">
-                    {examesAVencer !== null
-                      ? String(examesAVencer)
-                      : "—"}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <p className="mt-4 text-xs text-[var(--text-muted)]">
-              Exames com vencimento nos próximos 30 dias
-              (inclui atrasados)
-              {consolidated ? ", de todas as empresas do grupo" : ""}.
-            </p>
-          </div>
-        </section>
-
-        {/* Despesas por tipo e o perfil dos colaboradores, lado a lado
-            na mesma grade de 2 colunas das seções acima. */}
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Receipt
-                size={18}
-                className="text-[var(--text-secondary)]"
-              />
-
-              <h2 className="font-semibold text-[var(--text-primary)]">
-                Despesas por tipo
-              </h2>
-            </div>
-
-            {cashFlowLoading ? (
-              <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
-            ) : despesasPorTipo.length === 0 ? (
-              <p className="py-6 text-center text-sm text-[var(--text-muted)]">
-                Nenhuma despesa lançada este ano ainda.
-              </p>
-            ) : (
-              <div
-                style={{
-                  height: Math.max(
-                    160,
-                    Math.min(despesasPorTipo.length, 6) * 40 + 30
-                  ),
-                }}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    layout="vertical"
-                    data={despesasPorTipo.slice(0, 6)}
-                    margin={{ top: 4, right: 16, bottom: 0, left: 0 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--border)"
-                      horizontal={false}
-                    />
-                    <XAxis
-                      type="number"
-                      stroke="var(--text-muted)"
-                      fontSize={11}
-                      tickFormatter={(v) => moneyCompact(Number(v))}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="description"
-                      stroke="var(--text-muted)"
-                      fontSize={11}
-                      width={110}
-                    />
-                    <Tooltip
-                      contentStyle={dashboardTooltipStyle}
-                      formatter={(v) => money(Number(v))}
-                      cursor={{ fill: "var(--surface-hover)" }}
-                    />
-                    <Bar
-                      dataKey="pago"
-                      name="Pago"
-                      stackId="despesa"
-                      fill="var(--danger)"
-                      radius={[0, 0, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="emAberto"
-                      name="Em aberto"
-                      stackId="despesa"
-                      fill="var(--warning)"
-                      radius={[0, 4, 4, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            <p className="mt-4 text-xs text-[var(--text-muted)]">
-              As {Math.min(despesasPorTipo.length, 6)} maiores contas do
-              plano de contas no ano{consolidated ? ", somando o grupo" : ""}.
-              Veja todas em Financeiro → Gráficos de fluxo de caixa.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <UsersRound
-                size={18}
-                className="text-[var(--text-secondary)]"
-              />
-
-              <h2 className="font-semibold text-[var(--text-primary)]">
-                Perfil dos colaboradores
-              </h2>
-            </div>
-
-            {hrLoading ? (
-              <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
-            ) : genderChart.length === 0 &&
-              sectorChart.length === 0 ? (
-              <p className="py-6 text-center text-sm text-[var(--text-muted)]">
-                Nenhum colaborador ativo cadastrado ainda.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="mb-1 text-center text-xs font-medium text-[var(--text-muted)]">
-                    Por gênero
-                  </p>
-
-                  <div className="h-36">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={genderChart}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={28}
-                          outerRadius={52}
-                          paddingAngle={2}
-                        >
-                          {genderChart.map((item) => (
-                            <Cell key={item.name} fill={item.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={dashboardTooltipStyle}
-                          formatter={(v, name) => [
-                            `${v} colaborador(es)`,
-                            name,
-                          ]}
-                        />
-                        <Legend
-                          wrapperStyle={{ fontSize: 11 }}
-                          iconSize={8}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="mb-1 text-center text-xs font-medium text-[var(--text-muted)]">
-                    Por setor
-                  </p>
-
-                  <div className="h-36">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={sectorChart}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={28}
-                          outerRadius={52}
-                          paddingAngle={2}
-                        >
-                          {sectorChart.map((item, i) => (
-                            <Cell key={`${item.name}-${i}`} fill={item.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={dashboardTooltipStyle}
-                          formatter={(v, name) => [
-                            `${v} colaborador(es)`,
-                            name,
-                          ]}
-                        />
-                        <Legend
-                          wrapperStyle={{ fontSize: 11 }}
-                          iconSize={8}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <p className="mt-4 text-xs text-[var(--text-muted)]">
-              Só colaboradores ativos{
-                consolidated ? ", somando o grupo" : ""
-              }.
-            </p>
-          </div>
         </section>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
