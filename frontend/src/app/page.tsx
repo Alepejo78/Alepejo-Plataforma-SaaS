@@ -425,9 +425,9 @@ export default function HomePage() {
         )}
 
         {/*
-          Três linhas: A pagar/receber ao lado do fluxo de caixa,
-          Colaboradores ao lado do perfil dos colaboradores, e
-          despesas por tipo sozinho por último.
+          Três linhas: A pagar/receber ao lado de despesas por tipo,
+          fluxo de caixa sozinho, e colaboradores ao lado do perfil
+          dos colaboradores.
         */}
         <section className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -533,6 +533,89 @@ export default function HomePage() {
 
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
+                <Receipt
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  Despesas por tipo
+                </h2>
+              </div>
+
+              {cashFlowLoading ? (
+                <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+              ) : despesasPorTipo.length === 0 ? (
+                <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+                  Nenhuma despesa lançada este ano ainda.
+                </p>
+              ) : (
+                <div
+                  style={{
+                    height: Math.max(
+                      160,
+                      Math.min(despesasPorTipo.length, 6) * 40 + 30
+                    ),
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={despesasPorTipo.slice(0, 6)}
+                      margin={{ top: 4, right: 16, bottom: 0, left: 0 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        horizontal={false}
+                      />
+                      <XAxis
+                        type="number"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        tickFormatter={(v) => moneyCompact(Number(v))}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="description"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        width={110}
+                      />
+                      <Tooltip
+                        contentStyle={dashboardTooltipStyle}
+                        formatter={(v) => money(Number(v))}
+                        cursor={{ fill: "var(--surface-hover)" }}
+                      />
+                      <Bar
+                        dataKey="pago"
+                        name="Pago"
+                        stackId="despesa"
+                        fill="var(--danger)"
+                        radius={[0, 0, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="emAberto"
+                        name="Em aberto"
+                        stackId="despesa"
+                        fill="var(--warning)"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                As {Math.min(despesasPorTipo.length, 6)} maiores contas do
+                plano de contas no ano{consolidated ? ", somando o grupo" : ""}.
+                Veja todas em Financeiro → Gráficos de fluxo de caixa.
+              </p>
+            </div>
+        </section>
+
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
                 <PiggyBank
                   size={18}
                   className="text-[var(--text-secondary)]"
@@ -631,7 +714,6 @@ export default function HomePage() {
                 {consolidated ? " de todas as empresas do grupo" : ""}.
               </p>
             </div>
-        </section>
 
         <section className="grid gap-5 lg:grid-cols-2">
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -826,88 +908,6 @@ export default function HomePage() {
               </p>
             </div>
         </section>
-
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <Receipt
-                  size={18}
-                  className="text-[var(--text-secondary)]"
-                />
-
-                <h2 className="font-semibold text-[var(--text-primary)]">
-                  Despesas por tipo
-                </h2>
-              </div>
-
-              {cashFlowLoading ? (
-                <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
-              ) : despesasPorTipo.length === 0 ? (
-                <p className="py-6 text-center text-sm text-[var(--text-muted)]">
-                  Nenhuma despesa lançada este ano ainda.
-                </p>
-              ) : (
-                <div
-                  style={{
-                    height: Math.max(
-                      160,
-                      Math.min(despesasPorTipo.length, 6) * 40 + 30
-                    ),
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={despesasPorTipo.slice(0, 6)}
-                      margin={{ top: 4, right: 16, bottom: 0, left: 0 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="var(--border)"
-                        horizontal={false}
-                      />
-                      <XAxis
-                        type="number"
-                        stroke="var(--text-muted)"
-                        fontSize={11}
-                        tickFormatter={(v) => moneyCompact(Number(v))}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="description"
-                        stroke="var(--text-muted)"
-                        fontSize={11}
-                        width={110}
-                      />
-                      <Tooltip
-                        contentStyle={dashboardTooltipStyle}
-                        formatter={(v) => money(Number(v))}
-                        cursor={{ fill: "var(--surface-hover)" }}
-                      />
-                      <Bar
-                        dataKey="pago"
-                        name="Pago"
-                        stackId="despesa"
-                        fill="var(--danger)"
-                        radius={[0, 0, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="emAberto"
-                        name="Em aberto"
-                        stackId="despesa"
-                        fill="var(--warning)"
-                        radius={[0, 4, 4, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              <p className="mt-4 text-xs text-[var(--text-muted)]">
-                As {Math.min(despesasPorTipo.length, 6)} maiores contas do
-                plano de contas no ano{consolidated ? ", somando o grupo" : ""}.
-                Veja todas em Financeiro → Gráficos de fluxo de caixa.
-              </p>
-            </div>
 
         <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
