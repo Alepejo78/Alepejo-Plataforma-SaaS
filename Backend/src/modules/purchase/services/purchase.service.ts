@@ -492,6 +492,7 @@ export class PurchaseService {
             documentNumber: dto.invoiceNumber,
             documentKey: dto.invoiceKey,
             documentType,
+            chartOfAccountId: purchase.chartOfAccountId,
             purchaseId: purchase.id,
             observation: `Compra ${purchase.id}`,
           },

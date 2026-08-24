@@ -54,6 +54,13 @@ export interface Purchase {
   termDays?: number | null;
   dueDate?: string | null;
   paymentMethod?: PaymentMethod | null;
+  /** Tipo de despesa — vai junto pro título gerado no recebimento. */
+  chartOfAccountId?: string | null;
+  chartOfAccount?: {
+    id: string;
+    code: string;
+    description: string;
+  } | null;
   invoiceNumber?: string | null;
   invoiceKey?: string | null;
   invoiceIssueDate?: string | null;
@@ -87,6 +94,7 @@ export interface PurchasePayload {
   observation?: string;
   termDays?: number;
   paymentMethod?: PaymentMethod;
+  chartOfAccountId?: string;
   purchaseOrderId?: string;
   items: PurchaseItemPayload[];
 }

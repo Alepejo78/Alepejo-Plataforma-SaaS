@@ -10,6 +10,10 @@ import { SaleFilterDto } from '../dto/sale-filter.dto';
 const includeRelations = {
   partner: true,
   warehouse: true,
+  // A tela mostra "código — descrição" do tipo de despesa/receita, não o id.
+  chartOfAccount: {
+    select: { id: true, code: true, description: true },
+  },
   items: {
     include: {
       product: true,
@@ -49,6 +53,7 @@ export class SaleRepository {
           ? new Date(dto.saleDate)
           : undefined,
         observation: dto.observation,
+        chartOfAccountId: dto.chartOfAccountId,
 
         discountValue: dto.discountValue ?? 0,
         freightValue: dto.freightValue ?? 0,
@@ -151,6 +156,7 @@ export class SaleRepository {
       warehouseId?: string;
       saleDate?: Date;
       observation?: string;
+      chartOfAccountId?: string;
       discountValue?: number;
       freightValue?: number;
       otherExpenses?: number;
@@ -179,6 +185,9 @@ export class SaleRepository {
         }),
         ...(dto.observation !== undefined && {
           observation: dto.observation,
+        }),
+        ...(dto.chartOfAccountId !== undefined && {
+          chartOfAccountId: dto.chartOfAccountId,
         }),
         ...(dto.discountValue !== undefined && {
           discountValue: dto.discountValue,

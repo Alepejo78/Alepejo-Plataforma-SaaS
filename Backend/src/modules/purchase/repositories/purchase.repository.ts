@@ -13,6 +13,10 @@ import { PurchaseFilterDto } from '../dto/purchase-filter.dto';
 const includeRelations = {
   partner: true,
   warehouse: true,
+  // A tela mostra "código — descrição" do tipo de despesa/receita, não o id.
+  chartOfAccount: {
+    select: { id: true, code: true, description: true },
+  },
   items: {
     include: {
       product: true,
@@ -49,6 +53,7 @@ export class PurchaseRepository {
           ? new Date(dto.purchaseDate)
           : undefined,
         observation: dto.observation,
+        chartOfAccountId: dto.chartOfAccountId,
         totalAmount,
         termDays,
         dueDate: calculateDueDate(issueDate, termDays),
@@ -139,6 +144,7 @@ export class PurchaseRepository {
       warehouseId?: string;
       purchaseDate?: Date;
       observation?: string;
+      chartOfAccountId?: string;
       termDays?: number;
       dueDate?: Date;
       paymentMethod?: CreatePurchaseDto['paymentMethod'];
@@ -163,6 +169,9 @@ export class PurchaseRepository {
         }),
         ...(dto.observation !== undefined && {
           observation: dto.observation,
+        }),
+        ...(dto.chartOfAccountId !== undefined && {
+          chartOfAccountId: dto.chartOfAccountId,
         }),
         ...(dto.termDays !== undefined && {
           termDays: dto.termDays,

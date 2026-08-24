@@ -9,6 +9,8 @@ import {
   Query,
 } from '@nestjs/common';
 
+import { FinancialEntryType } from '@prisma/client';
+
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 import { Module } from '../../identity/license/decorators/module.decorator';
@@ -58,6 +60,33 @@ export class FinancialEntriesController {
         : new Date().getFullYear();
 
     return this.service.getCashFlow(companyId, targetYear);
+  }
+
+  @Get('account-breakdown')
+  @Permissions('financial-entry.view')
+  getAccountBreakdown(
+    @CurrentUser('companyId') companyId: string,
+    @Query('year') year?: string,
+    @Query('type') type?: string,
+  ) {
+    const parsedYear = Number(year);
+    const targetYear =
+      year && Number.isInteger(parsedYear)
+        ? parsedYear
+        : new Date().getFullYear();
+
+    // Padrão despesa: é o acompanhamento que o usuário pediu; receita
+    // sai pelo mesmo endereço trocando o parâmetro.
+    const targetType =
+      type === 'RECEIVABLE'
+        ? FinancialEntryType.RECEIVABLE
+        : FinancialEntryType.PAYABLE;
+
+    return this.service.getAccountBreakdown(
+      companyId,
+      targetYear,
+      targetType,
+    );
   }
 
   @Get(':id')

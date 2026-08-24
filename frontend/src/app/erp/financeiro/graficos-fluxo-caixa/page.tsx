@@ -6,6 +6,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   Line,
   LineChart,
@@ -22,6 +23,10 @@ import {
   budgetService,
   type BudgetYear,
 } from "@/services/budget.service";
+import {
+  financialEntryService,
+  type AccountBreakdownRow,
+} from "@/services/financial-entry.service";
 
 const MONTH_LABELS = [
   "Jan",
@@ -98,15 +103,26 @@ export default function GraficosFluxoCaixaPage() {
   const [data, setData] = useState<BudgetYear | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [despesasPorTipo, setDespesasPorTipo] = useState<
+    AccountBreakdownRow[]
+  >([]);
 
   const load = useCallback(async (targetYear: number) => {
     setLoading(true);
     setError("");
 
     try {
-      const result = await budgetService.getYear(targetYear);
+      const [result, breakdown] = await Promise.all([
+        budgetService.getYear(targetYear),
+        // Falhar aqui não pode derrubar o fluxo de caixa: o gráfico por
+        // tipo some, o resto da tela continua.
+        financialEntryService
+          .getAccountBreakdown(targetYear)
+          .catch(() => [] as AccountBreakdownRow[]),
+      ]);
 
       setData(result);
+      setDespesasPorTipo(breakdown);
     } catch (err) {
       setError(
         extractMessage(
@@ -351,6 +367,80 @@ export default function GraficosFluxoCaixaPage() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+            </Panel>
+
+            {/*
+              Despesas por tipo: barra deitada porque nome de conta é
+              texto longo — em barra em pé o rótulo vira sopa de letras
+              inclinada. Cada barra separa o que já saiu do caixa do que
+              ainda vai sair, que são leituras diferentes.
+            */}
+            <Panel title="Despesas por tipo">
+              {despesasPorTipo.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+                  Nenhuma despesa lançada em {year}. As despesas
+                  aparecem aqui conforme os títulos de contas a pagar
+                  forem cadastrados — o tipo vem do plano de contas
+                  escolhido na compra ou no próprio título.
+                </p>
+              ) : (
+                <div
+                  style={{
+                    height: Math.max(220, despesasPorTipo.length * 46 + 60),
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={despesasPorTipo}
+                      margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        horizontal={false}
+                      />
+                      <XAxis
+                        type="number"
+                        stroke="var(--text-muted)"
+                        fontSize={12}
+                        tickFormatter={(v) => money(v)}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="description"
+                        stroke="var(--text-muted)"
+                        fontSize={12}
+                        width={170}
+                      />
+                      <Tooltip
+                        contentStyle={tooltipStyle}
+                        formatter={(v) => money(Number(v))}
+                        cursor={{ fill: "var(--surface-hover)" }}
+                      />
+                      <Legend wrapperStyle={legendStyle} />
+                      <Bar
+                        dataKey="pago"
+                        name="Pago"
+                        stackId="despesa"
+                        fill="var(--danger)"
+                        radius={[0, 0, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="emAberto"
+                        name="Em aberto"
+                        stackId="despesa"
+                        fill="var(--warning)"
+                        radius={[0, 4, 4, 0]}
+                      >
+                        {despesasPorTipo.map((linha) => (
+                          <Cell key={linha.description} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </Panel>
           </div>
         )}

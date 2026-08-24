@@ -45,6 +45,15 @@ import {
 
     @ApiProperty({
       required: false,
+      description:
+        'Tipo de despesa (conta do plano de contas). Vai junto pro título gerado no recebimento.',
+    })
+    @IsOptional()
+    @IsString()
+    chartOfAccountId?: string;
+
+    @ApiProperty({
+      required: false,
       default: 0,
       description: 'Prazo em dias para o vencimento do título gerado no recebimento.',
     })

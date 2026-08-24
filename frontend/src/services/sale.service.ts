@@ -62,6 +62,13 @@ export interface Sale {
   termDays?: number | null;
   dueDate?: string | null;
   paymentMethod?: PaymentMethod | null;
+  /** Tipo de receita — vai junto pro título gerado na aprovação. */
+  chartOfAccountId?: string | null;
+  chartOfAccount?: {
+    id: string;
+    code: string;
+    description: string;
+  } | null;
   quoteId?: string | null;
   salesOrderId?: string | null;
   createdAt: string;
@@ -96,6 +103,7 @@ export interface SalePayload {
   otherExpenses?: number;
   termDays?: number;
   paymentMethod?: PaymentMethod;
+  chartOfAccountId?: string;
   quoteId?: string;
   salesOrderId?: string;
   items: SaleItemPayload[];

@@ -464,6 +464,7 @@ export class SaleService {
           documentNumber: dto.invoiceNumber,
           documentKey: dto.invoiceKey,
           documentType,
+          chartOfAccountId: sale.chartOfAccountId,
           saleId: sale.id,
           observation: `Venda ${sale.id}`,
         },

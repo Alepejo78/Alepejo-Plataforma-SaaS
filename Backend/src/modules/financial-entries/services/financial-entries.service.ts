@@ -243,6 +243,8 @@ export class FinancialEntriesService {
       documentNumber?: string | null;
       documentKey?: string | null;
       documentType?: FinancialDocumentType | null;
+      /// Tipo de despesa/receita herdado do documento (compra/venda).
+      chartOfAccountId?: string | null;
       purchaseId?: string;
       saleId?: string;
       payrollItemId?: string;
@@ -266,6 +268,7 @@ export class FinancialEntriesService {
         documentNumber: params.documentNumber ?? undefined,
         documentKey: params.documentKey ?? undefined,
         documentType: params.documentType ?? undefined,
+        chartOfAccountId: params.chartOfAccountId ?? undefined,
         purchaseId: params.purchaseId,
         saleId: params.saleId,
         payrollItemId: params.payrollItemId,
@@ -274,6 +277,60 @@ export class FinancialEntriesService {
         observation: params.observation,
       },
     });
+  }
+
+  /**
+   * Acompanhamento por tipo: quanto foi de cada conta do plano de
+   * contas no ano, separando o que já foi pago do que ainda está em
+   * aberto — as duas leituras interessam (quanto saiu do caixa e
+   * quanto ainda vai sair).
+   *
+   * Título sem conta escolhida entra como "Sem classificação", em vez
+   * de sumir do gráfico: some do total e some da percepção de quanto
+   * ainda falta classificar.
+   */
+  async getAccountBreakdown(
+    companyId: string,
+    year: number,
+    type: FinancialEntryType,
+  ) {
+    const entries = await this.repository.findForAccountBreakdown(
+      companyId,
+      year,
+      type,
+    );
+
+    const porConta = new Map<
+      string,
+      { code: string | null; description: string; pago: number; emAberto: number }
+    >();
+
+    for (const entry of entries) {
+      const chave = entry.chartOfAccount?.id ?? 'sem-classificacao';
+
+      const atual =
+        porConta.get(chave) ??
+        {
+          code: entry.chartOfAccount?.code ?? null,
+          description:
+            entry.chartOfAccount?.description ?? 'Sem classificação',
+          pago: 0,
+          emAberto: 0,
+        };
+
+      if (entry.status === 'PAID') {
+        atual.pago += Number(entry.paidAmount);
+      } else {
+        atual.emAberto += Number(entry.amount) - Number(entry.paidAmount);
+      }
+
+      porConta.set(chave, atual);
+    }
+
+    return [...porConta.values()]
+      .map((item) => ({ ...item, total: item.pago + item.emAberto }))
+      .filter((item) => item.total > 0)
+      .sort((a, b) => b.total - a.total);
   }
 
   /**

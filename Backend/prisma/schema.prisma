@@ -805,6 +805,13 @@ model Purchase {
 
   paymentMethod PaymentMethod?
 
+  /// Tipo de despesa (conta do plano de contas) desta compra. Vai
+  /// junto pro título gerado no recebimento, pra despesa já nascer
+  /// classificada em vez de alguém ter que abrir Contas a pagar
+  /// depois e escolher uma por uma.
+  chartOfAccountId String?
+  chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
   /// Dados fiscais informados no recebimento (nota fiscal do
   /// fornecedor) — repassados ao título gerado no financeiro.
   invoiceNumber    String?   @db.VarChar(50)
@@ -824,6 +831,7 @@ model Purchase {
 
   @@unique([companyId, number])
   @@index([companyId])
+  @@index([chartOfAccountId])
   @@map("purchases")
 }
 
@@ -1051,6 +1059,11 @@ model Sale {
 
   paymentMethod PaymentMethod?
 
+  /// Tipo de receita (conta do plano de contas) desta venda — mesmo
+  /// papel do campo em Purchase, só que do lado do que entra.
+  chartOfAccountId String?
+  chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
   items SaleItem[]
 
   financialEntries FinancialEntry[]
@@ -1067,6 +1080,7 @@ model Sale {
 
   @@unique([companyId, number])
   @@index([companyId])
+  @@index([chartOfAccountId])
   @@map("sales")
 }
 
@@ -1275,6 +1289,8 @@ model ChartOfAccount {
   parent           ChartOfAccount?              @relation("ChartOfAccountHierarchy", fields: [parentId], references: [id])
   children         ChartOfAccount[]             @relation("ChartOfAccountHierarchy")
   financialEntries FinancialEntry[]
+  purchases        Purchase[]
+  sales            Sale[]
   active           Boolean                      @default(true)
   createdAt        DateTime                     @default(now())
   updatedAt        DateTime                     @updatedAt

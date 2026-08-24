@@ -44,6 +44,15 @@ export class CreateSaleDto {
 
   @ApiProperty({
     required: false,
+    description:
+      'Tipo de receita (conta do plano de contas). Vai junto pro título gerado na aprovação.',
+  })
+  @IsOptional()
+  @IsString()
+  chartOfAccountId?: string;
+
+  @ApiProperty({
+    required: false,
     default: 0,
   })
   @IsOptional()

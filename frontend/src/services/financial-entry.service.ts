@@ -178,6 +178,15 @@ export interface CashFlow {
   months: CashFlowMonth[];
 }
 
+/** Uma fatia do acompanhamento por tipo de despesa/receita. */
+export interface AccountBreakdownRow {
+  code: string | null;
+  description: string;
+  pago: number;
+  emAberto: number;
+  total: number;
+}
+
 export const financialEntryService = {
   async list(
     filter: FinancialEntryFilter = {}
@@ -255,5 +264,21 @@ export const financialEntryService = {
     );
 
     return data.data;
+  },
+
+  /**
+   * Quanto foi de cada tipo de despesa (ou receita) no ano, separando
+   * pago de em aberto.
+   */
+  async getAccountBreakdown(
+    year: number,
+    type: "PAYABLE" | "RECEIVABLE" = "PAYABLE"
+  ): Promise<AccountBreakdownRow[]> {
+    const { data } = await api.get<ApiEnvelope<AccountBreakdownRow[]>>(
+      "/financial-entries/account-breakdown",
+      { params: { year, type } }
+    );
+
+    return data.data ?? [];
   },
 };

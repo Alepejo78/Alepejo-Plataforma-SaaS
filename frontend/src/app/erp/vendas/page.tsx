@@ -16,6 +16,10 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import {
+  chartOfAccountService,
+  type ChartOfAccount,
+} from "@/services/chart-of-account.service";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
@@ -175,6 +179,8 @@ export default function VendasPage() {
     otherExpenses: 0,
     termDays: "",
     paymentMethod: "" as PaymentMethod | "",
+    chartOfAccountId: "",
+    chartOfAccountLabel: "",
   });
   const [items, setItems] = useState<ItemForm[]>([
     emptyItem(),
@@ -291,6 +297,8 @@ export default function VendasPage() {
       otherExpenses: 0,
       termDays: "",
       paymentMethod: "",
+      chartOfAccountId: "",
+      chartOfAccountLabel: "",
     });
     setItems([emptyItem()]);
     setBarcodeInput("");
@@ -321,6 +329,10 @@ export default function VendasPage() {
       otherExpenses: num(sale.otherExpenses),
       termDays: sale.termDays ? String(sale.termDays) : "",
       paymentMethod: sale.paymentMethod ?? "",
+      chartOfAccountId: sale.chartOfAccountId ?? "",
+      chartOfAccountLabel: sale.chartOfAccount
+        ? `${sale.chartOfAccount.code} — ${sale.chartOfAccount.description}`
+        : "",
     });
     setItems(
       sale.items.map((it) => ({
@@ -449,6 +461,18 @@ export default function VendasPage() {
     async (query: string) => {
       const result = await partnerService.list({
         role: "CUSTOMER",
+        search: query || undefined,
+        limit: 20,
+      });
+
+      return result.data;
+    },
+    []
+  );
+
+  const searchChartOfAccounts = useCallback(
+    async (query: string) => {
+      const result = await chartOfAccountService.list({
         search: query || undefined,
         limit: 20,
       });
@@ -611,6 +635,7 @@ export default function VendasPage() {
       otherExpenses: form.otherExpenses || undefined,
       termDays: form.termDays ? Number(form.termDays) : undefined,
       paymentMethod: form.paymentMethod || undefined,
+      chartOfAccountId: form.chartOfAccountId || undefined,
       quoteId:
         sourceType === "quote" && sourceId
           ? sourceId
@@ -1549,6 +1574,31 @@ export default function VendasPage() {
                       )
                     )}
                   </select>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Tipo de receita
+                  </label>
+
+                  {/* Vai junto pro título de contas a receber gerado
+                      na aprovação da venda. */}
+                  <SearchSelect<ChartOfAccount>
+                    displayLabel={form.chartOfAccountLabel}
+                    search={searchChartOfAccounts}
+                    getId={(c) => c.id}
+                    getLabel={(c) => `${c.code} — ${c.description}`}
+                    placeholder="Digite para buscar a conta..."
+                    onSelect={(c) =>
+                      setForm({
+                        ...form,
+                        chartOfAccountId: c?.id ?? "",
+                        chartOfAccountLabel: c
+                          ? `${c.code} — ${c.description}`
+                          : "",
+                      })
+                    }
+                  />
                 </div>
               </div>
 

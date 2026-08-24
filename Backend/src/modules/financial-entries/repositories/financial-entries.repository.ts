@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   FinancialEntry,
   FinancialEntryStatus,
+  FinancialEntryType,
   Prisma,
 } from '@prisma/client';
 
@@ -158,6 +159,40 @@ export class FinancialEntriesRepository {
   }
 
   /** Títulos do ano (não cancelados) para montar o fluxo de caixa mensal. */
+  /**
+   * Títulos do ano agrupáveis por tipo de despesa/receita. Traz a conta
+   * junto (`chartOfAccount`) porque o gráfico mostra a descrição dela,
+   * não o id.
+   */
+  async findForAccountBreakdown(
+    companyId: string,
+    year: number,
+    type: FinancialEntryType,
+  ) {
+    const yearStart = new Date(Date.UTC(year, 0, 1));
+    const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
+
+    return this.prisma.financialEntry.findMany({
+      where: {
+        companyId,
+        type,
+        status: { not: FinancialEntryStatus.CANCELLED },
+        OR: [
+          { dueDate: { gte: yearStart, lt: yearEnd } },
+          { paymentDate: { gte: yearStart, lt: yearEnd } },
+        ],
+      },
+      select: {
+        status: true,
+        amount: true,
+        paidAmount: true,
+        chartOfAccount: {
+          select: { id: true, code: true, description: true },
+        },
+      },
+    });
+  }
+
   async findForCashFlow(companyId: string, year: number) {
     const yearStart = new Date(Date.UTC(year, 0, 1));
     const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
