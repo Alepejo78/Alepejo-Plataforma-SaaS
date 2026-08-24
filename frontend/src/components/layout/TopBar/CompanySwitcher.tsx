@@ -70,6 +70,7 @@ export function CompanySwitcher() {
   }, [open]);
 
   const companyName = user?.company?.tradeName;
+  const companyCode = user?.company?.code;
   const canSwitch = (companies?.length ?? 0) > 1;
 
   const handleSwitch = async (companyId: string) => {
@@ -115,6 +116,11 @@ export function CompanySwitcher() {
         <span aria-hidden="true" className={topBarStyles.companyIndicator} />
         <span className={topBarStyles.companyName}>
           {companyName ?? "Empresa não selecionada"}
+          {companyCode && (
+            <span className="ml-1.5 text-[var(--text-muted)]">
+              #{companyCode}
+            </span>
+          )}
         </span>
       </div>
     );
@@ -134,6 +140,11 @@ export function CompanySwitcher() {
         <span aria-hidden="true" className={topBarStyles.companyIndicator} />
         <span className={topBarStyles.companyName}>
           {companyName ?? "Empresa não selecionada"}
+          {companyCode && (
+            <span className="ml-1.5 text-[var(--text-muted)]">
+              #{companyCode}
+            </span>
+          )}
         </span>
         <ChevronDown
           aria-hidden="true"
@@ -164,6 +175,9 @@ export function CompanySwitcher() {
               >
                 <span className="truncate">
                   {company.tradeName || company.legalName}
+                  <span className="ml-1.5 text-xs text-[var(--text-muted)]">
+                    #{company.code}
+                  </span>
                 </span>
                 {isCurrent && (
                   <span className="shrink-0 text-xs text-[var(--text-muted)]">

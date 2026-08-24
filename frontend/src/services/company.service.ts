@@ -8,6 +8,8 @@ interface ApiEnvelope<T> {
 
 export interface Company {
   id: string;
+  /** Código sequencial da empresa (ex.: "1000", filiais "1000_1") — não editável. */
+  code: string;
   slug: string;
   legalName: string;
   tradeName?: string | null;

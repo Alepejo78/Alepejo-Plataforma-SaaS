@@ -402,7 +402,7 @@ function EditCompanyModal({
 
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-6">
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-3">
               <label className={labelClass} htmlFor="edit-legalName">
                 Razão social
               </label>
@@ -427,6 +427,20 @@ function EditCompanyModal({
                 disabled
                 className={`${fieldClass} cursor-not-allowed opacity-60`}
                 value={maskDocument(company.document)}
+              />
+            </div>
+
+            <div className="sm:col-span-1">
+              <label className={labelClass} htmlFor="edit-code">
+                Código
+              </label>
+
+              <input
+                id="edit-code"
+                disabled
+                title="Código da empresa — não pode ser alterado."
+                className={`${fieldClass} cursor-not-allowed opacity-60`}
+                value={company.code}
               />
             </div>
 
