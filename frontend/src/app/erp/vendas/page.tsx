@@ -29,6 +29,7 @@ import {
   formatSaleNumber,
   saleService,
   type Sale,
+  type SaleFinancialEntry,
   type SaleStatus,
 } from "@/services/sale.service";
 
@@ -53,6 +54,7 @@ import {
   DOCUMENT_TYPE_LABELS,
   FINANCIAL_ENTRY_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
+  financialEntryService,
   type FinancialDocumentType,
   type PaymentMethod,
 } from "@/services/financial-entry.service";
@@ -204,6 +206,16 @@ export default function VendasPage() {
 
   // Modal de detalhes
   const [detail, setDetail] = useState<Sale | null>(null);
+
+  // Edição do vencimento das parcelas já lançadas (consulta)
+  const [entryDays, setEntryDays] = useState<
+    Record<string, string>
+  >({});
+  const [entryDates, setEntryDates] = useState<
+    Record<string, string>
+  >({});
+  const [entrySavingId, setEntrySavingId] = useState("");
+  const [entryError, setEntryError] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -379,7 +391,75 @@ export default function VendasPage() {
     setSourceLabel("");
     setSourceError("");
     setFormError("");
+    setEntryDays({});
+    setEntryDates({});
+    setEntryError("");
     setCreateOpen(true);
+  }
+
+  function entryDueDate(entry: SaleFinancialEntry) {
+    return entryDates[entry.id] ?? entry.dueDate.slice(0, 10);
+  }
+
+  function updateEntryDays(
+    entry: SaleFinancialEntry,
+    days: string
+  ) {
+    setEntryDays((prev) => ({ ...prev, [entry.id]: days }));
+
+    if (days) {
+      setEntryDates((prev) => ({
+        ...prev,
+        [entry.id]: calculateDueDatePreview(
+          form.saleDate || undefined,
+          Number(days) || 0
+        )
+          .toISOString()
+          .slice(0, 10),
+      }));
+    }
+  }
+
+  async function saveEntryDueDate(entry: SaleFinancialEntry) {
+    setEntrySavingId(entry.id);
+    setEntryError("");
+
+    try {
+      await financialEntryService.update(entry.id, {
+        dueDate: entryDueDate(entry),
+      });
+
+      if (editingId) {
+        const fresh = await saleService.getById(editingId);
+
+        setDetail(fresh);
+      }
+
+      setEntryDays((prev) => {
+        const next = { ...prev };
+
+        delete next[entry.id];
+
+        return next;
+      });
+
+      setEntryDates((prev) => {
+        const next = { ...prev };
+
+        delete next[entry.id];
+
+        return next;
+      });
+    } catch (err) {
+      setEntryError(
+        extractMessage(
+          err,
+          "Não foi possível salvar o vencimento."
+        )
+      );
+    } finally {
+      setEntrySavingId("");
+    }
   }
 
   const decimal = (value: string) => {
@@ -1724,10 +1804,19 @@ export default function VendasPage() {
                     Lançamentos no financeiro
                   </p>
 
+                  {entryError && (
+                    <div className="mb-2 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                      {entryError}
+                    </div>
+                  )}
+
                   <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                         <tr>
+                          <th className="px-4 py-2 font-semibold">
+                            Dias
+                          </th>
                           <th className="px-4 py-2 font-semibold">
                             Vencimento
                           </th>
@@ -1740,29 +1829,100 @@ export default function VendasPage() {
                           <th className="px-4 py-2 font-semibold">
                             Situação
                           </th>
+                          <th className="px-4 py-2" />
                         </tr>
                       </thead>
 
                       <tbody>
-                        {detail.financialEntries.map((entry) => (
-                          <tr
-                            key={entry.id}
-                            className="border-t border-[var(--border)]"
-                          >
-                            <td className="whitespace-nowrap px-4 py-2 text-[var(--text-secondary)]">
-                              {date(entry.dueDate)}
-                            </td>
-                            <td className="px-4 py-2 text-[var(--text-secondary)]">
-                              {entry.documentNumber ?? "—"}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-[var(--text-primary)]">
-                              {money(entry.amount)}
-                            </td>
-                            <td className="px-4 py-2 text-[var(--text-secondary)]">
-                              {FINANCIAL_ENTRY_STATUS_LABELS[entry.status]}
-                            </td>
-                          </tr>
-                        ))}
+                        {detail.financialEntries.map((entry) => {
+                          const editableEntry =
+                            entry.status === "OPEN";
+                          const currentDate =
+                            entryDueDate(entry);
+                          const changed =
+                            currentDate !==
+                            entry.dueDate.slice(0, 10);
+                          const entrySaving =
+                            entrySavingId === entry.id;
+
+                          return (
+                            <tr
+                              key={entry.id}
+                              className="border-t border-[var(--border)]"
+                            >
+                              <td className="px-4 py-2">
+                                {editableEntry ? (
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    placeholder="Dias"
+                                    className={`${fieldClass} h-9 w-20`}
+                                    value={
+                                      entryDays[entry.id] ?? ""
+                                    }
+                                    onChange={(e) =>
+                                      updateEntryDays(
+                                        entry,
+                                        e.target.value
+                                      )
+                                    }
+                                  />
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-2 text-[var(--text-secondary)]">
+                                {editableEntry ? (
+                                  <input
+                                    type="date"
+                                    className={`${fieldClass} h-9`}
+                                    value={currentDate}
+                                    onChange={(e) => {
+                                      setEntryDays((prev) => ({
+                                        ...prev,
+                                        [entry.id]: "",
+                                      }));
+                                      setEntryDates((prev) => ({
+                                        ...prev,
+                                        [entry.id]:
+                                          e.target.value,
+                                      }));
+                                    }}
+                                  />
+                                ) : (
+                                  date(entry.dueDate)
+                                )}
+                              </td>
+                              <td className="px-4 py-2 text-[var(--text-secondary)]">
+                                {entry.documentNumber ?? "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-[var(--text-primary)]">
+                                {money(entry.amount)}
+                              </td>
+                              <td className="px-4 py-2 text-[var(--text-secondary)]">
+                                {FINANCIAL_ENTRY_STATUS_LABELS[entry.status]}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-2">
+                                {editableEntry && changed && (
+                                  <button
+                                    type="button"
+                                    disabled={entrySaving}
+                                    onClick={() =>
+                                      void saveEntryDueDate(
+                                        entry
+                                      )
+                                    }
+                                    className="rounded-lg border border-[var(--primary)] px-2 py-1 text-xs font-semibold text-[var(--primary)] disabled:opacity-50"
+                                  >
+                                    {entrySaving
+                                      ? "Salvando..."
+                                      : "Salvar"}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
