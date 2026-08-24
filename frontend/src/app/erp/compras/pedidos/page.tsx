@@ -55,13 +55,6 @@ function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
 
-function qty(value: string | number | null | undefined) {
-  return num(value).toLocaleString("pt-BR", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  });
-}
-
 function money(value: string | number | null | undefined) {
   return num(value).toLocaleString("pt-BR", {
     style: "currency",
@@ -156,6 +149,7 @@ export default function PedidosDeCompraPage() {
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
+  const [viewOnly, setViewOnly] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [items, setItems] = useState<ItemForm[]>([
     emptyItem(),
@@ -167,10 +161,6 @@ export default function PedidosDeCompraPage() {
     useState("");
   const [sourceOfferId, setSourceOfferId] = useState("");
   const [sourceError, setSourceError] = useState("");
-
-  const [detail, setDetail] = useState<PurchaseOrder | null>(
-    null
-  );
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -332,6 +322,7 @@ export default function PedidosDeCompraPage() {
 
   function openCreate() {
     setEditingId(null);
+    setViewOnly(false);
     setForm({
       ...emptyForm(),
       warehouseId: warehouses[0]?.id ?? "",
@@ -343,8 +334,7 @@ export default function PedidosDeCompraPage() {
     setFormOpen(true);
   }
 
-  function openEdit(order: PurchaseOrder) {
-    setEditingId(order.id);
+  function populateOrderForm(order: PurchaseOrder) {
     setForm({
       partnerId: order.partnerId,
       partnerLabel:
@@ -375,6 +365,21 @@ export default function PedidosDeCompraPage() {
         unitPrice: num(it.unitPrice),
       }))
     );
+  }
+
+  function openEdit(order: PurchaseOrder) {
+    setEditingId(order.id);
+    setViewOnly(false);
+    populateOrderForm(order);
+    clearSourceQuotation();
+    setFormError("");
+    setFormOpen(true);
+  }
+
+  function openView(order: PurchaseOrder) {
+    setEditingId(order.id);
+    setViewOnly(true);
+    populateOrderForm(order);
     clearSourceQuotation();
     setFormError("");
     setFormOpen(true);
@@ -682,9 +687,9 @@ export default function PedidosDeCompraPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => setDetail(o)}
-                            title="Ver itens"
-                            aria-label="Ver itens"
+                            onClick={() => openView(o)}
+                            title="Consultar"
+                            aria-label="Consultar"
                             className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                           >
                             <Eye size={16} />
@@ -739,9 +744,11 @@ export default function PedidosDeCompraPage() {
           <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editingId
-                  ? "Editar pedido de compra"
-                  : "Novo pedido de compra"}
+                {viewOnly
+                  ? "Consultar pedido de compra"
+                  : editingId
+                    ? "Editar pedido de compra"
+                    : "Novo pedido de compra"}
               </h2>
 
               <button
@@ -754,6 +761,7 @@ export default function PedidosDeCompraPage() {
               </button>
             </div>
 
+            <fieldset disabled={viewOnly} className="contents">
             <div className="space-y-4">
               {!editingId && (
                 <div className="rounded-xl border border-[var(--border)] p-3">
@@ -1064,16 +1072,19 @@ export default function PedidosDeCompraPage() {
                   {formError}
                 </div>
               )}
+            </div>
+            </fieldset>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+              >
+                {viewOnly ? "Fechar" : "Cancelar"}
+              </button>
 
+              {!viewOnly && (
                 <button
                   type="button"
                   disabled={saving}
@@ -1082,109 +1093,7 @@ export default function PedidosDeCompraPage() {
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Detalhes */}
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  {formatNumber(detail.number)} ·{" "}
-                  {detail.partner?.tradeName ??
-                    detail.partner?.legalName}
-                </h2>
-
-                <p className="text-sm text-[var(--text-muted)]">
-                  {date(detail.orderDate ?? detail.createdAt)}{" "}
-                  · {detail.warehouse?.code} ·{" "}
-                  {
-                    PURCHASE_ORDER_STATUS_LABELS[
-                      detail.status
-                    ]
-                  }
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setDetail(null)}
-                aria-label="Fechar"
-                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">
-                      Produto
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Qtd
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Preço unit.
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {detail.items.map((it) => (
-                    <tr
-                      key={it.id}
-                      className="border-t border-[var(--border)]"
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-[var(--text-primary)]">
-                          {it.product?.description ?? "—"}
-                        </p>
-
-                        <p className="text-xs text-[var(--text-muted)]">
-                          {it.product?.code}
-                        </p>
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {qty(it.quantity)}{" "}
-                        {it.product?.unit?.code ?? ""}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {money(it.unitPrice)}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
-                        {money(it.totalPrice)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {detail.observation && (
-              <p className="mt-4 text-sm text-[var(--text-secondary)]">
-                <span className="font-medium text-[var(--text-primary)]">
-                  Observação:
-                </span>{" "}
-                {detail.observation}
-              </p>
-            )}
-
-            <div className="mt-4 flex justify-end text-sm font-semibold text-[var(--text-primary)]">
-              Total: {money(detail.totalAmount)}
+              )}
             </div>
           </div>
         </div>

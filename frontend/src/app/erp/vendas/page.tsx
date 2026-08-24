@@ -172,6 +172,7 @@ export default function VendasPage() {
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
+  const [viewOnly, setViewOnly] = useState(false);
   const [form, setForm] = useState({
     partnerId: "",
     partnerLabel: "",
@@ -290,6 +291,8 @@ export default function VendasPage() {
 
   function openCreate() {
     setEditingId(null);
+    setViewOnly(false);
+    setDetail(null);
     setForm({
       partnerId: "",
       partnerLabel: "",
@@ -315,8 +318,7 @@ export default function VendasPage() {
     setCreateOpen(true);
   }
 
-  function openEdit(sale: Sale) {
-    setEditingId(sale.id);
+  function populateSaleForm(sale: Sale) {
     setForm({
       partnerId: sale.partnerId,
       partnerLabel:
@@ -348,6 +350,28 @@ export default function VendasPage() {
         unitPrice: num(it.unitPrice),
       }))
     );
+  }
+
+  function openEdit(sale: Sale) {
+    setEditingId(sale.id);
+    setViewOnly(false);
+    setDetail(sale);
+    populateSaleForm(sale);
+    setBarcodeInput("");
+    setBarcodeError("");
+    setSourceType("");
+    setSourceId("");
+    setSourceLabel("");
+    setSourceError("");
+    setFormError("");
+    setCreateOpen(true);
+  }
+
+  function openView(sale: Sale) {
+    setEditingId(sale.id);
+    setViewOnly(true);
+    setDetail(sale);
+    populateSaleForm(sale);
     setBarcodeInput("");
     setBarcodeError("");
     setSourceType("");
@@ -1079,9 +1103,9 @@ export default function VendasPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => setDetail(s)}
-                            title="Ver itens"
-                            aria-label="Ver itens"
+                            onClick={() => openView(s)}
+                            title="Consultar"
+                            aria-label="Consultar"
                             className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                           >
                             <Eye size={16} />
@@ -1198,7 +1222,11 @@ export default function VendasPage() {
           <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editingId ? "Editar venda" : "Nova venda"}
+                {viewOnly
+                  ? "Consultar venda"
+                  : editingId
+                    ? "Editar venda"
+                    : "Nova venda"}
               </h2>
 
               <button
@@ -1211,7 +1239,9 @@ export default function VendasPage() {
               </button>
             </div>
 
+            <fieldset disabled={viewOnly} className="contents">
             <div className="space-y-4">
+              {!editingId && (
               <div className="rounded-xl border border-[var(--border)] p-3">
                 <label className={labelClass}>
                   Criar a partir de
@@ -1312,6 +1342,7 @@ export default function VendasPage() {
                   </p>
                 )}
               </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="sm:col-span-2 lg:col-span-1">
@@ -1682,16 +1713,72 @@ export default function VendasPage() {
                   {formError}
                 </div>
               )}
+            </div>
+            </fieldset>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setCreateOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
+            {viewOnly &&
+              detail &&
+              detail.financialEntries.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">
+                    Lançamentos no financeiro
+                  </p>
 
+                  <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+                        <tr>
+                          <th className="px-4 py-2 font-semibold">
+                            Vencimento
+                          </th>
+                          <th className="px-4 py-2 font-semibold">
+                            Documento
+                          </th>
+                          <th className="px-4 py-2 text-right font-semibold">
+                            Valor
+                          </th>
+                          <th className="px-4 py-2 font-semibold">
+                            Situação
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {detail.financialEntries.map((entry) => (
+                          <tr
+                            key={entry.id}
+                            className="border-t border-[var(--border)]"
+                          >
+                            <td className="whitespace-nowrap px-4 py-2 text-[var(--text-secondary)]">
+                              {date(entry.dueDate)}
+                            </td>
+                            <td className="px-4 py-2 text-[var(--text-secondary)]">
+                              {entry.documentNumber ?? "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-[var(--text-primary)]">
+                              {money(entry.amount)}
+                            </td>
+                            <td className="px-4 py-2 text-[var(--text-secondary)]">
+                              {FINANCIAL_ENTRY_STATUS_LABELS[entry.status]}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setCreateOpen(false)}
+                className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+              >
+                {viewOnly ? "Fechar" : "Cancelar"}
+              </button>
+
+              {!viewOnly && (
                 <button
                   type="button"
                   disabled={saving || confirmChecking}
@@ -1706,200 +1793,12 @@ export default function VendasPage() {
                         ? "Salvar alterações"
                         : "Cadastrar"}
                 </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Detalhes */}
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  {formatSaleNumber(detail.number)} ·{" "}
-                  {detail.partner?.tradeName ??
-                    detail.partner?.legalName}
-                </h2>
-
-                <p className="text-sm text-[var(--text-muted)]">
-                  {date(detail.saleDate ?? detail.createdAt)}{" "}
-                  · {detail.warehouse?.code} ·{" "}
-                  {SALE_STATUS_LABELS[detail.status]}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setDetail(null)}
-                aria-label="Fechar"
-                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">
-                      Produto
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Qtd
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Preço unit.
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {detail.items.map((it) => (
-                    <tr
-                      key={it.id}
-                      className="border-t border-[var(--border)]"
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-[var(--text-primary)]">
-                          {it.product?.description ?? "—"}
-                        </p>
-
-                        <p className="text-xs text-[var(--text-muted)]">
-                          {it.product?.code}
-                        </p>
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {qty(it.quantity)}{" "}
-                        {it.product?.unit?.code ?? ""}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {money(it.unitPrice)}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
-                        {money(it.totalPrice)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {detail.observation && (
-              <p className="mt-4 text-sm text-[var(--text-secondary)]">
-                <span className="font-medium text-[var(--text-primary)]">
-                  Observação:
-                </span>{" "}
-                {detail.observation}
-              </p>
-            )}
-
-            <div className="mt-4 space-y-1 text-right text-sm">
-              <p className="text-[var(--text-secondary)]">
-                Total dos itens: {money(detail.totalAmount)}
-              </p>
-
-              {num(detail.discountValue) > 0 && (
-                <p className="text-[var(--text-secondary)]">
-                  Desconto: -{money(detail.discountValue)}
-                </p>
-              )}
-
-              {num(detail.freightValue) > 0 && (
-                <p className="text-[var(--text-secondary)]">
-                  Frete: {money(detail.freightValue)}
-                </p>
-              )}
-
-              {num(detail.otherExpenses) > 0 && (
-                <p className="text-[var(--text-secondary)]">
-                  Outras despesas:{" "}
-                  {money(detail.otherExpenses)}
-                </p>
-              )}
-
-              <p className="font-semibold text-[var(--text-primary)]">
-                Líquido: {money(detail.netAmount)}
-              </p>
-
-              {detail.dueDate && (
-                <p className="text-[var(--text-secondary)]">
-                  Vencimento: {date(detail.dueDate)}
-                  {detail.termDays != null &&
-                    ` (${detail.termDays} dia(s))`}
-                </p>
-              )}
-
-              {detail.paymentMethod && (
-                <p className="text-[var(--text-secondary)]">
-                  Forma de pagamento:{" "}
-                  {PAYMENT_METHOD_LABELS[detail.paymentMethod]}
-                </p>
-              )}
-            </div>
-
-            {detail.financialEntries.length > 0 && (
-              <div className="mt-4">
-                <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">
-                  Lançamentos no financeiro
-                </p>
-
-                <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-                      <tr>
-                        <th className="px-4 py-2 font-semibold">
-                          Vencimento
-                        </th>
-                        <th className="px-4 py-2 font-semibold">
-                          Documento
-                        </th>
-                        <th className="px-4 py-2 text-right font-semibold">
-                          Valor
-                        </th>
-                        <th className="px-4 py-2 font-semibold">
-                          Situação
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {detail.financialEntries.map((entry) => (
-                        <tr
-                          key={entry.id}
-                          className="border-t border-[var(--border)]"
-                        >
-                          <td className="whitespace-nowrap px-4 py-2 text-[var(--text-secondary)]">
-                            {date(entry.dueDate)}
-                          </td>
-                          <td className="px-4 py-2 text-[var(--text-secondary)]">
-                            {entry.documentNumber ?? "—"}
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-[var(--text-primary)]">
-                            {money(entry.amount)}
-                          </td>
-                          <td className="px-4 py-2 text-[var(--text-secondary)]">
-                            {FINANCIAL_ENTRY_STATUS_LABELS[entry.status]}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
       {/* Confirmar cadastro da venda: checagem de saldo disponível */}
       {confirmCreateOpen && (
         <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/50 p-4">

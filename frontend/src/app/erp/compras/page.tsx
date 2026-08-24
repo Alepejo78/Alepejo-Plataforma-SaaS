@@ -157,6 +157,7 @@ export default function ComprasPage() {
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
+  const [viewOnly, setViewOnly] = useState(false);
   const [form, setForm] = useState({
     partnerId: "",
     partnerLabel: "",
@@ -347,6 +348,8 @@ export default function ComprasPage() {
 
   function openCreate() {
     setEditingId(null);
+    setViewOnly(false);
+    setDetail(null);
     setForm({
       partnerId: "",
       partnerLabel: "",
@@ -367,8 +370,7 @@ export default function ComprasPage() {
     setCreateOpen(true);
   }
 
-  function openEdit(purchase: Purchase) {
-    setEditingId(purchase.id);
+  function populatePurchaseForm(purchase: Purchase) {
     setForm({
       partnerId: purchase.partnerId,
       partnerLabel:
@@ -404,6 +406,25 @@ export default function ComprasPage() {
         unitPrice: num(it.unitPrice),
       }))
     );
+  }
+
+  function openEdit(purchase: Purchase) {
+    setEditingId(purchase.id);
+    setViewOnly(false);
+    setDetail(purchase);
+    populatePurchaseForm(purchase);
+    setBarcodeInput("");
+    setBarcodeError("");
+    clearSourceOrder();
+    setFormError("");
+    setCreateOpen(true);
+  }
+
+  function openView(purchase: Purchase) {
+    setEditingId(purchase.id);
+    setViewOnly(true);
+    setDetail(purchase);
+    populatePurchaseForm(purchase);
     setBarcodeInput("");
     setBarcodeError("");
     clearSourceOrder();
@@ -856,9 +877,9 @@ export default function ComprasPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => setDetail(p)}
-                            title="Ver itens"
-                            aria-label="Ver itens"
+                            onClick={() => openView(p)}
+                            title="Consultar"
+                            aria-label="Consultar"
                             className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                           >
                             <Eye size={16} />
@@ -1001,7 +1022,11 @@ export default function ComprasPage() {
           <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editingId ? "Editar compra" : "Nova compra"}
+                {viewOnly
+                  ? "Consultar compra"
+                  : editingId
+                    ? "Editar compra"
+                    : "Nova compra"}
               </h2>
 
               <button
@@ -1014,7 +1039,12 @@ export default function ComprasPage() {
               </button>
             </div>
 
+            <fieldset
+              disabled={viewOnly}
+              className="contents"
+            >
             <div className="space-y-4">
+              {!editingId && (
               <div className="rounded-xl border border-[var(--border)] p-3">
                 <label className={labelClass}>
                   Criar a partir de pedido de compra
@@ -1052,6 +1082,7 @@ export default function ComprasPage() {
                   </p>
                 )}
               </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="sm:col-span-2 lg:col-span-1">
@@ -1385,16 +1416,72 @@ export default function ComprasPage() {
                   {formError}
                 </div>
               )}
+            </div>
+            </fieldset>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setCreateOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
+            {viewOnly &&
+              detail &&
+              detail.financialEntries.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">
+                    Lançamentos no financeiro
+                  </p>
 
+                  <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+                        <tr>
+                          <th className="px-4 py-2 font-semibold">
+                            Vencimento
+                          </th>
+                          <th className="px-4 py-2 font-semibold">
+                            Documento
+                          </th>
+                          <th className="px-4 py-2 text-right font-semibold">
+                            Valor
+                          </th>
+                          <th className="px-4 py-2 font-semibold">
+                            Situação
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {detail.financialEntries.map((entry) => (
+                          <tr
+                            key={entry.id}
+                            className="border-t border-[var(--border)]"
+                          >
+                            <td className="whitespace-nowrap px-4 py-2 text-[var(--text-secondary)]">
+                              {date(entry.dueDate)}
+                            </td>
+                            <td className="px-4 py-2 text-[var(--text-secondary)]">
+                              {entry.documentNumber ?? "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-[var(--text-primary)]">
+                              {money(entry.amount)}
+                            </td>
+                            <td className="px-4 py-2 text-[var(--text-secondary)]">
+                              {FINANCIAL_ENTRY_STATUS_LABELS[entry.status]}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setCreateOpen(false)}
+                className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+              >
+                {viewOnly ? "Fechar" : "Cancelar"}
+              </button>
+
+              {!viewOnly && (
                 <button
                   type="button"
                   disabled={saving}
@@ -1407,193 +1494,8 @@ export default function ComprasPage() {
                       ? "Salvar alterações"
                       : "Cadastrar"}
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Detalhes */}
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  {formatPurchaseNumber(detail.number)} ·{" "}
-                  {detail.partner?.tradeName ??
-                    detail.partner?.legalName}
-                </h2>
-
-                <p className="text-sm text-[var(--text-muted)]">
-                  {date(
-                    detail.purchaseDate ?? detail.createdAt
-                  )}{" "}
-                  · {detail.warehouse?.code} ·{" "}
-                  {PURCHASE_STATUS_LABELS[detail.status]}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setDetail(null)}
-                aria-label="Fechar"
-                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">
-                      Produto
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Qtd
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Preço unit.
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {detail.items.map((it) => (
-                    <tr
-                      key={it.id}
-                      className="border-t border-[var(--border)]"
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-[var(--text-primary)]">
-                          {it.product?.description ?? "—"}
-                        </p>
-
-                        <p className="text-xs text-[var(--text-muted)]">
-                          {it.product?.code}
-                        </p>
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {qty(it.quantity)}{" "}
-                        {it.product?.unit?.code ?? ""}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {money(it.unitPrice)}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
-                        {money(it.totalPrice)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {detail.observation && (
-              <p className="mt-4 text-sm text-[var(--text-secondary)]">
-                <span className="font-medium text-[var(--text-primary)]">
-                  Observação:
-                </span>{" "}
-                {detail.observation}
-              </p>
-            )}
-
-            <div className="mt-4 space-y-1 text-right text-sm">
-              {detail.dueDate && (
-                <p className="text-[var(--text-secondary)]">
-                  Vencimento: {date(detail.dueDate)}
-                  {detail.termDays != null &&
-                    ` (${detail.termDays} dia(s))`}
-                </p>
               )}
-
-              {detail.paymentMethod && (
-                <p className="text-[var(--text-secondary)]">
-                  Forma de pagamento:{" "}
-                  {PAYMENT_METHOD_LABELS[detail.paymentMethod]}
-                </p>
-              )}
-
-              {detail.invoiceNumber && (
-                <p className="text-[var(--text-secondary)]">
-                  Nota fiscal: {detail.invoiceNumber}
-                  {detail.invoiceIssueDate &&
-                    ` — emitida em ${date(detail.invoiceIssueDate)}`}
-                </p>
-              )}
-
-              {detail.invoiceKey && (
-                <p
-                  className="text-[var(--text-secondary)]"
-                  title={detail.invoiceKey}
-                >
-                  Chave de acesso: {detail.invoiceKey}
-                </p>
-              )}
-
-              <p className="font-semibold text-[var(--text-primary)]">
-                Total: {money(detail.totalAmount)}
-              </p>
             </div>
-
-            {detail.financialEntries.length > 0 && (
-              <div className="mt-4">
-                <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">
-                  Lançamentos no financeiro
-                </p>
-
-                <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-                      <tr>
-                        <th className="px-4 py-2 font-semibold">
-                          Vencimento
-                        </th>
-                        <th className="px-4 py-2 font-semibold">
-                          Documento
-                        </th>
-                        <th className="px-4 py-2 text-right font-semibold">
-                          Valor
-                        </th>
-                        <th className="px-4 py-2 font-semibold">
-                          Situação
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {detail.financialEntries.map((entry) => (
-                        <tr
-                          key={entry.id}
-                          className="border-t border-[var(--border)]"
-                        >
-                          <td className="whitespace-nowrap px-4 py-2 text-[var(--text-secondary)]">
-                            {date(entry.dueDate)}
-                          </td>
-                          <td className="px-4 py-2 text-[var(--text-secondary)]">
-                            {entry.documentNumber ?? "—"}
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-[var(--text-primary)]">
-                            {money(entry.amount)}
-                          </td>
-                          <td className="px-4 py-2 text-[var(--text-secondary)]">
-                            {FINANCIAL_ENTRY_STATUS_LABELS[entry.status]}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
