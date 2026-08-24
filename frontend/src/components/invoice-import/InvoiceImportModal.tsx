@@ -154,6 +154,8 @@ export function InvoiceImportModal({
     { productId: "", productLabel: "", hint: "", quantity: "1", unitPrice: 0 },
   ]);
 
+  const [expenseItemLabel, setExpenseItemLabel] = useState("");
+
   const [installments, setInstallments] = useState<InstallmentRow[]>([
     { dueDate: "", amount: 0 },
   ]);
@@ -213,6 +215,27 @@ export function InvoiceImportModal({
       city: p.city ?? "",
       state: p.state ?? "",
     });
+  }
+
+  function applyExpenseItem(p: Product | null) {
+    if (!p) {
+      setExpenseItemLabel("");
+      return;
+    }
+
+    setExpenseItemLabel(`${p.code} — ${p.description}`);
+
+    // Só ajuda a preencher — nunca sobrescreve o que a pessoa já digitou.
+    setObservation((prev) => prev || p.description);
+
+    const price = Number(p.salePrice ?? 0);
+    if (price > 0) {
+      setInstallments((prev) =>
+        prev.map((row, i) =>
+          i === 0 && !row.amount ? { ...row, amount: price } : row
+        )
+      );
+    }
   }
 
   async function applyParsed(parsed: ParsedInvoice) {
@@ -743,6 +766,24 @@ export function InvoiceImportModal({
               />
             </div>
           </div>
+
+          {mode === "EXPENSE" && (
+            <div>
+              <label className={labelClass}>Item (produto da despesa)</label>
+              <SearchSelect<Product>
+                displayLabel={expenseItemLabel}
+                search={searchProducts}
+                getId={(p) => p.id}
+                getLabel={(p) => `${p.code} — ${p.description}`}
+                placeholder='Digite para buscar, ex.: "Despesa Pagto Água"...'
+                onSelect={applyExpenseItem}
+              />
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Opcional — só ajuda a preencher a observação (e o valor,
+                se a parcela estiver vazia). Não movimenta estoque.
+              </p>
+            </div>
+          )}
 
           <div>
             <label className={labelClass}>Observação</label>
