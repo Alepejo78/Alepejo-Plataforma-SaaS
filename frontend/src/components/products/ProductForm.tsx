@@ -185,7 +185,7 @@ export function ProductForm({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-5">
         <div>
           <label className={labelClass} htmlFor="code">
             Código <span className="text-[var(--danger)]">*</span>
@@ -276,41 +276,43 @@ export function ProductForm({
         </div>
       </section>
 
-      <div>
-        <label className={labelClass} htmlFor="description">
-          Descrição <span className="text-[var(--danger)]">*</span>
-        </label>
+      <section className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className={labelClass} htmlFor="description">
+            Descrição <span className="text-[var(--danger)]">*</span>
+          </label>
 
-        <input
-          id="description"
-          className={fieldClass}
-          value={form.description}
-          onChange={(e) =>
-            setField("description", e.target.value)
-          }
-        />
-      </div>
+          <input
+            id="description"
+            className={fieldClass}
+            value={form.description}
+            onChange={(e) =>
+              setField("description", e.target.value)
+            }
+          />
+        </div>
 
-      <div>
-        <label
-          className={labelClass}
-          htmlFor="complementaryDescription"
-        >
-          Descrição complementar
-        </label>
+        <div>
+          <label
+            className={labelClass}
+            htmlFor="complementaryDescription"
+          >
+            Descrição complementar
+          </label>
 
-        <input
-          id="complementaryDescription"
-          className={fieldClass}
-          value={form.complementaryDescription}
-          onChange={(e) =>
-            setField(
-              "complementaryDescription",
-              e.target.value
-            )
-          }
-        />
-      </div>
+          <input
+            id="complementaryDescription"
+            className={fieldClass}
+            value={form.complementaryDescription}
+            onChange={(e) =>
+              setField(
+                "complementaryDescription",
+                e.target.value
+              )
+            }
+          />
+        </div>
+      </section>
 
       <section className="grid gap-4 md:grid-cols-3">
         <div>
@@ -409,35 +411,6 @@ export function ProductForm({
             <div>
               <label
                 className={labelClass}
-                htmlFor="inventoryControl"
-              >
-                Controle de estoque
-              </label>
-
-              <select
-                id="inventoryControl"
-                className={fieldClass}
-                value={form.inventoryControl}
-                onChange={(e) =>
-                  setField(
-                    "inventoryControl",
-                    e.target.value as InventoryControl
-                  )
-                }
-              >
-                {Object.entries(
-                  INVENTORY_CONTROL_LABELS
-                ).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                className={labelClass}
                 htmlFor="minimumStock"
               >
                 Estoque mínimo
@@ -491,6 +464,37 @@ export function ProductForm({
           </>
         )}
       </section>
+
+      {!isService && (
+        <div className="md:w-1/4">
+          <label
+            className={labelClass}
+            htmlFor="inventoryControl"
+          >
+            Controle de estoque
+          </label>
+
+          <select
+            id="inventoryControl"
+            className={fieldClass}
+            value={form.inventoryControl}
+            onChange={(e) =>
+              setField(
+                "inventoryControl",
+                e.target.value as InventoryControl
+              )
+            }
+          >
+            {Object.entries(INVENTORY_CONTROL_LABELS).map(
+              ([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              )
+            )}
+          </select>
+        </div>
+      )}
 
       {isService && (
         <p className="text-xs text-[var(--text-muted)]">

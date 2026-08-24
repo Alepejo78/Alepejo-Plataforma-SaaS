@@ -23,9 +23,39 @@ import {
   productService,
   unitService,
   type AuxiliaryRecord,
+  type InventoryControl,
   type Product,
   type UnitOfMeasure,
 } from "@/services/product.service";
+
+const INVENTORY_CONTROL_SHORT_LABELS: Record<
+  InventoryControl,
+  string
+> = {
+  NONE: "Sem estoque",
+  SIMPLE: "Simples",
+  BATCH: "Por lote",
+  SERIAL: "Por série",
+};
+
+function decimalDisplay(
+  value: string | number | null | undefined,
+  suffix: string
+) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed === 0) {
+    return "—";
+  }
+
+  return `${parsed.toLocaleString("pt-BR", {
+    maximumFractionDigits: 4,
+  })} ${suffix}`;
+}
 
 function money(value: string | number | null | undefined) {
   const parsed = Number(value ?? 0);
@@ -300,6 +330,15 @@ export default function ProdutosPage() {
                   <th className="px-4 py-3 font-semibold">
                     Tipo
                   </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Controle
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Peso
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Cubagem
+                  </th>
                   <th className="px-4 py-3 text-right font-semibold">
                     Venda
                   </th>
@@ -340,6 +379,20 @@ export default function ProdutosPage() {
 
                     <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
                       {PRODUCT_TYPE_LABELS[product.type]}
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
+                      {INVENTORY_CONTROL_SHORT_LABELS[
+                        product.inventoryControl
+                      ]}
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
+                      {decimalDisplay(product.weightKg, "kg")}
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
+                      {decimalDisplay(product.cubageM3, "m³")}
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
