@@ -57,6 +57,12 @@ export class CreateFinancialEntryDto {
   @IsEnum(FinancialDocumentType)
   documentType?: FinancialDocumentType;
 
+  /// Chave de acesso da nota fiscal eletrônica (44 dígitos).
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  documentKey?: string;
+
   @Type(() => Number)
   @IsNumber()
   @IsPositive()

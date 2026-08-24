@@ -37,6 +37,8 @@ interface FormState {
   unitId: string;
   salePrice: number;
   minimumStock: string;
+  weightKg: string;
+  cubageM3: string;
   status: "ACTIVE" | "INACTIVE";
 }
 
@@ -53,6 +55,8 @@ const emptyForm: FormState = {
   unitId: "",
   salePrice: 0,
   minimumStock: "",
+  weightKg: "",
+  cubageM3: "",
   status: "ACTIVE",
 };
 
@@ -98,6 +102,16 @@ export function ProductForm({
           product.minimumStock !== null &&
           product.minimumStock !== undefined
             ? String(product.minimumStock)
+            : "",
+        weightKg:
+          product.weightKg !== null &&
+          product.weightKg !== undefined
+            ? String(product.weightKg)
+            : "",
+        cubageM3:
+          product.cubageM3 !== null &&
+          product.cubageM3 !== undefined
+            ? String(product.cubageM3)
             : "",
         status: product.status,
       });
@@ -159,6 +173,12 @@ export function ProductForm({
         : form.minimumStock
           ? decimal(form.minimumStock)
           : undefined,
+      weightKg: form.weightKg
+        ? decimal(form.weightKg)
+        : undefined,
+      cubageM3: form.cubageM3
+        ? decimal(form.cubageM3)
+        : undefined,
       status: form.status,
     });
   }
@@ -431,6 +451,40 @@ export function ProductForm({
                 value={form.minimumStock}
                 onChange={(e) =>
                   setField("minimumStock", e.target.value)
+                }
+              />
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="weightKg">
+                Peso (kg)
+              </label>
+
+              <input
+                id="weightKg"
+                inputMode="decimal"
+                placeholder="0"
+                className={fieldClass}
+                value={form.weightKg}
+                onChange={(e) =>
+                  setField("weightKg", e.target.value)
+                }
+              />
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="cubageM3">
+                Cubagem (m³)
+              </label>
+
+              <input
+                id="cubageM3"
+                inputMode="decimal"
+                placeholder="0"
+                className={fieldClass}
+                value={form.cubageM3}
+                onChange={(e) =>
+                  setField("cubageM3", e.target.value)
                 }
               />
             </div>

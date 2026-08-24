@@ -52,6 +52,7 @@ import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { InvoiceImportModule } from './modules/invoice-import/invoice-import.module';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     TimeTrackingModule,
     MarketingModule,
     BillingModule,
+    InvoiceImportModule,
   ],
   controllers: [AppController],
   providers: [

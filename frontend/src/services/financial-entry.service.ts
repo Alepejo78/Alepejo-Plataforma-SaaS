@@ -134,6 +134,7 @@ export interface FinancialEntryPayload {
   dueDate: string;
   documentNumber?: string;
   documentType?: FinancialDocumentType;
+  documentKey?: string;
   amount: number;
   paymentMethod?: PaymentMethod;
   observation?: string;

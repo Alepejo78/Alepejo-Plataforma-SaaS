@@ -8,6 +8,7 @@ import {
   Plus,
   Trash2,
   Undo2,
+  Upload,
   X,
   XCircle,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
 import {
   chartOfAccountService,
   type ChartOfAccount,
@@ -165,6 +167,7 @@ export default function VendasPage() {
 
   // Modal de nova venda / edição (rascunho)
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
@@ -854,20 +857,31 @@ export default function VendasPage() {
               </div>
 
               <Can permission="sale.create">
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  disabled={semDeposito}
-                  title={
-                    semDeposito
-                      ? "Cadastre um depósito primeiro"
-                      : undefined
-                  }
-                  className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
-                >
-                  <Plus size={18} />
-                  Nova venda
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setImportOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <Upload size={18} />
+                    Importar nota fiscal
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    disabled={semDeposito}
+                    title={
+                      semDeposito
+                        ? "Cadastre um depósito primeiro"
+                        : undefined
+                    }
+                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                  >
+                    <Plus size={18} />
+                    Nova venda
+                  </button>
+                </div>
               </Can>
             </header>
 
@@ -1126,6 +1140,15 @@ export default function VendasPage() {
           </div>
         )}
       </ListPageLayout>
+
+      {importOpen && (
+        <InvoiceImportModal
+          direction="SALE"
+          warehouses={warehouses}
+          onClose={() => setImportOpen(false)}
+          onSaved={() => void load()}
+        />
+      )}
 
       {/* Nova venda */}
       {createOpen && (

@@ -7,6 +7,7 @@ import {
 import {
   BusinessPartnerRole,
   FinancialDocumentType,
+  FinancialEntry,
   FinancialEntryStatus,
   FinancialEntryType,
   PaymentMethod,
@@ -62,6 +63,7 @@ export class FinancialEntriesService {
       dueDate: new Date(dto.dueDate),
       documentNumber: dto.documentNumber,
       documentType: dto.documentType,
+      documentKey: dto.documentKey,
       amount: dto.amount,
       paymentMethod: dto.paymentMethod,
       observation: dto.observation,
@@ -253,30 +255,81 @@ export class FinancialEntriesService {
       observation?: string;
     },
   ) {
-    return tx.financialEntry.create({
-      data: {
-        companyId: params.companyId,
-        type: params.type,
-        partnerId: params.partnerId,
-        employeeId: params.employeeId,
-        amount: params.amount,
-        issueDate: params.issueDate,
-        termDays: params.termDays ?? undefined,
-        // Sem vencimento calculado no documento: vence na própria data.
-        dueDate: params.dueDate ?? params.issueDate,
-        paymentMethod: params.paymentMethod ?? undefined,
-        documentNumber: params.documentNumber ?? undefined,
-        documentKey: params.documentKey ?? undefined,
-        documentType: params.documentType ?? undefined,
-        chartOfAccountId: params.chartOfAccountId ?? undefined,
-        purchaseId: params.purchaseId,
-        saleId: params.saleId,
-        payrollItemId: params.payrollItemId,
-        thirteenthSalaryItemId: params.thirteenthSalaryItemId,
-        vacationGrantId: params.vacationGrantId,
-        observation: params.observation,
-      },
+    const [entry] = await this.createInstallments(tx, {
+      ...params,
+      installments: [
+        {
+          // Sem vencimento calculado no documento: vence na própria data.
+          dueDate: params.dueDate ?? params.issueDate,
+          amount: params.amount,
+        },
+      ],
     });
+
+    return entry;
+  }
+
+  /**
+   * Mesma coisa que `createFromDocument`, mas em N parcelas — cada
+   * uma vira uma `FinancialEntry` própria (título parcelado não existe
+   * como conceito no banco, só N títulos com o mesmo documento).
+   * Usado pela importação de nota fiscal (`InvoiceImportModule`)
+   * quando a nota traz mais de uma duplicata/vencimento.
+   */
+  async createInstallments(
+    tx: Prisma.TransactionClient,
+    params: {
+      companyId: string;
+      type: FinancialEntryType;
+      partnerId?: string;
+      employeeId?: string;
+      installments: { dueDate: Date; amount: number }[];
+      issueDate: Date;
+      termDays?: number | null;
+      paymentMethod?: PaymentMethod | null;
+      documentNumber?: string | null;
+      documentKey?: string | null;
+      documentType?: FinancialDocumentType | null;
+      chartOfAccountId?: string | null;
+      purchaseId?: string;
+      saleId?: string;
+      payrollItemId?: string;
+      thirteenthSalaryItemId?: string;
+      vacationGrantId?: string;
+      observation?: string;
+    },
+  ) {
+    const entries: FinancialEntry[] = [];
+
+    for (const installment of params.installments) {
+      const entry = await tx.financialEntry.create({
+        data: {
+          companyId: params.companyId,
+          type: params.type,
+          partnerId: params.partnerId,
+          employeeId: params.employeeId,
+          amount: installment.amount,
+          issueDate: params.issueDate,
+          termDays: params.termDays ?? undefined,
+          dueDate: installment.dueDate,
+          paymentMethod: params.paymentMethod ?? undefined,
+          documentNumber: params.documentNumber ?? undefined,
+          documentKey: params.documentKey ?? undefined,
+          documentType: params.documentType ?? undefined,
+          chartOfAccountId: params.chartOfAccountId ?? undefined,
+          purchaseId: params.purchaseId,
+          saleId: params.saleId,
+          payrollItemId: params.payrollItemId,
+          thirteenthSalaryItemId: params.thirteenthSalaryItemId,
+          vacationGrantId: params.vacationGrantId,
+          observation: params.observation,
+        },
+      });
+
+      entries.push(entry);
+    }
+
+    return entries;
   }
 
   /**

@@ -66,6 +66,17 @@ import {
     @Min(0)
     minimumStock?: number;
 
+    /// Logística/frete — não interfere em estoque nem em custo.
+    @IsOptional()
+    @IsNumber({ maxDecimalPlaces: 3 })
+    @Min(0)
+    weightKg?: number;
+
+    @IsOptional()
+    @IsNumber({ maxDecimalPlaces: 4 })
+    @Min(0)
+    cubageM3?: number;
+
     @IsOptional()
     @IsEnum(ProductStatus)
     status?: ProductStatus;

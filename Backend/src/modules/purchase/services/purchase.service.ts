@@ -8,6 +8,7 @@ import {
   FinancialDocumentType,
   FinancialEntryStatus,
   FinancialEntryType,
+  InventoryControl,
   PurchaseOrderStatus,
   PurchaseStatus,
   StockMovementType,
@@ -310,7 +311,9 @@ export class PurchaseService {
           companyId,
         },
         include: {
-          items: true,
+          items: {
+            include: { product: true },
+          },
         },
       });
 
@@ -354,6 +357,16 @@ export class PurchaseService {
           .join(' ');
 
         for (const item of purchase.items) {
+          // Item de produto que não controla estoque (serviço/despesa,
+          // ex.: nota importada direto sem pedido) não mexe em
+          // Inventory/StockMovement — só entra no valor total mesmo.
+          if (
+            item.product.inventoryControl ===
+            InventoryControl.NONE
+          ) {
+            continue;
+          }
+
           let inventory =
             await tx.inventory.findFirst({
               where: {

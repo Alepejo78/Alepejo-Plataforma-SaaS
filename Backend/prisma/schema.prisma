@@ -614,6 +614,10 @@ model Product {
   /// Lote mínimo por ordem de produção — sobrepõe o padrão da
   /// empresa (ProductionSettings.minBatchSize) quando preenchido.
   minProductionBatch       Decimal?             @db.Decimal(18, 3)
+  /// Peso unitário (kg) — logística/frete, não vem de nota importada.
+  weightKg                 Decimal?             @db.Decimal(10, 3)
+  /// Cubagem unitária (m³) — logística/frete, não vem de nota importada.
+  cubageM3                 Decimal?             @db.Decimal(10, 4)
   status                   ProductStatus        @default(ACTIVE)
   active                   Boolean              @default(true)
   createdAt                DateTime             @default(now())

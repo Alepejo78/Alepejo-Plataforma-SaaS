@@ -34,7 +34,7 @@ export const INVENTORY_CONTROL_LABELS: Record<
   InventoryControl,
   string
 > = {
-  NONE: "Sem controle",
+  NONE: "Nenhum — não movimenta estoque (serviço/despesa)",
   SIMPLE: "Simples",
   BATCH: "Por lote",
   SERIAL: "Por número de série",
@@ -72,6 +72,8 @@ export interface Product {
   salePrice: string | number;
   minimumStock?: string | number | null;
   currentStock?: string | number | null;
+  weightKg?: string | number | null;
+  cubageM3?: string | number | null;
   status: ProductStatus;
   active: boolean;
 

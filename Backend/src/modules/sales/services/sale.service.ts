@@ -9,6 +9,7 @@ import {
   FinancialDocumentType,
   FinancialEntryStatus,
   FinancialEntryType,
+  InventoryControl,
   QuoteStatus,
   SalesOrderStatus,
 } from '@prisma/client';
@@ -328,7 +329,9 @@ export class SaleService {
           companyId,
         },
         include: {
-          items: true,
+          items: {
+            include: { product: true },
+          },
         },
       });
 
@@ -366,6 +369,16 @@ export class SaleService {
         .join(' ');
 
       for (const item of sale.items) {
+        // Item de produto que não controla estoque (serviço/despesa)
+        // não mexe em Inventory/StockMovement — só entra no valor
+        // total da venda mesmo.
+        if (
+          item.product.inventoryControl ===
+          InventoryControl.NONE
+        ) {
+          continue;
+        }
+
         const inventory =
           await tx.inventory.findFirst({
             where: {
@@ -512,7 +525,10 @@ export class SaleService {
   ) {
     const sale = await this.prisma.sale.findFirst({
       where: { id, companyId },
-      include: { items: true, financialEntries: true },
+      include: {
+        items: { include: { product: true } },
+        financialEntries: true,
+      },
     });
 
     if (!sale) throw new NotFoundException('Venda não encontrada.');
@@ -537,6 +553,13 @@ export class SaleService {
 
     return this.prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
+        if (
+          item.product.inventoryControl ===
+          InventoryControl.NONE
+        ) {
+          continue;
+        }
+
         const inventory = await tx.inventory.findFirst({
           where: {
             companyId,

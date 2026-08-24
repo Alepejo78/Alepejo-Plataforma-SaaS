@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Upload,
   X,
   XCircle,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
 import {
   chartOfAccountService,
   type ChartOfAccount,
@@ -149,6 +151,7 @@ export default function ComprasPage() {
 
   // Modal de nova compra / edição (rascunho)
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
@@ -619,6 +622,15 @@ export default function ComprasPage() {
                 <Can permission="purchase.create">
                   <button
                     type="button"
+                    onClick={() => setImportOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <Upload size={18} />
+                    Importar nota fiscal
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={openCreate}
                     disabled={semDeposito}
                     title={
@@ -889,6 +901,15 @@ export default function ComprasPage() {
           </div>
         )}
       </ListPageLayout>
+
+      {importOpen && (
+        <InvoiceImportModal
+          direction="PURCHASE"
+          warehouses={warehouses}
+          onClose={() => setImportOpen(false)}
+          onSaved={() => void load()}
+        />
+      )}
 
       {/* Nova compra */}
       {createOpen && (
