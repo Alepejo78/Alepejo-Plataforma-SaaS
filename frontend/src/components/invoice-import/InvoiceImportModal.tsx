@@ -27,6 +27,7 @@ import {
   invoiceImportService,
   type ParsedInvoice,
 } from "@/services/invoice-import.service";
+import { calculateDueDatePreview } from "@/lib/dueDate";
 
 type Direction = "PURCHASE" | "SALE";
 type Mode = "ORDER" | "EXPENSE";
@@ -63,6 +64,13 @@ function toDateInput(value: string | null | undefined) {
   if (!value) return "";
   // Aceita tanto "2026-08-01" quanto "2026-08-01T10:00:00-03:00".
   return value.slice(0, 10);
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("pt-BR", {
+    timeZone: "UTC",
+  });
 }
 
 interface ItemRow {
@@ -718,14 +726,7 @@ export function InvoiceImportModal({
 
             {mode === "ORDER" && (
               <div>
-                <label className={labelClass}>
-                  Depósito
-                  {!warehouseRequired && (
-                    <span className="ml-1 font-normal text-[var(--text-muted)]">
-                      (não é necessário — item não movimenta estoque)
-                    </span>
-                  )}
-                </label>
+                <label className={labelClass}>Depósito</label>
                 <select
                   className={fieldClass}
                   value={warehouseId}
@@ -805,6 +806,45 @@ export function InvoiceImportModal({
               />
             </div>
           </div>
+
+          {mode === "ORDER" && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className={labelClass}>Dias a vencer</label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  className={fieldClass}
+                  value={termDays}
+                  onChange={(e) => setTermDays(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>
+                  Vencimento (calculado)
+                </label>
+                <div
+                  className={`${fieldClass} flex items-center text-[var(--text-secondary)]`}
+                >
+                  {formatDate(
+                    calculateDueDatePreview(
+                      invoiceIssueDate || undefined,
+                      Number(termDays) || 0
+                    ).toISOString()
+                  )}
+                </div>
+              </div>
+
+              {!warehouseRequired && (
+                <p className="sm:col-span-2 self-end text-xs text-[var(--text-muted)]">
+                  Depósito não é necessário — item não movimenta
+                  estoque.
+                </p>
+              )}
+            </div>
+          )}
 
           {mode === "EXPENSE" && (
             <div>
