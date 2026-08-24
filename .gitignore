@@ -41,3 +41,6 @@ Backend/prisma/scripts/output/
 # Backups locais (zip da pasta inteira, não versionado)
 backup-*.zip
 backups/
+
+# Previa temporaria do mascote, gerada so pra conferir o desenho
+.mascote-preview/
