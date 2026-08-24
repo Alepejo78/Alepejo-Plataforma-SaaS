@@ -184,9 +184,16 @@ export class PurchaseService {
   ) {
     const purchase = await this.findOne(companyId, id);
 
-    if (purchase.status !== PurchaseStatus.DRAFT) {
+    // approve() não mexe em estoque nem financeiro — só o
+    // recebimento faz isso. Por isso uma compra aprovada (ainda não
+    // recebida) pode ser editada sem risco nenhum, igual à em
+    // rascunho; só trava a partir de recebida (ou cancelada).
+    if (
+      purchase.status === PurchaseStatus.RECEIVED ||
+      purchase.status === PurchaseStatus.CANCELLED
+    ) {
       throw new BadRequestException(
-        'Somente compras em rascunho podem ser alteradas.',
+        'Compra recebida ou cancelada não pode ser alterada.',
       );
     }
 

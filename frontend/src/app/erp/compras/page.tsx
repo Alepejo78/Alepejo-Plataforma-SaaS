@@ -821,7 +821,8 @@ export default function ComprasPage() {
                             <Eye size={16} />
                           </button>
 
-                          {p.status === "DRAFT" && (
+                          {(p.status === "DRAFT" ||
+                            p.status === "APPROVED") && (
                             <Can permission="purchase.update">
                               <button
                                 type="button"
