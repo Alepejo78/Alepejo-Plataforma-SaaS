@@ -71,6 +71,8 @@ interface ItemRow {
   hint: string;
   quantity: string;
   unitPrice: number;
+  /** Serviço/despesa (não movimenta estoque) — o depósito não importa pra ele. */
+  tracksStock: boolean;
 }
 
 interface InstallmentRow {
@@ -151,7 +153,14 @@ export function InvoiceImportModal({
   >("");
 
   const [items, setItems] = useState<ItemRow[]>([
-    { productId: "", productLabel: "", hint: "", quantity: "1", unitPrice: 0 },
+    {
+      productId: "",
+      productLabel: "",
+      hint: "",
+      quantity: "1",
+      unitPrice: 0,
+      tracksStock: true,
+    },
   ]);
 
   const [expenseItemLabel, setExpenseItemLabel] = useState("");
@@ -310,6 +319,9 @@ export function InvoiceImportModal({
             hint: item.description,
             quantity: String(item.quantity || 1),
             unitPrice: item.unitPrice,
+            tracksStock: matchedProduct
+              ? matchedProduct.inventoryControl !== "NONE"
+              : true,
           };
         })
       );
@@ -361,7 +373,14 @@ export function InvoiceImportModal({
   function addItem() {
     setItems((prev) => [
       ...prev,
-      { productId: "", productLabel: "", hint: "", quantity: "1", unitPrice: 0 },
+      {
+      productId: "",
+      productLabel: "",
+      hint: "",
+      quantity: "1",
+      unitPrice: 0,
+      tracksStock: true,
+    },
     ]);
   }
 
@@ -426,10 +445,6 @@ export function InvoiceImportModal({
 
     try {
       if (mode === "ORDER") {
-        if (!warehouseId) {
-          throw new Error("Selecione o depósito.");
-        }
-
         const validItems = items.filter(
           (it) => it.productId && decimal(it.quantity) > 0
         );
@@ -440,9 +455,19 @@ export function InvoiceImportModal({
           );
         }
 
+        if (warehouseRequired && !warehouseId) {
+          throw new Error("Selecione o depósito.");
+        }
+
+        if (!warehouseRequired && !warehouseId && !warehouses[0]) {
+          throw new Error(
+            "Cadastre um depósito primeiro (é exigido pelo sistema mesmo quando o item não movimenta estoque)."
+          );
+        }
+
         const payload = {
           partner: buildPartnerPayload(),
-          warehouseId,
+          warehouseId: warehouseId || warehouses[0]?.id || "",
           chartOfAccountId: chartOfAccountId || undefined,
           invoiceNumber: invoiceNumber || undefined,
           invoiceKey: invoiceKey || undefined,
@@ -512,6 +537,12 @@ export function InvoiceImportModal({
   const installmentsTotal = installments.reduce(
     (sum, row) => sum + (row.amount || 0),
     0
+  );
+
+  // Item de serviço/despesa não mexe em estoque — só exige depósito
+  // quando algum item de verdade movimenta estoque.
+  const warehouseRequired = items.some(
+    (it) => it.productId && it.tracksStock
   );
 
   return (
@@ -687,10 +718,18 @@ export function InvoiceImportModal({
 
             {mode === "ORDER" && (
               <div>
-                <label className={labelClass}>Depósito</label>
+                <label className={labelClass}>
+                  Depósito
+                  {!warehouseRequired && (
+                    <span className="ml-1 font-normal text-[var(--text-muted)]">
+                      (não é necessário — item não movimenta estoque)
+                    </span>
+                  )}
+                </label>
                 <select
                   className={fieldClass}
                   value={warehouseId}
+                  disabled={!warehouseRequired}
                   onChange={(e) => setWarehouseId(e.target.value)}
                 >
                   <option value="">Selecione...</option>
@@ -833,9 +872,18 @@ export function InvoiceImportModal({
                                 productLabel: p
                                   ? `${p.code} — ${p.description}`
                                   : "",
+                                tracksStock: p
+                                  ? p.inventoryControl !== "NONE"
+                                  : true,
                               })
                             }
                           />
+
+                          {it.productId && !it.tracksStock && (
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
+                              Serviço/despesa — não movimenta estoque.
+                            </p>
+                          )}
                         </div>
 
                         <input
