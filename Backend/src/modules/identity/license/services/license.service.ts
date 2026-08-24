@@ -59,12 +59,21 @@ export class LicenseService {
    * antes disso é "A contratar", e quando a assinatura vence tudo o
    * que estava contratado vira "Expirou".
    *
+   * Durante o período de teste, todo módulo habilitado libera acesso
+   * mesmo sem contratação (`licensed: false`) — é assim que
+   * `hasModule()` já funciona (módulo ajustado depois do cadastro
+   * inicial nasce "a contratar" mesmo em teste, ver
+   * `syncCustomModules`). Por isso o teste precisa ser checado ANTES
+   * do `licensed`: senão a tela mostra "A contratar" pra um módulo que
+   * na prática já está liberado, o que confunde mais do que ajuda.
+   *
    * - DISABLED    — desmarcado pelo próprio cliente.
-   * - TO_CONTRACT — habilitado mas ainda sem contratação que o cubra
+   * - TRIAL       — dentro do período de teste (mesmo se ainda não
+   *                 contratado — o teste libera tudo de propósito).
+   * - TO_CONTRACT — fora do teste e ainda sem contratação que o cubra
    *                 (`licensed: false`): módulo escolhido depois, que
    *                 só vira contratado quando o pagamento é confirmado.
    * - EXPIRED     — contratado, mas a assinatura venceu/bloqueou.
-   * - TRIAL       — dentro do período de teste.
    * - ACTIVE      — contratado e com assinatura paga em dia.
    */
   moduleLicenseStatus(
@@ -79,16 +88,16 @@ export class LicenseService {
       return 'DISABLED';
     }
 
-    if (!companyModule.licensed) {
-      return 'TO_CONTRACT';
-    }
-
     if (this.isSubscriptionBlocked(companyPlan)) {
       return 'EXPIRED';
     }
 
     if (companyPlan?.status === 'TRIAL') {
       return 'TRIAL';
+    }
+
+    if (!companyModule.licensed) {
+      return 'TO_CONTRACT';
     }
 
     return companyPlan?.status === 'ACTIVE' ? 'ACTIVE' : 'EXPIRED';
