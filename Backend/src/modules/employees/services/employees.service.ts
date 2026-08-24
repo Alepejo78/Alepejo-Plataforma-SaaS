@@ -351,13 +351,32 @@ export class EmployeesService {
   }
 
   async getBirthdays(companyId: string, month?: number) {
+    const employees =
+      await this.repository.findActiveForReports(companyId);
+
+    return this.buildBirthdays(employees, month);
+  }
+
+  /** Mesmo relatório, mas somando os aniversariantes de todas as empresas do grupo. */
+  async getBirthdaysInGroup(rootCompanyId: string, month?: number) {
+    const employees =
+      await this.repository.findActiveForReportsInGroup(
+        rootCompanyId,
+      );
+
+    return this.buildBirthdays(employees, month);
+  }
+
+  private buildBirthdays(
+    employees: Awaited<
+      ReturnType<EmployeesRepository['findActiveForReports']>
+    >,
+    month?: number,
+  ) {
     const targetMonth =
       month && month >= 1 && month <= 12
         ? month
         : new Date().getMonth() + 1;
-
-    const employees =
-      await this.repository.findActiveForReports(companyId);
 
     return employees
       .filter(
@@ -380,6 +399,24 @@ export class EmployeesService {
     const employees =
       await this.repository.findActiveForReports(companyId);
 
+    return this.buildIndicators(employees);
+  }
+
+  /** Mesmos indicadores, mas somando todas as empresas do grupo — dashboard consolidado do administrador. */
+  async getIndicatorsInGroup(rootCompanyId: string) {
+    const employees =
+      await this.repository.findActiveForReportsInGroup(
+        rootCompanyId,
+      );
+
+    return this.buildIndicators(employees);
+  }
+
+  private buildIndicators(
+    employees: Awaited<
+      ReturnType<EmployeesRepository['findActiveForReports']>
+    >,
+  ) {
     const salaries = employees
       .map((e) => (e.baseSalary ? Number(e.baseSalary) : null))
       .filter((v): v is number => v !== null);

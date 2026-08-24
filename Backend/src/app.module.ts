@@ -51,6 +51,7 @@ import { ProductionModule } from './modules/production/production.module';
 import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module';
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { BillingModule } from './modules/billing/billing.module';
 
     IdentityModule,
     PlatformModule,
+    DashboardModule,
 
     BusinessPartnersModule,
     ProductsModule,

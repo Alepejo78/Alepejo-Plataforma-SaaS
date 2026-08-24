@@ -5,11 +5,27 @@ import Link from "next/link";
 import {
   ArrowRight,
   Boxes,
+  Building2,
   Package,
   PiggyBank,
+  Receipt,
+  UsersRound,
   Users,
   Wallet,
 } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { AppShell } from "@/components";
 import { DashboardHeader } from "@/components/dashboard";
@@ -17,10 +33,15 @@ import { DashboardHeader } from "@/components/dashboard";
 import { useAuth } from "@/providers/AuthProvider";
 import { partnerService } from "@/services/partner.service";
 import { productService } from "@/services/product.service";
-import { inventoryService } from "@/services/inventory.service";
-import { financialEntryService } from "@/services/financial-entry.service";
 import {
-  employeeReportsService,
+  dashboardService,
+  type DashboardAccountBreakdownRow,
+  type DashboardCompanySummary,
+  type DashboardGenderRow,
+  type DashboardSectorRow,
+} from "@/services/dashboard.service";
+import type { CashFlowMonth } from "@/services/financial-entry.service";
+import {
   employeeService,
   type Employee,
   type EmployeeBirthday,
@@ -32,6 +53,63 @@ function money(value: number) {
     currency: "BRL",
   });
 }
+
+/** Versão curta pro eixo do gráfico ("R$ 1,2 mil") — número cheio ali vira sopa de dígito. */
+function moneyCompact(value: number) {
+  return value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+}
+
+const MONTH_LABELS_SHORT = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+];
+
+const GENDER_LABELS: Record<string, string> = {
+  MASCULINO: "Homens",
+  FEMININO: "Mulheres",
+  OUTRO: "Outro",
+};
+
+/** Cores fixas por gênero (não dependem da ordem que a API devolve). */
+const GENDER_COLORS: Record<string, string> = {
+  MASCULINO: "var(--primary)",
+  FEMININO: "#d6336c",
+  OUTRO: "var(--text-muted)",
+};
+
+/** Paleta pra "por setor" — quantidade de setores varia por empresa, então roda em ciclo. */
+const SECTOR_COLORS = [
+  "var(--primary)",
+  "var(--success)",
+  "var(--warning)",
+  "#d6336c",
+  "#7c3aed",
+  "#0891b2",
+  "var(--danger)",
+];
+
+const dashboardTooltipStyle = {
+  backgroundColor: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  color: "var(--text-primary)",
+  fontSize: 12,
+};
 
 interface CardProps {
   title: string;
@@ -108,6 +186,10 @@ export default function HomePage() {
   const [aPagarMes, setAPagarMes] = useState<number | null>(
     null
   );
+  // Parte do "a receber"/"a pagar" do mês que já venceu — mostrada
+  // destacada dentro da própria barra, não só no total.
+  const [aReceberVencido, setAReceberVencido] = useState(0);
+  const [aPagarVencido, setAPagarVencido] = useState(0);
   const [recebidoTotal, setRecebidoTotal] = useState<
     number | null
   >(null);
@@ -116,6 +198,9 @@ export default function HomePage() {
   );
   const [cashFlowLoading, setCashFlowLoading] =
     useState(true);
+  const [cashFlowMonths, setCashFlowMonths] = useState<
+    CashFlowMonth[]
+  >([]);
 
   const [colaboradoresAtivos, setColaboradoresAtivos] =
     useState<number | null>(null);
@@ -133,18 +218,34 @@ export default function HomePage() {
   >([]);
   const [isUserBirthday, setIsUserBirthday] = useState(false);
 
+  // Quem administra um grupo com mais de uma empresa vê a soma de
+  // todas (o backend decide isso sozinho, por permissão); esse rótulo
+  // só existe pra deixar claro NA TELA que o número é consolidado, em
+  // vez da pessoa achar que é só da empresa que está vendo agora.
+  const [consolidated, setConsolidated] = useState(false);
+  const [dashboardCompanies, setDashboardCompanies] = useState<
+    DashboardCompanySummary[]
+  >([]);
+  const [despesasPorTipo, setDespesasPorTipo] = useState<
+    DashboardAccountBreakdownRow[]
+  >([]);
+  const [employeesByGender, setEmployeesByGender] = useState<
+    DashboardGenderRow[]
+  >([]);
+  const [employeesBySector, setEmployeesBySector] = useState<
+    DashboardSectorRow[]
+  >([]);
+
   useEffect(() => {
     Promise.all([
       partnerService.list({ limit: 1 }),
       partnerService.list({ limit: 1, role: "CUSTOMER" }),
       productService.list({ limit: 1 }),
-      inventoryService.list({ limit: 1 }),
     ])
-      .then(([todos, clientes, prods, estoque]) => {
+      .then(([todos, clientes, prods]) => {
         setPartners(todos.total);
         setCustomers(clientes.total);
         setProducts(prods.total);
-        setInventoryItems(estoque.total);
       })
       .catch(() => {
         // Sem dados: os cartões mostram "—" em vez de quebrar a tela.
@@ -153,9 +254,18 @@ export default function HomePage() {
 
     const now = new Date();
 
-    financialEntryService
-      .getCashFlow(now.getFullYear())
-      .then((cashFlow) => {
+    dashboardService
+      .getOverview(now.getFullYear())
+      .then((overview) => {
+        setConsolidated(overview.consolidated);
+        setDashboardCompanies(overview.companies);
+        setInventoryItems(overview.inventoryItems);
+        setDespesasPorTipo(overview.despesasPorTipo);
+
+        const cashFlow = overview.cashFlow;
+
+        setCashFlowMonths(cashFlow.months);
+
         const mesAtual = cashFlow.months[now.getMonth()];
 
         setAReceberMes(
@@ -166,6 +276,9 @@ export default function HomePage() {
         setAPagarMes(
           mesAtual.payable.open + mesAtual.payable.overdue
         );
+
+        setAReceberVencido(mesAtual.receivable.overdue);
+        setAPagarVencido(mesAtual.payable.overdue);
 
         // Realizado no ano até o mês atual (o que já entrou/saiu de
         // fato, diferente do "a receber/a pagar" que é o pendente).
@@ -187,48 +300,35 @@ export default function HomePage() {
             0
           )
         );
+
+        if (overview.hrAvailable) {
+          setColaboradoresAtivos(overview.employeesAtivos);
+          setColaboradoresExperiencia(
+            overview.employeesExperiencia
+          );
+          setBirthdaysMes(overview.birthdaysMes);
+          setExamesAVencer(overview.examesAVencer);
+          setEmployeesByGender(overview.employeesByGender);
+          setEmployeesBySector(overview.employeesBySector);
+        }
       })
       .catch(() => {
-        // Sem licença do Financeiro ou sem dados: cartão mostra "—".
+        // Sem dados: os cartões mostram "—" em vez de quebrar a tela.
       })
-      .finally(() => setCashFlowLoading(false));
+      .finally(() => {
+        setCashFlowLoading(false);
+        setHrLoading(false);
+      });
 
-    const daqui30Dias = new Date(
-      now.getTime() + 30 * 24 * 60 * 60 * 1000
-    );
-
-    Promise.all([
-      employeeReportsService.getIndicators(),
-      employeeReportsService.getBirthdays(now.getMonth() + 1),
-      employeeService.list({ limit: 100 }),
-    ])
-      .then(([indicators, birthdays, colaboradores]) => {
-        setColaboradoresAtivos(
-          indicators.byStatus.find((s) => s.status === "ATIVO")
-            ?.count ?? 0
-        );
-
-        setColaboradoresExperiencia(
-          indicators.byStatus.find(
-            (s) => s.status === "EXPERIENCIA"
-          )?.count ?? 0
-        );
-
-        setBirthdaysMes(birthdays);
-        setColaboradoresList(colaboradores);
-
-        setExamesAVencer(
-          colaboradores.filter(
-            (c) =>
-              c.nextExamDate &&
-              new Date(c.nextExamDate) <= daqui30Dias
-          ).length
-        );
-      })
+    // Só pra achar o próprio cadastro de colaborador e mostrar o
+    // banner de aniversário — sempre da empresa em que a pessoa está
+    // logada agora, mesmo quando os cartões acima estão consolidados.
+    employeeService
+      .list({ limit: 100 })
+      .then(setColaboradoresList)
       .catch(() => {
-        // Sem licença do RH ou sem dados: cartão mostra "—".
-      })
-      .finally(() => setHrLoading(false));
+        // Sem módulo de RH nesta empresa: sem banner de aniversário, e tudo bem.
+      });
   }, []);
 
   useEffect(() => {
@@ -254,6 +354,54 @@ export default function HomePage() {
     );
   }, [user, colaboradoresList]);
 
+  // Barra deitada "A receber x A pagar" do mês — duas linhas só, então
+  // uma barra em pé desperdiçaria a largura do cartão. Cada barra é
+  // empilhada em "em dia" + "vencido", pra mostrar quanto do total já
+  // passou do vencimento sem precisar abrir Contas a Pagar/Receber.
+  const aPagarReceberChart = [
+    {
+      label: "A receber",
+      emDia: (aReceberMes ?? 0) - aReceberVencido,
+      vencido: aReceberVencido,
+      fill: "var(--success)",
+    },
+    {
+      label: "A pagar",
+      emDia: (aPagarMes ?? 0) - aPagarVencido,
+      vencido: aPagarVencido,
+      fill: "var(--danger)",
+    },
+  ];
+
+  // Últimos 6 meses até o atual, incluindo o próprio — é a janela que
+  // cabe legível num cartão pequeno sem virar risquinhos ilegíveis.
+  const now = new Date();
+  const tendenciaMeses = cashFlowMonths
+    .slice(0, now.getMonth() + 1)
+    .slice(-6)
+    .map((mes) => ({
+      mes: MONTH_LABELS_SHORT[mes.month - 1],
+      recebido: mes.receivable.settled,
+      pago: mes.payable.settled,
+    }));
+
+  // Gênero sem cadastro (null) some do gráfico — "sem informar" não
+  // ajuda ninguém a ler a pizza, e o total das fatias já bate com
+  // "Ativos" porque `byGender` só conta quem tem o campo preenchido.
+  const genderChart = employeesByGender
+    .filter((g) => g.gender)
+    .map((g) => ({
+      name: GENDER_LABELS[g.gender as string] ?? g.gender,
+      value: g.count,
+      fill: GENDER_COLORS[g.gender as string] ?? "var(--text-muted)",
+    }));
+
+  const sectorChart = employeesBySector.map((s, i) => ({
+    name: s.sectorName,
+    value: s.count,
+    fill: SECTOR_COLORS[i % SECTOR_COLORS.length],
+  }));
+
   return (
     <AppShell workspaceLabel="Visão geral">
       <div className="space-y-8">
@@ -262,6 +410,19 @@ export default function HomePage() {
           companyName={user?.company?.tradeName}
           isBirthday={isUserBirthday}
         />
+
+        {consolidated && (
+          <div
+            title={dashboardCompanies
+              .map((c) => c.tradeName)
+              .join(", ")}
+            className="-mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
+          >
+            <Building2 size={13} className="text-[var(--primary)]" />
+            Visão consolidada de {dashboardCompanies.length}{" "}
+            empresas do grupo
+          </div>
+        )}
 
         <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
@@ -300,14 +461,24 @@ export default function HomePage() {
                 ? String(inventoryItems)
                 : "—"
             }
-            hint="Produtos com saldo cadastrado por depósito"
+            hint={
+              consolidated
+                ? "Saldo em todas as empresas do grupo"
+                : "Produtos com saldo cadastrado por depósito"
+            }
             icon={Boxes}
             href="/erp/estoque"
             loading={loading}
           />
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-3">
+        {/*
+          A pagar/receber e Fluxo de caixa lado a lado, largos — com
+          três colunas os mini-gráficos ficavam espremidos numa faixa
+          estreita e pareciam maiores do que precisavam ser.
+          Colaboradores vai numa seção própria logo abaixo.
+        */}
+        <section className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="mb-4 flex items-center gap-2">
               <Wallet
@@ -356,9 +527,56 @@ export default function HomePage() {
               ))}
             </div>
 
+            {!cashFlowLoading &&
+              (aReceberMes || aPagarMes) && (
+                <div className="mt-4 h-24">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={aPagarReceberChart}
+                      margin={{ top: 0, right: 12, bottom: 0, left: 0 }}
+                    >
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="label"
+                        stroke="var(--text-muted)"
+                        fontSize={12}
+                        width={70}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={dashboardTooltipStyle}
+                        formatter={(v, name) => [money(Number(v)), name]}
+                        cursor={{ fill: "var(--surface-hover)" }}
+                      />
+                      <Bar
+                        dataKey="emDia"
+                        name="Em aberto"
+                        stackId="valor"
+                        radius={[0, 0, 0, 0]}
+                      >
+                        {aPagarReceberChart.map((item) => (
+                          <Cell key={item.label} fill={item.fill} />
+                        ))}
+                      </Bar>
+                      <Bar
+                        dataKey="vencido"
+                        name="Vencido"
+                        stackId="valor"
+                        fill="var(--warning)"
+                        radius={[0, 6, 6, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
             <p className="mt-4 text-xs text-[var(--text-muted)]">
               Valores em aberto do mês atual, calculados a
-              partir de Contas a Receber e a Pagar.
+              partir de Contas a Receber e a Pagar
+              {consolidated ? " de todas as empresas do grupo" : ""}.
             </p>
           </div>
 
@@ -407,12 +625,67 @@ export default function HomePage() {
               ))}
             </div>
 
+            {!cashFlowLoading && tendenciaMeses.length > 1 && (
+              <div className="mt-4 h-28">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={tendenciaMeses}
+                    margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                    barGap={2}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--border)"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="mes"
+                      stroke="var(--text-muted)"
+                      fontSize={11}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      stroke="var(--text-muted)"
+                      fontSize={11}
+                      width={44}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => moneyCompact(Number(v))}
+                    />
+                    <Tooltip
+                      contentStyle={dashboardTooltipStyle}
+                      formatter={(v) => money(Number(v))}
+                    />
+                    <Bar
+                      dataKey="recebido"
+                      name="Recebido"
+                      fill="var(--success)"
+                      radius={[3, 3, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="pago"
+                      name="Pago"
+                      fill="var(--danger)"
+                      radius={[3, 3, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
             <p className="mt-4 text-xs text-[var(--text-muted)]">
               Realizado no ano até o mês atual, a partir das
-              baixas em Contas a Receber e a Pagar.
+              baixas em Contas a Receber e a Pagar
+              {consolidated ? " de todas as empresas do grupo" : ""}.
             </p>
           </div>
+        </section>
 
+        {/* Mesma grade de 2 colunas de cima, só que com 1 cartão só —
+            mantém a largura consistente com os outros em vez de
+            esticar de ponta a ponta da tela. */}
+        <section className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="mb-4 flex items-center gap-2">
               <Users
@@ -498,7 +771,196 @@ export default function HomePage() {
 
             <p className="mt-4 text-xs text-[var(--text-muted)]">
               Exames com vencimento nos próximos 30 dias
-              (inclui atrasados).
+              (inclui atrasados)
+              {consolidated ? ", de todas as empresas do grupo" : ""}.
+            </p>
+          </div>
+        </section>
+
+        {/* Despesas por tipo e o perfil dos colaboradores, lado a lado
+            na mesma grade de 2 colunas das seções acima. */}
+        <section className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Receipt
+                size={18}
+                className="text-[var(--text-secondary)]"
+              />
+
+              <h2 className="font-semibold text-[var(--text-primary)]">
+                Despesas por tipo
+              </h2>
+            </div>
+
+            {cashFlowLoading ? (
+              <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+            ) : despesasPorTipo.length === 0 ? (
+              <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+                Nenhuma despesa lançada este ano ainda.
+              </p>
+            ) : (
+              <div
+                style={{
+                  height: Math.max(
+                    160,
+                    Math.min(despesasPorTipo.length, 6) * 40 + 30
+                  ),
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    layout="vertical"
+                    data={despesasPorTipo.slice(0, 6)}
+                    margin={{ top: 4, right: 16, bottom: 0, left: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--border)"
+                      horizontal={false}
+                    />
+                    <XAxis
+                      type="number"
+                      stroke="var(--text-muted)"
+                      fontSize={11}
+                      tickFormatter={(v) => moneyCompact(Number(v))}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="description"
+                      stroke="var(--text-muted)"
+                      fontSize={11}
+                      width={110}
+                    />
+                    <Tooltip
+                      contentStyle={dashboardTooltipStyle}
+                      formatter={(v) => money(Number(v))}
+                      cursor={{ fill: "var(--surface-hover)" }}
+                    />
+                    <Bar
+                      dataKey="pago"
+                      name="Pago"
+                      stackId="despesa"
+                      fill="var(--danger)"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="emAberto"
+                      name="Em aberto"
+                      stackId="despesa"
+                      fill="var(--warning)"
+                      radius={[0, 4, 4, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            <p className="mt-4 text-xs text-[var(--text-muted)]">
+              As {Math.min(despesasPorTipo.length, 6)} maiores contas do
+              plano de contas no ano{consolidated ? ", somando o grupo" : ""}.
+              Veja todas em Financeiro → Gráficos de fluxo de caixa.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <UsersRound
+                size={18}
+                className="text-[var(--text-secondary)]"
+              />
+
+              <h2 className="font-semibold text-[var(--text-primary)]">
+                Perfil dos colaboradores
+              </h2>
+            </div>
+
+            {hrLoading ? (
+              <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+            ) : genderChart.length === 0 &&
+              sectorChart.length === 0 ? (
+              <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+                Nenhum colaborador ativo cadastrado ainda.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="mb-1 text-center text-xs font-medium text-[var(--text-muted)]">
+                    Por gênero
+                  </p>
+
+                  <div className="h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={genderChart}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={28}
+                          outerRadius={52}
+                          paddingAngle={2}
+                        >
+                          {genderChart.map((item) => (
+                            <Cell key={item.name} fill={item.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={dashboardTooltipStyle}
+                          formatter={(v, name) => [
+                            `${v} colaborador(es)`,
+                            name,
+                          ]}
+                        />
+                        <Legend
+                          wrapperStyle={{ fontSize: 11 }}
+                          iconSize={8}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-center text-xs font-medium text-[var(--text-muted)]">
+                    Por setor
+                  </p>
+
+                  <div className="h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={sectorChart}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={28}
+                          outerRadius={52}
+                          paddingAngle={2}
+                        >
+                          {sectorChart.map((item, i) => (
+                            <Cell key={`${item.name}-${i}`} fill={item.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={dashboardTooltipStyle}
+                          formatter={(v, name) => [
+                            `${v} colaborador(es)`,
+                            name,
+                          ]}
+                        />
+                        <Legend
+                          wrapperStyle={{ fontSize: 11 }}
+                          iconSize={8}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <p className="mt-4 text-xs text-[var(--text-muted)]">
+              Só colaboradores ativos{
+                consolidated ? ", somando o grupo" : ""
+              }.
             </p>
           </div>
         </section>

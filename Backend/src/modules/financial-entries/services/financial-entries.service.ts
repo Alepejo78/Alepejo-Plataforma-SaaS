@@ -290,7 +290,7 @@ export class FinancialEntriesService {
    * ainda falta classificar.
    */
   async getAccountBreakdown(
-    companyId: string,
+    companyId: string | string[],
     year: number,
     type: FinancialEntryType,
   ) {
@@ -338,7 +338,8 @@ export class FinancialEntriesService {
    * calculados a partir dos títulos de contas a receber/pagar (nunca
    * digitados diretamente).
    */
-  async getCashFlow(companyId: string, year: number) {
+  /** `companyId` também aceita array — ver `FinancialEntriesRepository.findForCashFlow`. */
+  async getCashFlow(companyId: string | string[], year: number) {
     const entries = await this.repository.findForCashFlow(
       companyId,
       year,

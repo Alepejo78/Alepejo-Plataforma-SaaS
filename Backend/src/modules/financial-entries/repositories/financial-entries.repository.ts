@@ -164,8 +164,9 @@ export class FinancialEntriesRepository {
    * junto (`chartOfAccount`) porque o gráfico mostra a descrição dela,
    * não o id.
    */
+  /** `companyId` aceita array — mesmo motivo do `findForCashFlow`. */
   async findForAccountBreakdown(
-    companyId: string,
+    companyId: string | string[],
     year: number,
     type: FinancialEntryType,
   ) {
@@ -174,7 +175,9 @@ export class FinancialEntriesRepository {
 
     return this.prisma.financialEntry.findMany({
       where: {
-        companyId,
+        companyId: Array.isArray(companyId)
+          ? { in: companyId }
+          : companyId,
         type,
         status: { not: FinancialEntryStatus.CANCELLED },
         OR: [
@@ -193,13 +196,23 @@ export class FinancialEntriesRepository {
     });
   }
 
-  async findForCashFlow(companyId: string, year: number) {
+  /**
+   * `companyId` aceita um array pro dashboard consolidado do
+   * administrador (soma o fluxo de caixa de todas as empresas do
+   * grupo numa consulta só, em vez de uma por empresa).
+   */
+  async findForCashFlow(
+    companyId: string | string[],
+    year: number,
+  ) {
     const yearStart = new Date(Date.UTC(year, 0, 1));
     const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
 
     return this.prisma.financialEntry.findMany({
       where: {
-        companyId,
+        companyId: Array.isArray(companyId)
+          ? { in: companyId }
+          : companyId,
         status: { not: FinancialEntryStatus.CANCELLED },
         // Uma baixa antecipada pode cair num mês diferente do
         // vencimento — busca por vencimento OU data de pagamento

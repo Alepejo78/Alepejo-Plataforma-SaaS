@@ -423,4 +423,30 @@ export class EmployeesRepository {
       orderBy: { name: 'asc' },
     });
   }
+
+  /** Mesma consulta acima, mas para todas as empresas do grupo — dashboard consolidado do administrador. */
+  async findActiveForReportsInGroup(rootCompanyId: string) {
+    return this.prisma.employee.findMany({
+      where: {
+        company: { OR: [{ id: rootCompanyId }, { rootCompanyId }] },
+        active: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        birthDate: true,
+        gender: true,
+        status: true,
+        baseSalary: true,
+        jobFunction: {
+          select: {
+            id: true,
+            name: true,
+            sector: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
 }
