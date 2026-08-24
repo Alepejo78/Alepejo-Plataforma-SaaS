@@ -141,8 +141,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
 
       if (user.company.companyModules) {
+        // Igual ao LicenseService.hasModule()/moduleLicenseStatus():
+        // durante o período de teste do plano, módulo habilitado
+        // libera mesmo sem contratação (`licensed: false`) — sem essa
+        // exceção aqui, o menu escondia/travava um módulo que a API
+        // já deixava usar, dando a entender que estava bloqueado
+        // quando na verdade só faltava aparecer.
+        const inTrial =
+          user.company.companyPlan?.status === 'TRIAL';
+
         for (const item of user.company.companyModules) {
-          if (!item.enabled || !item.licensed) {
+          if (!item.enabled) {
+            continue;
+          }
+
+          if (!item.licensed && !inTrial) {
             continue;
           }
 

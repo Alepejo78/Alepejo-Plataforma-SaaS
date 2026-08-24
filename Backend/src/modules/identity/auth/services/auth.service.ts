@@ -279,7 +279,12 @@ export class AuthService {
               .filter(
                 (item) =>
                   item.enabled &&
-                  item.licensed,
+                  // Mesma exceção de teste do JwtStrategy.validate/
+                  // LicenseService.hasModule() — sem ela, o menu logo
+                  // após o login mostrava um módulo "travado" que a
+                  // API já deixava usar em período de teste.
+                  (item.licensed ||
+                    user.company.companyPlan?.status === 'TRIAL'),
               )
               .map((item) => ({
                 id: item.module.id,

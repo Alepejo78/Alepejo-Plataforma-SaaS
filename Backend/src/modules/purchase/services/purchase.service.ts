@@ -530,7 +530,9 @@ export class PurchaseService {
           companyId,
         },
         include: {
-          items: true,
+          items: {
+            include: { product: true },
+          },
           financialEntries: true,
         },
       });
@@ -564,6 +566,15 @@ export class PurchaseService {
     await this.prisma.$transaction(
       async (tx) => {
         for (const item of purchase.items) {
+          // Item de serviço/despesa não mexeu em estoque no
+          // recebimento (ver receive()) — não tem o que estornar.
+          if (
+            item.product.inventoryControl ===
+            InventoryControl.NONE
+          ) {
+            continue;
+          }
+
           const inventory =
             await tx.inventory.findFirst({
               where: {

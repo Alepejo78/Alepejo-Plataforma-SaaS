@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Undo2,
   Upload,
   X,
   XCircle,
@@ -566,7 +567,7 @@ export default function ComprasPage() {
 
   async function runAction(
     id: string,
-    action: "approve" | "cancel"
+    action: "approve" | "cancel" | "unreceive"
   ) {
     setActionId(id);
     setActionError("");
@@ -574,6 +575,8 @@ export default function ComprasPage() {
     try {
       if (action === "approve") {
         await purchaseService.approve(id);
+      } else if (action === "unreceive") {
+        await purchaseService.unreceive(id);
       } else {
         await purchaseService.cancel(id);
       }
@@ -867,6 +870,26 @@ export default function ComprasPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
                               >
                                 <PackageCheck size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {p.status === "RECEIVED" && (
+                            <Can permission="purchase.receive">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void runAction(
+                                    p.id,
+                                    "unreceive"
+                                  )
+                                }
+                                title="Estornar recebimento"
+                                aria-label="Estornar recebimento"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"
+                              >
+                                <Undo2 size={16} />
                               </button>
                             </Can>
                           )}
