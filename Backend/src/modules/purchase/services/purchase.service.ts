@@ -9,6 +9,7 @@ import {
   FinancialEntryStatus,
   FinancialEntryType,
   InventoryControl,
+  PaymentMethod,
   PurchaseOrderStatus,
   PurchaseStatus,
   StockMovementType,
@@ -21,6 +22,7 @@ import { FinancialEntriesService } from '../../financial-entries/services/financ
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
+import { buildAutoInstallments } from '../../../core/utils/installment.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { PurchaseRepository } from '../repositories/purchase.repository';
@@ -102,6 +104,12 @@ export class PurchaseService {
         item.quantity * item.unitPrice;
     }
 
+    let sourceOrder: {
+      termDays: number | null;
+      paymentMethod: PaymentMethod | null;
+      installmentsCount: number | null;
+    } | null = null;
+
     if (dto.purchaseOrderId) {
       const order = await this.prisma.purchaseOrder.findFirst(
         {
@@ -120,7 +128,25 @@ export class PurchaseService {
           'Este pedido de compra já foi convertido em compra ou está cancelado.',
         );
       }
+
+      sourceOrder = order;
     }
+
+    // Prazo/forma de pagamento/parcelas: se a tela mandou um valor,
+    // vale; senão, herda do pedido de compra de origem (que por sua
+    // vez já pode ter herdado da proposta vencedora de uma cotação).
+    const effectiveDto: CreatePurchaseDto = {
+      ...dto,
+      termDays: dto.termDays ?? sourceOrder?.termDays ?? undefined,
+      paymentMethod:
+        dto.paymentMethod ??
+        sourceOrder?.paymentMethod ??
+        undefined,
+      installmentsCount:
+        dto.installmentsCount ??
+        sourceOrder?.installmentsCount ??
+        undefined,
+    };
 
     return this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
@@ -133,7 +159,7 @@ export class PurchaseService {
         tx,
         companyId,
         number,
-        dto,
+        effectiveDto,
         totalAmount,
       );
 
@@ -473,12 +499,34 @@ export class PurchaseService {
           invoiceIssueDate ??
           purchase.purchaseDate ??
           new Date();
-        // Parcelas explícitas (ex.: importação de nota) têm
-        // prioridade sobre o prazo único — cada uma já traz seu
-        // próprio vencimento, não recalcula a partir de termDays.
+        // Sem parcelas explícitas (ex.: importação de nota), mas com
+        // mais de uma parcela pedida (na própria compra, ou herdada
+        // do pedido/cotação de origem) — gera a divisão sozinho
+        // (30/60/90... a partir do prazo).
+        const effectiveInstallmentsCount =
+          dto.installmentsCount ??
+          purchase.installmentsCount ??
+          1;
+
+        const autoInstallments =
+          !dto.installments?.length &&
+          effectiveInstallmentsCount > 1
+            ? buildAutoInstallments(
+                issueDate,
+                termDays,
+                effectiveInstallmentsCount,
+                Number(purchase.totalAmount),
+              )
+            : null;
+
+        // Parcelas (explícitas ou geradas) têm prioridade sobre o
+        // prazo único — cada uma já traz seu próprio vencimento, não
+        // recalcula a partir de termDays.
         const dueDate = dto.installments?.length
           ? new Date(dto.installments[0].dueDate)
-          : calculateDueDate(issueDate, termDays);
+          : autoInstallments
+            ? autoInstallments[0].dueDate
+            : calculateDueDate(issueDate, termDays);
 
         await tx.purchase.update({
           where: {
@@ -491,6 +539,7 @@ export class PurchaseService {
             invoiceKey: dto.invoiceKey,
             invoiceIssueDate,
             termDays,
+            installmentsCount: effectiveInstallmentsCount,
             paymentMethod,
             dueDate,
           },
@@ -528,6 +577,14 @@ export class PurchaseService {
                   amount: installment.amount,
                 }),
               ),
+            },
+          );
+        } else if (autoInstallments) {
+          await this.financialEntriesService.createInstallments(
+            tx,
+            {
+              ...commonEntryData,
+              installments: autoInstallments,
             },
           );
         } else {

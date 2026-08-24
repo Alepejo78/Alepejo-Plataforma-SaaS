@@ -62,6 +62,7 @@ export interface Purchase {
   observation?: string | null;
   totalAmount: string | number;
   termDays?: number | null;
+  installmentsCount?: number | null;
   dueDate?: string | null;
   paymentMethod?: PaymentMethod | null;
   /** Tipo de despesa — vai junto pro título gerado no recebimento. */
@@ -104,6 +105,7 @@ export interface PurchasePayload {
   purchaseDate?: string;
   observation?: string;
   termDays?: number;
+  installmentsCount?: number;
   paymentMethod?: PaymentMethod;
   chartOfAccountId?: string;
   purchaseOrderId?: string;
@@ -116,6 +118,7 @@ export interface ReceivePurchasePayload {
   invoiceIssueDate?: string;
   documentType?: FinancialDocumentType;
   termDays?: number;
+  installmentsCount?: number;
   paymentMethod?: PaymentMethod;
 }
 

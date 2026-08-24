@@ -109,6 +109,7 @@ export default function RecebimentoPage() {
     invoiceIssueDate: "",
     documentType: "" as FinancialDocumentType | "",
     termDays: "",
+    installmentsCount: "",
     paymentMethod: "" as PaymentMethod | "",
   });
   const [receiveError, setReceiveError] = useState("");
@@ -194,6 +195,11 @@ export default function RecebimentoPage() {
       termDays:
         purchase.termDays != null
           ? String(purchase.termDays)
+          : "",
+      installmentsCount:
+        purchase.installmentsCount != null &&
+        purchase.installmentsCount > 1
+          ? String(purchase.installmentsCount)
           : "",
       paymentMethod: purchase.paymentMethod ?? "",
     });
@@ -292,6 +298,9 @@ export default function RecebimentoPage() {
         documentType: receiveForm.documentType || undefined,
         termDays: receiveForm.termDays
           ? Number(receiveForm.termDays)
+          : undefined,
+        installmentsCount: receiveForm.installmentsCount
+          ? Number(receiveForm.installmentsCount)
           : undefined,
         paymentMethod: receiveForm.paymentMethod || undefined,
       });
@@ -920,6 +929,27 @@ export default function RecebimentoPage() {
                         )
                       )}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Número de parcelas
+                    </label>
+
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="1"
+                      title="Em quantos títulos o vencimento se divide — 30/60/90 com prazo 30 e 3 parcelas"
+                      className={fieldClass}
+                      value={receiveForm.installmentsCount}
+                      onChange={(e) =>
+                        setReceiveForm({
+                          ...receiveForm,
+                          installmentsCount: e.target.value,
+                        })
+                      }
+                    />
                   </div>
                 </div>
 

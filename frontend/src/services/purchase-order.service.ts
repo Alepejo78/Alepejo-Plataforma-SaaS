@@ -1,4 +1,5 @@
 import { api } from "./api";
+import type { PaymentMethod } from "./financial-entry.service";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -46,6 +47,9 @@ export interface PurchaseOrder {
   totalAmount: string | number;
   quotationId?: string | null;
   quotationOfferId?: string | null;
+  termDays?: number | null;
+  paymentMethod?: PaymentMethod | null;
+  installmentsCount?: number | null;
   createdAt: string;
   items: PurchaseOrderItem[];
 
@@ -75,6 +79,9 @@ export interface PurchaseOrderPayload {
   observation?: string;
   quotationId?: string;
   quotationOfferId?: string;
+  termDays?: number;
+  paymentMethod?: PaymentMethod;
+  installmentsCount?: number;
   items: PurchaseOrderItemPayload[];
 }
 

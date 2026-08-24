@@ -156,6 +156,7 @@ export default function CotacoesPage() {
     partnerId: "",
     partnerLabel: "",
     termDays: "",
+    installmentsCount: "",
     paymentMethod: "" as PaymentMethod | "",
   });
   const [offerPrices, setOfferPrices] = useState<
@@ -369,6 +370,7 @@ export default function CotacoesPage() {
       partnerId: "",
       partnerLabel: "",
       termDays: "",
+      installmentsCount: "",
       paymentMethod: "",
     });
 
@@ -415,6 +417,9 @@ export default function CotacoesPage() {
         partnerId: offerForm.partnerId,
         termDays: offerForm.termDays
           ? Number(offerForm.termDays)
+          : undefined,
+        installmentsCount: offerForm.installmentsCount
+          ? Number(offerForm.installmentsCount)
           : undefined,
         paymentMethod: offerForm.paymentMethod || undefined,
         items,
@@ -1031,6 +1036,9 @@ export default function CotacoesPage() {
                         {offer.termDays != null && (
                           <p className="text-xs text-[var(--text-muted)]">
                             Prazo: {offer.termDays} dia(s)
+                            {offer.installmentsCount != null &&
+                              offer.installmentsCount > 1 &&
+                              ` em ${offer.installmentsCount}x`}
                           </p>
                         )}
 
@@ -1141,7 +1149,7 @@ export default function CotacoesPage() {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>
                     Prazo (dias)
@@ -1156,6 +1164,27 @@ export default function CotacoesPage() {
                       setOfferForm({
                         ...offerForm,
                         termDays: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Número de parcelas
+                  </label>
+
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    title="Em quantos títulos o vencimento se divide — 30/60/90 com prazo 30 e 3 parcelas"
+                    className={fieldClass}
+                    value={offerForm.installmentsCount}
+                    onChange={(e) =>
+                      setOfferForm({
+                        ...offerForm,
+                        installmentsCount: e.target.value,
                       })
                     }
                   />

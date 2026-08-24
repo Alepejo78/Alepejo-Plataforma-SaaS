@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, PurchaseOrder } from '@prisma/client';
+import { PaymentMethod, Prisma, PurchaseOrder } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 
@@ -39,6 +39,9 @@ export class PurchaseOrderRepository {
         totalAmount,
         quotationId: dto.quotationId,
         quotationOfferId: dto.quotationOfferId,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        installmentsCount: dto.installmentsCount,
         items: {
           create: dto.items.map((item) => ({
             productId: item.productId,
@@ -87,6 +90,9 @@ export class PurchaseOrderRepository {
       orderDate?: Date;
       observation?: string;
       totalAmount?: number;
+      termDays?: number;
+      paymentMethod?: PaymentMethod;
+      installmentsCount?: number;
       items?: {
         productId: string;
         quantity: number;
@@ -110,6 +116,15 @@ export class PurchaseOrderRepository {
         }),
         ...(dto.totalAmount !== undefined && {
           totalAmount: dto.totalAmount,
+        }),
+        ...(dto.termDays !== undefined && {
+          termDays: dto.termDays,
+        }),
+        ...(dto.paymentMethod !== undefined && {
+          paymentMethod: dto.paymentMethod,
+        }),
+        ...(dto.installmentsCount !== undefined && {
+          installmentsCount: dto.installmentsCount,
         }),
         ...(dto.items && {
           items: {

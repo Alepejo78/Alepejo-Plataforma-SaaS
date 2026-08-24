@@ -30,6 +30,18 @@ export class CreateQuotationOfferDto {
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
 
+  @ApiProperty({
+    required: false,
+    default: 1,
+    description:
+      'Em quantos títulos o vencimento se divide (30/60/90... = termDays × 1/2/3). Vai junto pro Pedido de Compra se esta proposta vencer.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  installmentsCount?: number;
+
   @ApiProperty({ type: [CreateQuotationOfferItemDto] })
   @IsArray()
   @ArrayMinSize(1)

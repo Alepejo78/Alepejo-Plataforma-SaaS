@@ -803,6 +803,10 @@ model Purchase {
   /// Prazo em dias até o vencimento do título gerado no recebimento.
   termDays Int? @default(0)
 
+  /// Em quantos títulos o vencimento se divide no recebimento
+  /// (30/60/90... = termDays × 1/2/3) — 1 ou vazio é um título só.
+  installmentsCount Int? @default(1)
+
   /// Vencimento calculado (purchaseDate + termDays), já ajustado para
   /// dia útil (nunca sábado ou domingo).
   dueDate DateTime?
@@ -919,8 +923,12 @@ model QuotationOffer {
 
   isWinner Boolean @default(false)
 
-  termDays      Int?
-  paymentMethod PaymentMethod?
+  termDays          Int?
+  paymentMethod     PaymentMethod?
+  /// Em quantos títulos o vencimento se divide (30/60/90...) — 1 ou
+  /// vazio é o de sempre, um título só. Vai junto pro Pedido de
+  /// Compra quando esta proposta vence.
+  installmentsCount Int?            @default(1)
 
   totalAmount Decimal @default(0) @db.Decimal(18, 2)
 
@@ -978,6 +986,13 @@ model PurchaseOrder {
 
   orderDate   DateTime?
   observation String?
+
+  /// Prazo/forma de pagamento/parcelas — vêm da proposta vencedora
+  /// quando o pedido nasce de uma Cotação, ou digitados direto quando
+  /// nasce sem uma. Repassados pra Compra na conversão.
+  termDays          Int?
+  paymentMethod     PaymentMethod?
+  installmentsCount Int?            @default(1)
 
   totalAmount Decimal @default(0) @db.Decimal(18, 2)
 

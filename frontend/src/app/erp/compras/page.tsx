@@ -164,6 +164,7 @@ export default function ComprasPage() {
     purchaseDate: "",
     observation: "",
     termDays: "",
+    installmentsCount: "",
     paymentMethod: "" as PaymentMethod | "",
     chartOfAccountId: "",
     chartOfAccountLabel: "",
@@ -279,6 +280,14 @@ export default function ComprasPage() {
         order.partner?.legalName ??
         "",
       warehouseId: order.warehouseId,
+      termDays:
+        order.termDays != null ? String(order.termDays) : "",
+      paymentMethod: order.paymentMethod ?? "",
+      installmentsCount:
+        order.installmentsCount != null &&
+        order.installmentsCount > 1
+          ? String(order.installmentsCount)
+          : "",
     }));
 
     setItems(
@@ -347,6 +356,7 @@ export default function ComprasPage() {
       purchaseDate: "",
       observation: "",
       termDays: "",
+      installmentsCount: "",
       paymentMethod: "",
     });
     setItems([emptyItem()]);
@@ -373,6 +383,11 @@ export default function ComprasPage() {
       termDays: purchase.termDays
         ? String(purchase.termDays)
         : "",
+      installmentsCount:
+        purchase.installmentsCount != null &&
+        purchase.installmentsCount > 1
+          ? String(purchase.installmentsCount)
+          : "",
       paymentMethod: purchase.paymentMethod ?? "",
       chartOfAccountId: purchase.chartOfAccountId ?? "",
       chartOfAccountLabel: purchase.chartOfAccount
@@ -532,6 +547,9 @@ export default function ComprasPage() {
       purchaseDate: form.purchaseDate || undefined,
       observation: form.observation || undefined,
       termDays: form.termDays ? Number(form.termDays) : undefined,
+      installmentsCount: form.installmentsCount
+        ? Number(form.installmentsCount)
+        : undefined,
       paymentMethod: form.paymentMethod || undefined,
       chartOfAccountId: form.chartOfAccountId || undefined,
       purchaseOrderId: sourceOrderId || undefined,
@@ -1157,6 +1175,27 @@ export default function ComprasPage() {
                       ).toISOString()
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Número de parcelas
+                  </label>
+
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    title="Em quantos títulos o vencimento se divide no recebimento — 30/60/90 com prazo 30 e 3 parcelas"
+                    className={fieldClass}
+                    value={form.installmentsCount}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        installmentsCount: e.target.value,
+                      })
+                    }
+                  />
                 </div>
 
                 <div>

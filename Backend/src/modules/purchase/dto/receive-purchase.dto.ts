@@ -81,7 +81,7 @@ export class ReceivePurchaseDto {
     required: false,
     type: [InstallmentDto],
     description:
-      'Divide o título gerado em várias parcelas em vez de uma só — quando informado, ignora `termDays` para o vencimento (cada parcela já traz o seu). Somadas, precisam bater com o total da compra.',
+      'Divide o título gerado em várias parcelas em vez de uma só, cada uma com data e valor escolhidos na mão — quando informado, tem prioridade sobre `installmentsCount`. Somadas, precisam bater com o total da compra.',
   })
   @IsOptional()
   @IsArray()
@@ -89,4 +89,16 @@ export class ReceivePurchaseDto {
   @ValidateNested({ each: true })
   @Type(() => InstallmentDto)
   installments?: InstallmentDto[];
+
+  @ApiProperty({
+    required: false,
+    default: 1,
+    description:
+      'Em quantos títulos o vencimento se divide (30/60/90... = termDays × 1/2/3) — sobrescreve o da compra. Ignorado se `installments` vier preenchido.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  installmentsCount?: number;
 }

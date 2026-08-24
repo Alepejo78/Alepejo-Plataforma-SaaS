@@ -46,6 +46,11 @@ import {
   type Product,
 } from "@/services/product.service";
 
+import {
+  PAYMENT_METHOD_LABELS,
+  type PaymentMethod,
+} from "@/services/financial-entry.service";
+
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
@@ -132,6 +137,9 @@ function emptyForm() {
     warehouseId: "",
     orderDate: "",
     observation: "",
+    termDays: "",
+    paymentMethod: "" as PaymentMethod | "",
+    installmentsCount: "",
   };
 }
 
@@ -266,6 +274,14 @@ export default function PedidosDeCompraPage() {
         winner.partner?.legalName ??
         "",
       warehouseId: quotation.warehouseId,
+      termDays:
+        winner.termDays != null ? String(winner.termDays) : "",
+      paymentMethod: winner.paymentMethod ?? "",
+      installmentsCount:
+        winner.installmentsCount != null &&
+        winner.installmentsCount > 1
+          ? String(winner.installmentsCount)
+          : "",
     }));
 
     setItems(
@@ -340,6 +356,14 @@ export default function PedidosDeCompraPage() {
         ? order.orderDate.slice(0, 10)
         : "",
       observation: order.observation ?? "",
+      termDays:
+        order.termDays != null ? String(order.termDays) : "",
+      paymentMethod: order.paymentMethod ?? "",
+      installmentsCount:
+        order.installmentsCount != null &&
+        order.installmentsCount > 1
+          ? String(order.installmentsCount)
+          : "",
     });
     setItems(
       order.items.map((it) => ({
@@ -419,6 +443,13 @@ export default function PedidosDeCompraPage() {
       observation: form.observation || undefined,
       quotationId: sourceQuotationId || undefined,
       quotationOfferId: sourceOfferId || undefined,
+      termDays: form.termDays
+        ? Number(form.termDays)
+        : undefined,
+      paymentMethod: form.paymentMethod || undefined,
+      installmentsCount: form.installmentsCount
+        ? Number(form.installmentsCount)
+        : undefined,
       items: validItems.map((it) => ({
         productId: it.productId,
         quantity: decimal(it.quantity),
@@ -856,6 +887,76 @@ export default function PedidosDeCompraPage() {
                       })
                     }
                   />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className={labelClass}>
+                    Prazo (dias)
+                  </label>
+
+                  <input
+                    type="number"
+                    min={0}
+                    className={fieldClass}
+                    value={form.termDays}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        termDays: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Número de parcelas
+                  </label>
+
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    title="Em quantos títulos o vencimento se divide — 30/60/90 com prazo 30 e 3 parcelas"
+                    className={fieldClass}
+                    value={form.installmentsCount}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        installmentsCount: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Forma de pagamento
+                  </label>
+
+                  <select
+                    className={fieldClass}
+                    value={form.paymentMethod}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        paymentMethod: e.target
+                          .value as PaymentMethod | "",
+                      })
+                    }
+                  >
+                    <option value="">Selecione...</option>
+
+                    {Object.entries(PAYMENT_METHOD_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      )
+                    )}
+                  </select>
                 </div>
               </div>
 

@@ -52,6 +52,7 @@ export interface QuotationOffer {
   isWinner: boolean;
   termDays?: number | null;
   paymentMethod?: PaymentMethod | null;
+  installmentsCount?: number | null;
   totalAmount: string | number;
   createdAt: string;
   items: QuotationOfferItem[];
@@ -104,6 +105,7 @@ export interface QuotationOfferPayload {
   partnerId: string;
   termDays?: number;
   paymentMethod?: PaymentMethod;
+  installmentsCount?: number;
   items: QuotationOfferItemPayload[];
 }
 

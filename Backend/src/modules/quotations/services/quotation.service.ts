@@ -238,6 +238,7 @@ export class QuotationService {
         partnerId: dto.partnerId,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
+        installmentsCount: dto.installmentsCount,
         totalAmount,
         items: {
           create: offerItems,
@@ -343,6 +344,9 @@ export class QuotationService {
           warehouseId: quotation.warehouseId,
           quotationId: quotation.id,
           quotationOfferId: offer.id,
+          termDays: offer.termDays,
+          paymentMethod: offer.paymentMethod,
+          installmentsCount: offer.installmentsCount,
           totalAmount: offer.totalAmount,
           items: {
             create: offer.items.map((item) => ({

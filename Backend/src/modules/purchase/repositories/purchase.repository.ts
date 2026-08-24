@@ -62,6 +62,7 @@ export class PurchaseRepository {
         chartOfAccountId: dto.chartOfAccountId,
         totalAmount,
         termDays,
+        installmentsCount: dto.installmentsCount,
         dueDate: calculateDueDate(issueDate, termDays),
         paymentMethod: dto.paymentMethod,
         purchaseOrderId: dto.purchaseOrderId,

@@ -259,6 +259,9 @@ export class PurchaseOrderService {
         : undefined,
       observation: dto.observation,
       totalAmount,
+      termDays: dto.termDays,
+      paymentMethod: dto.paymentMethod,
+      installmentsCount: dto.installmentsCount,
       items,
     });
   }
