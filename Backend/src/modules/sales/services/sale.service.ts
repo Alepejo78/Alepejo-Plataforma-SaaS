@@ -545,6 +545,23 @@ export class SaleService {
     });
   }
 
+  async remove(
+    companyId: string,
+    id: string,
+  ) {
+    const sale = await this.findOne(companyId, id);
+
+    if (sale.status !== 'CANCELLED') {
+      throw new BadRequestException(
+        'Só vendas canceladas podem ser excluídas.',
+      );
+    }
+
+    await this.prisma.sale.delete({
+      where: { id },
+    });
+  }
+
   async undoApproval(
     companyId: string,
     id: string,

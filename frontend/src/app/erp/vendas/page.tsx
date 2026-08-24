@@ -51,6 +51,7 @@ import {
 
 import {
   DOCUMENT_TYPE_LABELS,
+  FINANCIAL_ENTRY_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   type FinancialDocumentType,
   type PaymentMethod,
@@ -709,6 +710,30 @@ export default function VendasPage() {
     }
   }
 
+  async function handleRemove(sale: Sale) {
+    const confirmed = window.confirm(
+      `Excluir a venda ${formatSaleNumber(sale.number)}? Essa ação não pode ser desfeita.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionId(sale.id);
+    setActionError("");
+
+    try {
+      await saleService.remove(sale.id);
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível excluir a venda.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   function openApprove(sale: Sale) {
     setApproveTarget(sale);
     setApproveForm({
@@ -1127,6 +1152,23 @@ export default function VendasPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
                               >
                                 <Undo2 size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {s.status === "CANCELLED" && (
+                            <Can permission="sale.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void handleRemove(s)
+                                }
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </Can>
                           )}
@@ -1804,6 +1846,57 @@ export default function VendasPage() {
                 </p>
               )}
             </div>
+
+            {detail.financialEntries.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">
+                  Lançamentos no financeiro
+                </p>
+
+                <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+                      <tr>
+                        <th className="px-4 py-2 font-semibold">
+                          Vencimento
+                        </th>
+                        <th className="px-4 py-2 font-semibold">
+                          Documento
+                        </th>
+                        <th className="px-4 py-2 text-right font-semibold">
+                          Valor
+                        </th>
+                        <th className="px-4 py-2 font-semibold">
+                          Situação
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {detail.financialEntries.map((entry) => (
+                        <tr
+                          key={entry.id}
+                          className="border-t border-[var(--border)]"
+                        >
+                          <td className="whitespace-nowrap px-4 py-2 text-[var(--text-secondary)]">
+                            {date(entry.dueDate)}
+                          </td>
+                          <td className="px-4 py-2 text-[var(--text-secondary)]">
+                            {entry.documentNumber ?? "—"}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-2 text-right font-medium text-[var(--text-primary)]">
+                            {money(entry.amount)}
+                          </td>
+                          <td className="px-4 py-2 text-[var(--text-secondary)]">
+                            {FINANCIAL_ENTRY_STATUS_LABELS[entry.status]}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

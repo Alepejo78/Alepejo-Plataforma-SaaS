@@ -43,6 +43,16 @@ export interface SaleItem {
   } | null;
 }
 
+export interface SaleFinancialEntry {
+  id: string;
+  dueDate: string;
+  amount: string | number;
+  paidAmount: string | number;
+  status: "OPEN" | "PAID" | "CANCELLED";
+  documentNumber?: string | null;
+  paymentDate?: string | null;
+}
+
 export interface Sale {
   id: string;
   number: number;
@@ -73,6 +83,7 @@ export interface Sale {
   salesOrderId?: string | null;
   createdAt: string;
   items: SaleItem[];
+  financialEntries: SaleFinancialEntry[];
 
   partner?: {
     id: string;
@@ -196,5 +207,9 @@ export const saleService = {
     );
 
     return data.data;
+  },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/sales/${id}`);
   },
 };

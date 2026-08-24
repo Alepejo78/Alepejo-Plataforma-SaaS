@@ -275,6 +275,7 @@ const permissionGroups = [
       ["sales-order.cancel", "Cancelar Pedidos de Venda"],
       ["sale.reverse", "Estornar Vendas"],
       ["sale.report", "Ver Relatórios de Vendas"],
+      ["sale.delete", "Excluir Vendas"],
     ],
   },
   {
@@ -339,6 +340,7 @@ const permissionGroups = [
       ["purchase-order.cancel", "Cancelar Pedidos de Compra"],
       ["purchase.reverse", "Estornar Compras"],
       ["purchase.report", "Ver Relatórios de Compras"],
+      ["purchase.delete", "Excluir Compras"],
     ],
   },
   {

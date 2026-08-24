@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -152,6 +153,21 @@ export class PurchaseController {
     @Param('id') id: string,
   ) {
     return this.service.cancel(
+      companyId,
+      id,
+    );
+  }
+
+  @Delete(':id')
+  @Permissions('purchase.delete')
+  @ApiOperation({
+    summary: 'Excluir compra cancelada',
+  })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(
       companyId,
       id,
     );

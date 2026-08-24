@@ -710,4 +710,25 @@ export class PurchaseService {
       },
     });
   }
+
+  async remove(
+    companyId: string,
+    id: string,
+  ) {
+    const purchase =
+      await this.findOne(companyId, id);
+
+    if (
+      purchase.status !==
+      PurchaseStatus.CANCELLED
+    ) {
+      throw new BadRequestException(
+        'Só compras canceladas podem ser excluídas.',
+      );
+    }
+
+    await this.prisma.purchase.delete({
+      where: { id },
+    });
+  }
 }

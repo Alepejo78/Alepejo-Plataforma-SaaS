@@ -42,6 +42,16 @@ export interface PurchaseItem {
   } | null;
 }
 
+export interface PurchaseFinancialEntry {
+  id: string;
+  dueDate: string;
+  amount: string | number;
+  paidAmount: string | number;
+  status: "OPEN" | "PAID" | "CANCELLED";
+  documentNumber?: string | null;
+  paymentDate?: string | null;
+}
+
 export interface Purchase {
   id: string;
   number: number;
@@ -67,6 +77,7 @@ export interface Purchase {
   purchaseOrderId?: string | null;
   createdAt: string;
   items: PurchaseItem[];
+  financialEntries: PurchaseFinancialEntry[];
 
   partner?: {
     id: string;
@@ -196,5 +207,9 @@ export const purchaseService = {
     );
 
     return data.data;
+  },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/purchases/${id}`);
   },
 };

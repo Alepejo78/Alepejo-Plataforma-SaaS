@@ -22,6 +22,12 @@ const includeRelations = {
       product: true,
     },
   },
+  // Pra conferência: mostra todos os títulos que essa compra gerou no
+  // financeiro (uma parcela vira uma FinancialEntry cada) — não só o
+  // vencimento único que fica no próprio registro da compra.
+  financialEntries: {
+    orderBy: { dueDate: 'asc' },
+  },
 } satisfies Prisma.PurchaseInclude;
 
 @Injectable()
