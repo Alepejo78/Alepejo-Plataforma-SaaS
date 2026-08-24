@@ -78,4 +78,14 @@ export class PurchaseOrderController {
   ) {
     return this.service.cancel(companyId, id);
   }
+
+  @Patch(':id/reopen')
+  @Permissions('purchase-order.cancel')
+  @ApiOperation({ summary: 'Estornar pedido convertido em compra' })
+  reopen(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.reopen(companyId, id);
+  }
 }

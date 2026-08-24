@@ -9,6 +9,7 @@ import {
   FileText,
   Plus,
   Trash2,
+  Undo2,
   X,
   XCircle,
 } from "lucide-react";
@@ -486,6 +487,32 @@ export default function CotacoesPage() {
         extractMessage(
           err,
           "Não foi possível escolher o vencedor."
+        )
+      );
+    } finally {
+      setDetailBusy(false);
+    }
+  }
+
+  async function undoWinner() {
+    if (!detail) {
+      return;
+    }
+
+    setDetailBusy(true);
+    setDetailError("");
+
+    try {
+      await quotationService.undoWinner(detail.id);
+
+      await refreshDetail(detail.id);
+
+      await load();
+    } catch (err) {
+      setDetailError(
+        extractMessage(
+          err,
+          "Não foi possível estornar a vencedora."
         )
       );
     } finally {
@@ -976,6 +1003,21 @@ export default function CotacoesPage() {
                         </button>
                       </Can>
                     )}
+
+                  {detail.status === "DECIDED" && (
+                    <Can permission="quotation.decide">
+                      <button
+                        type="button"
+                        disabled={detailBusy}
+                        onClick={() => void undoWinner()}
+                        title="Estornar a vencedora (só se o pedido de compra gerado ainda não virou uma compra)"
+                        className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                      >
+                        <Undo2 size={14} />
+                        Estornar vencedora
+                      </button>
+                    </Can>
+                  )}
                 </div>
 
                 {detailError && (

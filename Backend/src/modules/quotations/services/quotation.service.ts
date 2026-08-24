@@ -408,4 +408,57 @@ export class QuotationService {
 
     return this.findOne(companyId, quotationId);
   }
+
+  /**
+   * Desfaz a escolha da vencedora — volta a cotação pra rascunho pra
+   * poder escolher outra proposta. Só permitido se o pedido de compra
+   * gerado por chooseWinner ainda não virou uma compra de verdade
+   * (senão a decisão está "amarrada" num documento posterior).
+   */
+  async undoWinner(companyId: string, quotationId: string) {
+    const quotation = await this.findOne(companyId, quotationId);
+
+    if (quotation.status !== QuotationStatus.DECIDED) {
+      throw new BadRequestException(
+        'Somente cotações decididas podem ter a vencedora estornada.',
+      );
+    }
+
+    const winner = quotation.offers.find((o) => o.isWinner);
+
+    if (!winner) {
+      throw new BadRequestException(
+        'Esta cotação não tem uma proposta vencedora definida.',
+      );
+    }
+
+    const order = await this.prisma.purchaseOrder.findFirst({
+      where: { quotationOfferId: winner.id },
+      include: { purchase: true },
+    });
+
+    if (order?.purchase) {
+      throw new BadRequestException(
+        'O pedido de compra gerado por esta cotação já virou uma compra — não é possível estornar a escolha.',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (order) {
+        await tx.purchaseOrder.delete({ where: { id: order.id } });
+      }
+
+      await tx.quotationOffer.update({
+        where: { id: winner.id },
+        data: { isWinner: false },
+      });
+
+      await tx.quotation.update({
+        where: { id: quotationId },
+        data: { status: QuotationStatus.DRAFT },
+      });
+    });
+
+    return this.findOne(companyId, quotationId);
+  }
 }

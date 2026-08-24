@@ -195,4 +195,12 @@ export const quotationService = {
 
     return data.data;
   },
+
+  async undoWinner(quotationId: string): Promise<Quotation> {
+    const { data } = await api.patch<ApiEnvelope<Quotation>>(
+      `/quotations/${quotationId}/undo-winner`
+    );
+
+    return data.data;
+  },
 };

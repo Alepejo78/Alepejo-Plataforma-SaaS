@@ -9,6 +9,7 @@ import {
   FileText,
   Plus,
   Trash2,
+  Undo2,
   X,
   XCircle,
 } from "lucide-react";
@@ -507,6 +508,26 @@ export default function PedidosDeCompraPage() {
     }
   }
 
+  async function reopenOrder(id: string) {
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await purchaseOrderService.reopen(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(
+          err,
+          "Não foi possível estornar o pedido de compra."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   const semDeposito = warehouses.length === 0;
 
   return (
@@ -726,6 +747,23 @@ export default function PedidosDeCompraPage() {
                                 </button>
                               </Can>
                             </>
+                          )}
+
+                          {o.status === "CONVERTED" && (
+                            <Can permission="purchase-order.cancel">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void reopenOrder(o.id)
+                                }
+                                title="Estornar (a compra vinculada precisa estar cancelada e excluída)"
+                                aria-label="Estornar"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                              >
+                                <Undo2 size={16} />
+                              </button>
+                            </Can>
                           )}
                         </div>
                       </td>

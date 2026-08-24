@@ -138,4 +138,12 @@ export const purchaseOrderService = {
 
     return data.data;
   },
+
+  async reopen(id: string): Promise<PurchaseOrder> {
+    const { data } = await api.patch<
+      ApiEnvelope<PurchaseOrder>
+    >(`/purchase-orders/${id}/reopen`);
+
+    return data.data;
+  },
 };

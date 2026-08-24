@@ -117,4 +117,16 @@ export class QuotationController {
   ) {
     return this.service.chooseWinner(companyId, id, offerId);
   }
+
+  @Patch(':id/undo-winner')
+  @Permissions('quotation.decide')
+  @ApiOperation({
+    summary: 'Estornar a escolha da vencedora, voltando a cotação para rascunho',
+  })
+  undoWinner(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.undoWinner(companyId, id);
+  }
 }

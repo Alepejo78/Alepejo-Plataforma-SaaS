@@ -277,4 +277,38 @@ export class PurchaseOrderService {
 
     return this.repository.cancel(id);
   }
+
+  /**
+   * Volta um pedido convertido para rascunho — só quando a compra que
+   * o converteu não existe mais (foi cancelada e excluída). O vínculo
+   * Purchase.purchaseOrderId é único no banco, então enquanto essa
+   * compra existir (mesmo cancelada) o pedido fica preso — é o que
+   * caracteriza "amarrado em documento posterior".
+   */
+  async reopen(companyId: string, id: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (order.status !== PurchaseOrderStatus.CONVERTED) {
+      throw new BadRequestException(
+        'Somente pedidos convertidos em compra podem ser estornados.',
+      );
+    }
+
+    const linkedPurchase = await this.prisma.purchase.findFirst({
+      where: { purchaseOrderId: id },
+    });
+
+    if (linkedPurchase) {
+      throw new BadRequestException(
+        'Este pedido já tem uma compra vinculada — cancele e exclua a compra antes de estornar o pedido.',
+      );
+    }
+
+    await this.prisma.purchaseOrder.update({
+      where: { id },
+      data: { status: PurchaseOrderStatus.DRAFT },
+    });
+
+    return this.findOne(companyId, id);
+  }
 }
