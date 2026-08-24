@@ -23,6 +23,18 @@ export const sidebarStyles = {
     "hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]",
   ].join(" "),
 
+  /**
+   * Ícone do menu. O `group-hover` cresce um tico e o item ativo ganha
+   * um leve empurrão pra frente — movimento curto de propósito: num
+   * menu com dezenas de linhas, animação longa vira agitação.
+   */
+  navigationIcon: [
+    "shrink-0 transition-transform duration-200 ease-out",
+    "group-hover:scale-110",
+  ].join(" "),
+
+  navigationIconActive: "scale-110 drop-shadow-sm",
+
   navigationItemActive: [
     "bg-[var(--primary)] text-[var(--primary-contrast)]",
     "hover:bg-[var(--primary-hover)] hover:text-[var(--primary-contrast)]",

@@ -1298,11 +1298,22 @@ function pickVoice(voices: SpeechSynthesisVoice[]) {
 
     // Neurais do Edge — as mais naturais que aparecem no navegador.
     if (name.includes("natural") || name.includes("online")) {
-      points += 40;
+      points += 60;
     }
 
+    /*
+     * A voz do Google em pt-BR é a mesma do navegador de mapas: todo
+     * mundo já ouviu, e no mascote soa como GPS, não como personagem.
+     * Fica por último entre as femininas — se houver qualquer outra,
+     * ela ganha; se for a única do navegador, ainda assim é usada.
+     */
     if (name.includes("google")) {
-      points += 25;
+      points -= 25;
+    }
+
+    // Mesma história da voz padrão do Windows, batida de tanto uso.
+    if (name.includes("maria")) {
+      points -= 10;
     }
 
     if (voice.lang.toLowerCase().replace("_", "-") === "pt-br") {
@@ -1414,8 +1425,10 @@ function DemoTour() {
 
       utterance.lang = "pt-BR";
       // Ritmo normal de fala: abaixo disso a leitura fica arrastada.
-      utterance.rate = 1;
-      utterance.pitch = 1.05;
+      utterance.rate = 1.04;
+      // Um tom acima: afasta do jeito de locução de GPS e combina com
+      // um personagem, que é o que o Pejo é.
+      utterance.pitch = 1.18;
       utterance.onend = advance;
       // Se a fala falhar (aba sem permissão, voz indisponível), o tour
       // não pode travar parado nesse módulo pra sempre.

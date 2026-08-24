@@ -81,7 +81,10 @@ function LeafItem({
       {Icon ? (
         <Icon
           size={nested ? 18 : 20}
-          className="shrink-0"
+          className={cn(
+            sidebarStyles.navigationIcon,
+            active && sidebarStyles.navigationIconActive
+          )}
         />
       ) : null}
 
@@ -256,7 +259,14 @@ function GroupItem({
               "text-[var(--text-primary)]"
           )}
         >
-          <Icon size={20} className="shrink-0" />
+          <Icon
+          size={20}
+          className={cn(
+            sidebarStyles.navigationIcon,
+            hasActiveChild && sidebarStyles.navigationIconActive,
+            hasActiveChild && "text-[var(--primary)]"
+          )}
+        />
         </button>
 
         {mounted &&
@@ -307,7 +317,14 @@ function GroupItem({
             "text-[var(--text-primary)]"
         )}
       >
-        <Icon size={20} className="shrink-0" />
+        <Icon
+          size={20}
+          className={cn(
+            sidebarStyles.navigationIcon,
+            hasActiveChild && sidebarStyles.navigationIconActive,
+            hasActiveChild && "text-[var(--primary)]"
+          )}
+        />
 
         <span className="flex-1 truncate text-left">
           {entry.title}
