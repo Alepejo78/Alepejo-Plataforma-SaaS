@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 
 import {
   INVENTORY_CONTROL_LABELS,
@@ -13,6 +14,11 @@ import {
   type ProductType,
   type UnitOfMeasure,
 } from "@/services/product.service";
+
+import {
+  chartOfAccountService,
+  type ChartOfAccount,
+} from "@/services/chart-of-account.service";
 
 const fieldClass = `
   h-11 w-full rounded-xl border border-[var(--border)]
@@ -34,6 +40,8 @@ interface FormState {
   inventoryControl: InventoryControl;
   categoryId: string;
   brandId: string;
+  chartOfAccountId: string;
+  chartOfAccountLabel: string;
   unitId: string;
   salePrice: number;
   minimumStock: string;
@@ -52,6 +60,8 @@ const emptyForm: FormState = {
   inventoryControl: "SIMPLE",
   categoryId: "",
   brandId: "",
+  chartOfAccountId: "",
+  chartOfAccountLabel: "",
   unitId: "",
   salePrice: 0,
   minimumStock: "",
@@ -96,6 +106,10 @@ export function ProductForm({
         inventoryControl: product.inventoryControl,
         categoryId: product.categoryId ?? "",
         brandId: product.brandId ?? "",
+        chartOfAccountId: product.chartOfAccountId ?? "",
+        chartOfAccountLabel: product.chartOfAccount
+          ? `${product.chartOfAccount.code} — ${product.chartOfAccount.description}`
+          : "",
         unitId: product.unitId ?? "",
         salePrice: Number(product.salePrice ?? 0),
         minimumStock:
@@ -121,6 +135,18 @@ export function ProductForm({
   }, [product]);
 
   const isService = form.type === "SERVICE";
+
+  const searchChartOfAccounts = useCallback(
+    async (query: string) => {
+      const result = await chartOfAccountService.list({
+        search: query || undefined,
+        limit: 20,
+      });
+
+      return result.data;
+    },
+    []
+  );
 
   function setField<K extends keyof FormState>(
     field: K,
@@ -166,6 +192,7 @@ export function ProductForm({
         : form.inventoryControl,
       categoryId: text(form.categoryId),
       brandId: text(form.brandId),
+      chartOfAccountId: text(form.chartOfAccountId),
       unitId: form.unitId,
       salePrice: form.salePrice,
       minimumStock: isService
@@ -314,7 +341,7 @@ export function ProductForm({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-4">
         <div>
           <label className={labelClass} htmlFor="unitId">
             Unidade{" "}
@@ -383,6 +410,34 @@ export function ProductForm({
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Classificação
+          </label>
+
+          <SearchSelect<ChartOfAccount>
+            displayLabel={form.chartOfAccountLabel}
+            search={searchChartOfAccounts}
+            getId={(c) => c.id}
+            getLabel={(c) => `${c.code} — ${c.description}`}
+            placeholder="Digite para buscar a classificação..."
+            onSelect={(c) =>
+              setForm((previous) => ({
+                ...previous,
+                chartOfAccountId: c?.id ?? "",
+                chartOfAccountLabel: c
+                  ? `${c.code} — ${c.description}`
+                  : "",
+              }))
+            }
+          />
+
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            Quando preenchida, compras e vendas já sugerem
+            essa classificação no título gerado.
+          </p>
         </div>
       </section>
 

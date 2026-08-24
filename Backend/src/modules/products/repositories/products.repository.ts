@@ -27,6 +27,7 @@ export class ProductsRepository {
         category: true,
         brand: true,
         unit: true,
+        chartOfAccount: true,
       },
     });
   }
@@ -109,6 +110,7 @@ export class ProductsRepository {
           category: true,
           brand: true,
           unit: true,
+          chartOfAccount: true,
         },
         skip: (page - 1) * limit,
         take: limit,

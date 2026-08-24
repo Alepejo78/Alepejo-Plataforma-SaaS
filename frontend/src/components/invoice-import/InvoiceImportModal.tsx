@@ -247,6 +247,15 @@ export function InvoiceImportModal({
         )
       );
     }
+
+    if (p.chartOfAccountId && !chartOfAccountId) {
+      setChartOfAccountId(p.chartOfAccountId);
+      setChartOfAccountLabel(
+        p.chartOfAccount
+          ? `${p.chartOfAccount.code} — ${p.chartOfAccount.description}`
+          : ""
+      );
+    }
   }
 
   async function applyParsed(parsed: ParsedInvoice) {
@@ -918,7 +927,7 @@ export function InvoiceImportModal({
                                 ? `Da nota: "${it.hint}" — buscar produto...`
                                 : "Digite para buscar o produto..."
                             }
-                            onSelect={(p) =>
+                            onSelect={(p) => {
                               updateItem(index, {
                                 productId: p?.id ?? "",
                                 productLabel: p
@@ -927,8 +936,22 @@ export function InvoiceImportModal({
                                 tracksStock: p
                                   ? p.inventoryControl !== "NONE"
                                   : true,
-                              })
-                            }
+                              });
+
+                              if (
+                                p?.chartOfAccountId &&
+                                !chartOfAccountId
+                              ) {
+                                setChartOfAccountId(
+                                  p.chartOfAccountId
+                                );
+                                setChartOfAccountLabel(
+                                  p.chartOfAccount
+                                    ? `${p.chartOfAccount.code} — ${p.chartOfAccount.description}`
+                                    : ""
+                                );
+                              }
+                            }}
                           />
 
                           {it.productId && !it.tracksStock && (

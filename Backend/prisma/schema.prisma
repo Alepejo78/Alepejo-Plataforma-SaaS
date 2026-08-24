@@ -603,6 +603,11 @@ model Product {
   complementaryDescription String?              @db.VarChar(255)
   type                     ProductType          @default(PRODUCT)
   inventoryControl         InventoryControl     @default(SIMPLE)
+  /// Classificação padrão (Tipo de despesa/receita) — quando
+  /// preenchida, compras/vendas/importação de nota já sugerem essa
+  /// conta pro título gerado, sem travar a escolha manual.
+  chartOfAccountId         String?
+  chartOfAccount           ChartOfAccount?      @relation(fields: [chartOfAccountId], references: [id])
   /// Congelado (frente "Interprise") — Product virou cadastro de
   /// grupo, custo real passou a ser Inventory.averageCost (por
   /// empresa/depósito). Default só pra não quebrar create() sem o
@@ -1310,6 +1315,7 @@ model ChartOfAccount {
   financialEntries FinancialEntry[]
   purchases        Purchase[]
   sales            Sale[]
+  products         Product[]
   active           Boolean                      @default(true)
   createdAt        DateTime                     @default(now())
   updatedAt        DateTime                     @updatedAt

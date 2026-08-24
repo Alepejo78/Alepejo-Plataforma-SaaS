@@ -1576,7 +1576,7 @@ export default function VendasPage() {
                               money(p.salePrice)
                             }
                             placeholder="Digite para buscar o produto..."
-                            onSelect={(p) =>
+                            onSelect={(p) => {
                               updateItem(index, {
                                 productId: p?.id ?? "",
                                 productLabel: p
@@ -1586,8 +1586,26 @@ export default function VendasPage() {
                                   p && !it.unitPrice
                                     ? num(p.salePrice)
                                     : it.unitPrice,
-                              })
-                            }
+                              });
+
+                              // Sugere a classificação do produto
+                              // no título, se ainda não tiver
+                              // escolhida uma.
+                              if (
+                                p?.chartOfAccountId &&
+                                !form.chartOfAccountId
+                              ) {
+                                setForm((prev) => ({
+                                  ...prev,
+                                  chartOfAccountId:
+                                    p.chartOfAccountId!,
+                                  chartOfAccountLabel: p
+                                    .chartOfAccount
+                                    ? `${p.chartOfAccount.code} — ${p.chartOfAccount.description}`
+                                    : prev.chartOfAccountLabel,
+                                }));
+                              }
+                            }}
                           />
                         </div>
 

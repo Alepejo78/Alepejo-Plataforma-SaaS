@@ -67,6 +67,7 @@ export interface Product {
   inventoryControl: InventoryControl;
   categoryId?: string | null;
   brandId?: string | null;
+  chartOfAccountId?: string | null;
   unitId: string;
   cost: string | number;
   salePrice: string | number;
@@ -80,6 +81,11 @@ export interface Product {
   category?: AuxiliaryRecord | null;
   brand?: AuxiliaryRecord | null;
   unit?: UnitOfMeasure | null;
+  chartOfAccount?: {
+    id: string;
+    code: string;
+    description: string;
+  } | null;
 }
 
 export interface ProductFilter {

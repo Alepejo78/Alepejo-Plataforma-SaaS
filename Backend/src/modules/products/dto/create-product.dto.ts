@@ -53,7 +53,11 @@ import {
     @IsOptional()
     @IsString()
     brandId?: string;
-  
+
+    @IsOptional()
+    @IsString()
+    chartOfAccountId?: string;
+
     @IsString()
     unitId: string;
 
