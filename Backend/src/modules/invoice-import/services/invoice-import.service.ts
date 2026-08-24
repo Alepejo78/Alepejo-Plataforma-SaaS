@@ -112,6 +112,7 @@ export class InvoiceImportService {
         : undefined,
       termDays: dto.termDays,
       paymentMethod: dto.paymentMethod,
+      installments: dto.installments,
     });
   }
 
@@ -140,6 +141,7 @@ export class InvoiceImportService {
         : undefined,
       termDays: dto.termDays,
       paymentMethod: dto.paymentMethod,
+      installments: dto.installments,
     });
   }
 

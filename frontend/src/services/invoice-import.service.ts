@@ -83,8 +83,8 @@ export interface ConfirmOrderImportPayload {
   invoiceKey?: string;
   invoiceIssueDate?: string;
   observation?: string;
-  termDays?: number;
   paymentMethod?: PaymentMethod;
+  installments: InvoiceInstallmentPayload[];
   items: { productId: string; quantity: number; unitPrice: number }[];
 }
 

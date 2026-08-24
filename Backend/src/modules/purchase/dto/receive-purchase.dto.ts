@@ -4,6 +4,8 @@ import {
   PaymentMethod,
 } from '@prisma/client';
 import {
+  ArrayMinSize,
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -11,8 +13,11 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+import { InstallmentDto } from '../../../core/dto/installment.dto';
 
 export class ReceivePurchaseDto {
   @ApiProperty({
@@ -71,4 +76,17 @@ export class ReceivePurchaseDto {
   @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
+
+  @ApiProperty({
+    required: false,
+    type: [InstallmentDto],
+    description:
+      'Divide o título gerado em várias parcelas em vez de uma só — quando informado, ignora `termDays` para o vencimento (cada parcela já traz o seu). Somadas, precisam bater com o total da compra.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => InstallmentDto)
+  installments?: InstallmentDto[];
 }

@@ -13,8 +13,8 @@ import { Type } from 'class-transformer';
 
 import { FinancialDocumentType, PaymentMethod } from '@prisma/client';
 
+import { InstallmentDto } from '../../../core/dto/installment.dto';
 import { InvoicePartnerDto } from './invoice-partner.dto';
-import { InvoiceInstallmentDto } from './invoice-installment.dto';
 
 /**
  * Importação de nota fiscal lançando direto em Contas a
@@ -66,10 +66,10 @@ export class ConfirmExpenseImportDto {
   @MaxLength(500)
   observation?: string;
 
-  @ApiProperty({ type: [InvoiceInstallmentDto] })
+  @ApiProperty({ type: [InstallmentDto] })
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
-  @Type(() => InvoiceInstallmentDto)
-  installments: InvoiceInstallmentDto[];
+  @Type(() => InstallmentDto)
+  installments: InstallmentDto[];
 }

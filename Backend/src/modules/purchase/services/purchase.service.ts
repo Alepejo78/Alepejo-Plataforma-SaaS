@@ -473,10 +473,12 @@ export class PurchaseService {
           invoiceIssueDate ??
           purchase.purchaseDate ??
           new Date();
-        const dueDate = calculateDueDate(
-          issueDate,
-          termDays,
-        );
+        // Parcelas explícitas (ex.: importação de nota) têm
+        // prioridade sobre o prazo único — cada uma já traz seu
+        // próprio vencimento, não recalcula a partir de termDays.
+        const dueDate = dto.installments?.length
+          ? new Date(dto.installments[0].dueDate)
+          : calculateDueDate(issueDate, termDays);
 
         await tx.purchase.update({
           where: {
@@ -497,26 +499,47 @@ export class PurchaseService {
         // Gera automaticamente a conta a pagar desta compra, já
         // com os dados fiscais e financeiros informados no
         // recebimento — não precisa entrar em Contas a pagar depois
-        // para completar vencimento/forma de pagamento.
-        await this.financialEntriesService.createFromDocument(
-          tx,
-          {
-            companyId,
-            type: FinancialEntryType.PAYABLE,
-            partnerId: purchase.partnerId,
-            amount: Number(purchase.totalAmount),
-            issueDate,
-            termDays,
-            dueDate,
-            paymentMethod,
-            documentNumber: dto.invoiceNumber,
-            documentKey: dto.invoiceKey,
-            documentType,
-            chartOfAccountId: purchase.chartOfAccountId,
-            purchaseId: purchase.id,
-            observation: `Compra ${purchase.id}`,
-          },
-        );
+        // para completar vencimento/forma de pagamento. Com parcelas
+        // explícitas, gera uma FinancialEntry por parcela em vez de
+        // uma só.
+        const commonEntryData = {
+          companyId,
+          type: FinancialEntryType.PAYABLE,
+          partnerId: purchase.partnerId,
+          issueDate,
+          termDays,
+          paymentMethod,
+          documentNumber: dto.invoiceNumber,
+          documentKey: dto.invoiceKey,
+          documentType,
+          chartOfAccountId: purchase.chartOfAccountId,
+          purchaseId: purchase.id,
+          observation: `Compra ${purchase.id}`,
+        };
+
+        if (dto.installments?.length) {
+          await this.financialEntriesService.createInstallments(
+            tx,
+            {
+              ...commonEntryData,
+              installments: dto.installments.map(
+                (installment) => ({
+                  dueDate: new Date(installment.dueDate),
+                  amount: installment.amount,
+                }),
+              ),
+            },
+          );
+        } else {
+          await this.financialEntriesService.createFromDocument(
+            tx,
+            {
+              ...commonEntryData,
+              amount: Number(purchase.totalAmount),
+              dueDate,
+            },
+          );
+        }
       },
     );
 

@@ -16,6 +16,7 @@ import { Type } from 'class-transformer';
 import { PaymentMethod } from '@prisma/client';
 
 import { CreateSaleItemDto } from '../../sales/dto/create-sale-item.dto';
+import { InstallmentDto } from '../../../core/dto/installment.dto';
 import { InvoicePartnerDto } from './invoice-partner.dto';
 
 /** Importação de nota fiscal criando uma Venda completa. */
@@ -68,6 +69,19 @@ export class ConfirmSaleImportDto {
   @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
+
+  @ApiProperty({
+    required: false,
+    type: [InstallmentDto],
+    description:
+      'Divide o título gerado na aprovação em várias parcelas — quando informado, ignora `termDays`.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => InstallmentDto)
+  installments?: InstallmentDto[];
 
   @ApiProperty({ type: [CreateSaleItemDto] })
   @IsArray()

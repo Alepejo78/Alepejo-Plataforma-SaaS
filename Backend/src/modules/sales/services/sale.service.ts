@@ -441,7 +441,12 @@ export class SaleService {
         dto.paymentMethod ?? sale.paymentMethod;
       const issueDate =
         invoiceIssueDate ?? sale.saleDate ?? new Date();
-      const dueDate = calculateDueDate(issueDate, termDays);
+      // Parcelas explícitas (ex.: importação de nota) têm
+      // prioridade sobre o prazo único — cada uma já traz seu
+      // próprio vencimento, não recalcula a partir de termDays.
+      const dueDate = dto.installments?.length
+        ? new Date(dto.installments[0].dueDate)
+        : calculateDueDate(issueDate, termDays);
 
       const updated = await tx.sale.update({
         where: {
@@ -462,26 +467,47 @@ export class SaleService {
       // Gera automaticamente a conta a receber desta venda, já com
       // os dados fiscais e financeiros informados na aprovação —
       // não precisa entrar em Contas a receber depois para
-      // completar vencimento/forma de pagamento.
-      await this.financialEntriesService.createFromDocument(
-        tx,
-        {
-          companyId,
-          type: FinancialEntryType.RECEIVABLE,
-          partnerId: sale.partnerId,
-          amount: Number(updated.netAmount),
-          issueDate,
-          termDays,
-          dueDate,
-          paymentMethod,
-          documentNumber: dto.invoiceNumber,
-          documentKey: dto.invoiceKey,
-          documentType,
-          chartOfAccountId: sale.chartOfAccountId,
-          saleId: sale.id,
-          observation: `Venda ${sale.id}`,
-        },
-      );
+      // completar vencimento/forma de pagamento. Com parcelas
+      // explícitas, gera uma FinancialEntry por parcela em vez de
+      // uma só.
+      const commonEntryData = {
+        companyId,
+        type: FinancialEntryType.RECEIVABLE,
+        partnerId: sale.partnerId,
+        issueDate,
+        termDays,
+        paymentMethod,
+        documentNumber: dto.invoiceNumber,
+        documentKey: dto.invoiceKey,
+        documentType,
+        chartOfAccountId: sale.chartOfAccountId,
+        saleId: sale.id,
+        observation: `Venda ${sale.id}`,
+      };
+
+      if (dto.installments?.length) {
+        await this.financialEntriesService.createInstallments(
+          tx,
+          {
+            ...commonEntryData,
+            installments: dto.installments.map(
+              (installment) => ({
+                dueDate: new Date(installment.dueDate),
+                amount: installment.amount,
+              }),
+            ),
+          },
+        );
+      } else {
+        await this.financialEntriesService.createFromDocument(
+          tx,
+          {
+            ...commonEntryData,
+            amount: Number(updated.netAmount),
+            dueDate,
+          },
+        );
+      }
 
       return updated;
     });

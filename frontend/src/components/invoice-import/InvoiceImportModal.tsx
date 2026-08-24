@@ -66,13 +66,6 @@ function toDateInput(value: string | null | undefined) {
   return value.slice(0, 10);
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("pt-BR", {
-    timeZone: "UTC",
-  });
-}
-
 interface ItemRow {
   productId: string;
   productLabel: string;
@@ -84,6 +77,8 @@ interface ItemRow {
 }
 
 interface InstallmentRow {
+  /** Dias a partir da data de emissão — opcional, só ajuda a calcular o vencimento. */
+  days: string;
   dueDate: string;
   amount: number;
 }
@@ -155,7 +150,6 @@ export function InvoiceImportModal({
   const [documentType, setDocumentType] =
     useState<FinancialDocumentType | "">("");
   const [observation, setObservation] = useState("");
-  const [termDays, setTermDays] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<
     PaymentMethod | ""
   >("");
@@ -174,7 +168,7 @@ export function InvoiceImportModal({
   const [expenseItemLabel, setExpenseItemLabel] = useState("");
 
   const [installments, setInstallments] = useState<InstallmentRow[]>([
-    { dueDate: "", amount: 0 },
+    { days: "", dueDate: "", amount: 0 },
   ]);
 
   const [saving, setSaving] = useState(false);
@@ -340,6 +334,7 @@ export function InvoiceImportModal({
     if (parsed.installments.length > 0) {
       setInstallments(
         parsed.installments.map((installment) => ({
+          days: "",
           dueDate: toDateInput(installment.dueDate),
           amount: installment.amount,
         }))
@@ -347,6 +342,7 @@ export function InvoiceImportModal({
     } else if (parsed.totalAmount) {
       setInstallments([
         {
+          days: "",
           dueDate: toDateInput(parsed.invoiceIssueDate),
           amount: parsed.totalAmount,
         },
@@ -401,12 +397,33 @@ export function InvoiceImportModal({
     patch: Partial<InstallmentRow>
   ) {
     setInstallments((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, ...patch } : row))
+      prev.map((row, i) => {
+        if (i !== index) return row;
+
+        const next = { ...row, ...patch };
+
+        // Dias preenchido recalcula o vencimento a partir da data de
+        // emissão — deixar em branco não mexe: a pessoa digita a
+        // data direto.
+        if (patch.days !== undefined && patch.days !== "") {
+          next.dueDate = toDateInput(
+            calculateDueDatePreview(
+              invoiceIssueDate || undefined,
+              Number(patch.days) || 0
+            ).toISOString()
+          );
+        }
+
+        return next;
+      })
     );
   }
 
   function addInstallment() {
-    setInstallments((prev) => [...prev, { dueDate: "", amount: 0 }]);
+    setInstallments((prev) => [
+      ...prev,
+      { days: "", dueDate: "", amount: 0 },
+    ]);
   }
 
   function removeInstallment(index: number) {
@@ -473,6 +490,29 @@ export function InvoiceImportModal({
           );
         }
 
+        const orderInstallments =
+          installments.length === 1
+            ? [{ dueDate: installments[0].dueDate, amount: itemsTotal }]
+            : installments.map((row) => ({
+                dueDate: row.dueDate,
+                amount: row.amount,
+              }));
+
+        if (orderInstallments.some((row) => !row.dueDate)) {
+          throw new Error(
+            "Preencha o vencimento de todas as parcelas."
+          );
+        }
+
+        if (
+          installments.length > 1 &&
+          Math.abs(installmentsTotal - itemsTotal) > 0.01
+        ) {
+          throw new Error(
+            `A soma das parcelas (${money(installmentsTotal)}) precisa bater com o total dos itens (${money(itemsTotal)}).`
+          );
+        }
+
         const payload = {
           partner: buildPartnerPayload(),
           warehouseId: warehouseId || warehouses[0]?.id || "",
@@ -481,8 +521,8 @@ export function InvoiceImportModal({
           invoiceKey: invoiceKey || undefined,
           invoiceIssueDate: invoiceIssueDate || undefined,
           observation: observation || undefined,
-          termDays: termDays ? Number(termDays) : undefined,
           paymentMethod: paymentMethod || undefined,
+          installments: orderInstallments,
           items: validItems.map((it) => ({
             productId: it.productId,
             quantity: decimal(it.quantity),
@@ -500,9 +540,9 @@ export function InvoiceImportModal({
           throw new Error("Informe a data de emissão.");
         }
 
-        const validInstallments = installments.filter(
-          (row) => row.dueDate && row.amount > 0
-        );
+        const validInstallments = installments
+          .filter((row) => row.dueDate && row.amount > 0)
+          .map((row) => ({ dueDate: row.dueDate, amount: row.amount }));
 
         if (validInstallments.length === 0) {
           throw new Error(
@@ -544,6 +584,11 @@ export function InvoiceImportModal({
 
   const installmentsTotal = installments.reduce(
     (sum, row) => sum + (row.amount || 0),
+    0
+  );
+
+  const itemsTotal = items.reduce(
+    (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
     0
   );
 
@@ -807,43 +852,10 @@ export function InvoiceImportModal({
             </div>
           </div>
 
-          {mode === "ORDER" && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className={labelClass}>Dias a vencer</label>
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  className={fieldClass}
-                  value={termDays}
-                  onChange={(e) => setTermDays(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>
-                  Vencimento (calculado)
-                </label>
-                <div
-                  className={`${fieldClass} flex items-center text-[var(--text-secondary)]`}
-                >
-                  {formatDate(
-                    calculateDueDatePreview(
-                      invoiceIssueDate || undefined,
-                      Number(termDays) || 0
-                    ).toISOString()
-                  )}
-                </div>
-              </div>
-
-              {!warehouseRequired && (
-                <p className="sm:col-span-2 self-end text-xs text-[var(--text-muted)]">
-                  Depósito não é necessário — item não movimenta
-                  estoque.
-                </p>
-              )}
-            </div>
+          {mode === "ORDER" && !warehouseRequired && (
+            <p className="text-xs text-[var(--text-muted)]">
+              Depósito não é necessário — item não movimenta estoque.
+            </p>
           )}
 
           {mode === "EXPENSE" && (
@@ -873,7 +885,7 @@ export function InvoiceImportModal({
             />
           </div>
 
-          {mode === "ORDER" ? (
+          {mode === "ORDER" && (
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <label className={labelClass}>Itens</label>
@@ -967,39 +979,52 @@ export function InvoiceImportModal({
               </div>
 
               <div className="mt-3 flex justify-end text-sm font-semibold text-[var(--text-primary)]">
-                Total:{" "}
-                {money(
-                  items.reduce(
-                    (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
-                    0
-                  )
-                )}
+                Total: {money(itemsTotal)}
               </div>
             </div>
-          ) : (
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label className={labelClass}>Parcelas</label>
+          )}
 
-                <button
-                  type="button"
-                  onClick={addInstallment}
-                  className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                >
-                  <Plus size={14} />
-                  Adicionar parcela
-                </button>
-              </div>
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label className={labelClass}>Parcelas</label>
 
-              <div className="space-y-2">
-                {installments.map((row, index) => (
+              <button
+                type="button"
+                onClick={addInstallment}
+                className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+              >
+                <Plus size={14} />
+                Adicionar parcela
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {installments.map((row, index) => {
+                const singleOrderInstallment =
+                  mode === "ORDER" && installments.length === 1;
+
+                return (
                   <div
                     key={index}
                     className="grid grid-cols-12 items-center gap-2 rounded-xl border border-[var(--border)] p-2"
                   >
                     <input
+                      type="number"
+                      min={0}
+                      placeholder="Dias"
+                      title="Dias a partir da emissão — calcula o vencimento"
+                      className={`${fieldClass} col-span-2`}
+                      value={row.days}
+                      onChange={(e) =>
+                        updateInstallment(index, {
+                          days: e.target.value,
+                        })
+                      }
+                    />
+
+                    <input
                       type="date"
-                      className={`${fieldClass} col-span-6`}
+                      className={`${fieldClass} col-span-4`}
                       value={row.dueDate}
                       onChange={(e) =>
                         updateInstallment(index, {
@@ -1012,7 +1037,10 @@ export function InvoiceImportModal({
                       placeholder="Valor"
                       wrapperClassName="col-span-5"
                       className={fieldClass}
-                      value={row.amount}
+                      disabled={singleOrderInstallment}
+                      value={
+                        singleOrderInstallment ? itemsTotal : row.amount
+                      }
                       onChange={(value) =>
                         updateInstallment(index, { amount: value })
                       }
@@ -1029,14 +1057,31 @@ export function InvoiceImportModal({
                       <Trash2 size={16} />
                     </button>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-3 flex justify-end text-sm font-semibold text-[var(--text-primary)]">
-                Total: {money(installmentsTotal)}
-              </div>
+                );
+              })}
             </div>
-          )}
+
+            <div className="mt-3 flex justify-end text-sm font-semibold text-[var(--text-primary)]">
+              Total:{" "}
+              {money(
+                mode === "ORDER" && installments.length === 1
+                  ? itemsTotal
+                  : installmentsTotal
+              )}
+            </div>
+
+            {mode === "ORDER" && installments.length > 1 && (
+              <p
+                className={`mt-1 text-right text-xs ${
+                  Math.abs(installmentsTotal - itemsTotal) > 0.01
+                    ? "text-[var(--danger)]"
+                    : "text-[var(--text-muted)]"
+                }`}
+              >
+                Precisa bater com o total dos itens ({money(itemsTotal)}).
+              </p>
+            )}
+          </div>
 
           {formError && (
             <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
