@@ -425,14 +425,12 @@ export default function HomePage() {
         )}
 
         {/*
-          Duas colunas empilhadas: A pagar/receber, Colaboradores e o
-          perfil dos colaboradores numa; Fluxo de caixa e despesas por
-          tipo na outra, logo abaixo do cartão que já mostra os mesmos
-          números por período.
+          Três linhas: A pagar/receber ao lado do fluxo de caixa,
+          Colaboradores ao lado do perfil dos colaboradores, e
+          despesas por tipo sozinho por último.
         */}
         <section className="grid gap-5 lg:grid-cols-2">
-          <div className="flex flex-col gap-5">
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Wallet
                   size={18}
@@ -533,6 +531,109 @@ export default function HomePage() {
               </p>
             </div>
 
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <PiggyBank
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  Fluxo de caixa
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { label: "Recebido", value: recebidoTotal },
+                  { label: "Pago", value: pagoTotal },
+                  {
+                    label: "Total em caixa",
+                    value:
+                      recebidoTotal !== null && pagoTotal !== null
+                        ? recebidoTotal - pagoTotal
+                        : null,
+                  },
+                ].map((linha) => (
+                  <div
+                    key={linha.label}
+                    className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
+                  >
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {linha.label}
+                    </span>
+
+                    {cashFlowLoading ? (
+                      <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
+                    ) : (
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {linha.value !== null
+                          ? money(linha.value)
+                          : "—"}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!cashFlowLoading && tendenciaMeses.length > 1 && (
+                <div className="mt-4 h-28">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={tendenciaMeses}
+                      margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                      barGap={2}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="mes"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        width={44}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => moneyCompact(Number(v))}
+                      />
+                      <Tooltip
+                        contentStyle={dashboardTooltipStyle}
+                        formatter={(v) => money(Number(v))}
+                      />
+                      <Bar
+                        dataKey="recebido"
+                        name="Recebido"
+                        fill="var(--success)"
+                        radius={[3, 3, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="pago"
+                        name="Pago"
+                        fill="var(--danger)"
+                        radius={[3, 3, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                Realizado no ano até o mês atual, a partir das
+                baixas em Contas a Receber e a Pagar
+                {consolidated ? " de todas as empresas do grupo" : ""}.
+              </p>
+            </div>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-2">
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Users
@@ -724,111 +825,9 @@ export default function HomePage() {
                 }.
               </p>
             </div>
-          </div>
+        </section>
 
-          <div className="flex flex-col gap-5">
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <PiggyBank
-                  size={18}
-                  className="text-[var(--text-secondary)]"
-                />
-
-                <h2 className="font-semibold text-[var(--text-primary)]">
-                  Fluxo de caixa
-                </h2>
-              </div>
-
-              <div className="space-y-3">
-                {[
-                  { label: "Recebido", value: recebidoTotal },
-                  { label: "Pago", value: pagoTotal },
-                  {
-                    label: "Total em caixa",
-                    value:
-                      recebidoTotal !== null && pagoTotal !== null
-                        ? recebidoTotal - pagoTotal
-                        : null,
-                  },
-                ].map((linha) => (
-                  <div
-                    key={linha.label}
-                    className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
-                  >
-                    <span className="text-sm text-[var(--text-secondary)]">
-                      {linha.label}
-                    </span>
-
-                    {cashFlowLoading ? (
-                      <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
-                    ) : (
-                      <span className="font-medium text-[var(--text-primary)]">
-                        {linha.value !== null
-                          ? money(linha.value)
-                          : "—"}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {!cashFlowLoading && tendenciaMeses.length > 1 && (
-                <div className="mt-4 h-28">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={tendenciaMeses}
-                      margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-                      barGap={2}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="var(--border)"
-                        vertical={false}
-                      />
-                      <XAxis
-                        dataKey="mes"
-                        stroke="var(--text-muted)"
-                        fontSize={11}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        stroke="var(--text-muted)"
-                        fontSize={11}
-                        width={44}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v) => moneyCompact(Number(v))}
-                      />
-                      <Tooltip
-                        contentStyle={dashboardTooltipStyle}
-                        formatter={(v) => money(Number(v))}
-                      />
-                      <Bar
-                        dataKey="recebido"
-                        name="Recebido"
-                        fill="var(--success)"
-                        radius={[3, 3, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="pago"
-                        name="Pago"
-                        fill="var(--danger)"
-                        radius={[3, 3, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              <p className="mt-4 text-xs text-[var(--text-muted)]">
-                Realizado no ano até o mês atual, a partir das
-                baixas em Contas a Receber e a Pagar
-                {consolidated ? " de todas as empresas do grupo" : ""}.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Receipt
                   size={18}
@@ -909,8 +908,6 @@ export default function HomePage() {
                 Veja todas em Financeiro → Gráficos de fluxo de caixa.
               </p>
             </div>
-          </div>
-        </section>
 
         <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
