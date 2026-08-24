@@ -83,6 +83,98 @@ function Panel({
   );
 }
 
+/**
+ * Painel de acompanhamento por tipo (despesa ou receita), reaproveitado
+ * pros dois lados — só troca os dados, o rótulo "pago"/"a pagar" e a
+ * cor. Barra deitada porque nome de conta é texto longo — em barra em
+ * pé o rótulo vira sopa de letras inclinada. Cada barra separa o que já
+ * passou pelo caixa do que ainda vai passar, que são leituras diferentes.
+ */
+function AccountBreakdownPanel({
+  title,
+  emptyLabel,
+  rows,
+  year,
+  tone,
+  paidLabel,
+  openLabel,
+}: {
+  title: string;
+  emptyLabel: string;
+  rows: AccountBreakdownRow[];
+  year: number;
+  tone: "danger" | "success";
+  paidLabel: string;
+  openLabel: string;
+}) {
+  return (
+    <Panel title={title}>
+      {rows.length === 0 ? (
+        <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+          {emptyLabel} em {year}.
+        </p>
+      ) : (
+        <div
+          style={{
+            height: Math.max(220, rows.length * 46 + 60),
+          }}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              layout="vertical"
+              data={rows}
+              margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+                horizontal={false}
+              />
+              <XAxis
+                type="number"
+                stroke="var(--text-muted)"
+                fontSize={12}
+                tickFormatter={(v) => money(v)}
+              />
+              <YAxis
+                type="category"
+                dataKey="description"
+                stroke="var(--text-muted)"
+                fontSize={12}
+                width={170}
+              />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(v) => money(Number(v))}
+                cursor={{ fill: "var(--surface-hover)" }}
+              />
+              <Legend wrapperStyle={legendStyle} />
+              <Bar
+                dataKey="pago"
+                name={paidLabel}
+                stackId="total"
+                fill={`var(--${tone})`}
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="emAberto"
+                name={openLabel}
+                stackId="total"
+                fill="var(--warning)"
+                radius={[0, 4, 4, 0]}
+              >
+                {rows.map((linha) => (
+                  <Cell key={linha.description} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 const tooltipStyle = {
   backgroundColor: "var(--surface)",
   border: "1px solid var(--border)",
@@ -106,23 +198,30 @@ export default function GraficosFluxoCaixaPage() {
   const [despesasPorTipo, setDespesasPorTipo] = useState<
     AccountBreakdownRow[]
   >([]);
+  const [receitasPorTipo, setReceitasPorTipo] = useState<
+    AccountBreakdownRow[]
+  >([]);
 
   const load = useCallback(async (targetYear: number) => {
     setLoading(true);
     setError("");
 
     try {
-      const [result, breakdown] = await Promise.all([
+      const [result, despesas, receitas] = await Promise.all([
         budgetService.getYear(targetYear),
         // Falhar aqui não pode derrubar o fluxo de caixa: o gráfico por
         // tipo some, o resto da tela continua.
         financialEntryService
-          .getAccountBreakdown(targetYear)
+          .getAccountBreakdown(targetYear, "PAYABLE")
+          .catch(() => [] as AccountBreakdownRow[]),
+        financialEntryService
+          .getAccountBreakdown(targetYear, "RECEIVABLE")
           .catch(() => [] as AccountBreakdownRow[]),
       ]);
 
       setData(result);
-      setDespesasPorTipo(breakdown);
+      setDespesasPorTipo(despesas);
+      setReceitasPorTipo(receitas);
     } catch (err) {
       setError(
         extractMessage(
@@ -369,79 +468,34 @@ export default function GraficosFluxoCaixaPage() {
               </div>
             </Panel>
 
-            {/*
-              Despesas por tipo: barra deitada porque nome de conta é
-              texto longo — em barra em pé o rótulo vira sopa de letras
-              inclinada. Cada barra separa o que já saiu do caixa do que
-              ainda vai sair, que são leituras diferentes.
-            */}
-            <Panel title="Despesas por tipo">
-              {despesasPorTipo.length === 0 ? (
-                <p className="py-8 text-center text-sm text-[var(--text-muted)]">
-                  Nenhuma despesa lançada em {year}. As despesas
-                  aparecem aqui conforme os títulos de contas a pagar
-                  forem cadastrados — o tipo vem do plano de contas
-                  escolhido na compra ou no próprio título.
-                </p>
-              ) : (
-                <div
-                  style={{
-                    height: Math.max(220, despesasPorTipo.length * 46 + 60),
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={despesasPorTipo}
-                      margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="var(--border)"
-                        horizontal={false}
-                      />
-                      <XAxis
-                        type="number"
-                        stroke="var(--text-muted)"
-                        fontSize={12}
-                        tickFormatter={(v) => money(v)}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="description"
-                        stroke="var(--text-muted)"
-                        fontSize={12}
-                        width={170}
-                      />
-                      <Tooltip
-                        contentStyle={tooltipStyle}
-                        formatter={(v) => money(Number(v))}
-                        cursor={{ fill: "var(--surface-hover)" }}
-                      />
-                      <Legend wrapperStyle={legendStyle} />
-                      <Bar
-                        dataKey="pago"
-                        name="Pago"
-                        stackId="despesa"
-                        fill="var(--danger)"
-                        radius={[0, 0, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="emAberto"
-                        name="Em aberto"
-                        stackId="despesa"
-                        fill="var(--warning)"
-                        radius={[0, 4, 4, 0]}
-                      >
-                        {despesasPorTipo.map((linha) => (
-                          <Cell key={linha.description} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </Panel>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <AccountBreakdownPanel
+                title="Despesas por tipo"
+                emptyLabel="Nenhuma despesa lançada"
+                rows={despesasPorTipo}
+                year={year}
+                tone="danger"
+                paidLabel="Pago"
+                openLabel="Em aberto"
+              />
+
+              <AccountBreakdownPanel
+                title="Receitas por tipo"
+                emptyLabel="Nenhuma receita lançada"
+                rows={receitasPorTipo}
+                year={year}
+                tone="success"
+                paidLabel="Recebido"
+                openLabel="A receber"
+              />
+            </div>
+
+            <p className="text-xs text-[var(--text-muted)]">
+              As despesas e receitas aparecem aqui conforme os títulos
+              de contas a pagar e a receber forem cadastrados — o tipo
+              vem do plano de contas escolhido na compra, na venda ou
+              no próprio título.
+            </p>
           </div>
         )}
       </ListPageLayout>
