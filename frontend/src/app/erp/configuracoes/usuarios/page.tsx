@@ -21,6 +21,10 @@ import { useAuth } from "@/providers/AuthProvider";
 
 import { roleService, type Role } from "@/services/role.service";
 import {
+  companyService,
+  type Company,
+} from "@/services/company.service";
+import {
   userService,
   type SystemUser,
   type UserPayload,
@@ -81,6 +85,9 @@ export default function UsuariosPage() {
 
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [groupCompanies, setGroupCompanies] = useState<Company[]>(
+    []
+  );
 
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -100,13 +107,16 @@ export default function UsuariosPage() {
     setListError("");
 
     try {
-      const [userList, roleList] = await Promise.all([
-        userService.list(),
-        roleService.list(),
-      ]);
+      const [userList, roleList, groupCompanyList] =
+        await Promise.all([
+          userService.list(),
+          roleService.list(),
+          companyService.listGroup(),
+        ]);
 
       setUsers(userList);
       setRoles(roleList);
+      setGroupCompanies(groupCompanyList);
     } catch (err) {
       setListError(
         extractMessage(
@@ -405,6 +415,11 @@ export default function UsuariosPage() {
                   <th className="px-4 py-3 font-semibold">
                     E-mail
                   </th>
+                  {groupCompanies.length > 1 && (
+                    <th className="px-4 py-3 font-semibold">
+                      Empresa
+                    </th>
+                  )}
                   <th className="px-4 py-3 font-semibold">
                     Departamento
                   </th>
@@ -448,6 +463,19 @@ export default function UsuariosPage() {
                     <td className="px-4 py-3 text-[var(--text-secondary)]">
                       {user.email}
                     </td>
+
+                    {groupCompanies.length > 1 && (
+                      <td className="px-4 py-3 text-[var(--text-secondary)]">
+                        {groupCompanies.find(
+                          (company) => company.id === user.companyId
+                        )?.tradeName ||
+                          groupCompanies.find(
+                            (company) =>
+                              company.id === user.companyId
+                          )?.legalName ||
+                          "—"}
+                      </td>
+                    )}
 
                     <td className="px-4 py-3 text-[var(--text-secondary)]">
                       {user.department || "—"}

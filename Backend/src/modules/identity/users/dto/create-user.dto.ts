@@ -97,4 +97,13 @@ export class CreateUserDto {
   @IsArray({ message: 'As empresas devem ser uma lista.' })
   @IsString({ each: true, message: 'Cada empresa deve ser um texto.' })
   companyIds?: string[];
+
+  @ApiPropertyOptional({
+    example: 'clx1234567890',
+    description:
+      'Empresa principal — em qual empresa (do grupo, dentre as que ele acessa) este login deve entrar automaticamente ao fazer login.',
+  })
+  @IsOptional()
+  @IsString({ message: 'A empresa principal deve ser um texto.' })
+  defaultCompanyId?: string;
 }

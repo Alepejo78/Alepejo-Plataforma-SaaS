@@ -139,7 +139,9 @@ model Company {
 
   active Boolean @default(true)
 
-  users User[]
+  users User[] @relation("UserActiveCompany")
+
+  usersWithDefault User[] @relation("UserDefaultCompany")
 
   roles Role[]
 
@@ -331,7 +333,16 @@ model User {
 
   companyId String
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  company Company @relation("UserActiveCompany", fields: [companyId], references: [id], onDelete: Restrict)
+
+  /// Empresa em que este login deve entrar por padrão, dentre as
+  /// empresas do grupo que ele acessa (`companies` abaixo) — se vazia,
+  /// login entra em `companyId` do jeito que ficou da última troca
+  /// (comportamento de sempre). Preenchida, o login já troca pra ela
+  /// automaticamente antes de emitir os tokens (ver AuthService.login).
+  defaultCompanyId String?
+
+  defaultCompany Company? @relation("UserDefaultCompany", fields: [defaultCompanyId], references: [id], onDelete: SetNull)
 
   name String @db.VarChar(150)
 

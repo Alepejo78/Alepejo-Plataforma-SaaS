@@ -16,6 +16,7 @@ export type UserStatus =
 
 export interface SystemUser {
   id: string;
+  companyId: string;
   name: string;
   email: string;
   department?: string | null;
@@ -31,6 +32,8 @@ export interface SystemUser {
   }[];
   /** Empresas do grupo que este login também acessa (login cruzado). */
   companies?: { companyId: string }[];
+  /** Empresa em que este login entra por padrão ao fazer login. */
+  defaultCompanyId?: string | null;
 }
 
 export type UserPayload = {
@@ -42,6 +45,8 @@ export type UserPayload = {
   roleId?: string;
   /** Empresas do grupo (além da empresa dona do cadastro) com acesso via login cruzado. */
   companyIds?: string[];
+  /** Empresa em que este login deve entrar por padrão ao fazer login. */
+  defaultCompanyId?: string;
 };
 
 export const userService = {

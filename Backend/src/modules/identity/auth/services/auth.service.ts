@@ -300,7 +300,57 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.validateUser(dto);
 
-    return this.issueTokens(user);
+    return this.issueTokens(await this.landOnDefaultCompany(user));
+  }
+
+  /**
+   * Se o login tem uma empresa principal definida (User.defaultCompanyId)
+   * e a sessão está numa empresa diferente dela, já troca pra ela antes
+   * de emitir os tokens — mesma regra do switchCompany, só que
+   * automática. Sem empresa principal definida, mantém o comportamento
+   * de sempre (entra na última empresa usada).
+   */
+  private async landOnDefaultCompany(user: any) {
+    if (
+      !user.defaultCompanyId ||
+      user.defaultCompanyId === user.companyId
+    ) {
+      return user;
+    }
+
+    const link = await this.prisma.userCompany.findUnique({
+      where: {
+        userId_companyId: {
+          userId: user.id,
+          companyId: user.defaultCompanyId,
+        },
+      },
+    });
+
+    if (!link) {
+      return user;
+    }
+
+    const company = await this.prisma.company.findFirst({
+      where: {
+        id: user.defaultCompanyId,
+        active: true,
+        deletedAt: null,
+      },
+    });
+
+    if (!company) {
+      return user;
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { companyId: user.defaultCompanyId },
+    });
+
+    return (
+      (await this.findUserWithAuthContext({ id: user.id })) ?? user
+    );
   }
 
   /**

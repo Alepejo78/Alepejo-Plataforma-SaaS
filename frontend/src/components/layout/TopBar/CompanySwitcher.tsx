@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { authService } from "@/services/auth.service";
 import { companyService, type Company } from "@/services/company.service";
+import { rememberCompanySlug } from "@/lib/companyLogin";
 
 import { topBarStyles } from "./TopBar.styles";
 
@@ -101,6 +102,15 @@ export function CompanySwitcher() {
       const newPath = targetSlug
         ? `/${targetSlug}/${rest}`
         : window.location.pathname;
+
+      // Precisa vir ANTES do reload: o middleware decide o que fazer
+      // com a URL comparando com este cookie, não com a sessão — sem
+      // atualizar aqui, ele ainda vê o slug antigo, acha que a URL
+      // "veio sem empresa" e prefixa o slug antigo de novo em cima do
+      // novo (`/antiga/nova/erp/...`).
+      if (targetSlug) {
+        rememberCompanySlug(targetSlug);
+      }
 
       window.location.href = `${newPath}${window.location.search}`;
     } catch {

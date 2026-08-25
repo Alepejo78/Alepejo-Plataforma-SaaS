@@ -35,6 +35,7 @@ const emptyForm: UserPayload = {
   alias: "",
   roleId: "",
   companyIds: [],
+  defaultCompanyId: "",
 };
 
 interface Props {
@@ -72,6 +73,7 @@ export function UserForm({
         alias: user.alias ?? "",
         roleId: user.roles?.[0]?.role.id ?? "",
         companyIds: user.companies?.map((c) => c.companyId) ?? [],
+        defaultCompanyId: user.defaultCompanyId ?? "",
       });
     } else if (copyFrom) {
       setForm({
@@ -116,7 +118,11 @@ export function UserForm({
     }));
   }
 
-  const homeCompanyId = currentUser?.companyId ?? "";
+  // Editando um usuário existente, a "empresa atual" (que nunca pode
+  // ser desmarcada) é a dele mesmo — não a de quem está editando.
+  // Só cai pra empresa de quem está logado quando ainda não existe
+  // usuário (cadastro novo nasce na empresa de quem cria).
+  const homeCompanyId = user?.companyId ?? currentUser?.companyId ?? "";
 
   function toggleCompany(companyId: string) {
     if (companyId === homeCompanyId) {
@@ -125,11 +131,22 @@ export function UserForm({
 
     setForm((previous) => {
       const current = previous.companyIds ?? [];
-      const next = current.includes(companyId)
-        ? current.filter((id) => id !== companyId)
-        : [...current, companyId];
+      const willBeChecked = !current.includes(companyId);
+      const next = willBeChecked
+        ? [...current, companyId]
+        : current.filter((id) => id !== companyId);
 
-      return { ...previous, companyIds: next };
+      return {
+        ...previous,
+        companyIds: next,
+        // Desmarcar a empresa que era a principal volta pro padrão
+        // (empresa atual) — não dá pra deixar a principal apontando
+        // pra uma empresa sem acesso.
+        defaultCompanyId:
+          !willBeChecked && previous.defaultCompanyId === companyId
+            ? ""
+            : previous.defaultCompanyId,
+      };
     });
   }
 
@@ -160,10 +177,16 @@ export function UserForm({
       alias: form.alias?.trim() || undefined,
       roleId: form.roleId || undefined,
       companyIds: form.companyIds,
+      defaultCompanyId: form.defaultCompanyId || undefined,
     });
   }
 
+  const homeCompany = groupCompanies.find(
+    (company) => company.id === homeCompanyId
+  );
   const companyName =
+    homeCompany?.tradeName ||
+    homeCompany?.legalName ||
     currentUser?.company.tradeName ||
     currentUser?.company.legalName ||
     "—";
@@ -299,27 +322,78 @@ export function UserForm({
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <label className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text-muted)]">
-                <input type="checkbox" checked disabled />
-                {companyName} (atual)
-              </label>
+              <label className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text-muted)]">
+                <span className="flex items-center gap-2">
+                  <input type="checkbox" checked disabled />
+                  {companyName} (atual)
+                </span>
 
-              {otherCompanies.map((company) => (
-                <label
-                  key={company.id}
-                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+                <span
+                  className="flex items-center gap-1 text-xs"
+                  title="Empresa em que este login entra ao fazer login"
                 >
                   <input
-                    type="checkbox"
-                    checked={(form.companyIds ?? []).includes(
-                      company.id
-                    )}
-                    onChange={() => toggleCompany(company.id)}
+                    type="radio"
+                    name="defaultCompanyId"
+                    checked={
+                      !form.defaultCompanyId ||
+                      form.defaultCompanyId === homeCompanyId
+                    }
+                    onChange={() =>
+                      setField("defaultCompanyId", homeCompanyId)
+                    }
                   />
-                  {company.tradeName || company.legalName}
-                </label>
-              ))}
+                  Principal
+                </span>
+              </label>
+
+              {otherCompanies.map((company) => {
+                const checked = (form.companyIds ?? []).includes(
+                  company.id
+                );
+
+                return (
+                  <label
+                    key={company.id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleCompany(company.id)}
+                      />
+                      {company.tradeName || company.legalName}
+                    </span>
+
+                    {checked && (
+                      <span
+                        className="flex items-center gap-1 text-xs"
+                        title="Empresa em que este login entra ao fazer login"
+                      >
+                        <input
+                          type="radio"
+                          name="defaultCompanyId"
+                          checked={
+                            form.defaultCompanyId === company.id
+                          }
+                          onChange={() =>
+                            setField("defaultCompanyId", company.id)
+                          }
+                        />
+                        Principal
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
             </div>
+
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              &quot;Principal&quot; é a empresa em que este login entra
+              automaticamente ao fazer login — continua podendo trocar
+              pra outra depois, pelo seletor de empresas.
+            </p>
           </section>
         </Can>
       )}

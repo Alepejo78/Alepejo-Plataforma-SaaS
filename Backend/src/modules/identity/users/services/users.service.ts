@@ -84,15 +84,55 @@ export class UsersService {
       );
     }
 
+    if (createUserDto.defaultCompanyId) {
+      await this.setDefaultCompany(
+        user.id,
+        createUserDto.defaultCompanyId,
+      );
+    }
+
     return user;
   }
 
+  /**
+   * Empresa raiz + todas as subsidiárias do grupo de `companyId` — a
+   * visão de usuários é do grupo inteiro, não só da empresa ativa da
+   * sessão, senão dava pra ver/configurar login cruzado só de dentro
+   * da empresa dona de cada usuário (mesma lógica de setCompanies).
+   */
+  private async resolveGroupCompanyIds(
+    companyId: string,
+  ): Promise<string[]> {
+    const company = await this.prisma.company.findFirst({
+      where: { id: companyId, deletedAt: null },
+    });
+
+    if (!company) {
+      return [companyId];
+    }
+
+    const rootCompanyId = company.rootCompanyId ?? company.id;
+
+    const groupCompanies = await this.prisma.company.findMany({
+      where: {
+        deletedAt: null,
+        OR: [{ id: rootCompanyId }, { rootCompanyId }],
+      },
+      select: { id: true },
+    });
+
+    return groupCompanies.map((c) => c.id);
+  }
+
   async findAll(companyId: string) {
-    return this.usersRepository.findAll(companyId);
+    const groupCompanyIds = await this.resolveGroupCompanyIds(companyId);
+
+    return this.usersRepository.findAll(groupCompanyIds);
   }
 
   async findById(companyId: string, id: string) {
-    const user = await this.usersRepository.findById(companyId, id);
+    const groupCompanyIds = await this.resolveGroupCompanyIds(companyId);
+    const user = await this.usersRepository.findById(groupCompanyIds, id);
 
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
@@ -114,12 +154,13 @@ export class UsersService {
   ) {
     await this.findById(companyId, id);
 
-    // roleId/companyIds não são colunas de User (viram vínculos à
-    // parte); password aqui é ignorado de propósito — troca de senha
-    // sempre passa pelo fluxo de redefinição por e-mail
-    // (requestPasswordReset / setPasswordWithToken), nunca por este
-    // PATCH genérico.
-    const { roleId, password, companyIds, ...rest } = updateUserDto;
+    // roleId/companyIds/defaultCompanyId não são colunas simples de
+    // User (viram vínculos/updates à parte); password aqui é ignorado
+    // de propósito — troca de senha sempre passa pelo fluxo de
+    // redefinição por e-mail (requestPasswordReset /
+    // setPasswordWithToken), nunca por este PATCH genérico.
+    const { roleId, password, companyIds, defaultCompanyId, ...rest } =
+      updateUserDto;
 
     const updated = await this.usersRepository.update(id, rest);
 
@@ -129,6 +170,10 @@ export class UsersService {
 
     if (companyIds !== undefined) {
       await this.setCompanies(companyId, id, companyIds);
+    }
+
+    if (defaultCompanyId !== undefined) {
+      await this.setDefaultCompany(id, defaultCompanyId || null);
     }
 
     return updated;
@@ -224,6 +269,51 @@ export class UsersService {
         where: { userId, companyId: { in: toRemove } },
       });
     }
+  }
+
+  /**
+   * Define em qual empresa este login deve entrar por padrão ao fazer
+   * login (User.defaultCompanyId) — precisa ser uma das empresas que
+   * ele já acessa (UserCompany), então chamar depois de setCompanies()
+   * no mesmo request, nunca antes. Também já troca a empresa ATIVA da
+   * sessão (User.companyId) pra ela na hora — não só no próximo login
+   * — pra "virar principal" ter efeito imediato; sem isso a empresa
+   * antiga continuaria presa como obrigatória em setCompanies() (que
+   * sempre inclui a empresa ativa atual no conjunto desejado) até
+   * alguém logar de novo.
+   */
+  private async setDefaultCompany(
+    userId: string,
+    defaultCompanyId: string | null,
+  ) {
+    if (!defaultCompanyId) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { defaultCompanyId: null },
+      });
+
+      return;
+    }
+
+    const link = await this.prisma.userCompany.findUnique({
+      where: {
+        userId_companyId: { userId, companyId: defaultCompanyId },
+      },
+    });
+
+    if (!link) {
+      throw new BadRequestException(
+        'A empresa principal precisa ser uma das empresas com acesso concedido a este usuário.',
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        defaultCompanyId,
+        companyId: defaultCompanyId,
+      },
+    });
   }
 
   async updateLoginSuccess(id: string) {

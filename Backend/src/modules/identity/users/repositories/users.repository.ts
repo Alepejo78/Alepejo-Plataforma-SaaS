@@ -19,6 +19,7 @@ export class UsersRepository {
   private static readonly SAFE_SELECT = {
     id: true,
     companyId: true,
+    defaultCompanyId: true,
     name: true,
     email: true,
     department: true,
@@ -45,10 +46,14 @@ export class UsersRepository {
     },
   } as const;
 
-  async findAll(companyId: string) {
+  // `companyIds` é o grupo inteiro (empresa raiz + todas as
+  // subsidiárias), não só a empresa ativa da sessão — visão geral pra
+  // dar pra configurar login cruzado de qualquer empresa do grupo, ver
+  // UsersService.resolveGroupCompanyIds.
+  async findAll(companyIds: string[]) {
     return this.prisma.user.findMany({
       where: {
-        companyId,
+        companyId: { in: companyIds },
         deletedAt: null,
       },
       select: UsersRepository.SAFE_SELECT,
@@ -58,11 +63,11 @@ export class UsersRepository {
     });
   }
 
-  async findById(companyId: string, id: string) {
+  async findById(companyIds: string[], id: string) {
     return this.prisma.user.findFirst({
       where: {
         id,
-        companyId,
+        companyId: { in: companyIds },
         deletedAt: null,
       },
       select: UsersRepository.SAFE_SELECT,
