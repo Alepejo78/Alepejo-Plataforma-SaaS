@@ -9,6 +9,8 @@ import { Employee, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
+import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
+
 import { EmployeesRepository } from '../repositories/employees.repository';
 
 import { CreateEmployeeDto } from '../dto/create-employee.dto';
@@ -24,6 +26,7 @@ export class EmployeesService {
     private readonly repository: EmployeesRepository,
     private readonly prisma: PrismaService,
     private readonly documentSequence: DocumentSequenceService,
+    private readonly notifications: InAppNotificationsService,
   ) {}
 
   /**
@@ -238,6 +241,7 @@ export class EmployeesService {
     companyId: string,
     rootCompanyId: string,
     dto: CreateEmployeeDto,
+    userId: string,
   ) {
     const targetCompanyId = await this.resolveTargetCompany(
       companyId,
@@ -247,8 +251,10 @@ export class EmployeesService {
 
     this.applyBusinessRules(dto);
 
+    let created: Employee | undefined;
+
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      created = await this.prisma.$transaction(async (tx) => {
         const employeeNumber = await this.documentSequence.next(
           tx,
           targetCompanyId,
@@ -265,6 +271,22 @@ export class EmployeesService {
     } catch (err) {
       this.handleUniqueConstraint(err);
     }
+
+    if (created) {
+      void this.notifications.emit({
+        rootCompanyId,
+        type: 'NEW_EMPLOYEE',
+        dedupeKey: `new-employee:${created.id}`,
+        title: 'Novo colaborador cadastrado',
+        message: `${created.name} foi cadastrado.`,
+        permissionCode: 'employee.view',
+        linkUrl: '/erp/rh/colaboradores',
+        documentRef: created.name,
+        actorUserId: userId,
+      });
+    }
+
+    return created;
   }
 
   async findAll(companyId: string, filter: EmployeeFilterDto) {

@@ -43,9 +43,10 @@ export class EmployeesController {
   create(
     @CurrentUser('companyId') companyId: string,
     @CurrentUser('rootCompanyId') rootCompanyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateEmployeeDto,
   ) {
-    return this.service.create(companyId, rootCompanyId, dto);
+    return this.service.create(companyId, rootCompanyId, dto, userId);
   }
 
   @Get()

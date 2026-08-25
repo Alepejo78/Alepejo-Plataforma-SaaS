@@ -2,14 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { FinancialEntryType } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { hasPermission } from '../../../core/utils/permission.util';
 import { CompanyService } from '../../identity/company/services/company.service';
 import { FinancialEntriesService } from '../../financial-entries/services/financial-entries.service';
 import { EmployeesService } from '../../employees/services/employees.service';
-import {
-  AuthenticatedPermission,
-  AuthenticatedUser,
-  PermissionEffect,
-} from '../../identity/auth/interfaces/authenticated-user.interface';
+import { AuthenticatedUser } from '../../identity/auth/interfaces/authenticated-user.interface';
 
 /** Empresa de menor porte, só o que a tela precisa pra rotular o quê é o quê. */
 export interface DashboardCompanySummary {
@@ -28,30 +25,6 @@ export class DashboardService {
   ) {}
 
   /**
-   * Mesma regra de precedência do `PermissionsGuard`: DENY sempre
-   * vence, mesmo vindo de outro perfil. Replicada aqui porque essa
-   * checagem acontece dentro do service (decide o QUE consultar), não
-   * como porta de entrada de uma rota — não dá pra usar o decorator
-   * `@Permissions`.
-   */
-  private hasPermission(
-    user: AuthenticatedUser,
-    code: string,
-  ): boolean {
-    const entries: AuthenticatedPermission[] = Array.isArray(
-      user.permissions,
-    )
-      ? user.permissions.filter((p) => p.code === code)
-      : [];
-
-    if (entries.length === 0) {
-      return false;
-    }
-
-    return !entries.some((p) => p.effect === PermissionEffect.DENY);
-  }
-
-  /**
    * Visão geral da página inicial. Quem administra o grupo (permissão
    * `company.create` — a mesma que libera "Cadastrar empresa" em
    * Configurações → Empresa) e está num grupo com mais de uma empresa
@@ -65,7 +38,7 @@ export class DashboardService {
       user.companyId,
     );
 
-    const isGroupAdmin = this.hasPermission(user, 'company.create');
+    const isGroupAdmin = hasPermission(user, 'company.create');
     const consolidated = isGroupAdmin && group.length > 1;
 
     const companyIds = consolidated

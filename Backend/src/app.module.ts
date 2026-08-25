@@ -53,6 +53,7 @@ import { MarketingModule } from './modules/marketing/marketing.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { InvoiceImportModule } from './modules/invoice-import/invoice-import.module';
+import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-notifications.module';
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { InvoiceImportModule } from './modules/invoice-import/invoice-import.mod
     MarketingModule,
     BillingModule,
     InvoiceImportModule,
+    InAppNotificationsModule,
   ],
   controllers: [AppController],
   providers: [

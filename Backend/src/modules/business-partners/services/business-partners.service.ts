@@ -13,6 +13,8 @@ import {
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 
+import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
+
 import { BusinessPartnersRepository } from '../repositories/business-partners.repository';
 
 import { CreateBusinessPartnerDto } from '../dto/create-business-partner.dto';
@@ -24,6 +26,7 @@ export class BusinessPartnersService {
   constructor(
     private readonly repository: BusinessPartnersRepository,
     private readonly prisma: PrismaService,
+    private readonly notifications: InAppNotificationsService,
   ) {}
 
   async create(
@@ -54,10 +57,24 @@ export class BusinessPartnersService {
       }, userId);
     }
 
-    return this.repository.create(companyId, {
+    const created = await this.repository.create(companyId, {
       ...dto,
       roles: this.normalizeRoles(dto.roles),
     }, userId);
+
+    void this.notifications.emit({
+      rootCompanyId: companyId,
+      type: 'NEW_PARTNER',
+      dedupeKey: `new-partner:${created.id}`,
+      title: 'Novo parceiro cadastrado',
+      message: `${created.tradeName ?? created.legalName} foi cadastrado.`,
+      permissionCode: 'partner.view',
+      linkUrl: '/erp/parceiros',
+      documentRef: created.document,
+      actorUserId: userId,
+    });
+
+    return created;
   }
 
   async findAll(

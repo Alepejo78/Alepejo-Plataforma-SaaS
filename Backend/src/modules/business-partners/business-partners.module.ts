@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '../../core/prisma/prisma.module';
+import { InAppNotificationsModule } from '../in-app-notifications/in-app-notifications.module';
 
 import { BusinessPartnersController } from './controllers/business-partners.controller';
 import { BusinessPartnersService } from './services/business-partners.service';
 import { BusinessPartnersRepository } from './repositories/business-partners.repository';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, InAppNotificationsModule],
   controllers: [BusinessPartnersController],
   providers: [
     BusinessPartnersRepository,

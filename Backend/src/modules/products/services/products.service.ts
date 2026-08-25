@@ -7,6 +7,8 @@ import {
   import { PrismaService } from '../../../core/prisma/prisma.service';
   import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 
+  import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
+
   import { ProductsRepository } from '../repositories/products.repository';
 
   import { CreateProductDto } from '../dto/create-product.dto';
@@ -18,6 +20,7 @@ import {
     constructor(
       private readonly repository: ProductsRepository,
       private readonly prisma: PrismaService,
+      private readonly notifications: InAppNotificationsService,
     ) {}
 
     async create(
@@ -36,7 +39,25 @@ import {
         );
       }
 
-      return this.repository.create(companyId, createProductDto, userId);
+      const created = await this.repository.create(
+        companyId,
+        createProductDto,
+        userId,
+      );
+
+      void this.notifications.emit({
+        rootCompanyId: companyId,
+        type: 'NEW_PRODUCT',
+        dedupeKey: `new-product:${created.id}`,
+        title: 'Novo produto cadastrado',
+        message: `${created.code} — ${created.description} foi cadastrado.`,
+        permissionCode: 'product.view',
+        linkUrl: '/erp/produtos',
+        documentRef: created.code,
+        actorUserId: userId,
+      });
+
+      return created;
     }
 
     async findAll(companyId: string, filter: ProductFilterDto) {
