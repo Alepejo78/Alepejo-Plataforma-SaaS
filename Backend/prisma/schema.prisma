@@ -309,6 +309,9 @@ model BusinessPartner {
   quotationOffers QuotationOffer[] @relation("QuotationOfferPartner")
   purchaseOrders  PurchaseOrder[]  @relation("PurchaseOrderPartner")
 
+  createdById String?
+  updatedById String?
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
@@ -625,6 +628,8 @@ model Product {
   cubageM3                 Decimal?             @db.Decimal(10, 4)
   status                   ProductStatus        @default(ACTIVE)
   active                   Boolean              @default(true)
+  createdById              String?
+  updatedById              String?
   createdAt                DateTime             @default(now())
   updatedAt                DateTime             @updatedAt
   deletedAt                DateTime?
@@ -651,6 +656,8 @@ model Warehouse {
   description      String            @db.VarChar(120)
   active           Boolean           @default(true)
   inventories      Inventory[]
+  createdById      String?
+  updatedById      String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   purchases        Purchase[]
@@ -839,6 +846,9 @@ model Purchase {
   purchaseOrderId String?        @unique
   purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
+  createdById String?
+  updatedById String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -893,6 +903,9 @@ model Quotation {
   offers         QuotationOffer[]
   purchaseOrders PurchaseOrder[]
 
+  createdById String?
+  updatedById String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -933,12 +946,14 @@ model QuotationOffer {
   /// Em quantos títulos o vencimento se divide (30/60/90...) — 1 ou
   /// vazio é o de sempre, um título só. Vai junto pro Pedido de
   /// Compra quando esta proposta vence.
-  installmentsCount Int?            @default(1)
+  installmentsCount Int?           @default(1)
 
   totalAmount Decimal @default(0) @db.Decimal(18, 2)
 
   items         QuotationOfferItem[]
   purchaseOrder PurchaseOrder?
+
+  createdById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -997,7 +1012,7 @@ model PurchaseOrder {
   /// nasce sem uma. Repassados pra Compra na conversão.
   termDays          Int?
   paymentMethod     PaymentMethod?
-  installmentsCount Int?            @default(1)
+  installmentsCount Int?           @default(1)
 
   totalAmount Decimal @default(0) @db.Decimal(18, 2)
 
@@ -1011,6 +1026,9 @@ model PurchaseOrder {
 
   quotationOfferId String?         @unique
   quotationOffer   QuotationOffer? @relation(fields: [quotationOfferId], references: [id])
+
+  createdById String?
+  updatedById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1098,6 +1116,9 @@ model Sale {
   quote        Quote?      @relation(fields: [quoteId], references: [id])
   salesOrderId String?     @unique
   salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
+
+  createdById String?
+  updatedById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1189,6 +1210,9 @@ model Quote {
   /// SalesOrder.quoteId) — relação reversa, a FK vive no SalesOrder.
   salesOrder SalesOrder?
 
+  createdById String?
+  updatedById String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1258,6 +1282,9 @@ model SalesOrder {
 
   productionOrders ProductionOrder[]
 
+  createdById String?
+  updatedById String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1286,14 +1313,16 @@ enum ChartOfAccountType {
 }
 
 model ChartOfAccountClassification {
-  id        String           @id @default(cuid())
-  companyId String
-  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name      String           @db.VarChar(120)
-  active    Boolean          @default(true)
-  accounts  ChartOfAccount[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id          String           @id @default(cuid())
+  companyId   String
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String           @db.VarChar(120)
+  active      Boolean          @default(true)
+  accounts    ChartOfAccount[]
+  createdById String?
+  updatedById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@unique([companyId, name])
   @@index([companyId])
@@ -1317,6 +1346,8 @@ model ChartOfAccount {
   sales            Sale[]
   products         Product[]
   active           Boolean                      @default(true)
+  createdById      String?
+  updatedById      String?
   createdAt        DateTime                     @default(now())
   updatedAt        DateTime                     @updatedAt
 
@@ -1431,6 +1462,9 @@ model FinancialEntry {
   /// empresa cliente. Único pra a mesma cobrança não gerar dois títulos.
   billingChargeId String?        @unique
   billingCharge   BillingCharge? @relation(fields: [billingChargeId], references: [id], onDelete: SetNull)
+
+  createdById String?
+  updatedById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1905,6 +1939,9 @@ model Budget {
 
   plannedAmount Decimal @db.Decimal(18, 2)
 
+  createdById String?
+  updatedById String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1935,20 +1972,20 @@ model Module {
 }
 
 model Plan {
-  id             String           @id @default(cuid())
-  code           String           @unique @db.VarChar(50)
-  name           String           @db.VarChar(150)
-  description    String?          @db.VarChar(500)
-  monthlyPrice   Decimal?         @db.Decimal(18, 2)
-  yearlyPrice    Decimal?         @db.Decimal(18, 2)
+  id               String            @id @default(cuid())
+  code             String            @unique @db.VarChar(50)
+  name             String            @db.VarChar(150)
+  description      String?           @db.VarChar(500)
+  monthlyPrice     Decimal?          @db.Decimal(18, 2)
+  yearlyPrice      Decimal?          @db.Decimal(18, 2)
   /// Cobrança única no início (migração/treinamento) — não é mensalidade.
-  setupFee       Decimal?         @db.Decimal(18, 2)
-  maxUsers       Int?
+  setupFee         Decimal?          @db.Decimal(18, 2)
+  maxUsers         Int?
   /// Ordem de exibição na página de preços (menor primeiro).
-  sortOrder      Int              @default(0)
+  sortOrder        Int               @default(0)
   /// Marca o plano "recomendado" com destaque visual na página de preços.
-  highlighted    Boolean          @default(false)
-  active         Boolean          @default(true)
+  highlighted      Boolean           @default(false)
+  active           Boolean           @default(true)
   planModules      PlanModule[]
   companyPlans     CompanyPlan[]
   licenseHistory   LicenseHistory[]

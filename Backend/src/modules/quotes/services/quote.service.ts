@@ -12,6 +12,7 @@ import { WhatsappNotificationsService } from '../../notifications/services/whats
 import { SalesOrderService } from '../../sales-orders/services/sales-order.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { QuoteRepository } from '../repositories/quote.repository';
@@ -34,7 +35,11 @@ export class QuoteService {
     private readonly salesOrderService: SalesOrderService,
   ) {}
 
-  async create(companyId: string, dto: CreateQuoteDto) {
+  async create(
+    companyId: string,
+    dto: CreateQuoteDto,
+    userId: string,
+  ) {
     await this.businessPartnersService.assertHasRole(
       companyId,
       dto.partnerId,
@@ -87,6 +92,7 @@ export class QuoteService {
         dto,
         totalAmount,
         netAmount,
+        userId,
       );
     });
 
@@ -145,7 +151,9 @@ export class QuoteService {
   }
 
   async findAll(companyId: string, filter: QuoteFilterDto) {
-    return this.repository.findAll(companyId, filter);
+    const quotes = await this.repository.findAll(companyId, filter);
+
+    return attachAuditNames(this.prisma, quotes);
   }
 
   async findOne(companyId: string, id: string) {
@@ -160,13 +168,14 @@ export class QuoteService {
       );
     }
 
-    return quote;
+    return attachAuditName(this.prisma, quote);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdateQuoteDto,
+    userId: string,
   ) {
     const quote = await this.findOne(companyId, id);
 
@@ -244,26 +253,30 @@ export class QuoteService {
     const netAmount =
       totalAmount - discountValue + freightValue + otherExpenses;
 
-    return this.repository.update(id, {
-      partnerId: dto.partnerId,
-      warehouseId: dto.warehouseId,
-      quoteDate: dto.quoteDate
-        ? new Date(dto.quoteDate)
-        : undefined,
-      validUntil: dto.validUntil
-        ? new Date(dto.validUntil)
-        : undefined,
-      observation: dto.observation,
-      discountValue,
-      freightValue,
-      otherExpenses,
-      totalAmount,
-      netAmount,
-      items,
-    });
+    return this.repository.update(
+      id,
+      {
+        partnerId: dto.partnerId,
+        warehouseId: dto.warehouseId,
+        quoteDate: dto.quoteDate
+          ? new Date(dto.quoteDate)
+          : undefined,
+        validUntil: dto.validUntil
+          ? new Date(dto.validUntil)
+          : undefined,
+        observation: dto.observation,
+        discountValue,
+        freightValue,
+        otherExpenses,
+        totalAmount,
+        netAmount,
+        items,
+      },
+      userId,
+    );
   }
 
-  async cancel(companyId: string, id: string) {
+  async cancel(companyId: string, id: string, userId: string) {
     const quote = await this.findOne(companyId, id);
 
     if (quote.status !== QuoteStatus.DRAFT) {
@@ -272,7 +285,7 @@ export class QuoteService {
       );
     }
 
-    return this.repository.cancel(id);
+    return this.repository.cancel(id, userId);
   }
 
   /**
@@ -285,7 +298,7 @@ export class QuoteService {
    * venda em si continua nascendo do Pedido (ou direto), nunca direto
    * do Orçamento aprovado.
    */
-  async approve(companyId: string, id: string) {
+  async approve(companyId: string, id: string, userId: string) {
     const quote = await this.findOne(companyId, id);
 
     if (quote.status !== QuoteStatus.DRAFT) {
@@ -297,27 +310,31 @@ export class QuoteService {
     const quoteNumber = `ORC-${String(quote.number).padStart(6, '0')}`;
     const generatedNote = `Gerado automaticamente a partir do Orçamento ${quoteNumber}.`;
 
-    const salesOrder = await this.salesOrderService.create(companyId, {
-      partnerId: quote.partnerId,
-      warehouseId: quote.warehouseId,
-      observation: quote.observation
-        ? `${quote.observation}\n\n${generatedNote}`
-        : generatedNote,
-      discountValue: Number(quote.discountValue),
-      freightValue: Number(quote.freightValue),
-      otherExpenses: Number(quote.otherExpenses),
-      items: quote.items.map((item) => ({
-        productId: item.productId,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-      })),
-    });
+    const salesOrder = await this.salesOrderService.create(
+      companyId,
+      {
+        partnerId: quote.partnerId,
+        warehouseId: quote.warehouseId,
+        observation: quote.observation
+          ? `${quote.observation}\n\n${generatedNote}`
+          : generatedNote,
+        discountValue: Number(quote.discountValue),
+        freightValue: Number(quote.freightValue),
+        otherExpenses: Number(quote.otherExpenses),
+        items: quote.items.map((item) => ({
+          productId: item.productId,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+        })),
+      },
+      userId,
+    );
 
     await this.prisma.salesOrder.update({
       where: { id: salesOrder.id },
       data: { quoteId: quote.id },
     });
 
-    return this.repository.approve(id);
+    return this.repository.approve(id, userId);
   }
 }

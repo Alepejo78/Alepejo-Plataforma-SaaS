@@ -11,6 +11,7 @@ import { EmailNotificationsService } from '../../notifications/services/email-no
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { QuotationRepository } from '../repositories/quotation.repository';
@@ -35,7 +36,11 @@ export class QuotationService {
     private readonly whatsappNotifications: WhatsappNotificationsService,
   ) {}
 
-  async create(companyId: string, dto: CreateQuotationDto) {
+  async create(
+    companyId: string,
+    dto: CreateQuotationDto,
+    userId: string,
+  ) {
     const warehouse = await this.prisma.warehouse.findFirst({
       where: { id: dto.warehouseId, companyId },
     });
@@ -65,12 +70,14 @@ export class QuotationService {
         SEQUENCE_TYPE,
       );
 
-      return this.repository.create(tx, companyId, number, dto);
+      return this.repository.create(tx, companyId, number, dto, userId);
     });
   }
 
   async findAll(companyId: string, filter: QuotationFilterDto) {
-    return this.repository.findAll(companyId, filter);
+    const quotations = await this.repository.findAll(companyId, filter);
+
+    return attachAuditNames(this.prisma, quotations);
   }
 
   async findOne(companyId: string, id: string) {
@@ -85,13 +92,14 @@ export class QuotationService {
       );
     }
 
-    return quotation;
+    return attachAuditName(this.prisma, quotation);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdateQuotationDto,
+    userId: string,
   ) {
     const quotation = await this.findOne(companyId, id);
 
@@ -135,17 +143,21 @@ export class QuotationService {
       items = dto.items;
     }
 
-    return this.repository.update(id, {
-      warehouseId: dto.warehouseId,
-      quotationDate: dto.quotationDate
-        ? new Date(dto.quotationDate)
-        : undefined,
-      observation: dto.observation,
-      items,
-    });
+    return this.repository.update(
+      id,
+      {
+        warehouseId: dto.warehouseId,
+        quotationDate: dto.quotationDate
+          ? new Date(dto.quotationDate)
+          : undefined,
+        observation: dto.observation,
+        items,
+      },
+      userId,
+    );
   }
 
-  async cancel(companyId: string, id: string) {
+  async cancel(companyId: string, id: string, userId: string) {
     const quotation = await this.findOne(companyId, id);
 
     if (quotation.status !== QuotationStatus.DRAFT) {
@@ -154,13 +166,14 @@ export class QuotationService {
       );
     }
 
-    return this.repository.cancel(id);
+    return this.repository.cancel(id, userId);
   }
 
   async addOffer(
     companyId: string,
     quotationId: string,
     dto: CreateQuotationOfferDto,
+    userId: string,
   ) {
     const quotation = await this.findOne(
       companyId,
@@ -240,6 +253,7 @@ export class QuotationService {
         paymentMethod: dto.paymentMethod,
         installmentsCount: dto.installmentsCount,
         totalAmount,
+        createdById: userId,
         items: {
           create: offerItems,
         },
@@ -286,6 +300,7 @@ export class QuotationService {
     companyId: string,
     quotationId: string,
     offerId: string,
+    userId: string,
   ) {
     const quotation = await this.findOne(
       companyId,
@@ -323,7 +338,7 @@ export class QuotationService {
 
       await tx.quotation.update({
         where: { id: quotationId },
-        data: { status: QuotationStatus.DECIDED },
+        data: { status: QuotationStatus.DECIDED, updatedById: userId },
       });
 
       // Escolher o vencedor já gera o pedido de compra com os
@@ -348,6 +363,8 @@ export class QuotationService {
           paymentMethod: offer.paymentMethod,
           installmentsCount: offer.installmentsCount,
           totalAmount: offer.totalAmount,
+          createdById: userId,
+          updatedById: userId,
           items: {
             create: offer.items.map((item) => ({
               productId: item.productId,
@@ -415,7 +432,11 @@ export class QuotationService {
    * gerado por chooseWinner ainda não virou uma compra de verdade
    * (senão a decisão está "amarrada" num documento posterior).
    */
-  async undoWinner(companyId: string, quotationId: string) {
+  async undoWinner(
+    companyId: string,
+    quotationId: string,
+    userId: string,
+  ) {
     const quotation = await this.findOne(companyId, quotationId);
 
     if (quotation.status !== QuotationStatus.DECIDED) {
@@ -455,7 +476,7 @@ export class QuotationService {
 
       await tx.quotation.update({
         where: { id: quotationId },
-        data: { status: QuotationStatus.DRAFT },
+        data: { status: QuotationStatus.DRAFT, updatedById: userId },
       });
     });
 

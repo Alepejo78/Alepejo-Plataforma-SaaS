@@ -4,6 +4,9 @@ import {
     NotFoundException,
   } from '@nestjs/common';
 
+  import { PrismaService } from '../../../core/prisma/prisma.service';
+  import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
+
   import { ProductsRepository } from '../repositories/products.repository';
 
   import { CreateProductDto } from '../dto/create-product.dto';
@@ -14,9 +17,14 @@ import {
   export class ProductsService {
     constructor(
       private readonly repository: ProductsRepository,
+      private readonly prisma: PrismaService,
     ) {}
 
-    async create(companyId: string, createProductDto: CreateProductDto) {
+    async create(
+      companyId: string,
+      createProductDto: CreateProductDto,
+      userId: string,
+    ) {
       const exists = await this.repository.findByCode(
         companyId,
         createProductDto.code,
@@ -28,11 +36,16 @@ import {
         );
       }
 
-      return this.repository.create(companyId, createProductDto);
+      return this.repository.create(companyId, createProductDto, userId);
     }
 
     async findAll(companyId: string, filter: ProductFilterDto) {
-      return this.repository.findAll(companyId, filter);
+      const result = await this.repository.findAll(companyId, filter);
+
+      return {
+        ...result,
+        data: await attachAuditNames(this.prisma, result.data),
+      };
     }
 
     async findOne(companyId: string, id: string) {
@@ -44,19 +57,21 @@ import {
         );
       }
 
-      return product;
+      return attachAuditName(this.prisma, product);
     }
 
     async update(
       companyId: string,
       id: string,
       updateProductDto: UpdateProductDto,
+      userId: string,
     ) {
       await this.findOne(companyId, id);
 
       return this.repository.update(
         id,
         updateProductDto,
+        userId,
       );
     }
 

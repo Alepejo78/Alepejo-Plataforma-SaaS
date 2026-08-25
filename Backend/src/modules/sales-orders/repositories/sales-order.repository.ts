@@ -28,6 +28,7 @@ export class SalesOrderRepository {
     dto: CreateSalesOrderDto,
     totalAmount: number,
     netAmount: number,
+    userId: string,
   ) {
     return tx.salesOrder.create({
       data: {
@@ -44,6 +45,8 @@ export class SalesOrderRepository {
         otherExpenses: dto.otherExpenses ?? 0,
         totalAmount,
         netAmount,
+        createdById: userId,
+        updatedById: userId,
         items: {
           create: dto.items.map((item) => ({
             productId: item.productId,
@@ -103,10 +106,12 @@ export class SalesOrderRepository {
         totalPrice: number;
       }[];
     },
+    userId: string,
   ): Promise<SalesOrder> {
     return this.prisma.salesOrder.update({
       where: { id },
       data: {
+        updatedById: userId,
         ...(dto.partnerId && { partnerId: dto.partnerId }),
         ...(dto.warehouseId && {
           warehouseId: dto.warehouseId,
@@ -143,10 +148,10 @@ export class SalesOrderRepository {
     });
   }
 
-  async cancel(id: string): Promise<SalesOrder> {
+  async cancel(id: string, userId: string): Promise<SalesOrder> {
     return this.prisma.salesOrder.update({
       where: { id },
-      data: { status: 'CANCELLED' },
+      data: { status: 'CANCELLED', updatedById: userId },
     });
   }
 }

@@ -130,6 +130,8 @@ function RelatorioContasContent() {
         "Pago",
         "Status",
         "Forma de pagamento",
+        "Criado por",
+        "Alterado por",
       ],
       entries.map((e) => [
         e.documentNumber ?? "",
@@ -145,6 +147,8 @@ function RelatorioContasContent() {
         e.paymentMethod
           ? PAYMENT_METHOD_LABELS[e.paymentMethod]
           : "",
+        e.createdByName || "",
+        e.updatedByName || "",
       ])
     );
   }
@@ -341,6 +345,12 @@ function RelatorioContasContent() {
               <th className="px-3 py-2 font-semibold print:border print:border-black">
                 Status
               </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Criado por
+              </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Alterado por
+              </th>
             </tr>
           </thead>
 
@@ -348,7 +358,7 @@ function RelatorioContasContent() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={9}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Carregando...
@@ -357,7 +367,7 @@ function RelatorioContasContent() {
             ) : entries.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={9}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Nenhum título encontrado com esses
@@ -393,6 +403,12 @@ function RelatorioContasContent() {
                   </td>
                   <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
                     {FINANCIAL_ENTRY_STATUS_LABELS[e.status]}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {e.createdByName || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {e.updatedByName || "—"}
                   </td>
                 </tr>
               ))

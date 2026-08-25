@@ -15,6 +15,7 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 
 import { FinancialEntriesRepository } from '../repositories/financial-entries.repository';
@@ -32,7 +33,11 @@ export class FinancialEntriesService {
     private readonly businessPartnersService: BusinessPartnersService,
   ) {}
 
-  async create(companyId: string, dto: CreateFinancialEntryDto) {
+  async create(
+    companyId: string,
+    dto: CreateFinancialEntryDto,
+    userId: string,
+  ) {
     if (dto.employeeId) {
       await this.assertEmployee(companyId, dto.employeeId);
     } else if (dto.partnerId) {
@@ -67,6 +72,8 @@ export class FinancialEntriesService {
       amount: dto.amount,
       paymentMethod: dto.paymentMethod,
       observation: dto.observation,
+      createdById: userId,
+      updatedById: userId,
     } as Prisma.FinancialEntryUncheckedCreateInput);
   }
 
@@ -87,7 +94,12 @@ export class FinancialEntriesService {
     companyId: string,
     filter: FinancialEntryFilterDto,
   ) {
-    return this.repository.findAll(companyId, filter);
+    const result = await this.repository.findAll(companyId, filter);
+
+    return {
+      ...result,
+      data: await attachAuditNames(this.prisma, result.data),
+    };
   }
 
   async findOne(companyId: string, id: string) {
@@ -97,13 +109,14 @@ export class FinancialEntriesService {
       throw new NotFoundException('Título não encontrado.');
     }
 
-    return entry;
+    return attachAuditName(this.prisma, entry);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdateFinancialEntryDto,
+    userId: string,
   ) {
     const entry = await this.findOne(companyId, id);
 
@@ -136,6 +149,7 @@ export class FinancialEntriesService {
         issueDate: new Date(dto.issueDate),
       }),
       ...(dto.dueDate && { dueDate: new Date(dto.dueDate) }),
+      updatedById: userId,
     } as Prisma.FinancialEntryUncheckedUpdateInput);
   }
 
@@ -144,6 +158,7 @@ export class FinancialEntriesService {
     companyId: string,
     id: string,
     dto: SettleFinancialEntryDto,
+    userId: string,
   ) {
     const entry = await this.findOne(companyId, id);
 
@@ -171,11 +186,12 @@ export class FinancialEntriesService {
         paymentMethod: dto.paymentMethod,
       }),
       ...(dto.observation && { observation: dto.observation }),
+      updatedById: userId,
     });
   }
 
   /** Estorna a baixa: volta o título para "em aberto". */
-  async reopen(companyId: string, id: string) {
+  async reopen(companyId: string, id: string, userId: string) {
     const entry = await this.findOne(companyId, id);
 
     if (entry.status !== FinancialEntryStatus.PAID) {
@@ -188,10 +204,11 @@ export class FinancialEntriesService {
       status: FinancialEntryStatus.OPEN,
       paidAmount: 0,
       paymentDate: null,
+      updatedById: userId,
     });
   }
 
-  async cancel(companyId: string, id: string) {
+  async cancel(companyId: string, id: string, userId: string) {
     const entry = await this.findOne(companyId, id);
 
     if (entry.status === FinancialEntryStatus.PAID) {
@@ -202,6 +219,7 @@ export class FinancialEntriesService {
 
     return this.repository.update(id, {
       status: FinancialEntryStatus.CANCELLED,
+      updatedById: userId,
     });
   }
 
@@ -254,17 +272,22 @@ export class FinancialEntriesService {
       vacationGrantId?: string;
       observation?: string;
     },
+    userId: string,
   ) {
-    const [entry] = await this.createInstallments(tx, {
-      ...params,
-      installments: [
-        {
-          // Sem vencimento calculado no documento: vence na própria data.
-          dueDate: params.dueDate ?? params.issueDate,
-          amount: params.amount,
-        },
-      ],
-    });
+    const [entry] = await this.createInstallments(
+      tx,
+      {
+        ...params,
+        installments: [
+          {
+            // Sem vencimento calculado no documento: vence na própria data.
+            dueDate: params.dueDate ?? params.issueDate,
+            amount: params.amount,
+          },
+        ],
+      },
+      userId,
+    );
 
     return entry;
   }
@@ -298,6 +321,7 @@ export class FinancialEntriesService {
       vacationGrantId?: string;
       observation?: string;
     },
+    userId: string,
   ) {
     const entries: FinancialEntry[] = [];
 
@@ -323,6 +347,8 @@ export class FinancialEntriesService {
           thirteenthSalaryItemId: params.thirteenthSalaryItemId,
           vacationGrantId: params.vacationGrantId,
           observation: params.observation,
+          createdById: userId,
+          updatedById: userId,
         },
       });
 

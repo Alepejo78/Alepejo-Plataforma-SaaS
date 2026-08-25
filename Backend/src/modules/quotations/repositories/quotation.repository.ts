@@ -31,6 +31,7 @@ export class QuotationRepository {
     companyId: string,
     number: number,
     dto: CreateQuotationDto,
+    userId: string,
   ): Promise<Quotation> {
     return tx.quotation.create({
       data: {
@@ -41,6 +42,8 @@ export class QuotationRepository {
           ? new Date(dto.quotationDate)
           : undefined,
         observation: dto.observation,
+        createdById: userId,
+        updatedById: userId,
         items: {
           create: dto.items.map((item) => ({
             productId: item.productId,
@@ -86,10 +89,12 @@ export class QuotationRepository {
       observation?: string;
       items?: { productId: string; quantity: number }[];
     },
+    userId: string,
   ): Promise<Quotation> {
     return this.prisma.quotation.update({
       where: { id },
       data: {
+        updatedById: userId,
         ...(dto.warehouseId && {
           warehouseId: dto.warehouseId,
         }),
@@ -110,10 +115,10 @@ export class QuotationRepository {
     });
   }
 
-  async cancel(id: string): Promise<Quotation> {
+  async cancel(id: string, userId: string): Promise<Quotation> {
     return this.prisma.quotation.update({
       where: { id },
-      data: { status: 'CANCELLED' },
+      data: { status: 'CANCELLED', updatedById: userId },
     });
   }
 }

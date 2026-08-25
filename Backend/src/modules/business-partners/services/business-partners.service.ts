@@ -10,6 +10,9 @@ import {
   BusinessPartnerRole,
 } from '@prisma/client';
 
+import { PrismaService } from '../../../core/prisma/prisma.service';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
+
 import { BusinessPartnersRepository } from '../repositories/business-partners.repository';
 
 import { CreateBusinessPartnerDto } from '../dto/create-business-partner.dto';
@@ -20,11 +23,13 @@ import { BusinessPartnerFilterDto } from '../dto/business-partner-filter.dto';
 export class BusinessPartnersService {
   constructor(
     private readonly repository: BusinessPartnersRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   async create(
     companyId: string,
     dto: CreateBusinessPartnerDto,
+    userId: string,
   ) {
     const exists = await this.repository.findByDocument(
       companyId,
@@ -46,26 +51,31 @@ export class BusinessPartnersService {
       return this.repository.restore(deleted.id, companyId, {
         ...dto,
         roles: this.normalizeRoles(dto.roles),
-      });
+      }, userId);
     }
 
     return this.repository.create(companyId, {
       ...dto,
       roles: this.normalizeRoles(dto.roles),
-    });
+    }, userId);
   }
 
   async findAll(
     companyId: string,
     filter: BusinessPartnerFilterDto,
   ) {
-    return this.repository.findAll(companyId, filter);
+    const result = await this.repository.findAll(companyId, filter);
+
+    return {
+      ...result,
+      data: await attachAuditNames(this.prisma, result.data),
+    };
   }
 
   async findOne(
     companyId: string,
     id: string,
-  ): Promise<BusinessPartner> {
+  ) {
     const partner = await this.repository.findById(
       companyId,
       id,
@@ -77,13 +87,14 @@ export class BusinessPartnersService {
       );
     }
 
-    return partner;
+    return attachAuditName(this.prisma, partner);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdateBusinessPartnerDto,
+    userId: string,
   ) {
     const partner = await this.findOne(companyId, id);
 
@@ -112,7 +123,7 @@ export class BusinessPartnersService {
       ...(dto.roles && {
         roles: this.normalizeRoles(dto.roles),
       }),
-    });
+    }, userId);
   }
 
   async remove(companyId: string, id: string) {

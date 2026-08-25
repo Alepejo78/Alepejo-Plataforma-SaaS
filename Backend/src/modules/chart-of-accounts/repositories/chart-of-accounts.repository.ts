@@ -14,11 +14,14 @@ export class ChartOfAccountsRepository {
   async create(
     companyId: string,
     data: CreateChartOfAccountDto,
+    userId: string,
   ): Promise<ChartOfAccount> {
     return this.prisma.chartOfAccount.create({
       data: {
         ...data,
         companyId,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }
@@ -106,10 +109,11 @@ export class ChartOfAccountsRepository {
   async update(
     id: string,
     data: UpdateChartOfAccountDto,
+    userId: string,
   ): Promise<ChartOfAccount> {
     return this.prisma.chartOfAccount.update({
       where: { id },
-      data,
+      data: { ...data, updatedById: userId },
     });
   }
 
@@ -124,12 +128,15 @@ export class ChartOfAccountsRepository {
   async restore(
     id: string,
     data: CreateChartOfAccountDto,
+    userId: string,
   ): Promise<ChartOfAccount> {
     return this.prisma.chartOfAccount.update({
       where: { id },
       data: {
         ...data,
         active: true,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }

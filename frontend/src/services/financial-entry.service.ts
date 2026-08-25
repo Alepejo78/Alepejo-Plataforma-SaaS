@@ -123,6 +123,8 @@ export interface FinancialEntry {
   saleId?: string | null;
   payrollItemId?: string | null;
   createdAt: string;
+  createdByName?: string | null;
+  updatedByName?: string | null;
 }
 
 export interface FinancialEntryPayload {

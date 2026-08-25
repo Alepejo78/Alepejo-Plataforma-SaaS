@@ -17,11 +17,14 @@ export class ChartOfAccountClassificationsRepository {
   async create(
     companyId: string,
     data: CreateChartOfAccountClassificationDto,
+    userId: string,
   ): Promise<ChartOfAccountClassification> {
     return this.prisma.chartOfAccountClassification.create({
       data: {
         ...data,
         companyId,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }
@@ -93,10 +96,11 @@ export class ChartOfAccountClassificationsRepository {
   async update(
     id: string,
     data: UpdateChartOfAccountClassificationDto,
+    userId: string,
   ): Promise<ChartOfAccountClassification> {
     return this.prisma.chartOfAccountClassification.update({
       where: { id },
-      data,
+      data: { ...data, updatedById: userId },
     });
   }
 
@@ -111,12 +115,15 @@ export class ChartOfAccountClassificationsRepository {
   async restore(
     id: string,
     data: CreateChartOfAccountClassificationDto,
+    userId: string,
   ): Promise<ChartOfAccountClassification> {
     return this.prisma.chartOfAccountClassification.update({
       where: { id },
       data: {
         ...data,
         active: true,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }

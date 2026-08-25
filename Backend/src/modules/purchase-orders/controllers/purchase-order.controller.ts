@@ -33,9 +33,10 @@ export class PurchaseOrderController {
   @ApiOperation({ summary: 'Cadastrar pedido de compra' })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreatePurchaseOrderDto,
   ) {
-    return this.service.create(companyId, dto);
+    return this.service.create(companyId, dto, userId);
   }
 
   @Get()
@@ -63,10 +64,11 @@ export class PurchaseOrderController {
   @ApiOperation({ summary: 'Alterar pedido de compra' })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdatePurchaseOrderDto,
   ) {
-    return this.service.update(companyId, id, dto);
+    return this.service.update(companyId, id, dto, userId);
   }
 
   @Patch(':id/cancel')
@@ -74,9 +76,10 @@ export class PurchaseOrderController {
   @ApiOperation({ summary: 'Cancelar pedido de compra' })
   cancel(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.cancel(companyId, id);
+    return this.service.cancel(companyId, id, userId);
   }
 
   @Patch(':id/reopen')
@@ -84,8 +87,9 @@ export class PurchaseOrderController {
   @ApiOperation({ summary: 'Estornar pedido convertido em compra' })
   reopen(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.reopen(companyId, id);
+    return this.service.reopen(companyId, id, userId);
   }
 }

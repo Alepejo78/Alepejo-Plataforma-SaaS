@@ -41,6 +41,9 @@ export interface BusinessPartner {
   notes?: string | null;
   status: PartnerStatus;
   active: boolean;
+  createdAt?: string;
+  createdByName?: string | null;
+  updatedByName?: string | null;
 }
 
 export interface PartnerListResult {

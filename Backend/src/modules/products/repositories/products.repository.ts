@@ -11,11 +11,17 @@ import { ProductFilterDto } from '../dto/product-filter.dto';
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(companyId: string, data: CreateProductDto): Promise<Product> {
+  async create(
+    companyId: string,
+    data: CreateProductDto,
+    userId: string,
+  ): Promise<Product> {
     return this.prisma.product.create({
       data: {
         ...data,
         companyId,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }
@@ -139,10 +145,11 @@ export class ProductsRepository {
   async update(
     id: string,
     data: UpdateProductDto,
+    userId: string,
   ): Promise<Product> {
     return this.prisma.product.update({
       where: { id },
-      data,
+      data: { ...data, updatedById: userId },
     });
   }
 

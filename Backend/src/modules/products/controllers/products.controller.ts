@@ -34,11 +34,13 @@ export class ProductsController {
   @Permissions('product.create')
   create(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() createProductDto: CreateProductDto,
   ) {
     return this.productsService.create(
       companyId,
       createProductDto,
+      userId,
     );
   }
 
@@ -70,6 +72,7 @@ export class ProductsController {
   @Permissions('product.update')
   update(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
   ) {
@@ -77,6 +80,7 @@ export class ProductsController {
       companyId,
       id,
       updateProductDto,
+      userId,
     );
   }
 

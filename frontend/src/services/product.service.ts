@@ -77,6 +77,9 @@ export interface Product {
   cubageM3?: string | number | null;
   status: ProductStatus;
   active: boolean;
+  createdAt?: string;
+  createdByName?: string | null;
+  updatedByName?: string | null;
 
   category?: AuxiliaryRecord | null;
   brand?: AuxiliaryRecord | null;

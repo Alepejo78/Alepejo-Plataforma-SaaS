@@ -33,9 +33,10 @@ export class FinancialEntriesController {
   @Permissions('financial-entry.create')
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateFinancialEntryDto,
   ) {
-    return this.service.create(companyId, dto);
+    return this.service.create(companyId, dto, userId);
   }
 
   @Get()
@@ -102,38 +103,42 @@ export class FinancialEntriesController {
   @Permissions('financial-entry.update')
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateFinancialEntryDto,
   ) {
-    return this.service.update(companyId, id, dto);
+    return this.service.update(companyId, id, dto, userId);
   }
 
   @Patch(':id/settle')
   @Permissions('financial-entry.settle')
   settle(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: SettleFinancialEntryDto,
   ) {
-    return this.service.settle(companyId, id, dto);
+    return this.service.settle(companyId, id, dto, userId);
   }
 
   @Patch(':id/reopen')
   @Permissions('financial-entry.settle')
   reopen(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.reopen(companyId, id);
+    return this.service.reopen(companyId, id, userId);
   }
 
   @Patch(':id/cancel')
   @Permissions('financial-entry.cancel')
   cancel(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.cancel(companyId, id);
+    return this.service.cancel(companyId, id, userId);
   }
 
   @Delete(':id')

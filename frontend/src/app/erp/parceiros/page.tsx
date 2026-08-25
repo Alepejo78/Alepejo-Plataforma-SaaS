@@ -27,6 +27,16 @@ const FILTERS: { label: string; role?: PartnerRole }[] = [
   { label: "Representantes", role: "SALES_REP" },
 ];
 
+function date(value: string | null | undefined) {
+  if (!value) {
+    return "—";
+  }
+
+  return new Date(value).toLocaleDateString("pt-BR", {
+    timeZone: "UTC",
+  });
+}
+
 function extractMessage(err: unknown, fallback: string) {
   const message = (
     err as { response?: { data?: { message?: unknown } } }
@@ -373,12 +383,24 @@ export default function ParceirosPage() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-8 w-full max-w-6xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editing
-                  ? "Editar parceiro"
-                  : "Novo parceiro"}
-              </h2>
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                  {editing
+                    ? "Editar parceiro"
+                    : "Novo parceiro"}
+                </h2>
+
+                {editing && editing.createdByName && (
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    {`Criado por ${editing.createdByName} em ${date(editing.createdAt)}`}
+                    {editing.updatedByName &&
+                      editing.updatedByName !==
+                        editing.createdByName &&
+                      ` · Última alteração por ${editing.updatedByName}`}
+                  </p>
+                )}
+              </div>
 
               <button
                 type="button"

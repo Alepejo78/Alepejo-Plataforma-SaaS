@@ -127,13 +127,15 @@ function RelatorioPedidosVendaPageInner() {
   function handleExport() {
     exportCsv(
       "relatorio-pedidos-venda",
-      ["Número", "Cliente", "Data", "Status", "Total"],
+      ["Número", "Cliente", "Data", "Status", "Total", "Criado por", "Alterado por"],
       filtered.map((o) => [
         formatNumber(o.number),
         o.partner?.tradeName || o.partner?.legalName || "",
         date(o.orderDate ?? o.createdAt),
         SALES_ORDER_STATUS_LABELS[o.status],
         money(o.totalAmount),
+        o.createdByName || "",
+        o.updatedByName || "",
       ])
     );
   }
@@ -287,6 +289,12 @@ function RelatorioPedidosVendaPageInner() {
               <th className="px-3 py-2 text-right font-semibold print:border print:border-black">
                 Total
               </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Criado por
+              </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Alterado por
+              </th>
             </tr>
           </thead>
 
@@ -294,7 +302,7 @@ function RelatorioPedidosVendaPageInner() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Carregando...
@@ -303,7 +311,7 @@ function RelatorioPedidosVendaPageInner() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Nenhum pedido encontrado com esses
@@ -332,6 +340,12 @@ function RelatorioPedidosVendaPageInner() {
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-[var(--text-primary)] print:border print:border-black print:text-black">
                     {money(o.totalAmount)}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {o.createdByName || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {o.updatedByName || "—"}
                   </td>
                 </tr>
               ))

@@ -125,6 +125,8 @@ function RelatorioComprasPageInner() {
         "Forma de pagamento",
         "Status",
         "Total",
+        "Criado por",
+        "Alterado por",
       ],
       filtered.map((p) => [
         formatPurchaseNumber(p.number),
@@ -136,6 +138,8 @@ function RelatorioComprasPageInner() {
           : "",
         PURCHASE_STATUS_LABELS[p.status],
         money(p.totalAmount),
+        p.createdByName || "",
+        p.updatedByName || "",
       ])
     );
   }
@@ -295,6 +299,12 @@ function RelatorioComprasPageInner() {
               <th className="px-3 py-2 text-right font-semibold print:border print:border-black">
                 Total
               </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Criado por
+              </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Alterado por
+              </th>
             </tr>
           </thead>
 
@@ -302,7 +312,7 @@ function RelatorioComprasPageInner() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={9}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Carregando...
@@ -311,7 +321,7 @@ function RelatorioComprasPageInner() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={9}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Nenhuma compra encontrada com esses
@@ -350,6 +360,12 @@ function RelatorioComprasPageInner() {
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-[var(--text-primary)] print:border print:border-black print:text-black">
                     {money(p.totalAmount)}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {p.createdByName || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {p.updatedByName || "—"}
                   </td>
                 </tr>
               ))

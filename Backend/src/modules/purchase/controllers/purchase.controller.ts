@@ -41,11 +41,13 @@ export class PurchaseController {
   })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreatePurchaseDto,
   ) {
     return this.service.create(
       companyId,
       dto,
+      userId,
     );
   }
 
@@ -86,6 +88,7 @@ export class PurchaseController {
   })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdatePurchaseDto,
   ) {
@@ -93,6 +96,7 @@ export class PurchaseController {
       companyId,
       id,
       dto,
+      userId,
     );
   }
 
@@ -103,11 +107,13 @@ export class PurchaseController {
   })
   approve(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
     return this.service.approve(
       companyId,
       id,
+      userId,
     );
   }
 
@@ -118,6 +124,7 @@ export class PurchaseController {
   })
   receive(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: ReceivePurchaseDto,
   ) {
@@ -125,6 +132,7 @@ export class PurchaseController {
       companyId,
       id,
       dto,
+      userId,
     );
   }
 
@@ -135,11 +143,13 @@ export class PurchaseController {
   })
   unreceive(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
     return this.service.unreceive(
       companyId,
       id,
+      userId,
     );
   }
 
@@ -150,11 +160,13 @@ export class PurchaseController {
   })
   cancel(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
     return this.service.cancel(
       companyId,
       id,
+      userId,
     );
   }
 

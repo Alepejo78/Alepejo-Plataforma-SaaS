@@ -184,17 +184,21 @@ export class VacationGrantService {
     const label = `FER-${String(grant.number).padStart(6, '0')}`;
 
     await this.prisma.$transaction(async (tx) => {
-      const entry = await this.financialEntriesService.createFromDocument(tx, {
-        companyId,
-        type: FinancialEntryType.PAYABLE,
-        employeeId: grant.employeeId,
-        amount: Number(grant.netAmount),
-        issueDate: new Date(),
-        dueDate: grant.startDate,
-        documentNumber: label,
-        vacationGrantId: grant.id,
-        observation: `Férias ${label} — ${grant.days} dia(s) a partir de ${grant.startDate.toISOString().slice(0, 10)}.`,
-      });
+      const entry = await this.financialEntriesService.createFromDocument(
+        tx,
+        {
+          companyId,
+          type: FinancialEntryType.PAYABLE,
+          employeeId: grant.employeeId,
+          amount: Number(grant.netAmount),
+          issueDate: new Date(),
+          dueDate: grant.startDate,
+          documentNumber: label,
+          vacationGrantId: grant.id,
+          observation: `Férias ${label} — ${grant.days} dia(s) a partir de ${grant.startDate.toISOString().slice(0, 10)}.`,
+        },
+        approvedByUserId,
+      );
 
       if (vacationAccount) {
         await tx.financialEntry.update({

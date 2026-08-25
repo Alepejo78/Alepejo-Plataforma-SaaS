@@ -15,6 +15,7 @@ import { WhatsappNotificationsService } from '../../notifications/services/whats
 import { ProductionOrdersService } from '../../production/services/production-orders.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { SalesOrderRepository } from '../repositories/sales-order.repository';
@@ -37,7 +38,11 @@ export class SalesOrderService {
     private readonly productionOrdersService: ProductionOrdersService,
   ) {}
 
-  async create(companyId: string, dto: CreateSalesOrderDto) {
+  async create(
+    companyId: string,
+    dto: CreateSalesOrderDto,
+    userId: string,
+  ) {
     await this.businessPartnersService.assertHasRole(
       companyId,
       dto.partnerId,
@@ -90,6 +95,7 @@ export class SalesOrderService {
         dto,
         totalAmount,
         netAmount,
+        userId,
       );
     });
 
@@ -167,7 +173,9 @@ export class SalesOrderService {
     companyId: string,
     filter: SalesOrderFilterDto,
   ) {
-    return this.repository.findAll(companyId, filter);
+    const orders = await this.repository.findAll(companyId, filter);
+
+    return attachAuditNames(this.prisma, orders);
   }
 
   async findOne(companyId: string, id: string) {
@@ -182,13 +190,14 @@ export class SalesOrderService {
       );
     }
 
-    return order;
+    return attachAuditName(this.prisma, order);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdateSalesOrderDto,
+    userId: string,
   ) {
     const order = await this.findOne(companyId, id);
 
@@ -266,23 +275,27 @@ export class SalesOrderService {
     const netAmount =
       totalAmount - discountValue + freightValue + otherExpenses;
 
-    return this.repository.update(id, {
-      partnerId: dto.partnerId,
-      warehouseId: dto.warehouseId,
-      orderDate: dto.orderDate
-        ? new Date(dto.orderDate)
-        : undefined,
-      observation: dto.observation,
-      discountValue,
-      freightValue,
-      otherExpenses,
-      totalAmount,
-      netAmount,
-      items,
-    });
+    return this.repository.update(
+      id,
+      {
+        partnerId: dto.partnerId,
+        warehouseId: dto.warehouseId,
+        orderDate: dto.orderDate
+          ? new Date(dto.orderDate)
+          : undefined,
+        observation: dto.observation,
+        discountValue,
+        freightValue,
+        otherExpenses,
+        totalAmount,
+        netAmount,
+        items,
+      },
+      userId,
+    );
   }
 
-  async cancel(companyId: string, id: string) {
+  async cancel(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 
     if (order.status !== SalesOrderStatus.DRAFT) {
@@ -291,6 +304,6 @@ export class SalesOrderService {
       );
     }
 
-    return this.repository.cancel(id);
+    return this.repository.cancel(id, userId);
   }
 }

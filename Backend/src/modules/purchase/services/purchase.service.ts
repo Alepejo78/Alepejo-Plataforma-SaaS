@@ -23,6 +23,7 @@ import { FinancialEntriesService } from '../../financial-entries/services/financ
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
 import { buildAutoInstallments } from '../../../core/utils/installment.util';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { PurchaseRepository } from '../repositories/purchase.repository';
@@ -60,6 +61,7 @@ export class PurchaseService {
   async create(
     companyId: string,
     dto: CreatePurchaseDto,
+    userId: string,
   ) {
     // Valida que o parceiro existe, pertence à empresa e possui o
     // papel de FORNECEDOR.
@@ -161,6 +163,7 @@ export class PurchaseService {
         number,
         effectiveDto,
         totalAmount,
+        userId,
       );
 
       if (dto.purchaseOrderId) {
@@ -178,10 +181,12 @@ export class PurchaseService {
     companyId: string,
     filter: PurchaseFilterDto,
   ) {
-    return this.repository.findAll(
+    const purchases = await this.repository.findAll(
       companyId,
       filter,
     );
+
+    return attachAuditNames(this.prisma, purchases);
   }
 
   async findOne(
@@ -200,13 +205,14 @@ export class PurchaseService {
       );
     }
 
-    return purchase;
+    return attachAuditName(this.prisma, purchase);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdatePurchaseDto,
+    userId: string,
   ) {
     const purchase = await this.findOne(companyId, id);
 
@@ -294,22 +300,27 @@ export class PurchaseService {
           )
         : undefined;
 
-    return this.repository.update(id, {
-      partnerId: dto.partnerId,
-      warehouseId: dto.warehouseId,
-      purchaseDate,
-      observation: dto.observation,
-      termDays,
-      dueDate,
-      paymentMethod: dto.paymentMethod,
-      totalAmount,
-      items,
-    });
+    return this.repository.update(
+      id,
+      {
+        partnerId: dto.partnerId,
+        warehouseId: dto.warehouseId,
+        purchaseDate,
+        observation: dto.observation,
+        termDays,
+        dueDate,
+        paymentMethod: dto.paymentMethod,
+        totalAmount,
+        items,
+      },
+      userId,
+    );
   }
 
   async approve(
     companyId: string,
     id: string,
+    userId: string,
   ) {
     const purchase =
       await this.findOne(companyId, id);
@@ -328,6 +339,7 @@ export class PurchaseService {
       },
       data: {
         status: PurchaseStatus.APPROVED,
+        updatedById: userId,
       },
     });
   }
@@ -336,6 +348,7 @@ export class PurchaseService {
     companyId: string,
     id: string,
     dto: ReceivePurchaseDto = {},
+    userId: string,
   ) {
     const purchase =
       await this.prisma.purchase.findFirst({
@@ -542,6 +555,7 @@ export class PurchaseService {
             installmentsCount: effectiveInstallmentsCount,
             paymentMethod,
             dueDate,
+            updatedById: userId,
           },
         });
 
@@ -578,6 +592,7 @@ export class PurchaseService {
                 }),
               ),
             },
+            userId,
           );
         } else if (autoInstallments) {
           await this.financialEntriesService.createInstallments(
@@ -586,6 +601,7 @@ export class PurchaseService {
               ...commonEntryData,
               installments: autoInstallments,
             },
+            userId,
           );
         } else {
           await this.financialEntriesService.createFromDocument(
@@ -595,6 +611,7 @@ export class PurchaseService {
               amount: Number(purchase.totalAmount),
               dueDate,
             },
+            userId,
           );
         }
       },
@@ -609,6 +626,7 @@ export class PurchaseService {
   async unreceive(
     companyId: string,
     id: string,
+    userId: string,
   ) {
     const purchase =
       await this.prisma.purchase.findFirst({
@@ -720,6 +738,7 @@ export class PurchaseService {
           data: {
             status:
               PurchaseStatus.APPROVED,
+            updatedById: userId,
           },
         });
 
@@ -744,6 +763,7 @@ export class PurchaseService {
   async cancel(
     companyId: string,
     id: string,
+    userId: string,
   ) {
     const purchase =
       await this.findOne(companyId, id);
@@ -764,6 +784,7 @@ export class PurchaseService {
       data: {
         status:
           PurchaseStatus.CANCELLED,
+        updatedById: userId,
       },
     });
   }

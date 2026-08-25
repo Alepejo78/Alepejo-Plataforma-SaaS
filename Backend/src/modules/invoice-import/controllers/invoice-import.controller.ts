@@ -70,9 +70,10 @@ export class InvoiceImportController {
   })
   confirmPurchase(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: ConfirmPurchaseImportDto,
   ) {
-    return this.service.confirmPurchase(companyId, dto);
+    return this.service.confirmPurchase(companyId, dto, userId);
   }
 
   @Post('purchase-expense')
@@ -84,9 +85,10 @@ export class InvoiceImportController {
   })
   confirmPurchaseExpense(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: ConfirmExpenseImportDto,
   ) {
-    return this.service.confirmPurchaseExpense(companyId, dto);
+    return this.service.confirmPurchaseExpense(companyId, dto, userId);
   }
 
   @Post('sale')
@@ -97,9 +99,10 @@ export class InvoiceImportController {
   })
   confirmSale(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: ConfirmSaleImportDto,
   ) {
-    return this.service.confirmSale(companyId, dto);
+    return this.service.confirmSale(companyId, dto, userId);
   }
 
   @Post('sale-expense')
@@ -111,8 +114,9 @@ export class InvoiceImportController {
   })
   confirmSaleExpense(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: ConfirmExpenseImportDto,
   ) {
-    return this.service.confirmSaleExpense(companyId, dto);
+    return this.service.confirmSaleExpense(companyId, dto, userId);
   }
 }

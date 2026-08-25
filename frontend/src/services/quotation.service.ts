@@ -74,6 +74,8 @@ export interface Quotation {
   quotationDate?: string | null;
   observation?: string | null;
   createdAt: string;
+  createdByName?: string | null;
+  updatedByName?: string | null;
   items: QuotationItem[];
   offers: QuotationOffer[];
 

@@ -100,6 +100,8 @@ function RelatorioParceirosPageInner() {
         "E-mail",
         "Cidade",
         "UF",
+        "Criado por",
+        "Alterado por",
       ],
       filtered.map((p) => [
         p.tradeName || p.legalName,
@@ -110,6 +112,8 @@ function RelatorioParceirosPageInner() {
         p.email ?? "",
         p.city ?? "",
         p.state ?? "",
+        p.createdByName || "",
+        p.updatedByName || "",
       ])
     );
   }
@@ -266,6 +270,12 @@ function RelatorioParceirosPageInner() {
               <th className="px-3 py-2 font-semibold print:border print:border-black">
                 UF
               </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Criado por
+              </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Alterado por
+              </th>
             </tr>
           </thead>
 
@@ -273,7 +283,7 @@ function RelatorioParceirosPageInner() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Carregando...
@@ -282,7 +292,7 @@ function RelatorioParceirosPageInner() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Nenhum parceiro encontrado com esses
@@ -320,6 +330,12 @@ function RelatorioParceirosPageInner() {
                   </td>
                   <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
                     {p.state || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {p.createdByName || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {p.updatedByName || "—"}
                   </td>
                 </tr>
               ))

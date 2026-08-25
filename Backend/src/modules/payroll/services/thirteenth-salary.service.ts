@@ -275,17 +275,21 @@ export class ThirteenthSalaryService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const item of includedItems) {
-        const entry = await this.financialEntriesService.createFromDocument(tx, {
-          companyId,
-          type: FinancialEntryType.PAYABLE,
-          employeeId: item.employeeId,
-          amount: Number(item.netAmount),
-          issueDate,
-          dueDate,
-          documentNumber: label,
-          thirteenthSalaryItemId: item.id,
-          observation: `13º salário (${thirteenth.installment}ª parcela) ${label} — ano ${thirteenth.year}.`,
-        });
+        const entry = await this.financialEntriesService.createFromDocument(
+          tx,
+          {
+            companyId,
+            type: FinancialEntryType.PAYABLE,
+            employeeId: item.employeeId,
+            amount: Number(item.netAmount),
+            issueDate,
+            dueDate,
+            documentNumber: label,
+            thirteenthSalaryItemId: item.id,
+            observation: `13º salário (${thirteenth.installment}ª parcela) ${label} — ano ${thirteenth.year}.`,
+          },
+          approvedByUserId,
+        );
 
         if (thirteenthAccount) {
           await tx.financialEntry.update({

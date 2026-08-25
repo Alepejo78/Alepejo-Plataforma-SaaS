@@ -41,11 +41,13 @@ export class SaleController {
   })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateSaleDto,
   ) {
     return this.service.create(
       companyId,
       dto,
+      userId,
     );
   }
 
@@ -86,6 +88,7 @@ export class SaleController {
   })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateSaleDto,
   ) {
@@ -93,6 +96,7 @@ export class SaleController {
       companyId,
       id,
       dto,
+      userId,
     );
   }
 
@@ -103,6 +107,7 @@ export class SaleController {
   })
   approve(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: ApproveSaleDto,
   ) {
@@ -110,6 +115,7 @@ export class SaleController {
       companyId,
       id,
       dto,
+      userId,
     );
   }
 
@@ -120,11 +126,13 @@ export class SaleController {
   })
   cancel(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
     return this.service.cancel(
       companyId,
       id,
+      userId,
     );
   }
 
@@ -150,11 +158,13 @@ export class SaleController {
   })
   undoApproval(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
     return this.service.undoApproval(
       companyId,
       id,
+      userId,
     );
   }
 }

@@ -19,11 +19,14 @@ export class BusinessPartnersRepository {
   async create(
     companyId: string,
     data: CreateBusinessPartnerDto,
+    userId: string,
   ): Promise<BusinessPartner> {
     return this.prisma.businessPartner.create({
       data: {
         ...data,
         companyId,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }
@@ -161,10 +164,11 @@ export class BusinessPartnersRepository {
   async update(
     id: string,
     data: UpdateBusinessPartnerDto,
+    userId: string,
   ): Promise<BusinessPartner> {
     return this.prisma.businessPartner.update({
       where: { id },
-      data,
+      data: { ...data, updatedById: userId },
     });
   }
 
@@ -187,6 +191,7 @@ export class BusinessPartnersRepository {
     id: string,
     companyId: string,
     data: CreateBusinessPartnerDto,
+    userId: string,
   ): Promise<BusinessPartner> {
     return this.prisma.businessPartner.update({
       where: { id },
@@ -195,6 +200,8 @@ export class BusinessPartnersRepository {
         companyId,
         active: true,
         deletedAt: null,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }

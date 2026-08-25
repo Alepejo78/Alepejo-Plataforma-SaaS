@@ -52,6 +52,8 @@ export interface Quote {
   totalAmount: string | number;
   netAmount: string | number;
   createdAt: string;
+  createdByName?: string | null;
+  updatedByName?: string | null;
   items: QuoteItem[];
 
   partner?: {

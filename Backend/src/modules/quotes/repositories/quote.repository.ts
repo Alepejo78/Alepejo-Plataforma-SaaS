@@ -29,6 +29,7 @@ export class QuoteRepository {
     dto: CreateQuoteDto,
     totalAmount: number,
     netAmount: number,
+    userId: string,
   ) {
     return tx.quote.create({
       data: {
@@ -48,6 +49,8 @@ export class QuoteRepository {
         otherExpenses: dto.otherExpenses ?? 0,
         totalAmount,
         netAmount,
+        createdById: userId,
+        updatedById: userId,
         items: {
           create: dto.items.map((item) => ({
             productId: item.productId,
@@ -105,10 +108,12 @@ export class QuoteRepository {
         totalPrice: number;
       }[];
     },
+    userId: string,
   ): Promise<Quote> {
     return this.prisma.quote.update({
       where: { id },
       data: {
+        updatedById: userId,
         ...(dto.partnerId && { partnerId: dto.partnerId }),
         ...(dto.warehouseId && {
           warehouseId: dto.warehouseId,
@@ -148,17 +153,17 @@ export class QuoteRepository {
     });
   }
 
-  async cancel(id: string): Promise<Quote> {
+  async cancel(id: string, userId: string): Promise<Quote> {
     return this.prisma.quote.update({
       where: { id },
-      data: { status: 'CANCELLED' },
+      data: { status: 'CANCELLED', updatedById: userId },
     });
   }
 
-  async approve(id: string): Promise<Quote> {
+  async approve(id: string, userId: string): Promise<Quote> {
     return this.prisma.quote.update({
       where: { id },
-      data: { status: 'APPROVED' },
+      data: { status: 'APPROVED', updatedById: userId },
       include: includeRelations,
     });
   }

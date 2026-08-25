@@ -31,9 +31,10 @@ export class QuoteController {
   @ApiOperation({ summary: 'Cadastrar orçamento' })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateQuoteDto,
   ) {
-    return this.service.create(companyId, dto);
+    return this.service.create(companyId, dto, userId);
   }
 
   @Get()
@@ -61,10 +62,11 @@ export class QuoteController {
   @ApiOperation({ summary: 'Alterar orçamento' })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateQuoteDto,
   ) {
-    return this.service.update(companyId, id, dto);
+    return this.service.update(companyId, id, dto, userId);
   }
 
   @Patch(':id/cancel')
@@ -72,9 +74,10 @@ export class QuoteController {
   @ApiOperation({ summary: 'Cancelar orçamento' })
   cancel(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.cancel(companyId, id);
+    return this.service.cancel(companyId, id, userId);
   }
 
   @Patch(':id/approve')
@@ -84,8 +87,9 @@ export class QuoteController {
   })
   approve(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.approve(companyId, id);
+    return this.service.approve(companyId, id, userId);
   }
 }

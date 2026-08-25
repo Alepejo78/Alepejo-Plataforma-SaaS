@@ -31,9 +31,10 @@ export class ChartOfAccountClassificationsController {
   @Permissions('chart-of-account-classification.create')
   create(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateChartOfAccountClassificationDto,
   ) {
-    return this.service.create(companyId, dto);
+    return this.service.create(companyId, dto, userId);
   }
 
   @Get()
@@ -58,10 +59,11 @@ export class ChartOfAccountClassificationsController {
   @Permissions('chart-of-account-classification.update')
   update(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateChartOfAccountClassificationDto,
   ) {
-    return this.service.update(companyId, id, dto);
+    return this.service.update(companyId, id, dto, userId);
   }
 
   @Delete(':id')

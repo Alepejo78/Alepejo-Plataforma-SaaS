@@ -39,9 +39,10 @@ export class BusinessPartnersController {
   })
   create(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateBusinessPartnerDto,
   ) {
-    return this.service.create(companyId, dto);
+    return this.service.create(companyId, dto, userId);
   }
 
   @Get()
@@ -71,10 +72,11 @@ export class BusinessPartnersController {
   @ApiOperation({ summary: 'Alterar parceiro' })
   update(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateBusinessPartnerDto,
   ) {
-    return this.service.update(companyId, id, dto);
+    return this.service.update(companyId, id, dto, userId);
   }
 
   @Delete(':id')

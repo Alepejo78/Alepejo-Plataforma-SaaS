@@ -44,6 +44,7 @@ export class InvoiceImportService {
     companyId: string,
     dto: InvoicePartnerDto,
     role: BusinessPartnerRole,
+    userId: string,
   ) {
     if (dto.partnerId) {
       return dto.partnerId;
@@ -77,6 +78,7 @@ export class InvoiceImportService {
         city: dto.city,
         state: dto.state,
       },
+      userId,
     );
 
     return created.id;
@@ -85,87 +87,116 @@ export class InvoiceImportService {
   async confirmPurchase(
     companyId: string,
     dto: ConfirmPurchaseImportDto,
+    userId: string,
   ) {
     const partnerId = await this.resolvePartner(
       companyId,
       dto.partner,
       BusinessPartnerRole.SUPPLIER,
+      userId,
     );
 
-    const purchase = await this.purchaseService.create(companyId, {
-      partnerId,
-      warehouseId: dto.warehouseId,
-      chartOfAccountId: dto.chartOfAccountId,
-      observation: dto.observation,
-      termDays: dto.termDays,
-      paymentMethod: dto.paymentMethod,
-      items: dto.items,
-    });
+    const purchase = await this.purchaseService.create(
+      companyId,
+      {
+        partnerId,
+        warehouseId: dto.warehouseId,
+        chartOfAccountId: dto.chartOfAccountId,
+        observation: dto.observation,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        items: dto.items,
+      },
+      userId,
+    );
 
-    await this.purchaseService.approve(companyId, purchase.id);
+    await this.purchaseService.approve(companyId, purchase.id, userId);
 
-    return this.purchaseService.receive(companyId, purchase.id, {
-      invoiceNumber: dto.invoiceNumber,
-      invoiceKey: dto.invoiceKey,
-      invoiceIssueDate: dto.invoiceIssueDate
-        ? (dto.invoiceIssueDate as unknown as Date)
-        : undefined,
-      termDays: dto.termDays,
-      paymentMethod: dto.paymentMethod,
-      installments: dto.installments,
-    });
+    return this.purchaseService.receive(
+      companyId,
+      purchase.id,
+      {
+        invoiceNumber: dto.invoiceNumber,
+        invoiceKey: dto.invoiceKey,
+        invoiceIssueDate: dto.invoiceIssueDate
+          ? (dto.invoiceIssueDate as unknown as Date)
+          : undefined,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        installments: dto.installments,
+      },
+      userId,
+    );
   }
 
-  async confirmSale(companyId: string, dto: ConfirmSaleImportDto) {
+  async confirmSale(
+    companyId: string,
+    dto: ConfirmSaleImportDto,
+    userId: string,
+  ) {
     const partnerId = await this.resolvePartner(
       companyId,
       dto.partner,
       BusinessPartnerRole.CUSTOMER,
+      userId,
     );
 
-    const sale = await this.saleService.create(companyId, {
-      partnerId,
-      warehouseId: dto.warehouseId,
-      chartOfAccountId: dto.chartOfAccountId,
-      observation: dto.observation,
-      termDays: dto.termDays,
-      paymentMethod: dto.paymentMethod,
-      items: dto.items,
-    });
+    const sale = await this.saleService.create(
+      companyId,
+      {
+        partnerId,
+        warehouseId: dto.warehouseId,
+        chartOfAccountId: dto.chartOfAccountId,
+        observation: dto.observation,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        items: dto.items,
+      },
+      userId,
+    );
 
-    return this.saleService.approve(companyId, sale.id, {
-      invoiceNumber: dto.invoiceNumber,
-      invoiceKey: dto.invoiceKey,
-      invoiceIssueDate: dto.invoiceIssueDate
-        ? (dto.invoiceIssueDate as unknown as Date)
-        : undefined,
-      termDays: dto.termDays,
-      paymentMethod: dto.paymentMethod,
-      installments: dto.installments,
-    });
+    return this.saleService.approve(
+      companyId,
+      sale.id,
+      {
+        invoiceNumber: dto.invoiceNumber,
+        invoiceKey: dto.invoiceKey,
+        invoiceIssueDate: dto.invoiceIssueDate
+          ? (dto.invoiceIssueDate as unknown as Date)
+          : undefined,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        installments: dto.installments,
+      },
+      userId,
+    );
   }
 
   async confirmPurchaseExpense(
     companyId: string,
     dto: ConfirmExpenseImportDto,
+    userId: string,
   ) {
     return this.confirmExpense(
       companyId,
       dto,
       FinancialEntryType.PAYABLE,
       BusinessPartnerRole.SUPPLIER,
+      userId,
     );
   }
 
   async confirmSaleExpense(
     companyId: string,
     dto: ConfirmExpenseImportDto,
+    userId: string,
   ) {
     return this.confirmExpense(
       companyId,
       dto,
       FinancialEntryType.RECEIVABLE,
       BusinessPartnerRole.CUSTOMER,
+      userId,
     );
   }
 
@@ -174,30 +205,36 @@ export class InvoiceImportService {
     dto: ConfirmExpenseImportDto,
     type: FinancialEntryType,
     role: BusinessPartnerRole,
+    userId: string,
   ) {
     const partnerId = await this.resolvePartner(
       companyId,
       dto.partner,
       role,
+      userId,
     );
 
     return this.prisma.$transaction((tx) =>
-      this.financialEntriesService.createInstallments(tx, {
-        companyId,
-        type,
-        partnerId,
-        issueDate: new Date(dto.issueDate),
-        chartOfAccountId: dto.chartOfAccountId,
-        documentNumber: dto.documentNumber,
-        documentKey: dto.documentKey,
-        documentType: dto.documentType,
-        paymentMethod: dto.paymentMethod,
-        observation: dto.observation,
-        installments: dto.installments.map((installment) => ({
-          dueDate: new Date(installment.dueDate),
-          amount: installment.amount,
-        })),
-      }),
+      this.financialEntriesService.createInstallments(
+        tx,
+        {
+          companyId,
+          type,
+          partnerId,
+          issueDate: new Date(dto.issueDate),
+          chartOfAccountId: dto.chartOfAccountId,
+          documentNumber: dto.documentNumber,
+          documentKey: dto.documentKey,
+          documentType: dto.documentType,
+          paymentMethod: dto.paymentMethod,
+          observation: dto.observation,
+          installments: dto.installments.map((installment) => ({
+            dueDate: new Date(installment.dueDate),
+            amount: installment.amount,
+          })),
+        },
+        userId,
+      ),
     );
   }
 }

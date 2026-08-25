@@ -14,6 +14,7 @@ import { EmailNotificationsService } from '../../notifications/services/email-no
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { PurchaseOrderRepository } from '../repositories/purchase-order.repository';
@@ -35,7 +36,11 @@ export class PurchaseOrderService {
     private readonly whatsappNotifications: WhatsappNotificationsService,
   ) {}
 
-  async create(companyId: string, dto: CreatePurchaseOrderDto) {
+  async create(
+    companyId: string,
+    dto: CreatePurchaseOrderDto,
+    userId: string,
+  ) {
     await this.businessPartnersService.assertHasRole(
       companyId,
       dto.partnerId,
@@ -104,6 +109,7 @@ export class PurchaseOrderService {
         number,
         dto,
         totalAmount,
+        userId,
       );
     });
 
@@ -162,7 +168,9 @@ export class PurchaseOrderService {
     companyId: string,
     filter: PurchaseOrderFilterDto,
   ) {
-    return this.repository.findAll(companyId, filter);
+    const orders = await this.repository.findAll(companyId, filter);
+
+    return attachAuditNames(this.prisma, orders);
   }
 
   async findOne(companyId: string, id: string) {
@@ -177,13 +185,14 @@ export class PurchaseOrderService {
       );
     }
 
-    return order;
+    return attachAuditName(this.prisma, order);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdatePurchaseOrderDto,
+    userId: string,
   ) {
     const order = await this.findOne(companyId, id);
 
@@ -251,22 +260,26 @@ export class PurchaseOrderService {
       }));
     }
 
-    return this.repository.update(id, {
-      partnerId: dto.partnerId,
-      warehouseId: dto.warehouseId,
-      orderDate: dto.orderDate
-        ? new Date(dto.orderDate)
-        : undefined,
-      observation: dto.observation,
-      totalAmount,
-      termDays: dto.termDays,
-      paymentMethod: dto.paymentMethod,
-      installmentsCount: dto.installmentsCount,
-      items,
-    });
+    return this.repository.update(
+      id,
+      {
+        partnerId: dto.partnerId,
+        warehouseId: dto.warehouseId,
+        orderDate: dto.orderDate
+          ? new Date(dto.orderDate)
+          : undefined,
+        observation: dto.observation,
+        totalAmount,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        installmentsCount: dto.installmentsCount,
+        items,
+      },
+      userId,
+    );
   }
 
-  async cancel(companyId: string, id: string) {
+  async cancel(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 
     if (order.status !== PurchaseOrderStatus.DRAFT) {
@@ -275,7 +288,7 @@ export class PurchaseOrderService {
       );
     }
 
-    return this.repository.cancel(id);
+    return this.repository.cancel(id, userId);
   }
 
   /**
@@ -285,7 +298,7 @@ export class PurchaseOrderService {
    * compra existir (mesmo cancelada) o pedido fica preso — é o que
    * caracteriza "amarrado em documento posterior".
    */
-  async reopen(companyId: string, id: string) {
+  async reopen(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 
     if (order.status !== PurchaseOrderStatus.CONVERTED) {
@@ -306,7 +319,7 @@ export class PurchaseOrderService {
 
     await this.prisma.purchaseOrder.update({
       where: { id },
-      data: { status: PurchaseOrderStatus.DRAFT },
+      data: { status: PurchaseOrderStatus.DRAFT, updatedById: userId },
     });
 
     return this.findOne(companyId, id);

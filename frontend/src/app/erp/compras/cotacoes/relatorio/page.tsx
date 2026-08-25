@@ -144,6 +144,9 @@ function RelatorioCotacoesPageInner() {
     for (const q of filtered) {
       const offers = sortedOffers(q);
 
+      const criadoPor = q.createdByName || "";
+      const alteradoPor = q.updatedByName || "";
+
       if (offers.length === 0) {
         rows.push([
           formatNumber(q.number),
@@ -154,6 +157,8 @@ function RelatorioCotacoesPageInner() {
           "",
           "",
           "",
+          criadoPor,
+          alteradoPor,
         ]);
 
         continue;
@@ -171,6 +176,8 @@ function RelatorioCotacoesPageInner() {
             : "",
           money(o.totalAmount),
           o.isWinner ? "Sim" : "Não",
+          criadoPor,
+          alteradoPor,
         ]);
       }
     }
@@ -186,6 +193,8 @@ function RelatorioCotacoesPageInner() {
         "Forma de pagamento",
         "Valor",
         "Vencedora",
+        "Criado por",
+        "Alterado por",
       ],
       rows
     );
@@ -344,6 +353,12 @@ function RelatorioCotacoesPageInner() {
               <th className="px-3 py-2 text-center font-semibold print:border print:border-black">
                 Vencedora
               </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Criado por
+              </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Alterado por
+              </th>
             </tr>
           </thead>
 
@@ -351,7 +366,7 @@ function RelatorioCotacoesPageInner() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Carregando...
@@ -360,7 +375,7 @@ function RelatorioCotacoesPageInner() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Nenhuma cotação encontrada com esses
@@ -393,6 +408,12 @@ function RelatorioCotacoesPageInner() {
                         className="px-3 py-2 text-[var(--text-muted)] print:border print:border-black print:text-black"
                       >
                         Sem propostas registradas.
+                      </td>
+                      <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                        {q.createdByName || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                        {q.updatedByName || "—"}
                       </td>
                     </tr>
                   );
@@ -466,6 +487,16 @@ function RelatorioCotacoesPageInner() {
                       </td>
                       <td className="px-3 py-2 text-center print:border print:border-black print:text-black">
                         {o.isWinner ? "🏆 Sim" : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                        {index === 0
+                          ? q.createdByName || "—"
+                          : ""}
+                      </td>
+                      <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                        {index === 0
+                          ? q.updatedByName || "—"
+                          : ""}
                       </td>
                     </tr>
                   )

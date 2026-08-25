@@ -31,11 +31,13 @@ export class ChartOfAccountsController {
   @Permissions('chart-of-account.create')
   create(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() createChartOfAccountDto: CreateChartOfAccountDto,
   ) {
     return this.chartOfAccountsService.create(
       companyId,
       createChartOfAccountDto,
+      userId,
     );
   }
 
@@ -61,6 +63,7 @@ export class ChartOfAccountsController {
   @Permissions('chart-of-account.update')
   update(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() updateChartOfAccountDto: UpdateChartOfAccountDto,
   ) {
@@ -68,6 +71,7 @@ export class ChartOfAccountsController {
       companyId,
       id,
       updateChartOfAccountDto,
+      userId,
     );
   }
 

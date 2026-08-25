@@ -22,6 +22,7 @@ export class BudgetsRepository {
     month: number,
     type: BudgetType,
     plannedAmount: number,
+    userId: string,
   ): Promise<Budget> {
     return this.prisma.budget.upsert({
       where: {
@@ -32,13 +33,15 @@ export class BudgetsRepository {
           type,
         },
       },
-      update: { plannedAmount },
+      update: { plannedAmount, updatedById: userId },
       create: {
         companyId,
         year,
         month,
         type,
         plannedAmount,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }

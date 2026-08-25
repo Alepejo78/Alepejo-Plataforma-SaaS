@@ -71,13 +71,18 @@ export class BudgetsService {
     return { year, months, totals };
   }
 
-  async upsert(companyId: string, dto: UpsertBudgetDto) {
+  async upsert(
+    companyId: string,
+    dto: UpsertBudgetDto,
+    userId: string,
+  ) {
     return this.repository.upsert(
       companyId,
       dto.year,
       dto.month,
       dto.type,
       dto.plannedAmount,
+      userId,
     );
   }
 }

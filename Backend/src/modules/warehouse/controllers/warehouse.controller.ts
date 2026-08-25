@@ -46,11 +46,13 @@ export class WarehouseController {
   })
   create(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateWarehouseDto,
   ) {
     return this.warehouseService.create(
       companyId,
       dto,
+      userId,
     );
   }
 
@@ -91,6 +93,7 @@ export class WarehouseController {
   })
   update(
     @CurrentUser('rootCompanyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateWarehouseDto,
   ) {
@@ -98,6 +101,7 @@ export class WarehouseController {
       companyId,
       id,
       dto,
+      userId,
     );
   }
 

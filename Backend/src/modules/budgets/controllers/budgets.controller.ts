@@ -31,8 +31,9 @@ export class BudgetsController {
   @Permissions('budget.manage')
   upsert(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: UpsertBudgetDto,
   ) {
-    return this.service.upsert(companyId, dto);
+    return this.service.upsert(companyId, dto, userId);
   }
 }

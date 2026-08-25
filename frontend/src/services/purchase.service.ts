@@ -77,6 +77,8 @@ export interface Purchase {
   invoiceIssueDate?: string | null;
   purchaseOrderId?: string | null;
   createdAt: string;
+  createdByName?: string | null;
+  updatedByName?: string | null;
   items: PurchaseItem[];
   financialEntries: PurchaseFinancialEntry[];
 

@@ -12,25 +12,46 @@ export class UsersRepository {
     });
   }
 
+  // Sem `select` aqui, `findMany`/`findFirst` devolveriam o User
+  // inteiro — inclusive passwordHash/refreshTokenHash/
+  // passwordResetTokenHash/lastLoginIp — pros endpoints públicos
+  // GET /users e GET /users/:id. Lista só o que a tela precisa.
+  private static readonly SAFE_SELECT = {
+    id: true,
+    companyId: true,
+    name: true,
+    email: true,
+    department: true,
+    manager: true,
+    alias: true,
+    status: true,
+    mustChangePassword: true,
+    lastLoginAt: true,
+    lockedUntil: true,
+    active: true,
+    avatar: true,
+    avatarEnabled: true,
+    createdAt: true,
+    updatedAt: true,
+    roles: {
+      select: {
+        role: { select: { id: true, name: true } },
+      },
+    },
+    companies: {
+      select: {
+        companyId: true,
+      },
+    },
+  } as const;
+
   async findAll(companyId: string) {
     return this.prisma.user.findMany({
       where: {
         companyId,
         deletedAt: null,
       },
-      include: {
-        company: true,
-        roles: {
-          include: {
-            role: true,
-          },
-        },
-        companies: {
-          select: {
-            companyId: true,
-          },
-        },
-      },
+      select: UsersRepository.SAFE_SELECT,
       orderBy: {
         name: 'asc',
       },
@@ -44,33 +65,7 @@ export class UsersRepository {
         companyId,
         deletedAt: null,
       },
-      include: {
-        company: true,
-
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: {
-                      include: {
-                        group: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-
-        companies: {
-          select: {
-            companyId: true,
-          },
-        },
-      },
+      select: UsersRepository.SAFE_SELECT,
     });
   }
 

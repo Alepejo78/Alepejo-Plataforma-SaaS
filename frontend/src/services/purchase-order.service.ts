@@ -51,6 +51,8 @@ export interface PurchaseOrder {
   paymentMethod?: PaymentMethod | null;
   installmentsCount?: number | null;
   createdAt: string;
+  createdByName?: string | null;
+  updatedByName?: string | null;
   items: PurchaseOrderItem[];
 
   partner?: {

@@ -40,6 +40,7 @@ export class SaleRepository {
     dto: CreateSaleDto,
     totalAmount: number,
     netAmount: number,
+    userId: string,
   ): Promise<Sale> {
     const issueDate = dto.saleDate
       ? new Date(dto.saleDate)
@@ -74,6 +75,8 @@ export class SaleRepository {
 
         quoteId: dto.quoteId,
         salesOrderId: dto.salesOrderId,
+        createdById: userId,
+        updatedById: userId,
 
         items: {
           create: dto.items.map((item) => ({
@@ -178,10 +181,12 @@ export class SaleRepository {
         totalPrice: number;
       }[];
     },
+    userId: string,
   ): Promise<Sale> {
     return this.prisma.sale.update({
       where: { id },
       data: {
+        updatedById: userId,
         ...(dto.partnerId && { partnerId: dto.partnerId }),
         ...(dto.warehouseId && {
           warehouseId: dto.warehouseId,

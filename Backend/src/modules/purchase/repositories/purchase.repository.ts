@@ -42,6 +42,7 @@ export class PurchaseRepository {
     number: number,
     dto: CreatePurchaseDto,
     totalAmount: number,
+    userId: string,
   ): Promise<Purchase> {
     const issueDate = dto.purchaseDate
       ? new Date(dto.purchaseDate)
@@ -66,6 +67,8 @@ export class PurchaseRepository {
         dueDate: calculateDueDate(issueDate, termDays),
         paymentMethod: dto.paymentMethod,
         purchaseOrderId: dto.purchaseOrderId,
+        createdById: userId,
+        updatedById: userId,
 
         items: {
           create: dto.items.map((item) => ({
@@ -163,10 +166,12 @@ export class PurchaseRepository {
         totalPrice: number;
       }[];
     },
+    userId: string,
   ): Promise<Purchase> {
     return this.prisma.purchase.update({
       where: { id },
       data: {
+        updatedById: userId,
         ...(dto.partnerId && { partnerId: dto.partnerId }),
         ...(dto.warehouseId && {
           warehouseId: dto.warehouseId,

@@ -125,13 +125,15 @@ function RelatorioOrcamentosPageInner() {
   function handleExport() {
     exportCsv(
       "relatorio-orcamentos",
-      ["Número", "Cliente", "Data", "Status", "Total"],
+      ["Número", "Cliente", "Data", "Status", "Total", "Criado por", "Alterado por"],
       filtered.map((q) => [
         formatNumber(q.number),
         q.partner?.tradeName || q.partner?.legalName || "",
         date(q.quoteDate ?? q.createdAt),
         QUOTE_STATUS_LABELS[q.status],
         money(q.netAmount ?? q.totalAmount),
+        q.createdByName || "",
+        q.updatedByName || "",
       ])
     );
   }
@@ -285,6 +287,12 @@ function RelatorioOrcamentosPageInner() {
               <th className="px-3 py-2 text-right font-semibold print:border print:border-black">
                 Total
               </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Criado por
+              </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Alterado por
+              </th>
             </tr>
           </thead>
 
@@ -292,7 +300,7 @@ function RelatorioOrcamentosPageInner() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Carregando...
@@ -301,7 +309,7 @@ function RelatorioOrcamentosPageInner() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Nenhum orçamento encontrado com esses
@@ -330,6 +338,12 @@ function RelatorioOrcamentosPageInner() {
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-[var(--text-primary)] print:border print:border-black print:text-black">
                     {money(q.netAmount ?? q.totalAmount)}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {q.createdByName || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {q.updatedByName || "—"}
                   </td>
                 </tr>
               ))

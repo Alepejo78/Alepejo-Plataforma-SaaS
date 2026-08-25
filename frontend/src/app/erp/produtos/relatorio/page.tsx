@@ -156,6 +156,8 @@ function RelatorioProdutosPageInner() {
         "Unidade",
         "Custo médio",
         "Situação",
+        "Criado por",
+        "Alterado por",
       ],
       products.map((p) => [
         p.code,
@@ -166,6 +168,8 @@ function RelatorioProdutosPageInner() {
         p.unit?.code ?? "",
         money(avgCostByProduct[p.id] ?? 0),
         STATUS_LABELS[p.status],
+        p.createdByName || "",
+        p.updatedByName || "",
       ])
     );
   }
@@ -355,6 +359,12 @@ function RelatorioProdutosPageInner() {
               <th className="px-3 py-2 font-semibold print:border print:border-black">
                 Situação
               </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Criado por
+              </th>
+              <th className="px-3 py-2 font-semibold print:border print:border-black">
+                Alterado por
+              </th>
             </tr>
           </thead>
 
@@ -362,7 +372,7 @@ function RelatorioProdutosPageInner() {
             {loading ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Carregando...
@@ -371,7 +381,7 @@ function RelatorioProdutosPageInner() {
             ) : products.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="px-3 py-6 text-center text-[var(--text-muted)]"
                 >
                   Nenhum produto encontrado com esses filtros.
@@ -406,6 +416,12 @@ function RelatorioProdutosPageInner() {
                   </td>
                   <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
                     {STATUS_LABELS[p.status]}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {p.createdByName || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] print:border print:border-black print:text-black">
+                    {p.updatedByName || "—"}
                   </td>
                 </tr>
               ))

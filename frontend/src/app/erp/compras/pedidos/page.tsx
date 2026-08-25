@@ -163,6 +163,11 @@ export default function PedidosDeCompraPage() {
   const [sourceOfferId, setSourceOfferId] = useState("");
   const [sourceError, setSourceError] = useState("");
 
+  // Só pra mostrar "Criado por/Última alteração" no Consultar.
+  const [detail, setDetail] = useState<PurchaseOrder | null>(
+    null
+  );
+
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -380,6 +385,7 @@ export default function PedidosDeCompraPage() {
   function openView(order: PurchaseOrder) {
     setEditingId(order.id);
     setViewOnly(true);
+    setDetail(order);
     populateOrderForm(order);
     clearSourceQuotation();
     setFormError("");
@@ -780,14 +786,28 @@ export default function PedidosDeCompraPage() {
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {viewOnly
-                  ? "Consultar pedido de compra"
-                  : editingId
-                    ? "Editar pedido de compra"
-                    : "Novo pedido de compra"}
-              </h2>
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                  {viewOnly
+                    ? "Consultar pedido de compra"
+                    : editingId
+                      ? "Editar pedido de compra"
+                      : "Novo pedido de compra"}
+                </h2>
+
+                {viewOnly && detail && (
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    {detail.createdByName &&
+                      `Criado por ${detail.createdByName} em ${date(detail.createdAt)}`}
+                    {detail.createdByName &&
+                      detail.updatedByName &&
+                      detail.updatedByName !==
+                        detail.createdByName &&
+                      ` · Última alteração por ${detail.updatedByName}`}
+                  </p>
+                )}
+              </div>
 
               <button
                 type="button"

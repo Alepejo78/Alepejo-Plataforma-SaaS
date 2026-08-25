@@ -12,6 +12,7 @@ export class WarehouseRepository {
   async create(
     companyId: string,
     dto: CreateWarehouseDto,
+    userId: string,
   ): Promise<Warehouse> {
     return this.prisma.warehouse.create({
       data: {
@@ -19,6 +20,8 @@ export class WarehouseRepository {
         code: dto.code,
         description: dto.description,
         active: dto.active ?? true,
+        createdById: userId,
+        updatedById: userId,
       },
     });
   }
@@ -88,6 +91,7 @@ export class WarehouseRepository {
     companyId: string,
     id: string,
     dto: UpdateWarehouseDto,
+    userId: string,
   ): Promise<Warehouse> {
     return this.prisma.warehouse.update({
       where: {
@@ -95,6 +99,7 @@ export class WarehouseRepository {
       },
       data: {
         ...dto,
+        updatedById: userId,
       },
     });
   }

@@ -21,6 +21,7 @@ import { ProductionOrdersService } from '../../production/services/production-or
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { calculateAvailableQuantity } from '../../../core/utils/inventory.util';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { SaleRepository } from '../repositories/sale.repository';
@@ -59,6 +60,7 @@ export class SaleService {
   async create(
     companyId: string,
     dto: CreateSaleDto,
+    userId: string,
   ) {
     // Valida que o parceiro existe, pertence à empresa e possui o
     // papel de CLIENTE (um fornecedor puro não pode receber venda).
@@ -159,6 +161,7 @@ export class SaleService {
         dto,
         totalAmount,
         netAmount,
+        userId,
       );
 
       if (dto.quoteId) {
@@ -183,10 +186,12 @@ export class SaleService {
     companyId: string,
     filter: SaleFilterDto,
   ) {
-    return this.repository.findAll(
+    const sales = await this.repository.findAll(
       companyId,
       filter,
     );
+
+    return attachAuditNames(this.prisma, sales);
   }
 
   async findOne(
@@ -205,13 +210,14 @@ export class SaleService {
       );
     }
 
-    return sale;
+    return attachAuditName(this.prisma, sale);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdateSaleDto,
+    userId: string,
   ) {
     const sale = await this.findOne(companyId, id);
 
@@ -300,27 +306,32 @@ export class SaleService {
           )
         : undefined;
 
-    return this.repository.update(id, {
-      partnerId: dto.partnerId,
-      warehouseId: dto.warehouseId,
-      saleDate,
-      observation: dto.observation,
-      discountValue: dto.discountValue,
-      freightValue: dto.freightValue,
-      otherExpenses: dto.otherExpenses,
-      termDays,
-      dueDate,
-      paymentMethod: dto.paymentMethod,
-      totalAmount,
-      netAmount,
-      items,
-    });
+    return this.repository.update(
+      id,
+      {
+        partnerId: dto.partnerId,
+        warehouseId: dto.warehouseId,
+        saleDate,
+        observation: dto.observation,
+        discountValue: dto.discountValue,
+        freightValue: dto.freightValue,
+        otherExpenses: dto.otherExpenses,
+        termDays,
+        dueDate,
+        paymentMethod: dto.paymentMethod,
+        totalAmount,
+        netAmount,
+        items,
+      },
+      userId,
+    );
   }
 
   async approve(
     companyId: string,
     id: string,
     dto: ApproveSaleDto = {},
+    userId: string,
   ) {
     const sale =
       await this.prisma.sale.findFirst({
@@ -461,6 +472,7 @@ export class SaleService {
           termDays,
           paymentMethod,
           dueDate,
+          updatedById: userId,
         },
       });
 
@@ -497,6 +509,7 @@ export class SaleService {
               }),
             ),
           },
+          userId,
         );
       } else {
         await this.financialEntriesService.createFromDocument(
@@ -506,6 +519,7 @@ export class SaleService {
             amount: Number(updated.netAmount),
             dueDate,
           },
+          userId,
         );
       }
 
@@ -530,6 +544,7 @@ export class SaleService {
   async cancel(
     companyId: string,
     id: string,
+    userId: string,
   ) {
     const sale = await this.findOne(companyId, id);
 
@@ -541,7 +556,7 @@ export class SaleService {
 
     return this.prisma.sale.update({
       where: { id },
-      data: { status: 'CANCELLED' },
+      data: { status: 'CANCELLED', updatedById: userId },
     });
   }
 
@@ -565,6 +580,7 @@ export class SaleService {
   async undoApproval(
     companyId: string,
     id: string,
+    userId: string,
   ) {
     const sale = await this.prisma.sale.findFirst({
       where: { id, companyId },
@@ -653,6 +669,7 @@ export class SaleService {
         data: {
           status: 'DRAFT',
           approvedAt: null,
+          updatedById: userId,
         },
       });
     });

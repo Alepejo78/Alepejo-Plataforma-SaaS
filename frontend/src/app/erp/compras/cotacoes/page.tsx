@@ -932,6 +932,13 @@ export default function CotacoesPage() {
                   )}{" "}
                   · {detail.warehouse?.code} ·{" "}
                   {QUOTATION_STATUS_LABELS[detail.status]}
+                  {detail.createdByName &&
+                    ` · Criado por ${detail.createdByName}`}
+                  {detail.createdByName &&
+                    detail.updatedByName &&
+                    detail.updatedByName !==
+                      detail.createdByName &&
+                    ` · Última alteração por ${detail.updatedByName}`}
                 </p>
               </div>
 

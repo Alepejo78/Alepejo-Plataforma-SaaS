@@ -5,6 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { PrismaService } from '../../../core/prisma/prisma.service';
+import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
+
 import { ChartOfAccountsRepository } from '../repositories/chart-of-accounts.repository';
 import { ChartOfAccountClassificationsService } from '../../chart-of-account-classifications/services/chart-of-account-classifications.service';
 
@@ -17,9 +20,14 @@ export class ChartOfAccountsService {
   constructor(
     private readonly repository: ChartOfAccountsRepository,
     private readonly classificationsService: ChartOfAccountClassificationsService,
+    private readonly prisma: PrismaService,
   ) {}
 
-  async create(companyId: string, dto: CreateChartOfAccountDto) {
+  async create(
+    companyId: string,
+    dto: CreateChartOfAccountDto,
+    userId: string,
+  ) {
     if (dto.parentId) {
       await this.findOne(companyId, dto.parentId);
     }
@@ -38,14 +46,19 @@ export class ChartOfAccountsService {
         );
       }
 
-      return this.repository.restore(exists.id, dto);
+      return this.repository.restore(exists.id, dto, userId);
     }
 
-    return this.repository.create(companyId, dto);
+    return this.repository.create(companyId, dto, userId);
   }
 
   async findAll(companyId: string, filter: ChartOfAccountFilterDto) {
-    return this.repository.findAll(companyId, filter);
+    const result = await this.repository.findAll(companyId, filter);
+
+    return {
+      ...result,
+      data: await attachAuditNames(this.prisma, result.data),
+    };
   }
 
   async findOne(companyId: string, id: string) {
@@ -55,13 +68,14 @@ export class ChartOfAccountsService {
       throw new NotFoundException('Conta contábil não encontrada.');
     }
 
-    return account;
+    return attachAuditName(this.prisma, account);
   }
 
   async update(
     companyId: string,
     id: string,
     dto: UpdateChartOfAccountDto,
+    userId: string,
   ) {
     await this.findOne(companyId, id);
 
@@ -95,7 +109,7 @@ export class ChartOfAccountsService {
       }
     }
 
-    return this.repository.update(id, dto);
+    return this.repository.update(id, dto, userId);
   }
 
   async remove(companyId: string, id: string) {

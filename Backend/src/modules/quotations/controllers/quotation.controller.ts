@@ -33,9 +33,10 @@ export class QuotationController {
   @ApiOperation({ summary: 'Cadastrar cotação' })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateQuotationDto,
   ) {
-    return this.service.create(companyId, dto);
+    return this.service.create(companyId, dto, userId);
   }
 
   @Get()
@@ -63,10 +64,11 @@ export class QuotationController {
   @ApiOperation({ summary: 'Alterar cotação' })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateQuotationDto,
   ) {
-    return this.service.update(companyId, id, dto);
+    return this.service.update(companyId, id, dto, userId);
   }
 
   @Patch(':id/cancel')
@@ -74,9 +76,10 @@ export class QuotationController {
   @ApiOperation({ summary: 'Cancelar cotação' })
   cancel(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.cancel(companyId, id);
+    return this.service.cancel(companyId, id, userId);
   }
 
   @Post(':id/offers')
@@ -86,10 +89,11 @@ export class QuotationController {
   })
   addOffer(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: CreateQuotationOfferDto,
   ) {
-    return this.service.addOffer(companyId, id, dto);
+    return this.service.addOffer(companyId, id, dto, userId);
   }
 
   @Delete(':id/offers/:offerId')
@@ -112,10 +116,11 @@ export class QuotationController {
   })
   chooseWinner(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Param('offerId') offerId: string,
   ) {
-    return this.service.chooseWinner(companyId, id, offerId);
+    return this.service.chooseWinner(companyId, id, offerId, userId);
   }
 
   @Patch(':id/undo-winner')
@@ -125,8 +130,9 @@ export class QuotationController {
   })
   undoWinner(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.undoWinner(companyId, id);
+    return this.service.undoWinner(companyId, id, userId);
   }
 }

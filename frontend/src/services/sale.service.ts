@@ -82,6 +82,8 @@ export interface Sale {
   quoteId?: string | null;
   salesOrderId?: string | null;
   createdAt: string;
+  createdByName?: string | null;
+  updatedByName?: string | null;
   items: SaleItem[];
   financialEntries: SaleFinancialEntry[];
 

@@ -374,17 +374,21 @@ export class PayrollService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const item of includedItems) {
-        const entry = await this.financialEntriesService.createFromDocument(tx, {
-          companyId,
-          type: FinancialEntryType.PAYABLE,
-          employeeId: item.employeeId,
-          amount: Number(item.netAmount),
-          issueDate,
-          dueDate,
-          documentNumber: payrollNumber,
-          payrollItemId: item.id,
-          observation: `Folha de pagamento ${payrollNumber} — competência ${String(payroll.competenceMonth).padStart(2, '0')}/${payroll.competenceYear}.`,
-        });
+        const entry = await this.financialEntriesService.createFromDocument(
+          tx,
+          {
+            companyId,
+            type: FinancialEntryType.PAYABLE,
+            employeeId: item.employeeId,
+            amount: Number(item.netAmount),
+            issueDate,
+            dueDate,
+            documentNumber: payrollNumber,
+            payrollItemId: item.id,
+            observation: `Folha de pagamento ${payrollNumber} — competência ${String(payroll.competenceMonth).padStart(2, '0')}/${payroll.competenceYear}.`,
+          },
+          approvedByUserId,
+        );
 
         if (salaryAccount) {
           await tx.financialEntry.update({
