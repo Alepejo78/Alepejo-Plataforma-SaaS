@@ -108,12 +108,28 @@ export class InvoiceImportService {
         observation: dto.observation,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
+        invoiceNumber: dto.invoiceNumber,
+        invoiceKey: dto.invoiceKey,
+        invoiceIssueDate: dto.invoiceIssueDate
+          ? (dto.invoiceIssueDate as unknown as Date)
+          : undefined,
         items: dto.items,
       },
       userId,
     );
 
-    await this.purchaseService.approve(companyId, purchase.id, userId);
+    const approved = await this.purchaseService.approve(
+      companyId,
+      purchase.id,
+      userId,
+    );
+
+    // Desmarcado, fica aprovada aguardando recebimento — quem importou
+    // já tem a nota, mas o físico (conferir quantidade/bipar) acontece
+    // depois na tela de Recebimento.
+    if (dto.confirmReceipt === false) {
+      return approved;
+    }
 
     return this.purchaseService.receive(
       companyId,

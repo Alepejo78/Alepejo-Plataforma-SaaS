@@ -93,6 +93,33 @@ import {
     purchaseOrderId?: string;
 
     @ApiProperty({
+      required: false,
+      description:
+        'Número da nota fiscal do fornecedor — quando a compra já nasce com a nota em mãos (ex.: importação de XML) mas o recebimento físico fica pra depois.',
+    })
+    @IsOptional()
+    @IsString()
+    @MaxLength(50)
+    invoiceNumber?: string;
+
+    @ApiProperty({
+      required: false,
+      description: 'Chave de acesso da NF-e (44 dígitos).',
+    })
+    @IsOptional()
+    @IsString()
+    @MaxLength(50)
+    invoiceKey?: string;
+
+    @ApiProperty({
+      required: false,
+      description: 'Data de emissão da nota fiscal.',
+    })
+    @IsOptional()
+    @IsDateString()
+    invoiceIssueDate?: Date;
+
+    @ApiProperty({
       type: [CreatePurchaseItemDto],
     })
     @IsArray()

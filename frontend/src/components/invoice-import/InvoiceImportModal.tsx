@@ -153,6 +153,7 @@ export function InvoiceImportModal({
   const [paymentMethod, setPaymentMethod] = useState<
     PaymentMethod | ""
   >("");
+  const [confirmReceipt, setConfirmReceipt] = useState(false);
 
   const [items, setItems] = useState<ItemRow[]>([
     {
@@ -544,6 +545,7 @@ export function InvoiceImportModal({
             quantity: decimal(it.quantity),
             unitPrice: it.unitPrice,
           })),
+          ...(isPurchase ? { confirmReceipt } : {}),
         };
 
         if (isPurchase) {
@@ -903,6 +905,25 @@ export function InvoiceImportModal({
               onChange={(e) => setObservation(e.target.value)}
             />
           </div>
+
+          {isPurchase && mode === "ORDER" && (
+            <div className="rounded-lg border border-[var(--border)] p-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+                <input
+                  type="checkbox"
+                  checked={confirmReceipt}
+                  onChange={(e) => setConfirmReceipt(e.target.checked)}
+                />
+                Já confirmar recebimento
+              </label>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Marcado, a compra entra direto no estoque e gera o título a
+                pagar. Desmarcado, a compra fica aprovada aguardando
+                recebimento — depois é só conferir a quantidade e bipar os
+                produtos na tela de Recebimento.
+              </p>
+            </div>
+          )}
 
           {mode === "ORDER" && (
             <div>

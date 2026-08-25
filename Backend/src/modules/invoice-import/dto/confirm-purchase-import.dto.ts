@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -89,4 +90,14 @@ export class ConfirmPurchaseImportDto {
   @ValidateNested({ each: true })
   @Type(() => CreatePurchaseItemDto)
   items: CreatePurchaseItemDto[];
+
+  @ApiProperty({
+    required: false,
+    default: true,
+    description:
+      'Já confirma o recebimento (entra no estoque e gera o título a pagar) — desmarcado, a compra fica aprovada aguardando recebimento na tela de Recebimento (confere quantidade/bipa os produtos depois).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  confirmReceipt?: boolean;
 }

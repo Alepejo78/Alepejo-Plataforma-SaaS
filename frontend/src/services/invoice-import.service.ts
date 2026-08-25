@@ -86,6 +86,7 @@ export interface ConfirmOrderImportPayload {
   paymentMethod?: PaymentMethod;
   installments: InvoiceInstallmentPayload[];
   items: { productId: string; quantity: number; unitPrice: number }[];
+  confirmReceipt?: boolean;
 }
 
 export interface ConfirmExpenseImportPayload {

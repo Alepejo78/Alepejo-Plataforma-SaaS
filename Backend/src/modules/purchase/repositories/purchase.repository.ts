@@ -67,6 +67,11 @@ export class PurchaseRepository {
         dueDate: calculateDueDate(issueDate, termDays),
         paymentMethod: dto.paymentMethod,
         purchaseOrderId: dto.purchaseOrderId,
+        invoiceNumber: dto.invoiceNumber,
+        invoiceKey: dto.invoiceKey,
+        invoiceIssueDate: dto.invoiceIssueDate
+          ? new Date(dto.invoiceIssueDate)
+          : undefined,
         createdById: userId,
         updatedById: userId,
 
