@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Lock } from "lucide-react";
 
 import { OsShell } from "@/components";
+import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { useAuth } from "@/providers/AuthProvider";
 
 import { roleService, type Role } from "@/services/role.service";
@@ -31,7 +32,10 @@ function extractMessage(err: unknown, fallback: string) {
 const GENERIC_COLUMNS: { key: string; label: string }[] = [
   { key: "create", label: "Cadastrar" },
   { key: "update", label: "Editar" },
+  { key: "cancel", label: "Cancelar" },
+  { key: "approve", label: "Aprovar" },
   { key: "delete", label: "Excluir" },
+  { key: "manage", label: "Configurar" },
   { key: "view", label: "Consultar" },
   { key: "report", label: "Relatório" },
 ];
@@ -44,22 +48,41 @@ const BUSINESS_COLUMNS: {
   label: string;
   codes: string[];
 }[] = [
-  { key: "purchaseApprove", label: "Aprovador Compras", codes: ["purchase.approve"] },
-  { key: "saleApprove", label: "Aprovador vendas", codes: ["sale.approve"] },
-  { key: "quoteApprove", label: "Aprovador orçamentos", codes: ["quote.approve"] },
   { key: "inventoryEntryExit", label: "Entrada e saída Estoque", codes: ["inventory.entry", "inventory.exit"] },
+  { key: "inventoryHold", label: "Reservar Estoque", codes: ["inventory.hold"] },
+  { key: "inventoryReleaseHold", label: "Liberar Reserva Estoque", codes: ["inventory.release-hold"] },
   { key: "productionComplete", label: "Concluir produção", codes: ["production-order.complete"] },
   { key: "inventoryAdjust", label: "Ajustes de estoque", codes: ["inventory.adjust"] },
   { key: "timeEntryAdjust", label: "Ajuste Horas", codes: ["time-entry.update"] },
+  { key: "purchaseReceive", label: "Receber Compras", codes: ["purchase.receive"] },
+  { key: "quotationDecide", label: "Escolher Vencedor da Cotação", codes: ["quotation.decide"] },
+  { key: "payrollGenerate", label: "Gerar Folha", codes: ["payroll.generate"] },
+  { key: "thirteenthSalaryGenerate", label: "Gerar 13º Salário", codes: ["thirteenth-salary.generate"] },
+  { key: "timeClockApiKey", label: "Chave API Ponto", codes: ["time-clock.manage-api-key"] },
+  { key: "licenseTrial", label: "Iniciar Teste Grátis", codes: ["license.trial"] },
+  { key: "userActivate", label: "Ativar Usuários", codes: ["user.activate"] },
+  { key: "userDeactivate", label: "Desativar Usuários", codes: ["user.deactivate"] },
+  { key: "userBlock", label: "Bloquear Usuários", codes: ["user.block"] },
+  { key: "userUnblock", label: "Desbloquear Usuários", codes: ["user.unblock"] },
+  { key: "userResetPassword", label: "Redefinir Senha", codes: ["user.reset-password"] },
   { key: "reverse", label: "Estornar documentos", codes: [] }, // resolvido por sufixo, ver abaixo
 ];
 
 const ADMIN_PERMISSION_CODE = "system.admin";
 
 // Permissões que já cobrem "estornar" na prática, mas não seguem o
-// sufixo ".reverse" (ex.: reabrir título baixado usa a mesma
-// permissão de baixar, financial-entry.settle).
-const REVERSE_EQUIVALENT_CODES = ["financial-entry.settle"];
+// sufixo ".reverse" — reaproveitam a permissão de uma ação vizinha em
+// vez de ganhar uma própria (ex.: reabrir título baixado usa a mesma
+// permissão de baixar, financial-entry.settle; estornar pedido de
+// compra convertido usa purchase-order.cancel; estornar escolha de
+// vencedora de cotação usa quotation.decide; estornar aprovação de
+// orçamento usa quote.approve).
+const REVERSE_EQUIVALENT_CODES = [
+  "financial-entry.settle",
+  "purchase-order.cancel",
+  "quotation.decide",
+  "quote.approve",
+];
 
 /**
  * Separa as linhas da matriz em duas seções — "APP" (administração/
@@ -523,66 +546,70 @@ export default function ConfigurarPerfilPage() {
 
   return (
     <OsShell workspaceLabel="Configurar perfil">
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
-        <button
-          type="button"
-          onClick={() => router.push("/erp/configuracoes/perfis")}
-          className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-        >
-          <ArrowLeft size={16} />
-          Voltar para Perfis
-        </button>
+      <ListPageLayout
+        header={
+          <>
+            <button
+              type="button"
+              onClick={() => router.push("/erp/configuracoes/perfis")}
+              className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            >
+              <ArrowLeft size={16} />
+              Voltar para Perfis
+            </button>
 
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="max-w-md flex-1">
-            <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
-              Nome do Perfil
-            </label>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="max-w-md flex-1">
+                <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+                  Nome do Perfil
+                </label>
 
-            <input
-              className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
-              value={roleName}
-              onChange={(e) => setRoleName(e.target.value)}
-              onBlur={() => void handleRenameBlur()}
-            />
-          </div>
+                <input
+                  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
+                  value={roleName}
+                  onChange={(e) => setRoleName(e.target.value)}
+                  onBlur={() => void handleRenameBlur()}
+                />
+              </div>
 
-          {adminPermission && (
-            <label className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)]">
-              <input
-                type="checkbox"
-                checked={grants.has(adminPermission.id)}
-                disabled={pending.has(adminPermission.id)}
-                onChange={() =>
-                  void toggle([adminPermission.id])
-                }
-              />
-              Administração Geral
-            </label>
-          )}
+              {adminPermission && (
+                <label className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)]">
+                  <input
+                    type="checkbox"
+                    checked={grants.has(adminPermission.id)}
+                    disabled={pending.has(adminPermission.id)}
+                    onChange={() =>
+                      void toggle([adminPermission.id])
+                    }
+                  />
+                  Administração Geral
+                </label>
+              )}
 
-          <div className="w-full max-w-xs">
-            <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
-              Filtros
-            </label>
+              <div className="w-full max-w-xs">
+                <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+                  Filtros
+                </label>
 
-            <input
-              placeholder="Buscar módulo"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
-            />
-          </div>
-        </div>
+                <input
+                  placeholder="Buscar módulo"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
+                />
+              </div>
+            </div>
 
-        {error && (
-          <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-            {error}
-          </div>
-        )}
-
+            {error && (
+              <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                {error}
+              </div>
+            )}
+          </>
+        }
+      >
         {loading ? (
-          <div className="space-y-2">
+          <div className="space-y-2 p-4">
             {Array.from({ length: 8 }).map((_, index) => (
               <div
                 key={index}
@@ -591,8 +618,7 @@ export default function ConfigurarPerfilPage() {
             ))}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-            <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">
@@ -638,10 +664,9 @@ export default function ConfigurarPerfilPage() {
                   </>
                 )}
               </tbody>
-            </table>
-          </div>
+          </table>
         )}
-      </div>
+      </ListPageLayout>
     </OsShell>
   );
 }

@@ -70,7 +70,7 @@ import {
     }
 
     @Patch(':id/activate')
-    @Permissions('user.update')
+    @Permissions('user.activate')
     @ApiOperation({ summary: 'Ativar usuário' })
     activate(
       @CurrentUser('companyId') companyId: string,
@@ -80,7 +80,7 @@ import {
     }
 
     @Patch(':id/deactivate')
-    @Permissions('user.update')
+    @Permissions('user.deactivate')
     @ApiOperation({ summary: 'Desativar usuário' })
     deactivate(
       @CurrentUser('companyId') companyId: string,
@@ -90,7 +90,7 @@ import {
     }
 
     @Patch(':id/block')
-    @Permissions('user.update')
+    @Permissions('user.block')
     @ApiOperation({ summary: 'Bloquear conta do usuário' })
     block(
       @CurrentUser('companyId') companyId: string,
@@ -100,7 +100,7 @@ import {
     }
 
     @Patch(':id/unblock')
-    @Permissions('user.update')
+    @Permissions('user.unblock')
     @ApiOperation({ summary: 'Desbloquear conta do usuário' })
     unblock(
       @CurrentUser('companyId') companyId: string,
@@ -110,7 +110,7 @@ import {
     }
 
     @Post(':id/reset-password-email')
-    @Permissions('user.update')
+    @Permissions('user.reset-password')
     @ApiOperation({
       summary: 'Enviar e-mail de redefinição de senha',
     })

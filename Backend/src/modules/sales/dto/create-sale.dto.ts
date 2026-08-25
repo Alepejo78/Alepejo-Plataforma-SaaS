@@ -102,6 +102,18 @@ export class CreateSaleDto {
 
   @ApiProperty({
     required: false,
+    default: 1,
+    description:
+      'Em quantos títulos o vencimento se divide na aprovação (30/60/90... = termDays × 1/2/3). Se vier de um pedido de venda e não for informado, usa o do pedido.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  installmentsCount?: number;
+
+  @ApiProperty({
+    required: false,
     description:
       'Orçamento de origem — a venda nasce com os dados dele e ele passa para CONVERTED.',
   })

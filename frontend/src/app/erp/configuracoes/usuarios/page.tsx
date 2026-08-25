@@ -256,87 +256,99 @@ export default function UsuariosPage() {
 
                   {actionMenuOpen && selectedCount > 0 && (
                     <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            (id) => userService.activate(id),
-                            "Usuário(s) ativado(s)."
-                          )
-                        }
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                      >
-                        <UserCheck size={16} />
-                        Ativar
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            (id) => userService.deactivate(id),
-                            "Usuário(s) desativado(s)."
-                          )
-                        }
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                      >
-                        <UserX size={16} />
-                        Desativar
-                      </button>
-
-                      {selectedCount === 1 && (
+                      <Can permission="user.activate">
                         <button
                           type="button"
-                          onClick={handleCopy}
+                          onClick={() =>
+                            void runAction(
+                              (id) => userService.activate(id),
+                              "Usuário(s) ativado(s)."
+                            )
+                          }
                           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
                         >
-                          <Copy size={16} />
-                          Copiar
+                          <UserCheck size={16} />
+                          Ativar
                         </button>
+                      </Can>
+
+                      <Can permission="user.deactivate">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void runAction(
+                              (id) => userService.deactivate(id),
+                              "Usuário(s) desativado(s)."
+                            )
+                          }
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                        >
+                          <UserX size={16} />
+                          Desativar
+                        </button>
+                      </Can>
+
+                      {selectedCount === 1 && (
+                        <Can permission="user.create">
+                          <button
+                            type="button"
+                            onClick={handleCopy}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                          >
+                            <Copy size={16} />
+                            Copiar
+                          </button>
+                        </Can>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            (id) =>
-                              userService.requestPasswordReset(id),
-                            "E-mail de redefinição enviado."
-                          )
-                        }
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                      >
-                        <ShieldCheck size={16} />
-                        Alterar Senha
-                      </button>
+                      <Can permission="user.reset-password">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void runAction(
+                              (id) =>
+                                userService.requestPasswordReset(id),
+                              "E-mail de redefinição enviado."
+                            )
+                          }
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                        >
+                          <ShieldCheck size={16} />
+                          Alterar Senha
+                        </button>
+                      </Can>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            (id) => userService.block(id),
-                            "Conta(s) bloqueada(s)."
-                          )
-                        }
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                      >
-                        <Lock size={16} />
-                        Bloquear Conta
-                      </button>
+                      <Can permission="user.block">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void runAction(
+                              (id) => userService.block(id),
+                              "Conta(s) bloqueada(s)."
+                            )
+                          }
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                        >
+                          <Lock size={16} />
+                          Bloquear Conta
+                        </button>
+                      </Can>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            (id) => userService.unblock(id),
-                            "Conta(s) desbloqueada(s)."
-                          )
-                        }
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                      >
-                        <Unlock size={16} />
-                        Desbloquear
-                      </button>
+                      <Can permission="user.unblock">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void runAction(
+                              (id) => userService.unblock(id),
+                              "Conta(s) desbloqueada(s)."
+                            )
+                          }
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                        >
+                          <Unlock size={16} />
+                          Desbloquear
+                        </button>
+                      </Can>
                     </div>
                   )}
                 </div>

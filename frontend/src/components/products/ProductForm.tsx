@@ -42,9 +42,12 @@ interface FormState {
   brandId: string;
   chartOfAccountId: string;
   chartOfAccountLabel: string;
+  saleChartOfAccountId: string;
+  saleChartOfAccountLabel: string;
   unitId: string;
   salePrice: number;
   minimumStock: string;
+  minProductionBatch: string;
   weightKg: string;
   cubageM3: string;
   status: "ACTIVE" | "INACTIVE";
@@ -62,9 +65,12 @@ const emptyForm: FormState = {
   brandId: "",
   chartOfAccountId: "",
   chartOfAccountLabel: "",
+  saleChartOfAccountId: "",
+  saleChartOfAccountLabel: "",
   unitId: "",
   salePrice: 0,
   minimumStock: "",
+  minProductionBatch: "",
   weightKg: "",
   cubageM3: "",
   status: "ACTIVE",
@@ -110,12 +116,22 @@ export function ProductForm({
         chartOfAccountLabel: product.chartOfAccount
           ? `${product.chartOfAccount.code} — ${product.chartOfAccount.description}`
           : "",
+        saleChartOfAccountId:
+          product.saleChartOfAccountId ?? "",
+        saleChartOfAccountLabel: product.saleChartOfAccount
+          ? `${product.saleChartOfAccount.code} — ${product.saleChartOfAccount.description}`
+          : "",
         unitId: product.unitId ?? "",
         salePrice: Number(product.salePrice ?? 0),
         minimumStock:
           product.minimumStock !== null &&
           product.minimumStock !== undefined
             ? String(product.minimumStock)
+            : "",
+        minProductionBatch:
+          product.minProductionBatch !== null &&
+          product.minProductionBatch !== undefined
+            ? String(product.minProductionBatch)
             : "",
         weightKg:
           product.weightKg !== null &&
@@ -193,12 +209,18 @@ export function ProductForm({
       categoryId: text(form.categoryId),
       brandId: text(form.brandId),
       chartOfAccountId: text(form.chartOfAccountId),
+      saleChartOfAccountId: text(form.saleChartOfAccountId),
       unitId: form.unitId,
       salePrice: form.salePrice,
       minimumStock: isService
         ? undefined
         : form.minimumStock
           ? decimal(form.minimumStock)
+          : undefined,
+      minProductionBatch: isService
+        ? undefined
+        : form.minProductionBatch
+          ? decimal(form.minProductionBatch)
           : undefined,
       weightKg: form.weightKg
         ? decimal(form.weightKg)
@@ -341,7 +363,7 @@ export function ProductForm({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-3">
         <div>
           <label className={labelClass} htmlFor="unitId">
             Unidade{" "}
@@ -411,10 +433,12 @@ export function ProductForm({
             ))}
           </select>
         </div>
+      </section>
 
+      <section className="grid gap-4 md:grid-cols-3">
         <div>
           <label className={labelClass}>
-            Classificação
+            Classificação (compra)
           </label>
 
           <SearchSelect<ChartOfAccount>
@@ -435,13 +459,79 @@ export function ProductForm({
           />
 
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Quando preenchida, compras e vendas já sugerem
-            essa classificação no título gerado.
+            Quando preenchida, compras já sugerem esse tipo
+            de despesa no título gerado.
           </p>
         </div>
+
+        <div>
+          <label className={labelClass}>
+            Classificação (venda)
+          </label>
+
+          <SearchSelect<ChartOfAccount>
+            displayLabel={form.saleChartOfAccountLabel}
+            search={searchChartOfAccounts}
+            getId={(c) => c.id}
+            getLabel={(c) => `${c.code} — ${c.description}`}
+            placeholder="Digite para buscar a classificação..."
+            onSelect={(c) =>
+              setForm((previous) => ({
+                ...previous,
+                saleChartOfAccountId: c?.id ?? "",
+                saleChartOfAccountLabel: c
+                  ? `${c.code} — ${c.description}`
+                  : "",
+              }))
+            }
+          />
+
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            Quando preenchida, vendas já sugerem esse tipo de
+            receita no título gerado.
+          </p>
+        </div>
+
+        {!isService && (
+          <div>
+            <label
+              className={labelClass}
+              htmlFor="inventoryControl"
+            >
+              Controle de estoque
+            </label>
+
+            <select
+              id="inventoryControl"
+              className={fieldClass}
+              value={form.inventoryControl}
+              onChange={(e) =>
+                setField(
+                  "inventoryControl",
+                  e.target.value as InventoryControl
+                )
+              }
+            >
+              {Object.entries(INVENTORY_CONTROL_LABELS).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+        )}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
+      {isService && (
+        <p className="text-xs text-[var(--text-muted)]">
+          Serviços não movimentam estoque, por isso o
+          controle de estoque não se aplica.
+        </p>
+      )}
+
+      <section className="grid gap-4 md:grid-cols-5">
         <div>
           <label className={labelClass} htmlFor="salePrice">
             Preço venda (R$){" "}
@@ -456,8 +546,7 @@ export function ProductForm({
           />
 
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Custo e saldo em estoque ficam em Estoque (são por
-            depósito, não do cadastro do produto).
+            Custo e saldo em estoque ficam em Estoque.
           </p>
         </div>
 
@@ -479,6 +568,29 @@ export function ProductForm({
                 value={form.minimumStock}
                 onChange={(e) =>
                   setField("minimumStock", e.target.value)
+                }
+              />
+            </div>
+
+            <div>
+              <label
+                className={labelClass}
+                htmlFor="minProductionBatch"
+              >
+                Qtd. mínima produção
+              </label>
+
+              <input
+                id="minProductionBatch"
+                inputMode="decimal"
+                placeholder="0"
+                className={fieldClass}
+                value={form.minProductionBatch}
+                onChange={(e) =>
+                  setField(
+                    "minProductionBatch",
+                    e.target.value
+                  )
                 }
               />
             </div>
@@ -519,44 +631,6 @@ export function ProductForm({
           </>
         )}
       </section>
-
-      {!isService && (
-        <div className="md:w-1/4">
-          <label
-            className={labelClass}
-            htmlFor="inventoryControl"
-          >
-            Controle de estoque
-          </label>
-
-          <select
-            id="inventoryControl"
-            className={fieldClass}
-            value={form.inventoryControl}
-            onChange={(e) =>
-              setField(
-                "inventoryControl",
-                e.target.value as InventoryControl
-              )
-            }
-          >
-            {Object.entries(INVENTORY_CONTROL_LABELS).map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-      )}
-
-      {isService && (
-        <p className="text-xs text-[var(--text-muted)]">
-          Serviços não movimentam estoque, por isso o
-          controle de estoque não se aplica.
-        </p>
-      )}
 
       {error && (
         <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">

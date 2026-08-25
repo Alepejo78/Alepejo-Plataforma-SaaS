@@ -72,6 +72,7 @@ export interface Sale {
   termDays?: number | null;
   dueDate?: string | null;
   paymentMethod?: PaymentMethod | null;
+  installmentsCount?: number | null;
   /** Tipo de receita — vai junto pro título gerado na aprovação. */
   chartOfAccountId?: string | null;
   chartOfAccount?: {
@@ -116,6 +117,7 @@ export interface SalePayload {
   otherExpenses?: number;
   termDays?: number;
   paymentMethod?: PaymentMethod;
+  installmentsCount?: number;
   chartOfAccountId?: string;
   quoteId?: string;
   salesOrderId?: string;
@@ -129,6 +131,7 @@ export interface ApproveSalePayload {
   documentType?: FinancialDocumentType;
   termDays?: number;
   paymentMethod?: PaymentMethod;
+  installmentsCount?: number;
 }
 
 export interface SaleFilter {

@@ -1,4 +1,5 @@
 import { api } from "./api";
+import type { PaymentMethod } from "./financial-entry.service";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -32,8 +33,8 @@ export interface SalesOrderItem {
     code: string;
     description: string;
     unit?: { code: string } | null;
-    chartOfAccountId?: string | null;
-    chartOfAccount?: {
+    saleChartOfAccountId?: string | null;
+    saleChartOfAccount?: {
       code: string;
       description: string;
     } | null;
@@ -53,6 +54,9 @@ export interface SalesOrder {
   otherExpenses: string | number;
   totalAmount: string | number;
   netAmount: string | number;
+  termDays?: number | null;
+  paymentMethod?: PaymentMethod | null;
+  installmentsCount?: number | null;
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;
@@ -85,6 +89,9 @@ export interface SalesOrderPayload {
   discountValue?: number;
   freightValue?: number;
   otherExpenses?: number;
+  termDays?: number;
+  paymentMethod?: PaymentMethod;
+  installmentsCount?: number;
   items: SalesOrderItemPayload[];
 }
 

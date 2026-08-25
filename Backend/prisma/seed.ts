@@ -232,6 +232,11 @@ const permissionGroups = [
       ["user.create", "Cadastrar Usuários"],
       ["user.update", "Alterar Usuários"],
       ["user.delete", "Excluir Usuários"],
+      ["user.activate", "Ativar Usuários"],
+      ["user.deactivate", "Desativar Usuários"],
+      ["user.block", "Bloquear Conta de Usuários"],
+      ["user.unblock", "Desbloquear Conta de Usuários"],
+      ["user.reset-password", "Redefinir Senha de Usuários"],
     ],
   },
   {

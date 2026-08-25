@@ -186,6 +186,7 @@ export default function VendasPage() {
     otherExpenses: 0,
     termDays: "",
     paymentMethod: "" as PaymentMethod | "",
+    installmentsCount: "",
     chartOfAccountId: "",
     chartOfAccountLabel: "",
   });
@@ -233,6 +234,7 @@ export default function VendasPage() {
     documentType: "" as FinancialDocumentType | "",
     termDays: "",
     paymentMethod: "" as PaymentMethod | "",
+    installmentsCount: "",
   });
   const [approveError, setApproveError] = useState("");
 
@@ -316,6 +318,7 @@ export default function VendasPage() {
       otherExpenses: 0,
       termDays: "",
       paymentMethod: "",
+      installmentsCount: "",
       chartOfAccountId: "",
       chartOfAccountLabel: "",
     });
@@ -347,6 +350,11 @@ export default function VendasPage() {
       otherExpenses: num(sale.otherExpenses),
       termDays: sale.termDays ? String(sale.termDays) : "",
       paymentMethod: sale.paymentMethod ?? "",
+      installmentsCount:
+        sale.installmentsCount != null &&
+        sale.installmentsCount > 1
+          ? String(sale.installmentsCount)
+          : "",
       chartOfAccountId: sale.chartOfAccountId ?? "",
       chartOfAccountLabel: sale.chartOfAccount
         ? `${sale.chartOfAccount.code} — ${sale.chartOfAccount.description}`
@@ -672,8 +680,10 @@ export default function VendasPage() {
     // Sugere a classificação do primeiro item que já tiver uma
     // cadastrada, se o formulário ainda não tiver uma escolhida.
     const suggestedAccount = doc.items.find(
-      (it) => it.product?.chartOfAccountId
+      (it) => it.product?.saleChartOfAccountId
     )?.product;
+
+    const sourceOrder = type === "salesOrder" ? doc as SalesOrder : null;
 
     setForm((prev) => ({
       ...prev,
@@ -686,14 +696,27 @@ export default function VendasPage() {
       discountValue: num(doc.discountValue),
       freightValue: num(doc.freightValue),
       otherExpenses: num(doc.otherExpenses),
+      termDays:
+        prev.termDays ||
+        (sourceOrder?.termDays != null
+          ? String(sourceOrder.termDays)
+          : ""),
+      paymentMethod:
+        prev.paymentMethod || sourceOrder?.paymentMethod || "",
+      installmentsCount:
+        prev.installmentsCount ||
+        (sourceOrder?.installmentsCount != null &&
+        sourceOrder.installmentsCount > 1
+          ? String(sourceOrder.installmentsCount)
+          : ""),
       chartOfAccountId:
         prev.chartOfAccountId ||
-        suggestedAccount?.chartOfAccountId ||
+        suggestedAccount?.saleChartOfAccountId ||
         "",
       chartOfAccountLabel:
-        prev.chartOfAccountId || !suggestedAccount?.chartOfAccount
+        prev.chartOfAccountId || !suggestedAccount?.saleChartOfAccount
           ? prev.chartOfAccountLabel
-          : `${suggestedAccount.chartOfAccount.code} — ${suggestedAccount.chartOfAccount.description}`,
+          : `${suggestedAccount.saleChartOfAccount.code} — ${suggestedAccount.saleChartOfAccount.description}`,
     }));
 
     setItems(
@@ -757,6 +780,9 @@ export default function VendasPage() {
       otherExpenses: form.otherExpenses || undefined,
       termDays: form.termDays ? Number(form.termDays) : undefined,
       paymentMethod: form.paymentMethod || undefined,
+      installmentsCount: form.installmentsCount
+        ? Number(form.installmentsCount)
+        : undefined,
       chartOfAccountId: form.chartOfAccountId || undefined,
       quoteId:
         sourceType === "quote" && sourceId
@@ -862,6 +888,11 @@ export default function VendasPage() {
       termDays:
         sale.termDays != null ? String(sale.termDays) : "",
       paymentMethod: sale.paymentMethod ?? "",
+      installmentsCount:
+        sale.installmentsCount != null &&
+        sale.installmentsCount > 1
+          ? String(sale.installmentsCount)
+          : "",
     });
     setApproveError("");
   }
@@ -885,6 +916,9 @@ export default function VendasPage() {
           ? Number(approveForm.termDays)
           : undefined,
         paymentMethod: approveForm.paymentMethod || undefined,
+        installmentsCount: approveForm.installmentsCount
+          ? Number(approveForm.installmentsCount)
+          : undefined,
       });
 
       setApproveTarget(null);
@@ -1626,16 +1660,16 @@ export default function VendasPage() {
                               // no título, se ainda não tiver
                               // escolhida uma.
                               if (
-                                p?.chartOfAccountId &&
+                                p?.saleChartOfAccountId &&
                                 !form.chartOfAccountId
                               ) {
                                 setForm((prev) => ({
                                   ...prev,
                                   chartOfAccountId:
-                                    p.chartOfAccountId!,
+                                    p.saleChartOfAccountId!,
                                   chartOfAccountLabel: p
-                                    .chartOfAccount
-                                    ? `${p.chartOfAccount.code} — ${p.chartOfAccount.description}`
+                                    .saleChartOfAccount
+                                    ? `${p.saleChartOfAccount.code} — ${p.saleChartOfAccount.description}`
                                     : prev.chartOfAccountLabel,
                                 }));
                               }
@@ -1774,6 +1808,27 @@ export default function VendasPage() {
                       ).toISOString()
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Número de parcelas
+                  </label>
+
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    title="Em quantos títulos o vencimento se divide na aprovação — 30/60/90 com prazo 30 e 3 parcelas"
+                    className={fieldClass}
+                    value={form.installmentsCount}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        installmentsCount: e.target.value,
+                      })
+                    }
+                  />
                 </div>
 
                 <div>
@@ -2296,6 +2351,27 @@ export default function VendasPage() {
                       ).toISOString()
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Número de parcelas
+                  </label>
+
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    title="Em quantos títulos o vencimento se divide — 30/60/90 com prazo 30 e 3 parcelas"
+                    className={fieldClass}
+                    value={approveForm.installmentsCount}
+                    onChange={(e) =>
+                      setApproveForm({
+                        ...approveForm,
+                        installmentsCount: e.target.value,
+                      })
+                    }
+                  />
                 </div>
 
                 <div>

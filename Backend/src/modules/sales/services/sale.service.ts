@@ -10,6 +10,7 @@ import {
   FinancialEntryStatus,
   FinancialEntryType,
   InventoryControl,
+  PaymentMethod,
   QuoteStatus,
   SalesOrderStatus,
 } from '@prisma/client';
@@ -21,6 +22,7 @@ import { ProductionOrdersService } from '../../production/services/production-or
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { calculateAvailableQuantity } from '../../../core/utils/inventory.util';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
+import { buildAutoInstallments } from '../../../core/utils/installment.util';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
@@ -129,6 +131,12 @@ export class SaleService {
       }
     }
 
+    let sourceOrder: {
+      termDays: number | null;
+      paymentMethod: PaymentMethod | null;
+      installmentsCount: number | null;
+    } | null = null;
+
     if (dto.salesOrderId) {
       const order = await this.prisma.salesOrder.findFirst({
         where: { id: dto.salesOrderId, companyId },
@@ -145,7 +153,24 @@ export class SaleService {
           'Este pedido de venda já foi convertido em venda ou está cancelado.',
         );
       }
+
+      sourceOrder = order;
     }
+
+    // Prazo/forma de pagamento/parcelas: se a tela mandou um valor,
+    // vale; senão, herda do pedido de venda de origem.
+    const effectiveDto: CreateSaleDto = {
+      ...dto,
+      termDays: dto.termDays ?? sourceOrder?.termDays ?? undefined,
+      paymentMethod:
+        dto.paymentMethod ??
+        sourceOrder?.paymentMethod ??
+        undefined,
+      installmentsCount:
+        dto.installmentsCount ??
+        sourceOrder?.installmentsCount ??
+        undefined,
+    };
 
     return this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
@@ -158,7 +183,7 @@ export class SaleService {
         tx,
         companyId,
         number,
-        dto,
+        effectiveDto,
         totalAmount,
         netAmount,
         userId,
@@ -452,12 +477,32 @@ export class SaleService {
         dto.paymentMethod ?? sale.paymentMethod;
       const issueDate =
         invoiceIssueDate ?? sale.saleDate ?? new Date();
+
+      // Sem parcelas explícitas nem quantidade informada na
+      // aprovação, usa a quantidade já registrada na venda (ex.:
+      // herdada do pedido de venda de origem).
+      const effectiveInstallmentsCount =
+        dto.installmentsCount ?? sale.installmentsCount ?? 1;
+
+      const autoInstallments =
+        !dto.installments?.length &&
+        effectiveInstallmentsCount > 1
+          ? buildAutoInstallments(
+              issueDate,
+              termDays,
+              effectiveInstallmentsCount,
+              Number(sale.netAmount),
+            )
+          : null;
+
       // Parcelas explícitas (ex.: importação de nota) têm
       // prioridade sobre o prazo único — cada uma já traz seu
       // próprio vencimento, não recalcula a partir de termDays.
       const dueDate = dto.installments?.length
         ? new Date(dto.installments[0].dueDate)
-        : calculateDueDate(issueDate, termDays);
+        : autoInstallments
+          ? autoInstallments[0].dueDate
+          : calculateDueDate(issueDate, termDays);
 
       const updated = await tx.sale.update({
         where: {
@@ -470,6 +515,7 @@ export class SaleService {
           invoiceKey: dto.invoiceKey,
           invoiceIssueDate,
           termDays,
+          installmentsCount: effectiveInstallmentsCount,
           paymentMethod,
           dueDate,
           updatedById: userId,
@@ -508,6 +554,15 @@ export class SaleService {
                 amount: installment.amount,
               }),
             ),
+          },
+          userId,
+        );
+      } else if (autoInstallments) {
+        await this.financialEntriesService.createInstallments(
+          tx,
+          {
+            ...commonEntryData,
+            installments: autoInstallments,
           },
           userId,
         );

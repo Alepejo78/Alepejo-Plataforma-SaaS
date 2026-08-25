@@ -89,4 +89,16 @@ export class ApproveSaleDto {
   @ValidateNested({ each: true })
   @Type(() => InstallmentDto)
   installments?: InstallmentDto[];
+
+  @ApiProperty({
+    required: false,
+    default: 1,
+    description:
+      'Em quantos títulos o vencimento se divide (30/60/90... = termDays × 1/2/3) — sobrescreve o da venda. Ignorado se `installments` vier preenchido.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  installmentsCount?: number;
 }

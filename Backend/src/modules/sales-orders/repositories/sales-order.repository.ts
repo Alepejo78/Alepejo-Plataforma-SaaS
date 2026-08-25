@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, SalesOrder } from '@prisma/client';
+import { PaymentMethod, Prisma, SalesOrder } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 
@@ -11,7 +11,7 @@ const includeRelations = {
   warehouse: true,
   items: {
     include: {
-      product: { include: { chartOfAccount: true } },
+      product: { include: { saleChartOfAccount: true } },
     },
   },
   sale: true,
@@ -45,6 +45,9 @@ export class SalesOrderRepository {
         otherExpenses: dto.otherExpenses ?? 0,
         totalAmount,
         netAmount,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        installmentsCount: dto.installmentsCount,
         createdById: userId,
         updatedById: userId,
         items: {
@@ -99,6 +102,9 @@ export class SalesOrderRepository {
       otherExpenses?: number;
       totalAmount?: number;
       netAmount?: number;
+      termDays?: number;
+      paymentMethod?: PaymentMethod;
+      installmentsCount?: number;
       items?: {
         productId: string;
         quantity: number;
@@ -136,6 +142,15 @@ export class SalesOrderRepository {
         }),
         ...(dto.netAmount !== undefined && {
           netAmount: dto.netAmount,
+        }),
+        ...(dto.termDays !== undefined && {
+          termDays: dto.termDays,
+        }),
+        ...(dto.paymentMethod !== undefined && {
+          paymentMethod: dto.paymentMethod,
+        }),
+        ...(dto.installmentsCount !== undefined && {
+          installmentsCount: dto.installmentsCount,
         }),
         ...(dto.items && {
           items: {

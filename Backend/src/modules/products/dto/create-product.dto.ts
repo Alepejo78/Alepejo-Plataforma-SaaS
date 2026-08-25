@@ -58,6 +58,10 @@ import {
     @IsString()
     chartOfAccountId?: string;
 
+    @IsOptional()
+    @IsString()
+    saleChartOfAccountId?: string;
+
     @IsString()
     unitId: string;
 
@@ -69,6 +73,13 @@ import {
     @IsNumber({ maxDecimalPlaces: 3 })
     @Min(0)
     minimumStock?: number;
+
+    /// Lote mínimo por ordem de produção — sobrepõe o padrão da
+    /// empresa (ProductionSettings.minBatchSize) quando preenchido.
+    @IsOptional()
+    @IsNumber({ maxDecimalPlaces: 3 })
+    @Min(0)
+    minProductionBatch?: number;
 
     /// Logística/frete — não interfere em estoque nem em custo.
     @IsOptional()

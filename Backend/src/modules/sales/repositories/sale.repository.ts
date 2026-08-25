@@ -70,6 +70,7 @@ export class SaleRepository {
         netAmount,
 
         termDays,
+        installmentsCount: dto.installmentsCount,
         dueDate: calculateDueDate(issueDate, termDays),
         paymentMethod: dto.paymentMethod,
 

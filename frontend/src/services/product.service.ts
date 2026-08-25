@@ -68,11 +68,13 @@ export interface Product {
   categoryId?: string | null;
   brandId?: string | null;
   chartOfAccountId?: string | null;
+  saleChartOfAccountId?: string | null;
   unitId: string;
   cost: string | number;
   salePrice: string | number;
   minimumStock?: string | number | null;
   currentStock?: string | number | null;
+  minProductionBatch?: string | number | null;
   weightKg?: string | number | null;
   cubageM3?: string | number | null;
   status: ProductStatus;
@@ -85,6 +87,11 @@ export interface Product {
   brand?: AuxiliaryRecord | null;
   unit?: UnitOfMeasure | null;
   chartOfAccount?: {
+    id: string;
+    code: string;
+    description: string;
+  } | null;
+  saleChartOfAccount?: {
     id: string;
     code: string;
     description: string;

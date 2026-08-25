@@ -11,7 +11,7 @@ const includeRelations = {
   warehouse: true,
   items: {
     include: {
-      product: { include: { chartOfAccount: true } },
+      product: { include: { saleChartOfAccount: true } },
     },
   },
   sale: true,

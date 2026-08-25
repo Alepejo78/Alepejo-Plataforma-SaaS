@@ -34,8 +34,8 @@ export interface QuoteItem {
     code: string;
     description: string;
     unit?: { code: string } | null;
-    chartOfAccountId?: string | null;
-    chartOfAccount?: {
+    saleChartOfAccountId?: string | null;
+    saleChartOfAccount?: {
       code: string;
       description: string;
     } | null;

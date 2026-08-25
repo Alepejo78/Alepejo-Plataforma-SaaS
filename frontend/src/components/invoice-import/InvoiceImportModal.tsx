@@ -248,11 +248,18 @@ export function InvoiceImportModal({
       );
     }
 
-    if (p.chartOfAccountId && !chartOfAccountId) {
-      setChartOfAccountId(p.chartOfAccountId);
+    const productAccountId = isPurchase
+      ? p.chartOfAccountId
+      : p.saleChartOfAccountId;
+    const productAccount = isPurchase
+      ? p.chartOfAccount
+      : p.saleChartOfAccount;
+
+    if (productAccountId && !chartOfAccountId) {
+      setChartOfAccountId(productAccountId);
       setChartOfAccountLabel(
-        p.chartOfAccount
-          ? `${p.chartOfAccount.code} — ${p.chartOfAccount.description}`
+        productAccount
+          ? `${productAccount.code} — ${productAccount.description}`
           : ""
       );
     }
@@ -938,16 +945,23 @@ export function InvoiceImportModal({
                                   : true,
                               });
 
+                              const productAccountId = isPurchase
+                                ? p?.chartOfAccountId
+                                : p?.saleChartOfAccountId;
+                              const productAccount = isPurchase
+                                ? p?.chartOfAccount
+                                : p?.saleChartOfAccount;
+
                               if (
-                                p?.chartOfAccountId &&
+                                productAccountId &&
                                 !chartOfAccountId
                               ) {
                                 setChartOfAccountId(
-                                  p.chartOfAccountId
+                                  productAccountId
                                 );
                                 setChartOfAccountLabel(
-                                  p.chartOfAccount
-                                    ? `${p.chartOfAccount.code} — ${p.chartOfAccount.description}`
+                                  productAccount
+                                    ? `${productAccount.code} — ${productAccount.description}`
                                     : ""
                                 );
                               }

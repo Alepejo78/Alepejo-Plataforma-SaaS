@@ -34,6 +34,7 @@ export class ProductsRepository {
         brand: true,
         unit: true,
         chartOfAccount: true,
+        saleChartOfAccount: true,
       },
     });
   }
@@ -117,6 +118,7 @@ export class ProductsRepository {
           brand: true,
           unit: true,
           chartOfAccount: true,
+          saleChartOfAccount: true,
         },
         skip: (page - 1) * limit,
         take: limit,

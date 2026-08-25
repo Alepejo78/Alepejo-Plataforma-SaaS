@@ -606,11 +606,16 @@ model Product {
   complementaryDescription String?              @db.VarChar(255)
   type                     ProductType          @default(PRODUCT)
   inventoryControl         InventoryControl     @default(SIMPLE)
-  /// Classificação padrão (Tipo de despesa/receita) — quando
-  /// preenchida, compras/vendas/importação de nota já sugerem essa
-  /// conta pro título gerado, sem travar a escolha manual.
+  /// Classificação padrão de compra (Tipo de despesa) — quando
+  /// preenchida, compras/importação de nota já sugerem essa conta pro
+  /// título gerado, sem travar a escolha manual.
   chartOfAccountId         String?
-  chartOfAccount           ChartOfAccount?      @relation(fields: [chartOfAccountId], references: [id])
+  chartOfAccount           ChartOfAccount?      @relation("ProductPurchaseChartOfAccount", fields: [chartOfAccountId], references: [id])
+  /// Classificação padrão de venda (Tipo de receita) — mesmo papel do
+  /// campo acima, só que do lado de vendas/orçamentos/pedidos de
+  /// venda.
+  saleChartOfAccountId     String?
+  saleChartOfAccount       ChartOfAccount?      @relation("ProductSaleChartOfAccount", fields: [saleChartOfAccountId], references: [id])
   /// Congelado (frente "Interprise") — Product virou cadastro de
   /// grupo, custo real passou a ser Inventory.averageCost (por
   /// empresa/depósito). Default só pra não quebrar create() sem o
@@ -1101,6 +1106,10 @@ model Sale {
 
   paymentMethod PaymentMethod?
 
+  /// Em quantos títulos o vencimento se divide na aprovação
+  /// (30/60/90... = termDays × 1/2/3) — 1 ou vazio é um título só.
+  installmentsCount Int? @default(1)
+
   /// Tipo de receita (conta do plano de contas) desta venda — mesmo
   /// papel do campo em Purchase, só que do lado do que entra.
   chartOfAccountId String?
@@ -1272,6 +1281,13 @@ model SalesOrder {
   totalAmount   Decimal @default(0) @db.Decimal(18, 2)
   netAmount     Decimal @default(0) @db.Decimal(18, 2)
 
+  /// Prazo/forma de pagamento/parcelas — digitados direto no pedido,
+  /// repassados pra Venda na conversão (mesmo papel dos campos
+  /// equivalentes em PurchaseOrder).
+  termDays          Int?
+  paymentMethod     PaymentMethod?
+  installmentsCount Int?           @default(1)
+
   items SalesOrderItem[]
   sale  Sale?
 
@@ -1344,7 +1360,8 @@ model ChartOfAccount {
   financialEntries FinancialEntry[]
   purchases        Purchase[]
   sales            Sale[]
-  products         Product[]
+  products         Product[]            @relation("ProductPurchaseChartOfAccount")
+  productsForSale  Product[]            @relation("ProductSaleChartOfAccount")
   active           Boolean                      @default(true)
   createdById      String?
   updatedById      String?
