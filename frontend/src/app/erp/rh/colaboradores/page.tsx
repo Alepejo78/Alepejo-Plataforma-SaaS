@@ -712,6 +712,7 @@ export default function ColaboradoresPage() {
       noticeDays: form.noticeDays
         ? Number(form.noticeDays)
         : undefined,
+      nextExamDate: form.nextExamDate || undefined,
       examReminderDays: form.examReminderDays
         ? Number(form.examReminderDays)
         : undefined,
@@ -2421,16 +2422,20 @@ export default function ColaboradoresPage() {
 
                         <input
                           type="date"
-                          disabled
-                          readOnly
-                          className={`${fieldClass} opacity-70`}
+                          className={fieldClass}
                           value={form.nextExamDate}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              nextExamDate: e.target.value,
+                            })
+                          }
                         />
 
                         <p className="mt-1 text-xs text-[var(--text-muted)]">
                           {examHistory.length > 0
-                            ? "Calculado a partir do último exame registrado."
-                            : "Nenhum exame registrado ainda — vale a data de admissão."}
+                            ? "Calculado a partir do último exame registrado — pode ajustar manualmente."
+                            : "Em branco, vale a data de admissão."}
                         </p>
                       </div>
 
