@@ -86,7 +86,7 @@ export class DashboardService {
         this.prisma.inventory.count({
           where: { companyId: { in: companyIds } },
         }),
-        this.getHrSummary(consolidated, user),
+        this.getHrSummary(user),
       ]);
 
     const companies: DashboardCompanySummary[] = consolidated
@@ -121,35 +121,27 @@ export class DashboardService {
    * entra em cena se a própria consulta falhar de verdade (banco fora,
    * por exemplo); nesse caso o cartão de RH volta a mostrar "—" na
    * tela, igual ao comportamento de antes desta consolidação.
+   *
+   * Colaborador é cadastro "Interprise" (ver `rootCompanyId` no schema)
+   * — diferente do cash flow/estoque (que só somam entre empresas pra
+   * quem administra o grupo), aqui é sempre visão geral do grupo,
+   * pra qualquer pessoa, senão colaborador cadastrado numa empresa do
+   * grupo some do cartão de quem está logado na raiz (e vice-versa).
    */
-  private async getHrSummary(
-    consolidated: boolean,
-    user: AuthenticatedUser,
-  ) {
+  private async getHrSummary(user: AuthenticatedUser) {
     try {
-      const [indicators, birthdays, employees] = consolidated
-        ? await Promise.all([
-            this.employeesService.getIndicatorsInGroup(
-              user.rootCompanyId,
-            ),
-            this.employeesService.getBirthdaysInGroup(
-              user.rootCompanyId,
-            ),
-            this.employeesService.findAllInGroup(
-              user.rootCompanyId,
-              { page: 1, limit: 100, orderBy: 'name', order: 'asc' },
-            ),
-          ])
-        : await Promise.all([
-            this.employeesService.getIndicators(user.companyId),
-            this.employeesService.getBirthdays(user.companyId),
-            this.employeesService.findAll(user.companyId, {
-              page: 1,
-              limit: 100,
-              orderBy: 'name',
-              order: 'asc',
-            }),
-          ]);
+      const [indicators, birthdays, employees] = await Promise.all([
+        this.employeesService.getIndicatorsInGroup(
+          user.rootCompanyId,
+        ),
+        this.employeesService.getBirthdaysInGroup(
+          user.rootCompanyId,
+        ),
+        this.employeesService.findAllInGroup(
+          user.rootCompanyId,
+          { page: 1, limit: 100, orderBy: 'name', order: 'asc' },
+        ),
+      ]);
 
       const daqui30Dias = new Date(
         Date.now() + 30 * 24 * 60 * 60 * 1000,

@@ -902,14 +902,12 @@ export default function HomePage() {
               )}
 
               <p className="mt-4 text-xs text-[var(--text-muted)]">
-                Só colaboradores ativos{
-                  consolidated ? ", somando o grupo" : ""
-                }.
+                Só colaboradores ativos, somando todas as empresas do grupo.
               </p>
             </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-5">
           <StatCard
             title="Parceiros"
             value={partners !== null ? String(partners) : "—"}
@@ -954,6 +952,19 @@ export default function HomePage() {
             icon={Boxes}
             href="/erp/estoque"
             loading={loading}
+          />
+
+          <StatCard
+            title="Colaboradores"
+            value={
+              colaboradoresAtivos !== null
+                ? String(colaboradoresAtivos)
+                : "—"
+            }
+            hint="Ativos, somando o grupo"
+            icon={UsersRound}
+            href="/erp/rh"
+            loading={hrLoading}
           />
         </section>
 
