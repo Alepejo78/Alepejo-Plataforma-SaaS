@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import { benefitService } from "@/services/hr.service";
 
 export default function BeneficiosRhPage() {
   return (
-    <AppShell workspaceLabel="Benefícios">
+    <OsShell workspaceLabel="Benefícios">
       <div className="space-y-6">
         <header>
           <Link
@@ -66,6 +66,6 @@ export default function BeneficiosRhPage() {
           />
         </div>
       </div>
-    </AppShell>
+    </OsShell>
   );
 }

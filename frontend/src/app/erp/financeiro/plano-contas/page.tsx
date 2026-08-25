@@ -314,7 +314,13 @@ export default function PlanoContasPage() {
                     {group.classificationName}
                   </div>
 
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full table-fixed text-left text-sm">
+                    <colgroup>
+                      <col className="w-28" />
+                      <col />
+                      <col className="w-24" />
+                    </colgroup>
+
                     <tbody>
                       {group.items.map((account) => (
                         <tr
@@ -325,7 +331,7 @@ export default function PlanoContasPage() {
                             {account.code}
                           </td>
 
-                          <td className="px-4 py-2.5 text-[var(--text-primary)]">
+                          <td className="truncate px-4 py-2.5 text-[var(--text-primary)]">
                             {account.description}
                           </td>
 

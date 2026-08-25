@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Save, Trash2, X } from "lucide-react";
 
-import { AppShell } from "@/components";
+import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
@@ -375,7 +375,7 @@ export default function ParametrosFiscaisPage() {
   }
 
   return (
-    <AppShell workspaceLabel="Parâmetros fiscais">
+    <OsShell workspaceLabel="Parâmetros fiscais">
       <ListPageLayout
         header={
           <>
@@ -773,6 +773,6 @@ export default function ParametrosFiscaisPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </OsShell>
   );
 }

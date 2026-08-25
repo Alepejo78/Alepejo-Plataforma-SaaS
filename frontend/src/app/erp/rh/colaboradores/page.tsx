@@ -766,13 +766,20 @@ export default function ColaboradoresPage() {
     try {
       if (editingId) {
         await employeeService.update(editingId, payload);
+
+        setFormOpen(false);
+
+        await load();
       } else {
         await employeeService.create(payload);
+
+        // Recarrega a página inteira em vez de só o load() — o
+        // colaborador novo (cadastro de grupo) não aparecia na
+        // lista sem isso.
+        window.location.reload();
+
+        return;
       }
-
-      setFormOpen(false);
-
-      await load();
     } catch (err) {
       setFormError(
         extractMessage(
