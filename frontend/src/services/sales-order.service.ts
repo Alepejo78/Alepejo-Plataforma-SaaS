@@ -32,6 +32,11 @@ export interface SalesOrderItem {
     code: string;
     description: string;
     unit?: { code: string } | null;
+    chartOfAccountId?: string | null;
+    chartOfAccount?: {
+      code: string;
+      description: string;
+    } | null;
   } | null;
 }
 

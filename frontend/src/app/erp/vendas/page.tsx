@@ -669,6 +669,12 @@ export default function VendasPage() {
       ).padStart(6, "0")}`
     );
 
+    // Sugere a classificação do primeiro item que já tiver uma
+    // cadastrada, se o formulário ainda não tiver uma escolhida.
+    const suggestedAccount = doc.items.find(
+      (it) => it.product?.chartOfAccountId
+    )?.product;
+
     setForm((prev) => ({
       ...prev,
       partnerId: doc.partnerId,
@@ -680,6 +686,14 @@ export default function VendasPage() {
       discountValue: num(doc.discountValue),
       freightValue: num(doc.freightValue),
       otherExpenses: num(doc.otherExpenses),
+      chartOfAccountId:
+        prev.chartOfAccountId ||
+        suggestedAccount?.chartOfAccountId ||
+        "",
+      chartOfAccountLabel:
+        prev.chartOfAccountId || !suggestedAccount?.chartOfAccount
+          ? prev.chartOfAccountLabel
+          : `${suggestedAccount.chartOfAccount.code} — ${suggestedAccount.chartOfAccount.description}`,
     }));
 
     setItems(

@@ -10,7 +10,9 @@ const includeRelations = {
   partner: true,
   warehouse: true,
   items: {
-    include: { product: true },
+    include: {
+      product: { include: { chartOfAccount: true } },
+    },
   },
   purchase: true,
 };

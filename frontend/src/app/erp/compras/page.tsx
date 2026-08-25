@@ -285,6 +285,12 @@ export default function ComprasPage() {
       `PC-${String(order.number).padStart(6, "0")}`
     );
 
+    // Sugere a classificação do primeiro item que já tiver uma
+    // cadastrada, se o formulário ainda não tiver uma escolhida.
+    const suggestedAccount = order.items.find(
+      (it) => it.product?.chartOfAccountId
+    )?.product;
+
     setForm((prev) => ({
       ...prev,
       partnerId: order.partnerId,
@@ -301,6 +307,14 @@ export default function ComprasPage() {
         order.installmentsCount > 1
           ? String(order.installmentsCount)
           : "",
+      chartOfAccountId:
+        prev.chartOfAccountId ||
+        suggestedAccount?.chartOfAccountId ||
+        "",
+      chartOfAccountLabel:
+        prev.chartOfAccountId || !suggestedAccount?.chartOfAccount
+          ? prev.chartOfAccountLabel
+          : `${suggestedAccount.chartOfAccount.code} — ${suggestedAccount.chartOfAccount.description}`,
     }));
 
     setItems(
