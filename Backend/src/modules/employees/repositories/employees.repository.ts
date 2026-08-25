@@ -87,7 +87,9 @@ export class EmployeesRepository {
         pixKeyType: dto.pixKeyType,
         pixKey: dto.pixKey,
 
-        nextExamDate: toDateOrUndefined(dto.nextExamDate),
+        nextExamDate:
+          toDateOrUndefined(dto.nextExamDate) ??
+          toDateOrUndefined(dto.admissionDate),
         noticeDays: dto.noticeDays,
         examReminderDays: dto.examReminderDays,
         onLeave: dto.onLeave ?? false,

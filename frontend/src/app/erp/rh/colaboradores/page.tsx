@@ -2428,9 +2428,9 @@ export default function ColaboradoresPage() {
                         />
 
                         <p className="mt-1 text-xs text-[var(--text-muted)]">
-                          {form.nextExamDate
+                          {examHistory.length > 0
                             ? "Calculado a partir do último exame registrado."
-                            : "Sem exame registrado ainda — a referência é a data de admissão."}
+                            : "Nenhum exame registrado ainda — vale a data de admissão."}
                         </p>
                       </div>
 
