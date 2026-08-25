@@ -796,17 +796,23 @@ export default function PedidosDeCompraPage() {
                       : "Novo pedido de compra"}
                 </h2>
 
-                {viewOnly && detail && (
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    {detail.createdByName &&
-                      `Criado por ${detail.createdByName} em ${date(detail.createdAt)}`}
-                    {detail.createdByName &&
-                      detail.updatedByName &&
-                      detail.updatedByName !==
+                {viewOnly &&
+                  detail &&
+                  (detail.createdByName ||
+                    detail.updatedByName) && (
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      {[
                         detail.createdByName &&
-                      ` · Última alteração por ${detail.updatedByName}`}
-                  </p>
-                )}
+                          `Criado por ${detail.createdByName} em ${date(detail.createdAt)}`,
+                        detail.updatedByName &&
+                          detail.updatedByName !==
+                            detail.createdByName &&
+                          `Última alteração por ${detail.updatedByName}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
               </div>
 
               <button

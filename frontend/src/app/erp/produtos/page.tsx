@@ -455,15 +455,22 @@ export default function ProdutosPage() {
                     : "Novo produto"}
                 </h2>
 
-                {editing && editing.createdByName && (
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    {`Criado por ${editing.createdByName} em ${date(editing.createdAt)}`}
-                    {editing.updatedByName &&
-                      editing.updatedByName !==
+                {editing &&
+                  (editing.createdByName ||
+                    editing.updatedByName) && (
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      {[
                         editing.createdByName &&
-                      ` · Última alteração por ${editing.updatedByName}`}
-                  </p>
-                )}
+                          `Criado por ${editing.createdByName} em ${date(editing.createdAt)}`,
+                        editing.updatedByName &&
+                          editing.updatedByName !==
+                            editing.createdByName &&
+                          `Última alteração por ${editing.updatedByName}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
               </div>
 
               <button
