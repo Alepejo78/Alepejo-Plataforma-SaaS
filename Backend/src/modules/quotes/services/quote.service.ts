@@ -337,4 +337,59 @@ export class QuoteService {
 
     return this.repository.approve(id, userId);
   }
+
+  /**
+   * Desfaz a aprovação — apaga o Pedido de Venda gerado por
+   * `approve` e volta o orçamento pra rascunho, pra poder editar e
+   * aprovar de novo. Só permitido se esse pedido ainda não virou
+   * venda nem gerou ordem de produção (senão a aprovação está
+   * "amarrada" num documento posterior).
+   */
+  async undoApproval(companyId: string, id: string, userId: string) {
+    const quote = await this.findOne(companyId, id);
+
+    if (quote.status !== QuoteStatus.APPROVED) {
+      throw new BadRequestException(
+        'Somente orçamentos aprovados podem ser estornados.',
+      );
+    }
+
+    const salesOrder = quote.salesOrder;
+
+    if (salesOrder) {
+      const linkedSale = await this.prisma.sale.findFirst({
+        where: { salesOrderId: salesOrder.id },
+      });
+
+      if (linkedSale) {
+        throw new BadRequestException(
+          'O pedido de venda gerado por este orçamento já virou uma venda — não é possível estornar.',
+        );
+      }
+
+      const linkedProductionOrder =
+        await this.prisma.productionOrder.findFirst({
+          where: { salesOrderId: salesOrder.id },
+        });
+
+      if (linkedProductionOrder) {
+        throw new BadRequestException(
+          'O pedido de venda gerado por este orçamento já gerou uma ordem de produção — não é possível estornar.',
+        );
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (salesOrder) {
+        await tx.salesOrder.delete({ where: { id: salesOrder.id } });
+      }
+
+      await tx.quote.update({
+        where: { id },
+        data: { status: QuoteStatus.DRAFT, updatedById: userId },
+      });
+    });
+
+    return this.findOne(companyId, id);
+  }
 }

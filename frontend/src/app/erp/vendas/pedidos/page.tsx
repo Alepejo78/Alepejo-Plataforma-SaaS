@@ -45,13 +45,6 @@ function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
 
-function qty(value: string | number | null | undefined) {
-  return num(value).toLocaleString("pt-BR", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  });
-}
-
 function money(value: string | number | null | undefined) {
   return num(value).toLocaleString("pt-BR", {
     style: "currency",
@@ -139,6 +132,7 @@ export default function PedidosDeVendaPage() {
   const [listError, setListError] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
@@ -223,6 +217,8 @@ export default function PedidosDeVendaPage() {
 
   function openCreate() {
     setEditingId(null);
+    setViewOnly(false);
+    setDetail(null);
     setForm({
       ...emptyForm(),
       warehouseId: warehouses[0]?.id ?? "",
@@ -232,8 +228,7 @@ export default function PedidosDeVendaPage() {
     setFormOpen(true);
   }
 
-  function openEdit(order: SalesOrder) {
-    setEditingId(order.id);
+  function populateOrderForm(order: SalesOrder) {
     setForm({
       partnerId: order.partnerId,
       partnerLabel:
@@ -259,6 +254,22 @@ export default function PedidosDeVendaPage() {
         unitPrice: num(it.unitPrice),
       }))
     );
+  }
+
+  function openEdit(order: SalesOrder) {
+    setEditingId(order.id);
+    setViewOnly(false);
+    setDetail(order);
+    populateOrderForm(order);
+    setFormError("");
+    setFormOpen(true);
+  }
+
+  function openView(order: SalesOrder) {
+    setEditingId(order.id);
+    setViewOnly(true);
+    setDetail(order);
+    populateOrderForm(order);
     setFormError("");
     setFormOpen(true);
   }
@@ -563,9 +574,9 @@ export default function PedidosDeVendaPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => setDetail(o)}
-                            title="Ver itens"
-                            aria-label="Ver itens"
+                            onClick={() => openView(o)}
+                            title="Consultar"
+                            aria-label="Consultar"
                             className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                           >
                             <Eye size={16} />
@@ -614,16 +625,44 @@ export default function PedidosDeVendaPage() {
         )}
       </ListPageLayout>
 
-      {/* Novo/editar pedido */}
+      {/* Novo/editar/consultar pedido */}
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editingId
-                  ? "Editar pedido de venda"
-                  : "Novo pedido de venda"}
-              </h2>
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                  {viewOnly
+                    ? "Consultar pedido de venda"
+                    : editingId
+                      ? "Editar pedido de venda"
+                      : "Novo pedido de venda"}
+                </h2>
+
+                {viewOnly && detail && (
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    {SALES_ORDER_STATUS_LABELS[detail.status]}
+                  </p>
+                )}
+
+                {viewOnly &&
+                  detail &&
+                  (detail.createdByName ||
+                    detail.updatedByName) && (
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      {[
+                        detail.createdByName &&
+                          `Criado por ${detail.createdByName} em ${date(detail.createdAt)}`,
+                        detail.updatedByName &&
+                          detail.updatedByName !==
+                            detail.createdByName &&
+                          `Última alteração por ${detail.updatedByName}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+              </div>
 
               <button
                 type="button"
@@ -635,6 +674,7 @@ export default function PedidosDeVendaPage() {
               </button>
             </div>
 
+            <fieldset disabled={viewOnly} className="contents">
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="sm:col-span-2 lg:col-span-1">
@@ -887,16 +927,19 @@ export default function PedidosDeVendaPage() {
                   {formError}
                 </div>
               )}
+            </div>
+            </fieldset>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+              >
+                {viewOnly ? "Fechar" : "Cancelar"}
+              </button>
 
+              {!viewOnly && (
                 <button
                   type="button"
                   disabled={saving}
@@ -905,134 +948,7 @@ export default function PedidosDeVendaPage() {
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Detalhes */}
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  {formatNumber(detail.number)} ·{" "}
-                  {detail.partner?.tradeName ??
-                    detail.partner?.legalName}
-                </h2>
-
-                <p className="text-sm text-[var(--text-muted)]">
-                  {date(detail.orderDate ?? detail.createdAt)}{" "}
-                  · {detail.warehouse?.code} ·{" "}
-                  {
-                    SALES_ORDER_STATUS_LABELS[
-                      detail.status
-                    ]
-                  }
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setDetail(null)}
-                aria-label="Fechar"
-                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">
-                      Produto
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Qtd
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Preço unit.
-                    </th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {detail.items.map((it) => (
-                    <tr
-                      key={it.id}
-                      className="border-t border-[var(--border)]"
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-[var(--text-primary)]">
-                          {it.product?.description ?? "—"}
-                        </p>
-
-                        <p className="text-xs text-[var(--text-muted)]">
-                          {it.product?.code}
-                        </p>
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {qty(it.quantity)}{" "}
-                        {it.product?.unit?.code ?? ""}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {money(it.unitPrice)}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
-                        {money(it.totalPrice)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {detail.observation && (
-              <p className="mt-4 text-sm text-[var(--text-secondary)]">
-                <span className="font-medium text-[var(--text-primary)]">
-                  Observação:
-                </span>{" "}
-                {detail.observation}
-              </p>
-            )}
-
-            <div className="mt-4 space-y-1 text-right text-sm">
-              <p className="text-[var(--text-secondary)]">
-                Total dos itens: {money(detail.totalAmount)}
-              </p>
-
-              {num(detail.discountValue) > 0 && (
-                <p className="text-[var(--text-secondary)]">
-                  Desconto: -{money(detail.discountValue)}
-                </p>
               )}
-
-              {num(detail.freightValue) > 0 && (
-                <p className="text-[var(--text-secondary)]">
-                  Frete: {money(detail.freightValue)}
-                </p>
-              )}
-
-              {num(detail.otherExpenses) > 0 && (
-                <p className="text-[var(--text-secondary)]">
-                  Outras despesas:{" "}
-                  {money(detail.otherExpenses)}
-                </p>
-              )}
-
-              <p className="font-semibold text-[var(--text-primary)]">
-                Líquido: {money(detail.netAmount)}
-              </p>
             </div>
           </div>
         </div>

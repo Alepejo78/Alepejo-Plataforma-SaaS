@@ -92,4 +92,18 @@ export class QuoteController {
   ) {
     return this.service.approve(companyId, id, userId);
   }
+
+  @Patch(':id/undo-approval')
+  @Permissions('quote.approve')
+  @ApiOperation({
+    summary:
+      'Estornar aprovação (apaga o Pedido de Venda gerado e volta para rascunho)',
+  })
+  undoApproval(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.undoApproval(companyId, id, userId);
+  }
 }

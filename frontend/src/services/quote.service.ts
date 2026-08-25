@@ -158,4 +158,12 @@ export const quoteService = {
 
     return data.data;
   },
+
+  async undoApproval(id: string): Promise<Quote> {
+    const { data } = await api.patch<ApiEnvelope<Quote>>(
+      `/quotes/${id}/undo-approval`
+    );
+
+    return data.data;
+  },
 };
