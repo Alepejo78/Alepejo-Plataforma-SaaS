@@ -269,7 +269,9 @@ export function InvoiceImportModal({
       ? p.chartOfAccount
       : p.saleChartOfAccount;
 
-    if (productAccountId && !chartOfAccountId) {
+    // Escolher o item é uma troca deliberada — segue o tipo de
+    // despesa/receita cadastrado nele, mesmo que já tivesse outro.
+    if (productAccountId) {
       setChartOfAccountId(productAccountId);
       setChartOfAccountLabel(
         productAccount
