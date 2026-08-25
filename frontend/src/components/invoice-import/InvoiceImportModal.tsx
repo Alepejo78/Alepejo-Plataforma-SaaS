@@ -206,6 +206,19 @@ export function InvoiceImportModal({
     return result.data;
   }, []);
 
+  // Lançamento direto em Contas a Pagar/Receber não passa por
+  // recebimento — só serve pra serviço. Produto (que movimenta
+  // estoque) precisa virar Pedido pra poder ser recebido depois.
+  const searchServiceProducts = useCallback(async (query: string) => {
+    const result = await productService.list({
+      search: query || undefined,
+      type: "SERVICE",
+      limit: 20,
+    });
+
+    return result.data;
+  }, []);
+
   function applyPartner(p: BusinessPartner | null) {
     if (!p) {
       setPartner((prev) => ({ ...emptyPartner, document: prev.document }));
@@ -881,10 +894,10 @@ export function InvoiceImportModal({
 
           {mode === "EXPENSE" && (
             <div>
-              <label className={labelClass}>Item (produto da despesa)</label>
+              <label className={labelClass}>Item (serviço da despesa)</label>
               <SearchSelect<Product>
                 displayLabel={expenseItemLabel}
-                search={searchProducts}
+                search={searchServiceProducts}
                 getId={(p) => p.id}
                 getLabel={(p) => `${p.code} — ${p.description}`}
                 placeholder='Digite para buscar, ex.: "Despesa Pagto Água"...'
@@ -892,7 +905,8 @@ export function InvoiceImportModal({
               />
               <p className="mt-1 text-xs text-[var(--text-muted)]">
                 Opcional — só ajuda a preencher a observação (e o valor,
-                se a parcela estiver vazia). Não movimenta estoque.
+                se a parcela estiver vazia). Só lista serviços — produto
+                precisa virar Pedido para poder ser recebido.
               </p>
             </div>
           )}
