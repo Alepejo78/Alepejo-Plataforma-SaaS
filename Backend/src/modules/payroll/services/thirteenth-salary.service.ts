@@ -252,7 +252,12 @@ export class ThirteenthSalaryService {
    * Aprova e gera 1 título a pagar por colaborador incluído — mesmo
    * padrão de `PayrollService.approve()`.
    */
-  async approve(companyId: string, id: string, approvedByUserId: string) {
+  async approve(
+    companyId: string,
+    rootCompanyId: string,
+    id: string,
+    approvedByUserId: string,
+  ) {
     const thirteenth = await this.findOne(companyId, id);
 
     this.assertDraft(thirteenth.status);
@@ -266,7 +271,7 @@ export class ThirteenthSalaryService {
     }
 
     const thirteenthAccount = await this.prisma.chartOfAccount.findFirst({
-      where: { companyId, code: THIRTEENTH_CHART_ACCOUNT_CODE },
+      where: { companyId: rootCompanyId, code: THIRTEENTH_CHART_ACCOUNT_CODE },
     });
 
     const label = `13S-${String(thirteenth.number).padStart(6, '0')}`;

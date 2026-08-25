@@ -35,6 +35,7 @@ export class FinancialEntriesService {
 
   async create(
     companyId: string,
+    rootCompanyId: string,
     dto: CreateFinancialEntryDto,
     userId: string,
   ) {
@@ -43,7 +44,7 @@ export class FinancialEntriesService {
     } else if (dto.partnerId) {
       // A receber exige cliente; a pagar exige fornecedor.
       await this.businessPartnersService.assertHasRole(
-        companyId,
+        rootCompanyId,
         dto.partnerId,
         dto.type === FinancialEntryType.RECEIVABLE
           ? BusinessPartnerRole.CUSTOMER
@@ -53,7 +54,7 @@ export class FinancialEntriesService {
 
     if (dto.chartOfAccountId) {
       await this.assertChartOfAccount(
-        companyId,
+        rootCompanyId,
         dto.chartOfAccountId,
       );
     }
@@ -114,6 +115,7 @@ export class FinancialEntriesService {
 
   async update(
     companyId: string,
+    rootCompanyId: string,
     id: string,
     dto: UpdateFinancialEntryDto,
     userId: string,
@@ -128,7 +130,7 @@ export class FinancialEntriesService {
 
     if (dto.partnerId && dto.partnerId !== entry.partnerId) {
       await this.businessPartnersService.assertHasRole(
-        companyId,
+        rootCompanyId,
         dto.partnerId,
         entry.type === FinancialEntryType.RECEIVABLE
           ? BusinessPartnerRole.CUSTOMER
@@ -138,7 +140,7 @@ export class FinancialEntriesService {
 
     if (dto.chartOfAccountId) {
       await this.assertChartOfAccount(
-        companyId,
+        rootCompanyId,
         dto.chartOfAccountId,
       );
     }

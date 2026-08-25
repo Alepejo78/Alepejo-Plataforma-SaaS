@@ -61,13 +61,15 @@ export class SaleService {
 
   async create(
     companyId: string,
+    rootCompanyId: string,
     dto: CreateSaleDto,
     userId: string,
   ) {
     // Valida que o parceiro existe, pertence à empresa e possui o
-    // papel de CLIENTE (um fornecedor puro não pode receber venda).
+    // papel de CLIENTE (um fornecedor puro não pode receber venda) —
+    // cadastro de grupo (Interprise), checa pela raiz do grupo.
     await this.businessPartnersService.assertHasRole(
-      companyId,
+      rootCompanyId,
       dto.partnerId,
       BusinessPartnerRole.CUSTOMER,
     );
@@ -76,7 +78,7 @@ export class SaleService {
       await this.prisma.warehouse.findFirst({
         where: {
           id: dto.warehouseId,
-          companyId,
+          companyId: rootCompanyId,
         },
       });
 
@@ -93,7 +95,7 @@ export class SaleService {
         await this.prisma.product.findFirst({
           where: {
             id: item.productId,
-            companyId,
+            companyId: rootCompanyId,
           },
         });
 
@@ -240,6 +242,7 @@ export class SaleService {
 
   async update(
     companyId: string,
+    rootCompanyId: string,
     id: string,
     dto: UpdateSaleDto,
     userId: string,
@@ -254,7 +257,7 @@ export class SaleService {
 
     if (dto.partnerId) {
       await this.businessPartnersService.assertHasRole(
-        companyId,
+        rootCompanyId,
         dto.partnerId,
         BusinessPartnerRole.CUSTOMER,
       );
@@ -262,7 +265,7 @@ export class SaleService {
 
     if (dto.warehouseId) {
       const warehouse = await this.prisma.warehouse.findFirst({
-        where: { id: dto.warehouseId, companyId },
+        where: { id: dto.warehouseId, companyId: rootCompanyId },
       });
 
       if (!warehouse) {
@@ -288,7 +291,7 @@ export class SaleService {
 
       for (const item of dto.items) {
         const product = await this.prisma.product.findFirst({
-          where: { id: item.productId, companyId },
+          where: { id: item.productId, companyId: rootCompanyId },
         });
 
         if (!product) {

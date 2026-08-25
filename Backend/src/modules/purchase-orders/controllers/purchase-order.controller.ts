@@ -33,10 +33,11 @@ export class PurchaseOrderController {
   @ApiOperation({ summary: 'Cadastrar pedido de compra' })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Body() dto: CreatePurchaseOrderDto,
   ) {
-    return this.service.create(companyId, dto, userId);
+    return this.service.create(companyId, rootCompanyId, dto, userId);
   }
 
   @Get()
@@ -64,11 +65,12 @@ export class PurchaseOrderController {
   @ApiOperation({ summary: 'Alterar pedido de compra' })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdatePurchaseOrderDto,
   ) {
-    return this.service.update(companyId, id, dto, userId);
+    return this.service.update(companyId, rootCompanyId, id, dto, userId);
   }
 
   @Patch(':id/cancel')

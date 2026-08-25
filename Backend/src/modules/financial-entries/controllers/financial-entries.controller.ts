@@ -33,10 +33,11 @@ export class FinancialEntriesController {
   @Permissions('financial-entry.create')
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Body() dto: CreateFinancialEntryDto,
   ) {
-    return this.service.create(companyId, dto, userId);
+    return this.service.create(companyId, rootCompanyId, dto, userId);
   }
 
   @Get()
@@ -103,11 +104,12 @@ export class FinancialEntriesController {
   @Permissions('financial-entry.update')
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateFinancialEntryDto,
   ) {
-    return this.service.update(companyId, id, dto, userId);
+    return this.service.update(companyId, rootCompanyId, id, dto, userId);
   }
 
   @Patch(':id/settle')

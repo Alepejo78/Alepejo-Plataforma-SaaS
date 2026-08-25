@@ -40,17 +40,18 @@ export class SalesOrderService {
 
   async create(
     companyId: string,
+    rootCompanyId: string,
     dto: CreateSalesOrderDto,
     userId: string,
   ) {
     await this.businessPartnersService.assertHasRole(
-      companyId,
+      rootCompanyId,
       dto.partnerId,
       BusinessPartnerRole.CUSTOMER,
     );
 
     const warehouse = await this.prisma.warehouse.findFirst({
-      where: { id: dto.warehouseId, companyId },
+      where: { id: dto.warehouseId, companyId: rootCompanyId },
     });
 
     if (!warehouse) {
@@ -63,7 +64,7 @@ export class SalesOrderService {
 
     for (const item of dto.items) {
       const product = await this.prisma.product.findFirst({
-        where: { id: item.productId, companyId },
+        where: { id: item.productId, companyId: rootCompanyId },
       });
 
       if (!product) {
@@ -195,6 +196,7 @@ export class SalesOrderService {
 
   async update(
     companyId: string,
+    rootCompanyId: string,
     id: string,
     dto: UpdateSalesOrderDto,
     userId: string,
@@ -209,7 +211,7 @@ export class SalesOrderService {
 
     if (dto.partnerId) {
       await this.businessPartnersService.assertHasRole(
-        companyId,
+        rootCompanyId,
         dto.partnerId,
         BusinessPartnerRole.CUSTOMER,
       );
@@ -218,7 +220,7 @@ export class SalesOrderService {
     if (dto.warehouseId) {
       const warehouse = await this.prisma.warehouse.findFirst(
         {
-          where: { id: dto.warehouseId, companyId },
+          where: { id: dto.warehouseId, companyId: rootCompanyId },
         },
       );
 
@@ -245,7 +247,7 @@ export class SalesOrderService {
 
       for (const item of dto.items) {
         const product = await this.prisma.product.findFirst({
-          where: { id: item.productId, companyId },
+          where: { id: item.productId, companyId: rootCompanyId },
         });
 
         if (!product) {

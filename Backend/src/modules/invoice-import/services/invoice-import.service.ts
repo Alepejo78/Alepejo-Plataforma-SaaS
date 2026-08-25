@@ -38,10 +38,11 @@ export class InvoiceImportService {
   /**
    * Acha o parceiro pelo id informado, ou pelo CPF/CNPJ — criando um
    * novo cadastro se não existir ainda (dados já vieram da nota
-   * importada ou foram digitados na mão).
+   * importada ou foram digitados na mão). Parceiro é cadastro de
+   * grupo (Interprise): `companyId` aqui precisa ser a raiz do grupo.
    */
   private async resolvePartner(
-    companyId: string,
+    rootCompanyId: string,
     dto: InvoicePartnerDto,
     role: BusinessPartnerRole,
     userId: string,
@@ -54,7 +55,7 @@ export class InvoiceImportService {
 
     const existing =
       await this.businessPartnersRepository.findByDocument(
-        companyId,
+        rootCompanyId,
         document,
       );
 
@@ -63,7 +64,7 @@ export class InvoiceImportService {
     }
 
     const created = await this.businessPartnersService.create(
-      companyId,
+      rootCompanyId,
       {
         roles: [role],
         document,
@@ -86,11 +87,12 @@ export class InvoiceImportService {
 
   async confirmPurchase(
     companyId: string,
+    rootCompanyId: string,
     dto: ConfirmPurchaseImportDto,
     userId: string,
   ) {
     const partnerId = await this.resolvePartner(
-      companyId,
+      rootCompanyId,
       dto.partner,
       BusinessPartnerRole.SUPPLIER,
       userId,
@@ -98,6 +100,7 @@ export class InvoiceImportService {
 
     const purchase = await this.purchaseService.create(
       companyId,
+      rootCompanyId,
       {
         partnerId,
         warehouseId: dto.warehouseId,
@@ -131,11 +134,12 @@ export class InvoiceImportService {
 
   async confirmSale(
     companyId: string,
+    rootCompanyId: string,
     dto: ConfirmSaleImportDto,
     userId: string,
   ) {
     const partnerId = await this.resolvePartner(
-      companyId,
+      rootCompanyId,
       dto.partner,
       BusinessPartnerRole.CUSTOMER,
       userId,
@@ -143,6 +147,7 @@ export class InvoiceImportService {
 
     const sale = await this.saleService.create(
       companyId,
+      rootCompanyId,
       {
         partnerId,
         warehouseId: dto.warehouseId,
@@ -174,11 +179,13 @@ export class InvoiceImportService {
 
   async confirmPurchaseExpense(
     companyId: string,
+    rootCompanyId: string,
     dto: ConfirmExpenseImportDto,
     userId: string,
   ) {
     return this.confirmExpense(
       companyId,
+      rootCompanyId,
       dto,
       FinancialEntryType.PAYABLE,
       BusinessPartnerRole.SUPPLIER,
@@ -188,11 +195,13 @@ export class InvoiceImportService {
 
   async confirmSaleExpense(
     companyId: string,
+    rootCompanyId: string,
     dto: ConfirmExpenseImportDto,
     userId: string,
   ) {
     return this.confirmExpense(
       companyId,
+      rootCompanyId,
       dto,
       FinancialEntryType.RECEIVABLE,
       BusinessPartnerRole.CUSTOMER,
@@ -202,13 +211,14 @@ export class InvoiceImportService {
 
   private async confirmExpense(
     companyId: string,
+    rootCompanyId: string,
     dto: ConfirmExpenseImportDto,
     type: FinancialEntryType,
     role: BusinessPartnerRole,
     userId: string,
   ) {
     const partnerId = await this.resolvePartner(
-      companyId,
+      rootCompanyId,
       dto.partner,
       role,
       userId,

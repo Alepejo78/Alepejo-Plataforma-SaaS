@@ -66,9 +66,13 @@ export class ProductionOrdersService {
     private readonly licenseService: LicenseService,
   ) {}
 
-  async create(companyId: string, dto: CreateProductionOrderDto) {
+  async create(
+    companyId: string,
+    rootCompanyId: string,
+    dto: CreateProductionOrderDto,
+  ) {
     await this.assertProductAndWarehouse(
-      companyId,
+      rootCompanyId,
       dto.productId,
       dto.warehouseId,
     );
@@ -117,6 +121,7 @@ export class ProductionOrdersService {
 
   async update(
     companyId: string,
+    rootCompanyId: string,
     id: string,
     dto: UpdateProductionOrderDto,
   ) {
@@ -130,7 +135,7 @@ export class ProductionOrdersService {
 
     if (dto.productId || dto.warehouseId) {
       await this.assertProductAndWarehouse(
-        companyId,
+        rootCompanyId,
         dto.productId ?? order.productId,
         dto.warehouseId ?? order.warehouseId,
       );
@@ -418,8 +423,13 @@ export class ProductionOrdersService {
         return;
       }
 
+      // Produto é cadastro de grupo (Interprise) — pertence sempre à
+      // raiz do grupo, não à empresa ativa que disparou o gatilho.
+      const rootCompanyId =
+        await this.resolveRootCompanyId(companyId);
+
       const product = await this.prisma.product.findFirst({
-        where: { id: productId, companyId },
+        where: { id: productId, companyId: rootCompanyId },
       });
 
       const minimumStock = Number(
@@ -523,6 +533,24 @@ export class ProductionOrdersService {
             : 'Gerada automaticamente — saldo do produto chegou ao mínimo.',
       });
     });
+  }
+
+  /**
+   * Resolve a raiz do grupo a partir de uma empresa qualquer do grupo
+   * — usado só nos gatilhos automáticos (chamados de outros módulos
+   * com a empresa ATIVA da sessão, não a raiz), pra não precisar
+   * espalhar `rootCompanyId` por todo caminho que aciona a geração
+   * automática (aprovação de venda, baixa de estoque...).
+   */
+  private async resolveRootCompanyId(
+    companyId: string,
+  ): Promise<string> {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { rootCompanyId: true },
+    });
+
+    return company?.rootCompanyId ?? companyId;
   }
 
   private async assertProductAndWarehouse(

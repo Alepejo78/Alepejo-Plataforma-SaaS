@@ -33,10 +33,11 @@ export class QuotationController {
   @ApiOperation({ summary: 'Cadastrar cotação' })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Body() dto: CreateQuotationDto,
   ) {
-    return this.service.create(companyId, dto, userId);
+    return this.service.create(companyId, rootCompanyId, dto, userId);
   }
 
   @Get()
@@ -64,11 +65,12 @@ export class QuotationController {
   @ApiOperation({ summary: 'Alterar cotação' })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateQuotationDto,
   ) {
-    return this.service.update(companyId, id, dto, userId);
+    return this.service.update(companyId, rootCompanyId, id, dto, userId);
   }
 
   @Patch(':id/cancel')
@@ -89,11 +91,18 @@ export class QuotationController {
   })
   addOffer(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: CreateQuotationOfferDto,
   ) {
-    return this.service.addOffer(companyId, id, dto, userId);
+    return this.service.addOffer(
+      companyId,
+      rootCompanyId,
+      id,
+      dto,
+      userId,
+    );
   }
 
   @Delete(':id/offers/:offerId')

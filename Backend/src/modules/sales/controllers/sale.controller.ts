@@ -41,11 +41,13 @@ export class SaleController {
   })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Body() dto: CreateSaleDto,
   ) {
     return this.service.create(
       companyId,
+      rootCompanyId,
       dto,
       userId,
     );
@@ -88,12 +90,14 @@ export class SaleController {
   })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateSaleDto,
   ) {
     return this.service.update(
       companyId,
+      rootCompanyId,
       id,
       dto,
       userId,

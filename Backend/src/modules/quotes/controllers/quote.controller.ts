@@ -31,10 +31,11 @@ export class QuoteController {
   @ApiOperation({ summary: 'Cadastrar orçamento' })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Body() dto: CreateQuoteDto,
   ) {
-    return this.service.create(companyId, dto, userId);
+    return this.service.create(companyId, rootCompanyId, dto, userId);
   }
 
   @Get()
@@ -62,11 +63,12 @@ export class QuoteController {
   @ApiOperation({ summary: 'Alterar orçamento' })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateQuoteDto,
   ) {
-    return this.service.update(companyId, id, dto, userId);
+    return this.service.update(companyId, rootCompanyId, id, dto, userId);
   }
 
   @Patch(':id/cancel')
@@ -87,10 +89,11 @@ export class QuoteController {
   })
   approve(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.approve(companyId, id, userId);
+    return this.service.approve(companyId, rootCompanyId, id, userId);
   }
 
   @Patch(':id/undo-approval')

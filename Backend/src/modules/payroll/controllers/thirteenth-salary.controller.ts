@@ -110,10 +110,11 @@ export class ThirteenthSalaryController {
   @ApiOperation({ summary: 'Aprovar 13º (gera os títulos a pagar)' })
   approve(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.approve(companyId, id, userId);
+    return this.service.approve(companyId, rootCompanyId, id, userId);
   }
 
   @Patch(':id/reverse')

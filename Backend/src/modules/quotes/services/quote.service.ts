@@ -37,17 +37,18 @@ export class QuoteService {
 
   async create(
     companyId: string,
+    rootCompanyId: string,
     dto: CreateQuoteDto,
     userId: string,
   ) {
     await this.businessPartnersService.assertHasRole(
-      companyId,
+      rootCompanyId,
       dto.partnerId,
       BusinessPartnerRole.CUSTOMER,
     );
 
     const warehouse = await this.prisma.warehouse.findFirst({
-      where: { id: dto.warehouseId, companyId },
+      where: { id: dto.warehouseId, companyId: rootCompanyId },
     });
 
     if (!warehouse) {
@@ -60,7 +61,7 @@ export class QuoteService {
 
     for (const item of dto.items) {
       const product = await this.prisma.product.findFirst({
-        where: { id: item.productId, companyId },
+        where: { id: item.productId, companyId: rootCompanyId },
       });
 
       if (!product) {
@@ -173,6 +174,7 @@ export class QuoteService {
 
   async update(
     companyId: string,
+    rootCompanyId: string,
     id: string,
     dto: UpdateQuoteDto,
     userId: string,
@@ -187,7 +189,7 @@ export class QuoteService {
 
     if (dto.partnerId) {
       await this.businessPartnersService.assertHasRole(
-        companyId,
+        rootCompanyId,
         dto.partnerId,
         BusinessPartnerRole.CUSTOMER,
       );
@@ -196,7 +198,7 @@ export class QuoteService {
     if (dto.warehouseId) {
       const warehouse = await this.prisma.warehouse.findFirst(
         {
-          where: { id: dto.warehouseId, companyId },
+          where: { id: dto.warehouseId, companyId: rootCompanyId },
         },
       );
 
@@ -223,7 +225,7 @@ export class QuoteService {
 
       for (const item of dto.items) {
         const product = await this.prisma.product.findFirst({
-          where: { id: item.productId, companyId },
+          where: { id: item.productId, companyId: rootCompanyId },
         });
 
         if (!product) {
@@ -298,7 +300,12 @@ export class QuoteService {
    * venda em si continua nascendo do Pedido (ou direto), nunca direto
    * do Orçamento aprovado.
    */
-  async approve(companyId: string, id: string, userId: string) {
+  async approve(
+    companyId: string,
+    rootCompanyId: string,
+    id: string,
+    userId: string,
+  ) {
     const quote = await this.findOne(companyId, id);
 
     if (quote.status !== QuoteStatus.DRAFT) {
@@ -312,6 +319,7 @@ export class QuoteService {
 
     const salesOrder = await this.salesOrderService.create(
       companyId,
+      rootCompanyId,
       {
         partnerId: quote.partnerId,
         warehouseId: quote.warehouseId,

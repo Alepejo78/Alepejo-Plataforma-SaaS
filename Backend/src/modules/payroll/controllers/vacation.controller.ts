@@ -98,10 +98,11 @@ export class VacationController {
   @ApiOperation({ summary: 'Aprovar (gera título a pagar)' })
   approve(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.grantService.approve(companyId, id, userId);
+    return this.grantService.approve(companyId, rootCompanyId, id, userId);
   }
 
   @Patch('grants/:id/reverse')

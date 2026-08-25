@@ -172,13 +172,18 @@ export class VacationGrantService {
     });
   }
 
-  async approve(companyId: string, id: string, approvedByUserId: string) {
+  async approve(
+    companyId: string,
+    rootCompanyId: string,
+    id: string,
+    approvedByUserId: string,
+  ) {
     const grant = await this.findOne(companyId, id);
 
     this.assertDraft(grant.status);
 
     const vacationAccount = await this.prisma.chartOfAccount.findFirst({
-      where: { companyId, code: VACATION_CHART_ACCOUNT_CODE },
+      where: { companyId: rootCompanyId, code: VACATION_CHART_ACCOUNT_CODE },
     });
 
     const label = `FER-${String(grant.number).padStart(6, '0')}`;

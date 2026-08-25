@@ -334,7 +334,12 @@ export class PayrollService {
    * `QuoteService.approve()` (transação + `FinancialEntriesService.
    * createFromDocument`).
    */
-  async approve(companyId: string, id: string, approvedByUserId: string) {
+  async approve(
+    companyId: string,
+    rootCompanyId: string,
+    id: string,
+    approvedByUserId: string,
+  ) {
     const payroll = await this.findOne(companyId, id);
 
     this.assertDraft(payroll.status);
@@ -365,7 +370,7 @@ export class PayrollService {
     }
 
     const salaryAccount = await this.prisma.chartOfAccount.findFirst({
-      where: { companyId, code: SALARY_CHART_ACCOUNT_CODE },
+      where: { companyId: rootCompanyId, code: SALARY_CHART_ACCOUNT_CODE },
     });
 
     const payrollNumber = `FOL-${String(payroll.number).padStart(6, '0')}`;

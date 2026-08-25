@@ -34,9 +34,10 @@ export class ProductionOrderController {
   @ApiOperation({ summary: 'Cadastrar ordem de produção' })
   create(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @Body() dto: CreateProductionOrderDto,
   ) {
-    return this.service.create(companyId, dto);
+    return this.service.create(companyId, rootCompanyId, dto);
   }
 
   @Get()
@@ -64,10 +65,11 @@ export class ProductionOrderController {
   @ApiOperation({ summary: 'Alterar ordem de produção' })
   update(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @Param('id') id: string,
     @Body() dto: UpdateProductionOrderDto,
   ) {
-    return this.service.update(companyId, id, dto);
+    return this.service.update(companyId, rootCompanyId, id, dto);
   }
 
   @Patch(':id/start')

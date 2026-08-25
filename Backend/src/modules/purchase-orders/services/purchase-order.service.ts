@@ -38,17 +38,18 @@ export class PurchaseOrderService {
 
   async create(
     companyId: string,
+    rootCompanyId: string,
     dto: CreatePurchaseOrderDto,
     userId: string,
   ) {
     await this.businessPartnersService.assertHasRole(
-      companyId,
+      rootCompanyId,
       dto.partnerId,
       BusinessPartnerRole.SUPPLIER,
     );
 
     const warehouse = await this.prisma.warehouse.findFirst({
-      where: { id: dto.warehouseId, companyId },
+      where: { id: dto.warehouseId, companyId: rootCompanyId },
     });
 
     if (!warehouse) {
@@ -61,7 +62,7 @@ export class PurchaseOrderService {
 
     for (const item of dto.items) {
       const product = await this.prisma.product.findFirst({
-        where: { id: item.productId, companyId },
+        where: { id: item.productId, companyId: rootCompanyId },
       });
 
       if (!product) {
@@ -190,6 +191,7 @@ export class PurchaseOrderService {
 
   async update(
     companyId: string,
+    rootCompanyId: string,
     id: string,
     dto: UpdatePurchaseOrderDto,
     userId: string,
@@ -204,7 +206,7 @@ export class PurchaseOrderService {
 
     if (dto.partnerId) {
       await this.businessPartnersService.assertHasRole(
-        companyId,
+        rootCompanyId,
         dto.partnerId,
         BusinessPartnerRole.SUPPLIER,
       );
@@ -213,7 +215,7 @@ export class PurchaseOrderService {
     if (dto.warehouseId) {
       const warehouse = await this.prisma.warehouse.findFirst(
         {
-          where: { id: dto.warehouseId, companyId },
+          where: { id: dto.warehouseId, companyId: rootCompanyId },
         },
       );
 
@@ -240,7 +242,7 @@ export class PurchaseOrderService {
 
       for (const item of dto.items) {
         const product = await this.prisma.product.findFirst({
-          where: { id: item.productId, companyId },
+          where: { id: item.productId, companyId: rootCompanyId },
         });
 
         if (!product) {

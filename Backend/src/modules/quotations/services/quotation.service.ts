@@ -38,11 +38,12 @@ export class QuotationService {
 
   async create(
     companyId: string,
+    rootCompanyId: string,
     dto: CreateQuotationDto,
     userId: string,
   ) {
     const warehouse = await this.prisma.warehouse.findFirst({
-      where: { id: dto.warehouseId, companyId },
+      where: { id: dto.warehouseId, companyId: rootCompanyId },
     });
 
     if (!warehouse) {
@@ -53,7 +54,7 @@ export class QuotationService {
 
     for (const item of dto.items) {
       const product = await this.prisma.product.findFirst({
-        where: { id: item.productId, companyId },
+        where: { id: item.productId, companyId: rootCompanyId },
       });
 
       if (!product) {
@@ -97,6 +98,7 @@ export class QuotationService {
 
   async update(
     companyId: string,
+    rootCompanyId: string,
     id: string,
     dto: UpdateQuotationDto,
     userId: string,
@@ -112,7 +114,7 @@ export class QuotationService {
     if (dto.warehouseId) {
       const warehouse = await this.prisma.warehouse.findFirst(
         {
-          where: { id: dto.warehouseId, companyId },
+          where: { id: dto.warehouseId, companyId: rootCompanyId },
         },
       );
 
@@ -130,7 +132,7 @@ export class QuotationService {
     if (dto.items) {
       for (const item of dto.items) {
         const product = await this.prisma.product.findFirst({
-          where: { id: item.productId, companyId },
+          where: { id: item.productId, companyId: rootCompanyId },
         });
 
         if (!product) {
@@ -171,6 +173,7 @@ export class QuotationService {
 
   async addOffer(
     companyId: string,
+    rootCompanyId: string,
     quotationId: string,
     dto: CreateQuotationOfferDto,
     userId: string,
@@ -203,7 +206,7 @@ export class QuotationService {
     }
 
     await this.businessPartnersService.assertHasRole(
-      companyId,
+      rootCompanyId,
       dto.partnerId,
       BusinessPartnerRole.SUPPLIER,
     );

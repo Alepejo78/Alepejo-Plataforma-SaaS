@@ -144,10 +144,11 @@ export class PayrollController {
   })
   approve(
     @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.approve(companyId, id, userId);
+    return this.service.approve(companyId, rootCompanyId, id, userId);
   }
 
   @Patch(':id/reverse')

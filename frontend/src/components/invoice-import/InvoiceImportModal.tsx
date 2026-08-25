@@ -589,9 +589,12 @@ export function InvoiceImportModal({
       onClose();
     } catch (err) {
       setFormError(
-        err instanceof Error
-          ? err.message
-          : extractMessage(err, "Não foi possível confirmar a importação.")
+        extractMessage(
+          err,
+          err instanceof Error
+            ? err.message
+            : "Não foi possível confirmar a importação."
+        )
       );
     } finally {
       setSaving(false);

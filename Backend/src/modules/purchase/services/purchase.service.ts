@@ -60,13 +60,15 @@ export class PurchaseService {
 
   async create(
     companyId: string,
+    rootCompanyId: string,
     dto: CreatePurchaseDto,
     userId: string,
   ) {
     // Valida que o parceiro existe, pertence à empresa e possui o
-    // papel de FORNECEDOR.
+    // papel de FORNECEDOR — cadastro de grupo (Interprise), checa pela
+    // raiz do grupo, não pela empresa ativa.
     await this.businessPartnersService.assertHasRole(
-      companyId,
+      rootCompanyId,
       dto.partnerId,
       BusinessPartnerRole.SUPPLIER,
     );
@@ -75,7 +77,7 @@ export class PurchaseService {
       await this.prisma.warehouse.findFirst({
         where: {
           id: dto.warehouseId,
-          companyId,
+          companyId: rootCompanyId,
         },
       });
 
@@ -92,7 +94,7 @@ export class PurchaseService {
         await this.prisma.product.findFirst({
           where: {
             id: item.productId,
-            companyId,
+            companyId: rootCompanyId,
           },
         });
 
@@ -210,6 +212,7 @@ export class PurchaseService {
 
   async update(
     companyId: string,
+    rootCompanyId: string,
     id: string,
     dto: UpdatePurchaseDto,
     userId: string,
@@ -231,7 +234,7 @@ export class PurchaseService {
 
     if (dto.partnerId) {
       await this.businessPartnersService.assertHasRole(
-        companyId,
+        rootCompanyId,
         dto.partnerId,
         BusinessPartnerRole.SUPPLIER,
       );
@@ -239,7 +242,7 @@ export class PurchaseService {
 
     if (dto.warehouseId) {
       const warehouse = await this.prisma.warehouse.findFirst({
-        where: { id: dto.warehouseId, companyId },
+        where: { id: dto.warehouseId, companyId: rootCompanyId },
       });
 
       if (!warehouse) {
@@ -265,7 +268,7 @@ export class PurchaseService {
 
       for (const item of dto.items) {
         const product = await this.prisma.product.findFirst({
-          where: { id: item.productId, companyId },
+          where: { id: item.productId, companyId: rootCompanyId },
         });
 
         if (!product) {
