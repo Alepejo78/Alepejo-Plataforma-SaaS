@@ -440,7 +440,7 @@ export default function ConfigurarPerfilPage() {
 
     return (
       <tr key={row.groupId} className={locked ? "opacity-60" : undefined}>
-        <td className="border-t border-[var(--border)] px-4 py-2 font-medium text-[var(--text-primary)]">
+        <td className="sticky left-0 z-[5] border-t border-[var(--border)] bg-[var(--surface)] px-4 py-2 font-medium text-[var(--text-primary)]">
           <span className="flex items-center gap-1.5">
             {row.groupName}
             {locked && (
@@ -638,7 +638,7 @@ export default function ConfigurarPerfilPage() {
           <table className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">
+                  <th className="sticky left-0 z-20 bg-[var(--surface-hover)] px-4 py-3 font-semibold">
                     Módulo
                   </th>
 
