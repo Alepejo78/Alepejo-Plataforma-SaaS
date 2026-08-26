@@ -14,6 +14,7 @@ export default function OsConfiguracoesEstoquePage() {
       description: "Cadastros de apoio de Estoque",
       href: "/erp/estoque/depositos",
       icon: Building2,
+      iconAnim: "building2",
       visible: can("warehouse.view"),
     },
   ].filter((card) => card.visible);
@@ -33,6 +34,7 @@ export default function OsConfiguracoesEstoquePage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

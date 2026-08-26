@@ -14,6 +14,7 @@ export default function OsConfiguracoesProducaoPage() {
       description: "Cadastros de apoio de Produção",
       href: "/erp/producao/configuracoes",
       icon: Settings,
+      iconAnim: "settings",
       visible: can("production-settings.view"),
     },
   ].filter((card) => card.visible);
@@ -33,6 +34,7 @@ export default function OsConfiguracoesProducaoPage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

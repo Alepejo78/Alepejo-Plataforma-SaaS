@@ -23,6 +23,7 @@ export default function OsHomePage() {
       description: "Usuários e perfis de acesso",
       href: "/os/seguranca",
       icon: ShieldCheck,
+      iconAnim: "shieldcheck",
       visible: can("user.view") || can("role.view"),
     },
     {
@@ -30,6 +31,7 @@ export default function OsHomePage() {
       description: "WhatsApp e chave do relógio de ponto",
       href: "/os/apis",
       icon: Plug,
+      iconAnim: "plug",
       visible:
         can("whatsapp.view") ||
         (hasModule("LABOR") && can("time-clock.manage-api-key")),
@@ -39,6 +41,7 @@ export default function OsHomePage() {
       description: "Dados da empresa e empresas do grupo",
       href: "/erp/configuracoes",
       icon: Building2,
+      iconAnim: "building2",
       visible: can("company.view"),
     },
     {
@@ -46,6 +49,7 @@ export default function OsHomePage() {
       description: "Cadastros de apoio de cada módulo",
       href: "/os/configuracoes",
       icon: Settings,
+      iconAnim: "settings",
       visible:
         can("product-category.view") ||
         can("warehouse.view") ||
@@ -60,6 +64,7 @@ export default function OsHomePage() {
       description: "Marca, logo e layout do sistema",
       href: "/erp/configuracoes/personalizacao",
       icon: Monitor,
+      iconAnim: "monitor",
       visible: can("company-branding.view"),
     },
     {
@@ -67,6 +72,7 @@ export default function OsHomePage() {
       description: "Plano e módulos contratados",
       href: "/erp/licenciamento",
       icon: BadgeCheck,
+      iconAnim: "badgecheck",
       visible: can("license.view"),
     },
     {
@@ -74,6 +80,7 @@ export default function OsHomePage() {
       description: "Catálogo comercial — só o dono da plataforma",
       href: "/erp/licenciamento/planos",
       icon: Settings2,
+      iconAnim: "settings2",
       visible: can("platform.license.manage"),
     },
     {
@@ -81,6 +88,7 @@ export default function OsHomePage() {
       description: "Quem comprou, planos e valores mês a mês — só o dono da plataforma",
       href: "/erp/licenciamento/clientes",
       icon: Users,
+      iconAnim: "users",
       visible: can("platform.license.manage"),
     },
   ].filter((card) => card.visible);
@@ -107,6 +115,7 @@ export default function OsHomePage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

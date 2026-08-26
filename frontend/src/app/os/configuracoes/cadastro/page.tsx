@@ -14,6 +14,7 @@ export default function OsConfiguracoesCadastroPage() {
       description: "Cadastros de apoio de Produtos",
       href: "/erp/produtos/cadastros",
       icon: Tags,
+      iconAnim: "tags",
       visible: can("product-category.view"),
     },
   ].filter((card) => card.visible);
@@ -33,6 +34,7 @@ export default function OsConfiguracoesCadastroPage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

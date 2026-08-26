@@ -50,7 +50,7 @@ export function AppTabsBar() {
                 aria-selected={active}
                 className={`flex items-center gap-1 rounded-xl py-1 pl-3 pr-1 text-sm font-semibold transition-colors ${
                   active
-                    ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+                    ? "bg-[var(--primary-soft)] text-[var(--primary-text)]"
                     : "text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)]"
                 }`}
               >

@@ -203,6 +203,1013 @@ a:active svg,
   transform: scale(0.9);
 }
 
+/*
+ * Animações específicas por ícone do menu (data-icon-anim, ver
+ * frontend/src/components/layout/Sidebar/menu.ts, campo `iconAnim`)
+ * — miram direto nos <path>/<circle> que o lucide-react já desenha
+ * separados (rodas, dentes da engrenagem), sem precisar recriar o
+ * desenho. Seletores escritos de propósito sem `:is()`/`:nth-child`
+ * encadeado — mais verboso, mas sem risco de o minificador de CSS do
+ * build (Lightning CSS) rejeitar a regra inteira por sintaxe exótica.
+ */
+@keyframes icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes icon-users-front {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-1.5px) scale(0.86);
+    opacity: 0.6;
+  }
+}
+
+@keyframes icon-users-back {
+  0%,
+  100% {
+    transform: translateX(0) scale(0.86);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(1.5px) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes icon-truck-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.6px);
+  }
+}
+
+@keyframes icon-cart-load {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+}
+
+/* Cadastros (Users): a "pessoa da frente" e a "de trás" alternam —
+   uma encolhe/afasta enquanto a outra cresce/avança, feito loop. */
+a:hover svg[data-icon-anim="users"] :nth-child(1),
+a:active svg[data-icon-anim="users"] :nth-child(1),
+a:focus-visible svg[data-icon-anim="users"] :nth-child(1),
+a:hover svg[data-icon-anim="users"] :nth-child(4),
+a:active svg[data-icon-anim="users"] :nth-child(4),
+a:focus-visible svg[data-icon-anim="users"] :nth-child(4),
+button:not(:disabled):hover svg[data-icon-anim="users"] :nth-child(1),
+button:not(:disabled):active svg[data-icon-anim="users"] :nth-child(1),
+button:not(:disabled):focus-visible svg[data-icon-anim="users"] :nth-child(1),
+button:not(:disabled):hover svg[data-icon-anim="users"] :nth-child(4),
+button:not(:disabled):active svg[data-icon-anim="users"] :nth-child(4),
+button:not(:disabled):focus-visible svg[data-icon-anim="users"] :nth-child(4) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-users-front 900ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="users"] :nth-child(2),
+a:active svg[data-icon-anim="users"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="users"] :nth-child(2),
+a:hover svg[data-icon-anim="users"] :nth-child(3),
+a:active svg[data-icon-anim="users"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="users"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="users"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="users"] :nth-child(2),
+button:not(:disabled):focus-visible svg[data-icon-anim="users"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="users"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="users"] :nth-child(3),
+button:not(:disabled):focus-visible svg[data-icon-anim="users"] :nth-child(3) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-users-back 900ms ease-in-out infinite;
+}
+
+/* Colaboradores (UserCog): só a engrenagem gira — a pessoa fica parada.
+   Centro da engrenagem no ícone lucide é (18, 15). Os filhos 2 a 10
+   do SVG são os 8 dentes + o círculo da engrenagem; 1 e 11 são a
+   pessoa (fica parada). */
+a:hover svg[data-icon-anim="usercog"] :nth-child(2),
+a:hover svg[data-icon-anim="usercog"] :nth-child(3),
+a:hover svg[data-icon-anim="usercog"] :nth-child(4),
+a:hover svg[data-icon-anim="usercog"] :nth-child(5),
+a:hover svg[data-icon-anim="usercog"] :nth-child(6),
+a:hover svg[data-icon-anim="usercog"] :nth-child(7),
+a:hover svg[data-icon-anim="usercog"] :nth-child(8),
+a:hover svg[data-icon-anim="usercog"] :nth-child(9),
+a:hover svg[data-icon-anim="usercog"] :nth-child(10),
+a:active svg[data-icon-anim="usercog"] :nth-child(2),
+a:active svg[data-icon-anim="usercog"] :nth-child(3),
+a:active svg[data-icon-anim="usercog"] :nth-child(4),
+a:active svg[data-icon-anim="usercog"] :nth-child(5),
+a:active svg[data-icon-anim="usercog"] :nth-child(6),
+a:active svg[data-icon-anim="usercog"] :nth-child(7),
+a:active svg[data-icon-anim="usercog"] :nth-child(8),
+a:active svg[data-icon-anim="usercog"] :nth-child(9),
+a:active svg[data-icon-anim="usercog"] :nth-child(10),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(4),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(5),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(6),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(7),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(8),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(9),
+a:focus-visible svg[data-icon-anim="usercog"] :nth-child(10),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(4),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(5),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(6),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(7),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(8),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(9),
+button:not(:disabled):hover svg[data-icon-anim="usercog"] :nth-child(10),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(4),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(5),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(6),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(7),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(8),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(9),
+button:not(:disabled):active svg[data-icon-anim="usercog"] :nth-child(10),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(2),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(3),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(4),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(5),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(6),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(7),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(8),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(9),
+button:not(:disabled):focus-visible svg[data-icon-anim="usercog"] :nth-child(10) {
+  transform-origin: 18px 15px;
+  animation: icon-spin 1.4s linear infinite;
+}
+
+/* Compras (Truck): as duas rodas (circle) giram, a carroceria balança
+   de leve como se estivesse andando numa estrada. */
+a:hover svg[data-icon-anim="truck"] circle,
+a:active svg[data-icon-anim="truck"] circle,
+a:focus-visible svg[data-icon-anim="truck"] circle,
+button:not(:disabled):hover svg[data-icon-anim="truck"] circle,
+button:not(:disabled):active svg[data-icon-anim="truck"] circle,
+button:not(:disabled):focus-visible svg[data-icon-anim="truck"] circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-spin 500ms linear infinite;
+}
+
+a:hover svg[data-icon-anim="truck"] path,
+a:active svg[data-icon-anim="truck"] path,
+a:focus-visible svg[data-icon-anim="truck"] path,
+button:not(:disabled):hover svg[data-icon-anim="truck"] path,
+button:not(:disabled):active svg[data-icon-anim="truck"] path,
+button:not(:disabled):focus-visible svg[data-icon-anim="truck"] path {
+  animation: icon-truck-bounce 300ms ease-in-out infinite;
+}
+
+/* Comercial (ShoppingCart): as rodas giram e a cesta balança, como se
+   estivesse recebendo item dentro. */
+a:hover svg[data-icon-anim="cart"] circle,
+a:active svg[data-icon-anim="cart"] circle,
+a:focus-visible svg[data-icon-anim="cart"] circle,
+button:not(:disabled):hover svg[data-icon-anim="cart"] circle,
+button:not(:disabled):active svg[data-icon-anim="cart"] circle,
+button:not(:disabled):focus-visible svg[data-icon-anim="cart"] circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-spin 450ms linear infinite;
+}
+
+a:hover svg[data-icon-anim="cart"] path,
+a:active svg[data-icon-anim="cart"] path,
+a:focus-visible svg[data-icon-anim="cart"] path,
+button:not(:disabled):hover svg[data-icon-anim="cart"] path,
+button:not(:disabled):active svg[data-icon-anim="cart"] path,
+button:not(:disabled):focus-visible svg[data-icon-anim="cart"] path {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: icon-cart-load 600ms ease-in-out infinite;
+}
+
+/* ---- Restante dos ícones do menu — cada um com sua animação. ---- */
+
+@keyframes icon-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+@keyframes icon-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes icon-nod {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-6deg);
+  }
+}
+
+@keyframes icon-bounce-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+@keyframes icon-grow-bar {
+  0%,
+  100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1.15);
+  }
+}
+
+@keyframes icon-heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.35);
+  }
+  30% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.35);
+  }
+}
+
+@keyframes icon-ping {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0.25;
+  }
+}
+
+@keyframes icon-smoke {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+}
+
+@keyframes icon-flip-x {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.15);
+  }
+}
+
+@keyframes icon-type {
+  0%,
+  100% {
+    transform: scaleX(0.15);
+  }
+  50% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes icon-shake-x {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-1.5px);
+  }
+  75% {
+    transform: translateX(1.5px);
+  }
+}
+
+@keyframes icon-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Visão geral / Dashboard: os 4 blocos "acendem" em sequência. */
+a:hover svg[data-icon-anim="dashboard"] :nth-child(1),
+a:active svg[data-icon-anim="dashboard"] :nth-child(1),
+a:focus-visible svg[data-icon-anim="dashboard"] :nth-child(1),
+button:not(:disabled):hover svg[data-icon-anim="dashboard"] :nth-child(1),
+button:not(:disabled):active svg[data-icon-anim="dashboard"] :nth-child(1),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="dashboard"]
+  :nth-child(1) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 1s ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="dashboard"] :nth-child(2),
+a:active svg[data-icon-anim="dashboard"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="dashboard"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="dashboard"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="dashboard"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="dashboard"]
+  :nth-child(2) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 1s ease-in-out 100ms infinite;
+}
+
+a:hover svg[data-icon-anim="dashboard"] :nth-child(3),
+a:active svg[data-icon-anim="dashboard"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="dashboard"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="dashboard"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="dashboard"] :nth-child(3),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="dashboard"]
+  :nth-child(3) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 1s ease-in-out 200ms infinite;
+}
+
+a:hover svg[data-icon-anim="dashboard"] :nth-child(4),
+a:active svg[data-icon-anim="dashboard"] :nth-child(4),
+a:focus-visible svg[data-icon-anim="dashboard"] :nth-child(4),
+button:not(:disabled):hover svg[data-icon-anim="dashboard"] :nth-child(4),
+button:not(:disabled):active svg[data-icon-anim="dashboard"] :nth-child(4),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="dashboard"]
+  :nth-child(4) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 1s ease-in-out 300ms infinite;
+}
+
+/* Cadastros (Produtos/Package): a caixa balança como se fosse manuseada. */
+a:hover svg[data-icon-anim="package"] *,
+a:active svg[data-icon-anim="package"] *,
+a:focus-visible svg[data-icon-anim="package"] *,
+button:not(:disabled):hover svg[data-icon-anim="package"] *,
+button:not(:disabled):active svg[data-icon-anim="package"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="package"] * {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-wiggle 700ms ease-in-out infinite;
+}
+
+/* Cotações/Pedidos/Orçamentos/Relatórios (FileText): linhas de texto
+   "escrevendo", uma de cada vez. */
+a:hover svg[data-icon-anim="filetext"] :nth-child(3),
+a:active svg[data-icon-anim="filetext"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="filetext"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="filetext"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="filetext"] :nth-child(3),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="filetext"]
+  :nth-child(3) {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: icon-type 1.2s ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="filetext"] :nth-child(4),
+a:active svg[data-icon-anim="filetext"] :nth-child(4),
+a:focus-visible svg[data-icon-anim="filetext"] :nth-child(4),
+button:not(:disabled):hover svg[data-icon-anim="filetext"] :nth-child(4),
+button:not(:disabled):active svg[data-icon-anim="filetext"] :nth-child(4),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="filetext"]
+  :nth-child(4) {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: icon-type 1.2s ease-in-out 150ms infinite;
+}
+
+a:hover svg[data-icon-anim="filetext"] :nth-child(5),
+a:active svg[data-icon-anim="filetext"] :nth-child(5),
+a:focus-visible svg[data-icon-anim="filetext"] :nth-child(5),
+button:not(:disabled):hover svg[data-icon-anim="filetext"] :nth-child(5),
+button:not(:disabled):active svg[data-icon-anim="filetext"] :nth-child(5),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="filetext"]
+  :nth-child(5) {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: icon-type 1.2s ease-in-out 300ms infinite;
+}
+
+/* Estoque/Recebimentos (Boxes): as 3 caixas empilham em sequência. */
+a:hover svg[data-icon-anim="boxes"] :is(:nth-child(1), :nth-child(2), :nth-child(3), :nth-child(4)),
+a:active svg[data-icon-anim="boxes"] :is(:nth-child(1), :nth-child(2), :nth-child(3), :nth-child(4)),
+a:focus-visible svg[data-icon-anim="boxes"] :is(:nth-child(1), :nth-child(2), :nth-child(3), :nth-child(4)),
+button:not(:disabled):hover svg[data-icon-anim="boxes"] :is(:nth-child(1), :nth-child(2), :nth-child(3), :nth-child(4)),
+button:not(:disabled):active svg[data-icon-anim="boxes"] :is(:nth-child(1), :nth-child(2), :nth-child(3), :nth-child(4)),
+button:not(:disabled):focus-visible svg[data-icon-anim="boxes"] :is(:nth-child(1), :nth-child(2), :nth-child(3), :nth-child(4)) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 900ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="boxes"] :is(:nth-child(5), :nth-child(6), :nth-child(7), :nth-child(8)),
+a:active svg[data-icon-anim="boxes"] :is(:nth-child(5), :nth-child(6), :nth-child(7), :nth-child(8)),
+a:focus-visible svg[data-icon-anim="boxes"] :is(:nth-child(5), :nth-child(6), :nth-child(7), :nth-child(8)),
+button:not(:disabled):hover svg[data-icon-anim="boxes"] :is(:nth-child(5), :nth-child(6), :nth-child(7), :nth-child(8)),
+button:not(:disabled):active svg[data-icon-anim="boxes"] :is(:nth-child(5), :nth-child(6), :nth-child(7), :nth-child(8)),
+button:not(:disabled):focus-visible svg[data-icon-anim="boxes"] :is(:nth-child(5), :nth-child(6), :nth-child(7), :nth-child(8)) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 900ms ease-in-out 150ms infinite;
+}
+
+a:hover svg[data-icon-anim="boxes"] :is(:nth-child(9), :nth-child(10), :nth-child(11), :nth-child(12)),
+a:active svg[data-icon-anim="boxes"] :is(:nth-child(9), :nth-child(10), :nth-child(11), :nth-child(12)),
+a:focus-visible svg[data-icon-anim="boxes"] :is(:nth-child(9), :nth-child(10), :nth-child(11), :nth-child(12)),
+button:not(:disabled):hover svg[data-icon-anim="boxes"] :is(:nth-child(9), :nth-child(10), :nth-child(11), :nth-child(12)),
+button:not(:disabled):active svg[data-icon-anim="boxes"] :is(:nth-child(9), :nth-child(10), :nth-child(11), :nth-child(12)),
+button:not(:disabled):focus-visible svg[data-icon-anim="boxes"] :is(:nth-child(9), :nth-child(10), :nth-child(11), :nth-child(12)) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 900ms ease-in-out 300ms infinite;
+}
+
+/* Ordens de produção/Funções (ClipboardList): os itens vão sendo
+   marcados como concluídos. */
+a:hover svg[data-icon-anim="clipboard"] :nth-child(5),
+a:active svg[data-icon-anim="clipboard"] :nth-child(5),
+a:focus-visible svg[data-icon-anim="clipboard"] :nth-child(5),
+button:not(:disabled):hover svg[data-icon-anim="clipboard"] :nth-child(5),
+button:not(:disabled):active svg[data-icon-anim="clipboard"] :nth-child(5),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="clipboard"]
+  :nth-child(5) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 800ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="clipboard"] :nth-child(6),
+a:active svg[data-icon-anim="clipboard"] :nth-child(6),
+a:focus-visible svg[data-icon-anim="clipboard"] :nth-child(6),
+button:not(:disabled):hover svg[data-icon-anim="clipboard"] :nth-child(6),
+button:not(:disabled):active svg[data-icon-anim="clipboard"] :nth-child(6),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="clipboard"]
+  :nth-child(6) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-pop 800ms ease-in-out 250ms infinite;
+}
+
+/* Estoque (Warehouse): o galpão balança de leve, se acomodando. */
+a:hover svg[data-icon-anim="warehouse"] *,
+a:active svg[data-icon-anim="warehouse"] *,
+a:focus-visible svg[data-icon-anim="warehouse"] *,
+button:not(:disabled):hover svg[data-icon-anim="warehouse"] *,
+button:not(:disabled):active svg[data-icon-anim="warehouse"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="warehouse"] * {
+  animation: icon-bounce-y 500ms ease-in-out infinite;
+}
+
+/* Financeiro/13º salário (Wallet): abre e fecha de leve. */
+a:hover svg[data-icon-anim="wallet"] *,
+a:active svg[data-icon-anim="wallet"] *,
+a:focus-visible svg[data-icon-anim="wallet"] *,
+button:not(:disabled):hover svg[data-icon-anim="wallet"] *,
+button:not(:disabled):active svg[data-icon-anim="wallet"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="wallet"] * {
+  animation: icon-bounce-y 500ms ease-in-out infinite;
+}
+
+/* Contas a receber/Folha/Encargos (Banknote): a moeda gira. */
+a:hover svg[data-icon-anim="banknote"] :nth-child(2),
+a:active svg[data-icon-anim="banknote"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="banknote"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="banknote"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="banknote"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="banknote"]
+  :nth-child(2) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-flip-x 600ms ease-in-out infinite;
+}
+
+/* Contas a pagar (Receipt): o papel balança como se estivesse sendo folheado. */
+a:hover svg[data-icon-anim="receipt"] *,
+a:active svg[data-icon-anim="receipt"] *,
+a:focus-visible svg[data-icon-anim="receipt"] *,
+button:not(:disabled):hover svg[data-icon-anim="receipt"] *,
+button:not(:disabled):active svg[data-icon-anim="receipt"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="receipt"] * {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: icon-wiggle 700ms ease-in-out infinite;
+}
+
+/* Gráficos/Indicadores (BarChart3): as barras crescem uma a uma. */
+a:hover svg[data-icon-anim="chart"] :nth-child(2),
+a:active svg[data-icon-anim="chart"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="chart"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="chart"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="chart"] :nth-child(2),
+button:not(:disabled):focus-visible svg[data-icon-anim="chart"] :nth-child(2) {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: icon-grow-bar 700ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="chart"] :nth-child(3),
+a:active svg[data-icon-anim="chart"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="chart"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="chart"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="chart"] :nth-child(3),
+button:not(:disabled):focus-visible svg[data-icon-anim="chart"] :nth-child(3) {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: icon-grow-bar 700ms ease-in-out 130ms infinite;
+}
+
+a:hover svg[data-icon-anim="chart"] :nth-child(4),
+a:active svg[data-icon-anim="chart"] :nth-child(4),
+a:focus-visible svg[data-icon-anim="chart"] :nth-child(4),
+button:not(:disabled):hover svg[data-icon-anim="chart"] :nth-child(4),
+button:not(:disabled):active svg[data-icon-anim="chart"] :nth-child(4),
+button:not(:disabled):focus-visible svg[data-icon-anim="chart"] :nth-child(4) {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: icon-grow-bar 700ms ease-in-out 260ms infinite;
+}
+
+/* Orçamento (Target): o alvo pulsa em ondas, como um radar. */
+a:hover svg[data-icon-anim="target"] :nth-child(1),
+a:active svg[data-icon-anim="target"] :nth-child(1),
+a:focus-visible svg[data-icon-anim="target"] :nth-child(1),
+button:not(:disabled):hover svg[data-icon-anim="target"] :nth-child(1),
+button:not(:disabled):active svg[data-icon-anim="target"] :nth-child(1),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="target"]
+  :nth-child(1) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-ping 900ms ease-out infinite;
+}
+
+a:hover svg[data-icon-anim="target"] :nth-child(2),
+a:active svg[data-icon-anim="target"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="target"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="target"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="target"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="target"]
+  :nth-child(2) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-ping 900ms ease-out 150ms infinite;
+}
+
+a:hover svg[data-icon-anim="target"] :nth-child(3),
+a:active svg[data-icon-anim="target"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="target"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="target"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="target"] :nth-child(3),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="target"]
+  :nth-child(3) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-ping 900ms ease-out 300ms infinite;
+}
+
+/* Ficha de EPI (HardHat): o capacete balança que nem um aceno. */
+a:hover svg[data-icon-anim="hardhat"] *,
+a:active svg[data-icon-anim="hardhat"] *,
+a:focus-visible svg[data-icon-anim="hardhat"] *,
+button:not(:disabled):hover svg[data-icon-anim="hardhat"] *,
+button:not(:disabled):active svg[data-icon-anim="hardhat"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="hardhat"] * {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: icon-nod 600ms ease-in-out infinite;
+}
+
+/* Exames médicos (Stethoscope): a campânula bate como um coração. */
+a:hover svg[data-icon-anim="stethoscope"] :nth-child(5),
+a:active svg[data-icon-anim="stethoscope"] :nth-child(5),
+a:focus-visible svg[data-icon-anim="stethoscope"] :nth-child(5),
+button:not(:disabled):hover svg[data-icon-anim="stethoscope"] :nth-child(5),
+button:not(:disabled):active svg[data-icon-anim="stethoscope"] :nth-child(5),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="stethoscope"]
+  :nth-child(5) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-heartbeat 1s ease-in-out infinite;
+}
+
+/* Aniversariantes (CalendarHeart): o coração bate. */
+a:hover svg[data-icon-anim="calendarheart"] :nth-child(2),
+a:active svg[data-icon-anim="calendarheart"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="calendarheart"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="calendarheart"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="calendarheart"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="calendarheart"]
+  :nth-child(2) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-heartbeat 1s ease-in-out infinite;
+}
+
+/* Etiquetas CTPS (Tag): a etiqueta balança pendurada. */
+a:hover svg[data-icon-anim="tag"] :is(:nth-child(1), :nth-child(2)),
+a:active svg[data-icon-anim="tag"] :is(:nth-child(1), :nth-child(2)),
+a:focus-visible svg[data-icon-anim="tag"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):hover svg[data-icon-anim="tag"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):active svg[data-icon-anim="tag"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):focus-visible svg[data-icon-anim="tag"] :is(:nth-child(1), :nth-child(2)) {
+  transform-origin: 4px 3px;
+  animation: icon-wiggle 800ms ease-in-out infinite;
+}
+
+/* Controle de ponto/Ponto Manual (Clock): o ponteiro roda. */
+a:hover svg[data-icon-anim="clock"] :nth-child(2),
+a:active svg[data-icon-anim="clock"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="clock"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="clock"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="clock"] :nth-child(2),
+button:not(:disabled):focus-visible svg[data-icon-anim="clock"] :nth-child(2) {
+  transform-origin: 12px 12px;
+  animation: icon-spin 1.6s linear infinite;
+}
+
+/* Faltas e abonos (CalendarX): o X balança negando. */
+a:hover svg[data-icon-anim="calendarx"] :is(:nth-child(5), :nth-child(6)),
+a:active svg[data-icon-anim="calendarx"] :is(:nth-child(5), :nth-child(6)),
+a:focus-visible svg[data-icon-anim="calendarx"] :is(:nth-child(5), :nth-child(6)),
+button:not(:disabled):hover svg[data-icon-anim="calendarx"] :is(:nth-child(5), :nth-child(6)),
+button:not(:disabled):active svg[data-icon-anim="calendarx"] :is(:nth-child(5), :nth-child(6)),
+button:not(:disabled):focus-visible svg[data-icon-anim="calendarx"] :is(:nth-child(5), :nth-child(6)) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-shake-x 400ms ease-in-out infinite;
+}
+
+/* Férias (Palmtree): as folhas balançam com o vento. */
+a:hover svg[data-icon-anim="palmtree"] :is(:nth-child(1), :nth-child(2)),
+a:active svg[data-icon-anim="palmtree"] :is(:nth-child(1), :nth-child(2)),
+a:focus-visible svg[data-icon-anim="palmtree"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):hover svg[data-icon-anim="palmtree"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):active svg[data-icon-anim="palmtree"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):focus-visible svg[data-icon-anim="palmtree"] :is(:nth-child(1), :nth-child(2)) {
+  transform-origin: 13px 7px;
+  animation: icon-wiggle 900ms ease-in-out infinite;
+}
+
+/* Programação de férias (CalendarPlus): o "+" pulsa como um botão de adicionar. */
+a:hover svg[data-icon-anim="calendarplus"] :is(:nth-child(1), :nth-child(3)),
+a:active svg[data-icon-anim="calendarplus"] :is(:nth-child(1), :nth-child(3)),
+a:focus-visible svg[data-icon-anim="calendarplus"] :is(:nth-child(1), :nth-child(3)),
+button:not(:disabled):hover svg[data-icon-anim="calendarplus"] :is(:nth-child(1), :nth-child(3)),
+button:not(:disabled):active svg[data-icon-anim="calendarplus"] :is(:nth-child(1), :nth-child(3)),
+button:not(:disabled):focus-visible svg[data-icon-anim="calendarplus"] :is(:nth-child(1), :nth-child(3)) {
+  transform-origin: 19px 19px;
+  animation: icon-pop 700ms ease-in-out infinite;
+}
+
+/* Produção (Factory): fumacinha saindo da chaminé. */
+a:hover svg[data-icon-anim="factory"] :nth-child(1),
+a:active svg[data-icon-anim="factory"] :nth-child(1),
+a:focus-visible svg[data-icon-anim="factory"] :nth-child(1),
+button:not(:disabled):hover svg[data-icon-anim="factory"] :nth-child(1),
+button:not(:disabled):active svg[data-icon-anim="factory"] :nth-child(1),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="factory"]
+  :nth-child(1) {
+  animation: icon-smoke 900ms ease-out infinite;
+}
+
+a:hover svg[data-icon-anim="factory"] :nth-child(2),
+a:active svg[data-icon-anim="factory"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="factory"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="factory"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="factory"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="factory"]
+  :nth-child(2) {
+  animation: icon-smoke 900ms ease-out 200ms infinite;
+}
+
+a:hover svg[data-icon-anim="factory"] :nth-child(4),
+a:active svg[data-icon-anim="factory"] :nth-child(4),
+a:focus-visible svg[data-icon-anim="factory"] :nth-child(4),
+button:not(:disabled):hover svg[data-icon-anim="factory"] :nth-child(4),
+button:not(:disabled):active svg[data-icon-anim="factory"] :nth-child(4),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="factory"]
+  :nth-child(4) {
+  animation: icon-smoke 900ms ease-out 400ms infinite;
+}
+
+/* Personalização (Monitor): a tela pisca como se estivesse ligando. */
+a:hover svg[data-icon-anim="monitor"] :nth-child(1),
+a:active svg[data-icon-anim="monitor"] :nth-child(1),
+a:focus-visible svg[data-icon-anim="monitor"] :nth-child(1),
+button:not(:disabled):hover svg[data-icon-anim="monitor"] :nth-child(1),
+button:not(:disabled):active svg[data-icon-anim="monitor"] :nth-child(1),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="monitor"]
+  :nth-child(1) {
+  animation: icon-glow 700ms ease-in-out infinite;
+}
+
+/* ---- Ícones do app OS (cards em OsCardLink). ---- */
+
+@keyframes icon-slide-x {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes icon-buzz {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-1px);
+  }
+  75% {
+    transform: translateY(1px);
+  }
+}
+
+/* Cadastro/Estoque/Configurações (Tags): balança pendurada. */
+a:hover svg[data-icon-anim="tags"] *,
+a:active svg[data-icon-anim="tags"] *,
+a:focus-visible svg[data-icon-anim="tags"] *,
+button:not(:disabled):hover svg[data-icon-anim="tags"] *,
+button:not(:disabled):active svg[data-icon-anim="tags"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="tags"] * {
+  transform-origin: 9px 3px;
+  animation: icon-wiggle 800ms ease-in-out infinite;
+}
+
+/* RH (UsersRound): a pessoa da frente e a de trás alternam (mesmo
+   efeito do ícone Cadastros). */
+a:hover svg[data-icon-anim="usersround"] :is(:nth-child(1), :nth-child(2)),
+a:active svg[data-icon-anim="usersround"] :is(:nth-child(1), :nth-child(2)),
+a:focus-visible svg[data-icon-anim="usersround"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):hover svg[data-icon-anim="usersround"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):active svg[data-icon-anim="usersround"] :is(:nth-child(1), :nth-child(2)),
+button:not(:disabled):focus-visible svg[data-icon-anim="usersround"] :is(:nth-child(1), :nth-child(2)) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-users-front 900ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="usersround"] :nth-child(3),
+a:active svg[data-icon-anim="usersround"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="usersround"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="usersround"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="usersround"] :nth-child(3),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="usersround"]
+  :nth-child(3) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-users-back 900ms ease-in-out infinite;
+}
+
+/* Parâmetros fiscais (Percent): os dois círculos pulsam em ondas. */
+a:hover svg[data-icon-anim="percent"] :nth-child(2),
+a:active svg[data-icon-anim="percent"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="percent"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="percent"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="percent"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="percent"]
+  :nth-child(2) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-ping 900ms ease-out infinite;
+}
+
+a:hover svg[data-icon-anim="percent"] :nth-child(3),
+a:active svg[data-icon-anim="percent"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="percent"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="percent"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="percent"] :nth-child(3),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="percent"]
+  :nth-child(3) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-ping 900ms ease-out 300ms infinite;
+}
+
+/* Empresa/Estoque (Building2): as janelas acendem. */
+a:hover svg[data-icon-anim="building2"] :nth-child(1),
+a:active svg[data-icon-anim="building2"] :nth-child(1),
+a:focus-visible svg[data-icon-anim="building2"] :nth-child(1),
+button:not(:disabled):hover svg[data-icon-anim="building2"] :nth-child(1),
+button:not(:disabled):active svg[data-icon-anim="building2"] :nth-child(1),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="building2"]
+  :nth-child(1) {
+  animation: icon-glow 700ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="building2"] :nth-child(2),
+a:active svg[data-icon-anim="building2"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="building2"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="building2"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="building2"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="building2"]
+  :nth-child(2) {
+  animation: icon-glow 700ms ease-in-out 250ms infinite;
+}
+
+/* Configurações (Settings): a engrenagem inteira gira — não tem
+   pessoa pra manter parada, então gira tudo. */
+a:hover svg[data-icon-anim="settings"] *,
+a:active svg[data-icon-anim="settings"] *,
+a:focus-visible svg[data-icon-anim="settings"] *,
+button:not(:disabled):hover svg[data-icon-anim="settings"] *,
+button:not(:disabled):active svg[data-icon-anim="settings"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="settings"] * {
+  transform-origin: 12px 12px;
+  animation: icon-spin 1.4s linear infinite;
+}
+
+/* Administrar planos (Settings2): os dois "controles deslizantes" se
+   ajustam. */
+a:hover svg[data-icon-anim="settings2"] :nth-child(3),
+a:active svg[data-icon-anim="settings2"] :nth-child(3),
+a:focus-visible svg[data-icon-anim="settings2"] :nth-child(3),
+button:not(:disabled):hover svg[data-icon-anim="settings2"] :nth-child(3),
+button:not(:disabled):active svg[data-icon-anim="settings2"] :nth-child(3),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="settings2"]
+  :nth-child(3) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-slide-x 700ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="settings2"] :nth-child(4),
+a:active svg[data-icon-anim="settings2"] :nth-child(4),
+a:focus-visible svg[data-icon-anim="settings2"] :nth-child(4),
+button:not(:disabled):hover svg[data-icon-anim="settings2"] :nth-child(4),
+button:not(:disabled):active svg[data-icon-anim="settings2"] :nth-child(4),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="settings2"]
+  :nth-child(4) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-slide-x 700ms ease-in-out 200ms infinite;
+}
+
+/* Segurança/Licenciamento (ShieldCheck/BadgeCheck): o "check" pulsa
+   confirmando. */
+a:hover svg[data-icon-anim="shieldcheck"] :nth-child(2),
+a:active svg[data-icon-anim="shieldcheck"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="shieldcheck"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="shieldcheck"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="shieldcheck"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="shieldcheck"]
+  :nth-child(2) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-heartbeat 1s ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="badgecheck"] :nth-child(2),
+a:active svg[data-icon-anim="badgecheck"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="badgecheck"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="badgecheck"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="badgecheck"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="badgecheck"]
+  :nth-child(2) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-heartbeat 1s ease-in-out infinite;
+}
+
+/* APIs (Plug): os pinos vibram, como conectando. */
+a:hover svg[data-icon-anim="plug"] :nth-child(2),
+a:active svg[data-icon-anim="plug"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="plug"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="plug"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="plug"] :nth-child(2),
+button:not(:disabled):focus-visible svg[data-icon-anim="plug"] :nth-child(2) {
+  animation: icon-buzz 300ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="plug"] :nth-child(4),
+a:active svg[data-icon-anim="plug"] :nth-child(4),
+a:focus-visible svg[data-icon-anim="plug"] :nth-child(4),
+button:not(:disabled):hover svg[data-icon-anim="plug"] :nth-child(4),
+button:not(:disabled):active svg[data-icon-anim="plug"] :nth-child(4),
+button:not(:disabled):focus-visible svg[data-icon-anim="plug"] :nth-child(4) {
+  animation: icon-buzz 300ms ease-in-out 100ms infinite;
+}
+
+/* APIs — WhatsApp (MessageCircle): balão de mensagem pulando, como
+   uma notificação chegando. */
+a:hover svg[data-icon-anim="messagecircle"] *,
+a:active svg[data-icon-anim="messagecircle"] *,
+a:focus-visible svg[data-icon-anim="messagecircle"] *,
+button:not(:disabled):hover svg[data-icon-anim="messagecircle"] *,
+button:not(:disabled):active svg[data-icon-anim="messagecircle"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="messagecircle"] * {
+  animation: icon-bounce-y 500ms ease-in-out infinite;
+}
+
+/* APIs — chave (KeyRound): gira tentando a fechadura, o furo brilha. */
+a:hover svg[data-icon-anim="keyround"] *,
+a:active svg[data-icon-anim="keyround"] *,
+a:focus-visible svg[data-icon-anim="keyround"] *,
+button:not(:disabled):hover svg[data-icon-anim="keyround"] *,
+button:not(:disabled):active svg[data-icon-anim="keyround"] *,
+button:not(:disabled):focus-visible svg[data-icon-anim="keyround"] * {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-wiggle 700ms ease-in-out infinite;
+}
+
+a:hover svg[data-icon-anim="keyround"] :nth-child(2),
+a:active svg[data-icon-anim="keyround"] :nth-child(2),
+a:focus-visible svg[data-icon-anim="keyround"] :nth-child(2),
+button:not(:disabled):hover svg[data-icon-anim="keyround"] :nth-child(2),
+button:not(:disabled):active svg[data-icon-anim="keyround"] :nth-child(2),
+button:not(:disabled):focus-visible
+  svg[data-icon-anim="keyround"]
+  :nth-child(2) {
+  animation:
+    icon-wiggle 700ms ease-in-out infinite,
+    icon-glow 700ms ease-in-out infinite;
+}
+
 /* Respeita quem pediu menos animação no sistema */
 @media (prefers-reduced-motion: reduce) {
   *,

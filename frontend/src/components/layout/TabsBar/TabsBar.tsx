@@ -40,7 +40,7 @@ export function TabsBar({ app, onOpenMenu, isMenuOpen }: TabsBarProps) {
               key={tab.href}
               className={`flex items-center gap-1 rounded-xl px-1 transition-colors ${
                 active
-                  ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+                  ? "bg-[var(--primary-soft)] text-[var(--primary-text)]"
                   : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
               }`}
             >

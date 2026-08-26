@@ -10,6 +10,12 @@ interface OsCardLinkProps {
   description: string;
   href: string;
   icon: LucideIcon;
+  /**
+   * Animação específica do ícone no hover/clique (CSS em globals.css,
+   * seletores `svg[data-icon-anim="..."]`). Ausente = só a animação
+   * genérica (escala).
+   */
+  iconAnim?: string;
   /** Sem conteúdo ainda (ex.: Portal) — continua clicável, só avisa. */
   comingSoon?: boolean;
 }
@@ -20,6 +26,7 @@ export function OsCardLink({
   description,
   href,
   icon: Icon,
+  iconAnim,
   comingSoon,
 }: OsCardLinkProps) {
   const { openTab } = useTabs("os");
@@ -48,8 +55,8 @@ export function OsCardLink({
       className="group flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors hover:border-[var(--primary)]"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-          <Icon size={18} />
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-secondary)] transition-colors group-hover:border-[var(--primary)] group-hover:text-[var(--primary)]">
+          <Icon size={20} data-icon-anim={iconAnim} />
         </span>
 
         <div className="min-w-0">

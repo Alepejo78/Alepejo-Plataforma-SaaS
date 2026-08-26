@@ -14,6 +14,7 @@ export default function OsConfiguracoesPage() {
       description: "Categorias e marcas",
       href: "/os/configuracoes/cadastro",
       icon: Tags,
+      iconAnim: "tags",
       visible: can("product-category.view"),
     },
     {
@@ -21,6 +22,7 @@ export default function OsConfiguracoesPage() {
       description: "Depósitos",
       href: "/os/configuracoes/estoque",
       icon: Warehouse,
+      iconAnim: "warehouse",
       visible: can("warehouse.view"),
     },
     {
@@ -28,6 +30,7 @@ export default function OsConfiguracoesPage() {
       description: "Plano de contas e classificações",
       href: "/os/configuracoes/financeiro",
       icon: Wallet,
+      iconAnim: "wallet",
       visible:
         can("chart-of-account.view") ||
         can("chart-of-account-classification.view"),
@@ -37,6 +40,7 @@ export default function OsConfiguracoesPage() {
       description: "Funções e cargos, setores, horários e EPI",
       href: "/os/configuracoes/rh",
       icon: UsersRound,
+      iconAnim: "usersround",
       visible: can("job-function.view") || can("sector.view"),
     },
     {
@@ -44,6 +48,7 @@ export default function OsConfiguracoesPage() {
       description: "Configurações do módulo de produção",
       href: "/os/configuracoes/producao",
       icon: Factory,
+      iconAnim: "factory",
       visible: can("production-settings.view"),
     },
   ].filter((card) => card.visible);
@@ -68,6 +73,7 @@ export default function OsConfiguracoesPage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

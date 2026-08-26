@@ -14,6 +14,7 @@ export default function OsConfiguracoesFinanceiroPage() {
       description: "Cadastros de apoio do Financeiro",
       href: "/erp/financeiro/classificacoes",
       icon: Tags,
+      iconAnim: "tags",
       visible: can("chart-of-account-classification.view"),
     },
     {
@@ -21,6 +22,7 @@ export default function OsConfiguracoesFinanceiroPage() {
       description: "Cadastros de apoio do Financeiro",
       href: "/erp/financeiro/plano-contas",
       icon: FileText,
+      iconAnim: "filetext",
       visible: can("chart-of-account.view"),
     },
   ].filter((card) => card.visible);
@@ -40,6 +42,7 @@ export default function OsConfiguracoesFinanceiroPage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

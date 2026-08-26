@@ -81,6 +81,7 @@ function LeafItem({
       {Icon ? (
         <Icon
           size={nested ? 18 : 20}
+          data-icon-anim={item.iconAnim}
           className={cn(
             sidebarStyles.navigationIcon,
             active && sidebarStyles.navigationIconActive
@@ -261,6 +262,7 @@ function GroupItem({
         >
           <Icon
           size={20}
+          data-icon-anim={entry.iconAnim}
           className={cn(
             sidebarStyles.navigationIcon,
             hasActiveChild && sidebarStyles.navigationIconActive,
@@ -319,6 +321,7 @@ function GroupItem({
       >
         <Icon
           size={20}
+          data-icon-anim={entry.iconAnim}
           className={cn(
             sidebarStyles.navigationIcon,
             hasActiveChild && sidebarStyles.navigationIconActive,

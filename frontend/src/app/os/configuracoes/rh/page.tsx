@@ -14,6 +14,7 @@ export default function OsConfiguracoesRhPage() {
       description: "Cadastros de apoio de Recursos Humanos",
       href: "/erp/rh/funcoes",
       icon: ClipboardList,
+      iconAnim: "clipboard",
       visible: can("job-function.view"),
     },
     {
@@ -21,6 +22,7 @@ export default function OsConfiguracoesRhPage() {
       description: "Cadastros de apoio de Recursos Humanos",
       href: "/erp/rh/cadastros",
       icon: Tags,
+      iconAnim: "tags",
       visible: can("sector.view"),
     },
     {
@@ -28,6 +30,7 @@ export default function OsConfiguracoesRhPage() {
       description: "Cadastro de apoio de Recursos Humanos",
       href: "/erp/rh/beneficios",
       icon: Wallet,
+      iconAnim: "wallet",
       visible: can("benefit.view"),
     },
     {
@@ -35,6 +38,7 @@ export default function OsConfiguracoesRhPage() {
       description: "Tabelas da Folha de Pagamento, por vigência",
       href: "/erp/rh/parametros-fiscais",
       icon: Percent,
+      iconAnim: "percent",
       visible: can("payroll-tax-table.view"),
     },
   ].filter((card) => card.visible);
@@ -54,6 +58,7 @@ export default function OsConfiguracoesRhPage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

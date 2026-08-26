@@ -14,6 +14,7 @@ export default function OsApisPage() {
       description: "Sessão de WhatsApp conectada ao sistema",
       href: "/erp/configuracoes/notificacoes",
       icon: MessageCircle,
+      iconAnim: "messagecircle",
       visible: can("whatsapp.view"),
     },
     {
@@ -21,6 +22,7 @@ export default function OsApisPage() {
       description: "Chave usada por dispositivos externos pra bater ponto",
       href: "/erp/rh/ponto/chave-api",
       icon: KeyRound,
+      iconAnim: "keyround",
       visible: hasModule("LABOR") && can("time-clock.manage-api-key"),
     },
   ].filter((card) => card.visible);
@@ -45,6 +47,7 @@ export default function OsApisPage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

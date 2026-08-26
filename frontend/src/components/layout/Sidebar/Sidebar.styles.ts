@@ -20,7 +20,7 @@ export const sidebarStyles = {
     "group flex h-11 items-center rounded-xl text-sm font-medium",
     "text-[var(--text-secondary)]",
     "transition-colors duration-200",
-    "hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]",
+    "hover:bg-[var(--surface-hover)] hover:text-[var(--primary)]",
   ].join(" "),
 
   /**

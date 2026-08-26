@@ -14,6 +14,7 @@ export default function OsSegurancaPage() {
       description: "Cadastro de usuários e vínculo com perfis",
       href: "/erp/configuracoes/usuarios",
       icon: Users,
+      iconAnim: "users",
       visible: can("user.view"),
     },
     {
@@ -21,6 +22,7 @@ export default function OsSegurancaPage() {
       description: "Perfis e matriz de permissões",
       href: "/erp/configuracoes/perfis",
       icon: ShieldCheck,
+      iconAnim: "shieldcheck",
       visible: can("role.view"),
     },
   ].filter((card) => card.visible);
@@ -40,6 +42,7 @@ export default function OsSegurancaPage() {
               description={card.description}
               href={card.href}
               icon={card.icon}
+              iconAnim={card.iconAnim}
             />
           ))}
         </section>

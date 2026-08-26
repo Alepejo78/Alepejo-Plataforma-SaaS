@@ -10,6 +10,13 @@ export interface MenuItem {
   href: string;
 
   /**
+   * Animação específica do ícone no hover/clique (CSS em globals.css,
+   * seletores `svg[data-icon-anim="..."]`) — "users", "usercog",
+   * "truck" ou "cart". Ausente = só a animação genérica (escala).
+   */
+  iconAnim?: string;
+
+  /**
    * Código do módulo licenciado exigido para ver este item.
    * Deve bater com o `code` da tabela `modules` no backend
    * (BPS, PRODUCTS, INVENTORY, PURCHASE, SALES).
@@ -53,6 +60,7 @@ export interface MenuGroup {
   id: string;
   title: string;
   icon: LucideIcon;
+  iconAnim?: string;
 
   /** Mesmas regras de licença/permissão dos itens. */
   module?: string;
