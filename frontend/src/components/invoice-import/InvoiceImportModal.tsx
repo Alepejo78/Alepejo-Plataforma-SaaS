@@ -178,6 +178,7 @@ export function InvoiceImportModal({
     },
   ]);
 
+  const [expenseItemId, setExpenseItemId] = useState("");
   const [expenseItemLabel, setExpenseItemLabel] = useState("");
 
   const [installments, setInstallments] = useState<InstallmentRow[]>([
@@ -256,10 +257,12 @@ export function InvoiceImportModal({
 
   function applyExpenseItem(p: Product | null) {
     if (!p) {
+      setExpenseItemId("");
       setExpenseItemLabel("");
       return;
     }
 
+    setExpenseItemId(p.id);
     setExpenseItemLabel(`${p.code} — ${p.description}`);
 
     // Só ajuda a preencher — nunca sobrescreve o que a pessoa já digitou.
@@ -534,6 +537,18 @@ export function InvoiceImportModal({
           );
         }
 
+        if (!chartOfAccountId) {
+          throw new Error(
+            isPurchase
+              ? "Selecione o tipo de despesa."
+              : "Selecione o tipo de receita."
+          );
+        }
+
+        if (!paymentMethod) {
+          throw new Error("Selecione a forma de pagamento.");
+        }
+
         const orderInstallments =
           installments.length === 1
             ? [{ dueDate: installments[0].dueDate, amount: itemsTotal }]
@@ -560,12 +575,12 @@ export function InvoiceImportModal({
         const payload = {
           partner: buildPartnerPayload(),
           warehouseId: warehouseId || warehouses[0]?.id || "",
-          chartOfAccountId: chartOfAccountId || undefined,
+          chartOfAccountId,
           invoiceNumber: invoiceNumber || undefined,
           invoiceKey: invoiceKey || undefined,
           invoiceIssueDate: invoiceIssueDate || undefined,
           observation: observation || undefined,
-          paymentMethod: paymentMethod || undefined,
+          paymentMethod,
           installments: orderInstallments,
           items: validItems.map((it) => ({
             productId: it.productId,
@@ -585,6 +600,22 @@ export function InvoiceImportModal({
           throw new Error("Informe a data de emissão.");
         }
 
+        if (!expenseItemId) {
+          throw new Error("Selecione o item (serviço da despesa).");
+        }
+
+        if (!chartOfAccountId) {
+          throw new Error(
+            isPurchase
+              ? "Selecione o tipo de despesa."
+              : "Selecione o tipo de receita."
+          );
+        }
+
+        if (!paymentMethod) {
+          throw new Error("Selecione a forma de pagamento.");
+        }
+
         const validInstallments = installments
           .filter((row) => row.dueDate && row.amount > 0)
           .map((row) => ({ dueDate: row.dueDate, amount: row.amount }));
@@ -597,12 +628,13 @@ export function InvoiceImportModal({
 
         const payload = {
           partner: buildPartnerPayload(),
-          chartOfAccountId: chartOfAccountId || undefined,
+          chartOfAccountId,
+          productId: expenseItemId,
           issueDate: invoiceIssueDate,
           documentNumber: invoiceNumber || undefined,
           documentKey: invoiceKey || undefined,
           documentType: documentType || undefined,
-          paymentMethod: paymentMethod || undefined,
+          paymentMethod,
           observation: observation || undefined,
           installments: validInstallments,
         };
@@ -940,8 +972,8 @@ export function InvoiceImportModal({
                 onSelect={applyExpenseItem}
               />
               <p className="mt-1 text-xs text-[var(--text-muted)]">
-                Opcional — só ajuda a preencher a observação (e o valor,
-                se a parcela estiver vazia). Só lista serviços — produto
+                Também ajuda a preencher a observação (e o valor, se a
+                parcela estiver vazia). Só lista serviços — produto
                 precisa virar Pedido para poder ser recebido.
               </p>
             </div>

@@ -134,6 +134,7 @@ export class SaleService {
     }
 
     let sourceOrder: {
+      chartOfAccountId: string | null;
       termDays: number | null;
       paymentMethod: PaymentMethod | null;
       installmentsCount: number | null;
@@ -159,10 +160,15 @@ export class SaleService {
       sourceOrder = order;
     }
 
-    // Prazo/forma de pagamento/parcelas: se a tela mandou um valor,
-    // vale; senão, herda do pedido de venda de origem.
+    // Prazo/forma de pagamento/parcelas/tipo de receita: se a tela
+    // mandou um valor, vale; senão, herda do pedido de venda de
+    // origem.
     const effectiveDto: CreateSaleDto = {
       ...dto,
+      chartOfAccountId:
+        dto.chartOfAccountId ??
+        sourceOrder?.chartOfAccountId ??
+        undefined,
       termDays: dto.termDays ?? sourceOrder?.termDays ?? undefined,
       paymentMethod:
         dto.paymentMethod ??

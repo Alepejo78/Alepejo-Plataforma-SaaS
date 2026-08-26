@@ -42,6 +42,11 @@ import {
 } from "@/services/product.service";
 
 import {
+  chartOfAccountService,
+  type ChartOfAccount,
+} from "@/services/chart-of-account.service";
+
+import {
   PAYMENT_METHOD_LABELS,
   type PaymentMethod,
 } from "@/services/financial-entry.service";
@@ -124,6 +129,8 @@ function emptyForm() {
     discountValue: 0,
     freightValue: 0,
     otherExpenses: 0,
+    chartOfAccountId: "",
+    chartOfAccountLabel: "",
     termDays: "",
     paymentMethod: "" as PaymentMethod | "",
     installmentsCount: "",
@@ -195,6 +202,18 @@ export default function PedidosDeVendaPage() {
     []
   );
 
+  const searchChartOfAccounts = useCallback(
+    async (query: string) => {
+      const result = await chartOfAccountService.list({
+        search: query || undefined,
+        limit: 20,
+      });
+
+      return result.data;
+    },
+    []
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setListError("");
@@ -251,6 +270,10 @@ export default function PedidosDeVendaPage() {
       discountValue: num(order.discountValue),
       freightValue: num(order.freightValue),
       otherExpenses: num(order.otherExpenses),
+      chartOfAccountId: order.chartOfAccountId ?? "",
+      chartOfAccountLabel: order.chartOfAccount
+        ? `${order.chartOfAccount.code} — ${order.chartOfAccount.description}`
+        : "",
       termDays:
         order.termDays != null ? String(order.termDays) : "",
       paymentMethod: order.paymentMethod ?? "",
@@ -349,6 +372,24 @@ export default function PedidosDeVendaPage() {
       return;
     }
 
+    if (!form.chartOfAccountId) {
+      setFormError("Selecione o tipo de receita.");
+
+      return;
+    }
+
+    if (!form.paymentMethod) {
+      setFormError("Selecione a forma de pagamento.");
+
+      return;
+    }
+
+    if (form.termDays === "") {
+      setFormError("Informe o prazo/vencimento.");
+
+      return;
+    }
+
     setSaving(true);
     setFormError("");
 
@@ -360,10 +401,9 @@ export default function PedidosDeVendaPage() {
       discountValue: form.discountValue || undefined,
       freightValue: form.freightValue || undefined,
       otherExpenses: form.otherExpenses || undefined,
-      termDays: form.termDays
-        ? Number(form.termDays)
-        : undefined,
-      paymentMethod: form.paymentMethod || undefined,
+      chartOfAccountId: form.chartOfAccountId,
+      termDays: Number(form.termDays),
+      paymentMethod: form.paymentMethod as PaymentMethod,
       installmentsCount: form.installmentsCount
         ? Number(form.installmentsCount)
         : undefined,
@@ -787,7 +827,32 @@ export default function PedidosDeVendaPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div>
+                  <label className={labelClass}>
+                    Tipo de receita
+                  </label>
+
+                  <SearchSelect<ChartOfAccount>
+                    displayLabel={form.chartOfAccountLabel}
+                    search={searchChartOfAccounts}
+                    getId={(c) => c.id}
+                    getLabel={(c) =>
+                      `${c.code} — ${c.description}`
+                    }
+                    placeholder="Digite para buscar a conta..."
+                    onSelect={(c) =>
+                      setForm({
+                        ...form,
+                        chartOfAccountId: c?.id ?? "",
+                        chartOfAccountLabel: c
+                          ? `${c.code} — ${c.description}`
+                          : "",
+                      })
+                    }
+                  />
+                </div>
+
                 <div>
                   <label className={labelClass}>
                     Prazo (dias)

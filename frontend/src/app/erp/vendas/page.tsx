@@ -711,12 +711,16 @@ export default function VendasPage() {
           : ""),
       chartOfAccountId:
         prev.chartOfAccountId ||
+        sourceOrder?.chartOfAccountId ||
         suggestedAccount?.saleChartOfAccountId ||
         "",
-      chartOfAccountLabel:
-        prev.chartOfAccountId || !suggestedAccount?.saleChartOfAccount
-          ? prev.chartOfAccountLabel
-          : `${suggestedAccount.saleChartOfAccount.code} — ${suggestedAccount.saleChartOfAccount.description}`,
+      chartOfAccountLabel: prev.chartOfAccountId
+        ? prev.chartOfAccountLabel
+        : sourceOrder?.chartOfAccount
+          ? `${sourceOrder.chartOfAccount.code} — ${sourceOrder.chartOfAccount.description}`
+          : suggestedAccount?.saleChartOfAccount
+            ? `${suggestedAccount.saleChartOfAccount.code} — ${suggestedAccount.saleChartOfAccount.description}`
+            : prev.chartOfAccountLabel,
     }));
 
     setItems(
@@ -767,6 +771,24 @@ export default function VendasPage() {
       return false;
     }
 
+    if (!form.chartOfAccountId) {
+      setFormError("Selecione o tipo de receita.");
+
+      return false;
+    }
+
+    if (!form.paymentMethod) {
+      setFormError("Selecione a forma de pagamento.");
+
+      return false;
+    }
+
+    if (form.termDays === "") {
+      setFormError("Informe o prazo/vencimento.");
+
+      return false;
+    }
+
     setSaving(true);
     setFormError("");
 
@@ -778,12 +800,12 @@ export default function VendasPage() {
       discountValue: form.discountValue || undefined,
       freightValue: form.freightValue || undefined,
       otherExpenses: form.otherExpenses || undefined,
-      termDays: form.termDays ? Number(form.termDays) : undefined,
-      paymentMethod: form.paymentMethod || undefined,
+      termDays: Number(form.termDays),
+      paymentMethod: form.paymentMethod as PaymentMethod,
       installmentsCount: form.installmentsCount
         ? Number(form.installmentsCount)
         : undefined,
-      chartOfAccountId: form.chartOfAccountId || undefined,
+      chartOfAccountId: form.chartOfAccountId,
       quoteId:
         sourceType === "quote" && sourceId
           ? sourceId

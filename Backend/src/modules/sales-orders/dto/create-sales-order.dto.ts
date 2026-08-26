@@ -58,19 +58,23 @@ export class CreateSalesOrderDto {
   otherExpenses?: number = 0;
 
   @ApiProperty({
-    required: false,
+    description:
+      'Tipo de receita (conta do plano de contas) — repassado pra Venda na conversão.',
+  })
+  @IsString({ message: 'Informe o tipo de receita.' })
+  chartOfAccountId?: string;
+
+  @ApiProperty({
     description:
       'Prazo em dias até o vencimento do título gerado na conversão em venda.',
   })
-  @IsOptional()
   @Type(() => Number)
-  @IsInt()
+  @IsInt({ message: 'Informe o prazo/vencimento.' })
   @Min(0)
   termDays?: number;
 
-  @ApiProperty({ required: false, enum: PaymentMethod })
-  @IsOptional()
-  @IsEnum(PaymentMethod)
+  @ApiProperty({ enum: PaymentMethod })
+  @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
   paymentMethod?: PaymentMethod;
 
   @ApiProperty({

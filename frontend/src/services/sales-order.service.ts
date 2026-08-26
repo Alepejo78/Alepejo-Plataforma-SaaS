@@ -54,6 +54,7 @@ export interface SalesOrder {
   otherExpenses: string | number;
   totalAmount: string | number;
   netAmount: string | number;
+  chartOfAccountId?: string | null;
   termDays?: number | null;
   paymentMethod?: PaymentMethod | null;
   installmentsCount?: number | null;
@@ -69,6 +70,12 @@ export interface SalesOrder {
   } | null;
 
   warehouse?: {
+    id: string;
+    code: string;
+    description: string;
+  } | null;
+
+  chartOfAccount?: {
     id: string;
     code: string;
     description: string;
@@ -89,6 +96,7 @@ export interface SalesOrderPayload {
   discountValue?: number;
   freightValue?: number;
   otherExpenses?: number;
+  chartOfAccountId?: string;
   termDays?: number;
   paymentMethod?: PaymentMethod;
   installmentsCount?: number;

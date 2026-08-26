@@ -9,6 +9,9 @@ import { SalesOrderFilterDto } from '../dto/sales-order-filter.dto';
 const includeRelations = {
   partner: true,
   warehouse: true,
+  chartOfAccount: {
+    select: { id: true, code: true, description: true },
+  },
   items: {
     include: {
       product: { include: { saleChartOfAccount: true } },
@@ -45,6 +48,7 @@ export class SalesOrderRepository {
         otherExpenses: dto.otherExpenses ?? 0,
         totalAmount,
         netAmount,
+        chartOfAccountId: dto.chartOfAccountId,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
         installmentsCount: dto.installmentsCount,
@@ -102,6 +106,7 @@ export class SalesOrderRepository {
       otherExpenses?: number;
       totalAmount?: number;
       netAmount?: number;
+      chartOfAccountId?: string;
       termDays?: number;
       paymentMethod?: PaymentMethod;
       installmentsCount?: number;
@@ -142,6 +147,9 @@ export class SalesOrderRepository {
         }),
         ...(dto.netAmount !== undefined && {
           netAmount: dto.netAmount,
+        }),
+        ...(dto.chartOfAccountId !== undefined && {
+          chartOfAccountId: dto.chartOfAccountId,
         }),
         ...(dto.termDays !== undefined && {
           termDays: dto.termDays,

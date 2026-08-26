@@ -44,31 +44,24 @@ import {
     observation?: string;
 
     @ApiProperty({
-      required: false,
       description:
         'Tipo de despesa (conta do plano de contas). Vai junto pro título gerado no recebimento.',
     })
-    @IsOptional()
-    @IsString()
+    @IsString({ message: 'Informe o tipo de despesa.' })
     chartOfAccountId?: string;
 
     @ApiProperty({
-      required: false,
-      default: 0,
       description: 'Prazo em dias para o vencimento do título gerado no recebimento.',
     })
-    @IsOptional()
     @Type(() => Number)
-    @IsInt()
+    @IsInt({ message: 'Informe o prazo/vencimento.' })
     @Min(0)
     termDays?: number;
 
     @ApiProperty({
-      required: false,
       enum: PaymentMethod,
     })
-    @IsOptional()
-    @IsEnum(PaymentMethod)
+    @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
     paymentMethod?: PaymentMethod;
 
     @ApiProperty({

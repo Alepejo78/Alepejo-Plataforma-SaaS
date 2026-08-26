@@ -43,12 +43,10 @@ export class CreateSaleDto {
   observation?: string;
 
   @ApiProperty({
-    required: false,
     description:
       'Tipo de receita (conta do plano de contas). Vai junto pro título gerado na aprovação.',
   })
-  @IsOptional()
-  @IsString()
+  @IsString({ message: 'Informe o tipo de receita.' })
   chartOfAccountId?: string;
 
   @ApiProperty({
@@ -82,22 +80,17 @@ export class CreateSaleDto {
   otherExpenses?: number = 0;
 
   @ApiProperty({
-    required: false,
-    default: 0,
     description: 'Prazo em dias para o vencimento do título gerado na aprovação.',
   })
-  @IsOptional()
   @Type(() => Number)
-  @IsInt()
+  @IsInt({ message: 'Informe o prazo/vencimento.' })
   @Min(0)
   termDays?: number;
 
   @ApiProperty({
-    required: false,
     enum: PaymentMethod,
   })
-  @IsOptional()
-  @IsEnum(PaymentMethod)
+  @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
   paymentMethod?: PaymentMethod;
 
   @ApiProperty({

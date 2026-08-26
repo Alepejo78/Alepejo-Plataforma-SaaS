@@ -52,12 +52,8 @@ export class FinancialEntriesService {
       );
     }
 
-    if (dto.chartOfAccountId) {
-      await this.assertChartOfAccount(
-        rootCompanyId,
-        dto.chartOfAccountId,
-      );
-    }
+    await this.assertChartOfAccount(rootCompanyId, dto.chartOfAccountId);
+    await this.assertProduct(rootCompanyId, dto.productId);
 
     if (dto.installments && dto.installments.length > 0) {
       const entries = await this.prisma.$transaction((tx) =>
@@ -69,6 +65,7 @@ export class FinancialEntriesService {
             partnerId: dto.partnerId,
             employeeId: dto.employeeId,
             chartOfAccountId: dto.chartOfAccountId,
+            productId: dto.productId,
             issueDate: new Date(dto.issueDate),
             termDays: dto.termDays,
             paymentMethod: dto.paymentMethod,
@@ -93,6 +90,7 @@ export class FinancialEntriesService {
       partnerId: dto.partnerId,
       employeeId: dto.employeeId,
       chartOfAccountId: dto.chartOfAccountId,
+      productId: dto.productId,
       issueDate: new Date(dto.issueDate),
       termDays: dto.termDays,
       dueDate: new Date(dto.dueDate!),
@@ -172,6 +170,10 @@ export class FinancialEntriesService {
         rootCompanyId,
         dto.chartOfAccountId,
       );
+    }
+
+    if (dto.productId) {
+      await this.assertProduct(rootCompanyId, dto.productId);
     }
 
     return this.repository.update(id, {
@@ -345,6 +347,7 @@ export class FinancialEntriesService {
       documentKey?: string | null;
       documentType?: FinancialDocumentType | null;
       chartOfAccountId?: string | null;
+      productId?: string | null;
       purchaseId?: string;
       saleId?: string;
       payrollItemId?: string;
@@ -372,6 +375,7 @@ export class FinancialEntriesService {
           documentKey: params.documentKey ?? undefined,
           documentType: params.documentType ?? undefined,
           chartOfAccountId: params.chartOfAccountId ?? undefined,
+          productId: params.productId ?? undefined,
           purchaseId: params.purchaseId,
           saleId: params.saleId,
           payrollItemId: params.payrollItemId,
@@ -571,5 +575,21 @@ export class FinancialEntriesService {
     }
 
     return account;
+  }
+
+  /** Produto/serviço é cadastro de grupo ("Interprise") — `companyId` aqui é sempre a raiz do grupo (rootCompanyId). */
+  private async assertProduct(
+    rootCompanyId: string,
+    productId: string,
+  ) {
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, companyId: rootCompanyId },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Produto/serviço não encontrado.');
+    }
+
+    return product;
   }
 }

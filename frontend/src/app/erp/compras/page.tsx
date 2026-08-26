@@ -285,8 +285,9 @@ export default function ComprasPage() {
       `PC-${String(order.number).padStart(6, "0")}`
     );
 
-    // Sugere a classificação do primeiro item que já tiver uma
-    // cadastrada, se o formulário ainda não tiver uma escolhida.
+    // Classificação: herda a do próprio pedido; se ele não tiver
+    // (pedido antigo, de antes desse campo existir), cai pra
+    // sugestão do primeiro item que já tiver uma cadastrada.
     const suggestedAccount = order.items.find(
       (it) => it.product?.chartOfAccountId
     )?.product;
@@ -309,12 +310,16 @@ export default function ComprasPage() {
           : "",
       chartOfAccountId:
         prev.chartOfAccountId ||
+        order.chartOfAccountId ||
         suggestedAccount?.chartOfAccountId ||
         "",
-      chartOfAccountLabel:
-        prev.chartOfAccountId || !suggestedAccount?.chartOfAccount
-          ? prev.chartOfAccountLabel
-          : `${suggestedAccount.chartOfAccount.code} — ${suggestedAccount.chartOfAccount.description}`,
+      chartOfAccountLabel: prev.chartOfAccountId
+        ? prev.chartOfAccountLabel
+        : order.chartOfAccount
+          ? `${order.chartOfAccount.code} — ${order.chartOfAccount.description}`
+          : suggestedAccount?.chartOfAccount
+            ? `${suggestedAccount.chartOfAccount.code} — ${suggestedAccount.chartOfAccount.description}`
+            : prev.chartOfAccountLabel,
     }));
 
     setItems(
@@ -653,6 +658,24 @@ export default function ComprasPage() {
       return;
     }
 
+    if (!form.chartOfAccountId) {
+      setFormError("Selecione o tipo de despesa.");
+
+      return;
+    }
+
+    if (!form.paymentMethod) {
+      setFormError("Selecione a forma de pagamento.");
+
+      return;
+    }
+
+    if (form.termDays === "") {
+      setFormError("Informe o prazo/vencimento.");
+
+      return;
+    }
+
     setSaving(true);
     setFormError("");
 
@@ -661,12 +684,12 @@ export default function ComprasPage() {
       warehouseId: form.warehouseId,
       purchaseDate: form.purchaseDate || undefined,
       observation: form.observation || undefined,
-      termDays: form.termDays ? Number(form.termDays) : undefined,
+      termDays: Number(form.termDays),
       installmentsCount: form.installmentsCount
         ? Number(form.installmentsCount)
         : undefined,
-      paymentMethod: form.paymentMethod || undefined,
-      chartOfAccountId: form.chartOfAccountId || undefined,
+      paymentMethod: form.paymentMethod as PaymentMethod,
+      chartOfAccountId: form.chartOfAccountId,
       purchaseOrderId: sourceOrderId || undefined,
       items: validItems.map((it) => ({
         productId: it.productId,

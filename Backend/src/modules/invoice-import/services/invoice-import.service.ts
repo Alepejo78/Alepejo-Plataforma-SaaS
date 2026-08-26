@@ -249,6 +249,7 @@ export class InvoiceImportService {
           partnerId,
           issueDate: new Date(dto.issueDate),
           chartOfAccountId: dto.chartOfAccountId,
+          productId: dto.productId,
           documentNumber: dto.documentNumber,
           documentKey: dto.documentKey,
           documentType: dto.documentType,

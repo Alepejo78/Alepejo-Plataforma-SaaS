@@ -60,6 +60,16 @@ export class SalesOrderService {
       );
     }
 
+    const chartOfAccount = await this.prisma.chartOfAccount.findFirst({
+      where: { id: dto.chartOfAccountId, companyId: rootCompanyId },
+    });
+
+    if (!chartOfAccount) {
+      throw new NotFoundException(
+        'Tipo de receita não encontrado.',
+      );
+    }
+
     let totalAmount = 0;
 
     for (const item of dto.items) {
@@ -231,6 +241,23 @@ export class SalesOrderService {
       }
     }
 
+    if (dto.chartOfAccountId) {
+      const chartOfAccount = await this.prisma.chartOfAccount.findFirst(
+        {
+          where: {
+            id: dto.chartOfAccountId,
+            companyId: rootCompanyId,
+          },
+        },
+      );
+
+      if (!chartOfAccount) {
+        throw new NotFoundException(
+          'Tipo de receita não encontrado.',
+        );
+      }
+    }
+
     let items:
       | {
           productId: string;
@@ -291,6 +318,7 @@ export class SalesOrderService {
         otherExpenses,
         totalAmount,
         netAmount,
+        chartOfAccountId: dto.chartOfAccountId,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
         installmentsCount: dto.installmentsCount,

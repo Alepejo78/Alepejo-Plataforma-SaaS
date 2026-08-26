@@ -108,6 +108,12 @@ export interface FinancialEntry {
     description: string;
     classification?: { id: string; name: string } | null;
   } | null;
+  productId?: string | null;
+  product?: {
+    id: string;
+    code: string;
+    description: string;
+  } | null;
   issueDate: string;
   termDays?: number | null;
   dueDate: string;
@@ -130,7 +136,8 @@ export interface FinancialEntry {
 export interface FinancialEntryPayload {
   type: FinancialEntryType;
   partnerId: string;
-  chartOfAccountId?: string;
+  chartOfAccountId: string;
+  productId: string;
   issueDate: string;
   termDays?: number;
   /** Obrigatório só quando não vier `installments`. */
@@ -142,7 +149,7 @@ export interface FinancialEntryPayload {
   amount?: number;
   /** Parcelamento — cada parcela vira um título próprio, com vencimento e valor editáveis. */
   installments?: { dueDate: string; amount: number }[];
-  paymentMethod?: PaymentMethod;
+  paymentMethod: PaymentMethod;
   observation?: string;
 }
 

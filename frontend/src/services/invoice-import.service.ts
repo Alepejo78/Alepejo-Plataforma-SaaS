@@ -78,12 +78,12 @@ export interface InvoiceInstallmentPayload {
 export interface ConfirmOrderImportPayload {
   partner: InvoicePartnerPayload;
   warehouseId: string;
-  chartOfAccountId?: string;
+  chartOfAccountId: string;
   invoiceNumber?: string;
   invoiceKey?: string;
   invoiceIssueDate?: string;
   observation?: string;
-  paymentMethod?: PaymentMethod;
+  paymentMethod: PaymentMethod;
   installments: InvoiceInstallmentPayload[];
   items: { productId: string; quantity: number; unitPrice: number }[];
   confirmReceipt?: boolean;
@@ -91,12 +91,13 @@ export interface ConfirmOrderImportPayload {
 
 export interface ConfirmExpenseImportPayload {
   partner: InvoicePartnerPayload;
-  chartOfAccountId?: string;
+  chartOfAccountId: string;
+  productId: string;
   issueDate: string;
   documentNumber?: string;
   documentKey?: string;
   documentType?: FinancialDocumentType;
-  paymentMethod?: PaymentMethod;
+  paymentMethod: PaymentMethod;
   observation?: string;
   installments: InvoiceInstallmentPayload[];
 }

@@ -52,6 +52,7 @@ export interface PurchaseOrder {
   totalAmount: string | number;
   quotationId?: string | null;
   quotationOfferId?: string | null;
+  chartOfAccountId?: string | null;
   termDays?: number | null;
   paymentMethod?: PaymentMethod | null;
   installmentsCount?: number | null;
@@ -71,6 +72,12 @@ export interface PurchaseOrder {
     code: string;
     description: string;
   } | null;
+
+  chartOfAccount?: {
+    id: string;
+    code: string;
+    description: string;
+  } | null;
 }
 
 export interface PurchaseOrderItemPayload {
@@ -86,6 +93,7 @@ export interface PurchaseOrderPayload {
   observation?: string;
   quotationId?: string;
   quotationOfferId?: string;
+  chartOfAccountId?: string;
   termDays?: number;
   paymentMethod?: PaymentMethod;
   installmentsCount?: number;

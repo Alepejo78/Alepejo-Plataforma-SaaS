@@ -46,6 +46,8 @@ import {
   type ChartOfAccount,
 } from "@/services/chart-of-account.service";
 
+import { productService, type Product } from "@/services/product.service";
+
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
@@ -112,12 +114,15 @@ interface Form {
   partnerLabel: string;
   chartOfAccountId: string;
   chartOfAccountLabel: string;
+  productId: string;
+  productLabel: string;
   issueDate: string;
   termDays: string;
   dueDate: string;
   documentNumber: string;
   documentType: FinancialDocumentType | "";
   amount: number;
+  paymentMethod: PaymentMethod | "";
   observation: string;
 }
 
@@ -137,12 +142,15 @@ function emptyForm(): Form {
     partnerLabel: "",
     chartOfAccountId: "",
     chartOfAccountLabel: "",
+    productId: "",
+    productLabel: "",
     issueDate: today,
     termDays: "",
     dueDate: today,
     documentNumber: "",
     documentType: "",
     amount: 0,
+    paymentMethod: "",
     observation: "",
   };
 }
@@ -259,6 +267,46 @@ export function FinancialEntriesScreen({
     []
   );
 
+  const searchProducts = useCallback(async (query: string) => {
+    const result = await productService.list({
+      search: query || undefined,
+      limit: 20,
+    });
+
+    return result.data;
+  }, []);
+
+  function applyProduct(p: Product | null) {
+    if (!p) {
+      setForm((prev) => ({ ...prev, productId: "", productLabel: "" }));
+      return;
+    }
+
+    setForm((prev) => {
+      const productAccountId =
+        type === "RECEIVABLE"
+          ? p.saleChartOfAccountId
+          : p.chartOfAccountId;
+      const productAccount =
+        type === "RECEIVABLE" ? p.saleChartOfAccount : p.chartOfAccount;
+
+      return {
+        ...prev,
+        productId: p.id,
+        productLabel: `${p.code} — ${p.description}`,
+        // Escolher o produto/serviço é uma troca deliberada — segue
+        // o tipo de despesa/receita cadastrado nele, mesmo que já
+        // tivesse outro (mesmo padrão do InvoiceImportModal).
+        ...(productAccountId && {
+          chartOfAccountId: productAccountId,
+          chartOfAccountLabel: productAccount
+            ? `${productAccount.code} — ${productAccount.description}`
+            : "",
+        }),
+      };
+    });
+  }
+
   function openCreate() {
     setViewOnly(false);
     setEditingId(null);
@@ -286,12 +334,17 @@ export function FinancialEntriesScreen({
       chartOfAccountLabel: entry.chartOfAccount
         ? `${entry.chartOfAccount.code} — ${entry.chartOfAccount.description}`
         : "",
+      productId: entry.productId ?? "",
+      productLabel: entry.product
+        ? `${entry.product.code} — ${entry.product.description}`
+        : "",
       issueDate: entry.issueDate.slice(0, 10),
       termDays: entry.termDays ? String(entry.termDays) : "",
       dueDate: entry.dueDate.slice(0, 10),
       documentNumber: entry.documentNumber ?? "",
       documentType: entry.documentType ?? "",
       amount: num(entry.amount),
+      paymentMethod: entry.paymentMethod ?? "",
       observation: entry.observation ?? "",
     });
     setInstallments([]);
@@ -381,6 +434,23 @@ export function FinancialEntriesScreen({
       return;
     }
 
+    if (!form.productId) {
+      setFormError("Selecione o produto ou serviço.");
+      return;
+    }
+
+    if (!form.chartOfAccountId) {
+      setFormError(
+        `Selecione o tipo de ${type === "RECEIVABLE" ? "receita" : "despesa"}.`
+      );
+      return;
+    }
+
+    if (!form.paymentMethod) {
+      setFormError("Selecione a forma de pagamento.");
+      return;
+    }
+
     if (!isParceled && !form.dueDate) {
       setFormError("Informe o vencimento.");
       return;
@@ -415,7 +485,8 @@ export function FinancialEntriesScreen({
       const payload = {
         type,
         partnerId: form.partnerId,
-        chartOfAccountId: form.chartOfAccountId || undefined,
+        chartOfAccountId: form.chartOfAccountId,
+        productId: form.productId,
         issueDate: form.issueDate,
         termDays: form.termDays
           ? Number(form.termDays)
@@ -425,6 +496,7 @@ export function FinancialEntriesScreen({
         documentType: form.documentType || undefined,
         amount: isParceled ? undefined : form.amount,
         installments: isParceled ? validInstallments : undefined,
+        paymentMethod: form.paymentMethod as PaymentMethod,
         observation: form.observation || undefined,
       };
 
@@ -1142,7 +1214,22 @@ export function FinancialEntriesScreen({
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>
+                  Produto/Serviço
+                </label>
+
+                <SearchSelect<Product>
+                  displayLabel={form.productLabel}
+                  search={searchProducts}
+                  getId={(p) => p.id}
+                  getLabel={(p) => `${p.code} — ${p.description}`}
+                  placeholder="Buscar produto ou serviço..."
+                  onSelect={applyProduct}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>
                     Valor (R$)
@@ -1162,7 +1249,9 @@ export function FinancialEntriesScreen({
 
                 <div>
                   <label className={labelClass}>
-                    Classificação (opcional)
+                    {type === "RECEIVABLE"
+                      ? "Tipo de receita"
+                      : "Tipo de despesa"}
                   </label>
 
                   <SearchSelect<ChartOfAccount>
@@ -1188,6 +1277,34 @@ export function FinancialEntriesScreen({
                       })
                     }
                   />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Forma de pagamento
+                  </label>
+
+                  <select
+                    className={fieldClass}
+                    value={form.paymentMethod}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        paymentMethod: e.target
+                          .value as PaymentMethod | "",
+                      })
+                    }
+                  >
+                    <option value="">Selecione...</option>
+
+                    {Object.entries(PAYMENT_METHOD_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      )
+                    )}
+                  </select>
                 </div>
               </div>
 

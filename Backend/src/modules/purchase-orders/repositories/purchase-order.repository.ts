@@ -9,6 +9,9 @@ import { PurchaseOrderFilterDto } from '../dto/purchase-order-filter.dto';
 const includeRelations = {
   partner: true,
   warehouse: true,
+  chartOfAccount: {
+    select: { id: true, code: true, description: true },
+  },
   items: {
     include: {
       product: { include: { chartOfAccount: true } },
@@ -42,6 +45,7 @@ export class PurchaseOrderRepository {
         totalAmount,
         quotationId: dto.quotationId,
         quotationOfferId: dto.quotationOfferId,
+        chartOfAccountId: dto.chartOfAccountId,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
         installmentsCount: dto.installmentsCount,
@@ -95,6 +99,7 @@ export class PurchaseOrderRepository {
       orderDate?: Date;
       observation?: string;
       totalAmount?: number;
+      chartOfAccountId?: string;
       termDays?: number;
       paymentMethod?: PaymentMethod;
       installmentsCount?: number;
@@ -123,6 +128,9 @@ export class PurchaseOrderRepository {
         }),
         ...(dto.totalAmount !== undefined && {
           totalAmount: dto.totalAmount,
+        }),
+        ...(dto.chartOfAccountId !== undefined && {
+          chartOfAccountId: dto.chartOfAccountId,
         }),
         ...(dto.termDays !== undefined && {
           termDays: dto.termDays,

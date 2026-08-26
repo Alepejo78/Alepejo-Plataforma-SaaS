@@ -37,9 +37,13 @@ export class CreateFinancialEntryDto {
   @IsString({ message: 'Informe o parceiro ou o colaborador.' })
   employeeId?: string;
 
-  @IsOptional()
-  @IsString()
-  chartOfAccountId?: string;
+  @IsString({ message: 'Informe o tipo de despesa/receita.' })
+  chartOfAccountId: string;
+
+  /// Produto ou serviço do lançamento — todo título tem que sair
+  /// vinculado a algo (decisão do usuário, 26-08-2026).
+  @IsString({ message: 'Informe o produto ou serviço.' })
+  productId: string;
 
   @IsDateString()
   issueDate: string;
@@ -89,9 +93,8 @@ export class CreateFinancialEntryDto {
   @IsPositive()
   amount?: number;
 
-  @IsOptional()
-  @IsEnum(PaymentMethod)
-  paymentMethod?: PaymentMethod;
+  @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
+  paymentMethod: PaymentMethod;
 
   @IsOptional()
   @IsString()

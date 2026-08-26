@@ -48,6 +48,11 @@ import {
 } from "@/services/product.service";
 
 import {
+  chartOfAccountService,
+  type ChartOfAccount,
+} from "@/services/chart-of-account.service";
+
+import {
   PAYMENT_METHOD_LABELS,
   type PaymentMethod,
 } from "@/services/financial-entry.service";
@@ -131,6 +136,8 @@ function emptyForm() {
     warehouseId: "",
     orderDate: "",
     observation: "",
+    chartOfAccountId: "",
+    chartOfAccountLabel: "",
     termDays: "",
     paymentMethod: "" as PaymentMethod | "",
     installmentsCount: "",
@@ -201,6 +208,18 @@ export default function PedidosDeCompraPage() {
   const searchProducts = useCallback(
     async (query: string) => {
       const result = await productService.list({
+        search: query || undefined,
+        limit: 20,
+      });
+
+      return result.data;
+    },
+    []
+  );
+
+  const searchChartOfAccounts = useCallback(
+    async (query: string) => {
+      const result = await chartOfAccountService.list({
         search: query || undefined,
         limit: 20,
       });
@@ -352,6 +371,10 @@ export default function PedidosDeCompraPage() {
         ? order.orderDate.slice(0, 10)
         : "",
       observation: order.observation ?? "",
+      chartOfAccountId: order.chartOfAccountId ?? "",
+      chartOfAccountLabel: order.chartOfAccount
+        ? `${order.chartOfAccount.code} — ${order.chartOfAccount.description}`
+        : "",
       termDays:
         order.termDays != null ? String(order.termDays) : "",
       paymentMethod: order.paymentMethod ?? "",
@@ -445,6 +468,24 @@ export default function PedidosDeCompraPage() {
       return;
     }
 
+    if (!form.chartOfAccountId) {
+      setFormError("Selecione o tipo de despesa.");
+
+      return;
+    }
+
+    if (!form.paymentMethod) {
+      setFormError("Selecione a forma de pagamento.");
+
+      return;
+    }
+
+    if (form.termDays === "") {
+      setFormError("Informe o prazo/vencimento.");
+
+      return;
+    }
+
     setSaving(true);
     setFormError("");
 
@@ -455,10 +496,9 @@ export default function PedidosDeCompraPage() {
       observation: form.observation || undefined,
       quotationId: sourceQuotationId || undefined,
       quotationOfferId: sourceOfferId || undefined,
-      termDays: form.termDays
-        ? Number(form.termDays)
-        : undefined,
-      paymentMethod: form.paymentMethod || undefined,
+      chartOfAccountId: form.chartOfAccountId,
+      termDays: Number(form.termDays),
+      paymentMethod: form.paymentMethod as PaymentMethod,
       installmentsCount: form.installmentsCount
         ? Number(form.installmentsCount)
         : undefined,
@@ -962,7 +1002,32 @@ export default function PedidosDeCompraPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div>
+                  <label className={labelClass}>
+                    Tipo de despesa
+                  </label>
+
+                  <SearchSelect<ChartOfAccount>
+                    displayLabel={form.chartOfAccountLabel}
+                    search={searchChartOfAccounts}
+                    getId={(c) => c.id}
+                    getLabel={(c) =>
+                      `${c.code} — ${c.description}`
+                    }
+                    placeholder="Digite para buscar a conta..."
+                    onSelect={(c) =>
+                      setForm({
+                        ...form,
+                        chartOfAccountId: c?.id ?? "",
+                        chartOfAccountLabel: c
+                          ? `${c.code} — ${c.description}`
+                          : "",
+                      })
+                    }
+                  />
+                </div>
+
                 <div>
                   <label className={labelClass}>
                     Prazo (dias)

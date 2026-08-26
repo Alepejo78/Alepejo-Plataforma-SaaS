@@ -29,10 +29,15 @@ export class ConfirmExpenseImportDto {
   @Type(() => InvoicePartnerDto)
   partner: InvoicePartnerDto;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  chartOfAccountId?: string;
+  @ApiProperty()
+  @IsString({ message: 'Informe o tipo de despesa/receita.' })
+  chartOfAccountId: string;
+
+  /// Produto ou serviço do lançamento — todo título tem que sair
+  /// vinculado a algo (decisão do usuário, 26-08-2026).
+  @ApiProperty()
+  @IsString({ message: 'Informe o produto ou serviço.' })
+  productId: string;
 
   @ApiProperty()
   @IsDateString()
@@ -55,10 +60,9 @@ export class ConfirmExpenseImportDto {
   @IsEnum(FinancialDocumentType)
   documentType?: FinancialDocumentType;
 
-  @ApiProperty({ required: false, enum: PaymentMethod })
-  @IsOptional()
-  @IsEnum(PaymentMethod)
-  paymentMethod?: PaymentMethod;
+  @ApiProperty({ enum: PaymentMethod })
+  @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
+  paymentMethod: PaymentMethod;
 
   @ApiProperty({ required: false })
   @IsOptional()

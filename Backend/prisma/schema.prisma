@@ -662,6 +662,7 @@ model Product {
   quotationOfferItems      QuotationOfferItem[]
   purchaseOrderItems       PurchaseOrderItem[]
   productionOrders         ProductionOrder[]
+  financialEntries         FinancialEntry[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1034,6 +1035,13 @@ model PurchaseOrder {
   paymentMethod     PaymentMethod?
   installmentsCount Int?           @default(1)
 
+  /// Tipo de despesa — obrigatório na tela de novo Pedido (ver DTO),
+  /// nullable aqui só pra não quebrar pedido antigo nem o que nasce
+  /// automático ao escolher o vencedor de uma Cotação (que ainda não
+  /// tem esse campo). Repassado pra Compra na conversão.
+  chartOfAccountId String?
+  chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
   totalAmount Decimal @default(0) @db.Decimal(18, 2)
 
   items    PurchaseOrderItem[]
@@ -1303,6 +1311,13 @@ model SalesOrder {
   paymentMethod     PaymentMethod?
   installmentsCount Int?           @default(1)
 
+  /// Tipo de receita — obrigatório na tela de novo Pedido (ver DTO),
+  /// nullable aqui só pra não quebrar pedido antigo nem o que nasce
+  /// automático da aprovação de um Orçamento (que ainda não tem esse
+  /// campo). Repassado pra Venda na conversão.
+  chartOfAccountId String?
+  chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
   items SalesOrderItem[]
   sale  Sale?
 
@@ -1375,6 +1390,8 @@ model ChartOfAccount {
   financialEntries FinancialEntry[]
   purchases        Purchase[]
   sales            Sale[]
+  purchaseOrders   PurchaseOrder[]
+  salesOrders      SalesOrder[]
   products         Product[]            @relation("ProductPurchaseChartOfAccount")
   productsForSale  Product[]            @relation("ProductSaleChartOfAccount")
   active           Boolean                      @default(true)
@@ -1447,6 +1464,13 @@ model FinancialEntry {
 
   chartOfAccountId String?
   chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
+  /// Produto ou serviço do lançamento — obrigatório na tela (ver DTO),
+  /// nullable aqui só pra não quebrar título antigo (de antes deste
+  /// campo existir) nem os que nascem de fluxo interno sem essa
+  /// referência (folha, 13º, férias).
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
 
   /// Data de emissão / da compra.
   issueDate DateTime

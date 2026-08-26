@@ -31,10 +31,9 @@ export class ConfirmPurchaseImportDto {
   @IsString()
   warehouseId: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  chartOfAccountId?: string;
+  @ApiProperty()
+  @IsString({ message: 'Informe o tipo de despesa.' })
+  chartOfAccountId: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -66,10 +65,9 @@ export class ConfirmPurchaseImportDto {
   @Min(0)
   termDays?: number;
 
-  @ApiProperty({ required: false, enum: PaymentMethod })
-  @IsOptional()
-  @IsEnum(PaymentMethod)
-  paymentMethod?: PaymentMethod;
+  @ApiProperty({ enum: PaymentMethod })
+  @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
+  paymentMethod: PaymentMethod;
 
   @ApiProperty({
     required: false,

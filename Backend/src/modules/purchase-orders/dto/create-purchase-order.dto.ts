@@ -53,19 +53,23 @@ export class CreatePurchaseOrderDto {
   quotationOfferId?: string;
 
   @ApiProperty({
-    required: false,
+    description:
+      'Tipo de despesa (conta do plano de contas) — repassado pra Compra na conversão.',
+  })
+  @IsString({ message: 'Informe o tipo de despesa.' })
+  chartOfAccountId?: string;
+
+  @ApiProperty({
     description:
       'Prazo em dias até o vencimento do título gerado na conversão em compra — quando o pedido nasce sem cotação, ou pra sobrescrever o da proposta vencedora.',
   })
-  @IsOptional()
   @Type(() => Number)
-  @IsInt()
+  @IsInt({ message: 'Informe o prazo/vencimento.' })
   @Min(0)
   termDays?: number;
 
-  @ApiProperty({ required: false, enum: PaymentMethod })
-  @IsOptional()
-  @IsEnum(PaymentMethod)
+  @ApiProperty({ enum: PaymentMethod })
+  @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
   paymentMethod?: PaymentMethod;
 
   @ApiProperty({
