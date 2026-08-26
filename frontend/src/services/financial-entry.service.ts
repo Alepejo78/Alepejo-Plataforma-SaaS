@@ -190,6 +190,12 @@ export interface AccountBreakdownRow {
   total: number;
 }
 
+/** Uma fatia do gráfico de forma de pagamento/recebimento. */
+export interface PaymentMethodBreakdownRow {
+  method: string;
+  total: number;
+}
+
 export const financialEntryService = {
   async list(
     filter: FinancialEntryFilter = {}
@@ -281,6 +287,20 @@ export const financialEntryService = {
       "/financial-entries/account-breakdown",
       { params: { year, type } }
     );
+
+    return data.data ?? [];
+  },
+
+  /** Quanto foi de cada forma de pagamento (ou recebimento) no ano. */
+  async getPaymentMethodBreakdown(
+    year: number,
+    type: "PAYABLE" | "RECEIVABLE" = "PAYABLE"
+  ): Promise<PaymentMethodBreakdownRow[]> {
+    const { data } = await api.get<
+      ApiEnvelope<PaymentMethodBreakdownRow[]>
+    >("/financial-entries/payment-method-breakdown", {
+      params: { year, type },
+    });
 
     return data.data ?? [];
   },

@@ -91,6 +91,31 @@ export class FinancialEntriesController {
     );
   }
 
+  @Get('payment-method-breakdown')
+  @Permissions('financial-entry.view')
+  getPaymentMethodBreakdown(
+    @CurrentUser('companyId') companyId: string,
+    @Query('year') year?: string,
+    @Query('type') type?: string,
+  ) {
+    const parsedYear = Number(year);
+    const targetYear =
+      year && Number.isInteger(parsedYear)
+        ? parsedYear
+        : new Date().getFullYear();
+
+    const targetType =
+      type === 'RECEIVABLE'
+        ? FinancialEntryType.RECEIVABLE
+        : FinancialEntryType.PAYABLE;
+
+    return this.service.getPaymentMethodBreakdown(
+      companyId,
+      targetYear,
+      targetType,
+    );
+  }
+
   @Get(':id')
   @Permissions('financial-entry.view')
   findOne(

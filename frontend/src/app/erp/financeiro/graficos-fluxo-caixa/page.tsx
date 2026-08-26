@@ -10,6 +10,8 @@ import {
   Legend,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -25,8 +27,30 @@ import {
 } from "@/services/budget.service";
 import {
   financialEntryService,
+  PAYMENT_METHOD_LABELS,
   type AccountBreakdownRow,
+  type PaymentMethodBreakdownRow,
 } from "@/services/financial-entry.service";
+
+/** Paleta pra "forma de pagamento/recebimento" — quantidade de formas varia, roda em ciclo. */
+const PAYMENT_METHOD_COLORS = [
+  "var(--primary)",
+  "var(--success)",
+  "var(--warning)",
+  "#d6336c",
+  "#7c3aed",
+  "#0891b2",
+  "var(--danger)",
+  "var(--text-muted)",
+];
+
+function paymentMethodLabel(method: string) {
+  if (method === "NAO_INFORMADO") return "Não informado";
+  return (
+    PAYMENT_METHOD_LABELS[method as keyof typeof PAYMENT_METHOD_LABELS] ??
+    method
+  );
+}
 
 const MONTH_LABELS = [
   "Jan",
@@ -175,6 +199,59 @@ function AccountBreakdownPanel({
   );
 }
 
+/** Pizza de forma de pagamento/recebimento — reaproveitada pros dois lados. */
+function PaymentMethodPieChart({
+  title,
+  emptyLabel,
+  rows,
+  year,
+}: {
+  title: string;
+  emptyLabel: string;
+  rows: PaymentMethodBreakdownRow[];
+  year: number;
+}) {
+  const chartData = rows.map((row, i) => ({
+    name: paymentMethodLabel(row.method),
+    value: row.total,
+    fill: PAYMENT_METHOD_COLORS[i % PAYMENT_METHOD_COLORS.length],
+  }));
+
+  return (
+    <Panel title={title}>
+      {chartData.length === 0 ? (
+        <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+          {emptyLabel} em {year}.
+        </p>
+      ) : (
+        <div style={{ height: 260 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={50}
+                outerRadius={90}
+                paddingAngle={2}
+              >
+                {chartData.map((item) => (
+                  <Cell key={item.name} fill={item.fill} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(v, name) => [money(Number(v)), name]}
+              />
+              <Legend wrapperStyle={legendStyle} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 const tooltipStyle = {
   backgroundColor: "var(--surface)",
   border: "1px solid var(--border)",
@@ -201,27 +278,42 @@ export default function GraficosFluxoCaixaPage() {
   const [receitasPorTipo, setReceitasPorTipo] = useState<
     AccountBreakdownRow[]
   >([]);
+  const [formaPagamento, setFormaPagamento] = useState<
+    PaymentMethodBreakdownRow[]
+  >([]);
+  const [formaRecebimento, setFormaRecebimento] = useState<
+    PaymentMethodBreakdownRow[]
+  >([]);
 
   const load = useCallback(async (targetYear: number) => {
     setLoading(true);
     setError("");
 
     try {
-      const [result, despesas, receitas] = await Promise.all([
-        budgetService.getYear(targetYear),
-        // Falhar aqui não pode derrubar o fluxo de caixa: o gráfico por
-        // tipo some, o resto da tela continua.
-        financialEntryService
-          .getAccountBreakdown(targetYear, "PAYABLE")
-          .catch(() => [] as AccountBreakdownRow[]),
-        financialEntryService
-          .getAccountBreakdown(targetYear, "RECEIVABLE")
-          .catch(() => [] as AccountBreakdownRow[]),
-      ]);
+      const [result, despesas, receitas, pagamento, recebimento] =
+        await Promise.all([
+          budgetService.getYear(targetYear),
+          // Falhar aqui não pode derrubar o fluxo de caixa: o gráfico por
+          // tipo some, o resto da tela continua.
+          financialEntryService
+            .getAccountBreakdown(targetYear, "PAYABLE")
+            .catch(() => [] as AccountBreakdownRow[]),
+          financialEntryService
+            .getAccountBreakdown(targetYear, "RECEIVABLE")
+            .catch(() => [] as AccountBreakdownRow[]),
+          financialEntryService
+            .getPaymentMethodBreakdown(targetYear, "PAYABLE")
+            .catch(() => [] as PaymentMethodBreakdownRow[]),
+          financialEntryService
+            .getPaymentMethodBreakdown(targetYear, "RECEIVABLE")
+            .catch(() => [] as PaymentMethodBreakdownRow[]),
+        ]);
 
       setData(result);
       setDespesasPorTipo(despesas);
       setReceitasPorTipo(receitas);
+      setFormaPagamento(pagamento);
+      setFormaRecebimento(recebimento);
     } catch (err) {
       setError(
         extractMessage(
@@ -487,6 +579,22 @@ export default function GraficosFluxoCaixaPage() {
                 tone="success"
                 paidLabel="Recebido"
                 openLabel="A receber"
+              />
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <PaymentMethodPieChart
+                title="Forma de pagamento"
+                emptyLabel="Nenhuma despesa lançada"
+                rows={formaPagamento}
+                year={year}
+              />
+
+              <PaymentMethodPieChart
+                title="Forma de recebimento"
+                emptyLabel="Nenhuma receita lançada"
+                rows={formaRecebimento}
+                year={year}
               />
             </div>
 

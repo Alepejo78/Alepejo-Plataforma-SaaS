@@ -414,6 +414,36 @@ export class FinancialEntriesService {
       .sort((a, b) => b.total - a.total);
   }
 
+  /** Total (pago + em aberto) agrupado por forma de pagamento — pro gráfico de pizza da Visão geral. */
+  async getPaymentMethodBreakdown(
+    companyId: string | string[],
+    year: number,
+    type: FinancialEntryType,
+  ) {
+    const entries = await this.repository.findForPaymentMethodBreakdown(
+      companyId,
+      year,
+      type,
+    );
+
+    const porForma = new Map<string, number>();
+
+    for (const entry of entries) {
+      const chave = entry.paymentMethod ?? 'NAO_INFORMADO';
+      const valor =
+        entry.status === 'PAID'
+          ? Number(entry.paidAmount)
+          : Number(entry.amount) - Number(entry.paidAmount);
+
+      porForma.set(chave, (porForma.get(chave) ?? 0) + valor);
+    }
+
+    return [...porForma.entries()]
+      .map(([method, total]) => ({ method, total }))
+      .filter((item) => item.total > 0)
+      .sort((a, b) => b.total - a.total);
+  }
+
   /**
    * Fluxo de caixa: totais de receita e despesa por mês do ano informado,
    * calculados a partir dos títulos de contas a receber/pagar (nunca

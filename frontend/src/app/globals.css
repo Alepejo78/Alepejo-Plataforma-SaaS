@@ -179,6 +179,30 @@ tbody tr:hover {
   color: var(--primary-text);
 }
 
+/* Ícones reagem ao passar o mouse/clicar em qualquer botão ou link do
+   sistema — sem precisar animar cada tela na mão. Exclui botão
+   desabilitado (não faz sentido "responder" a algo que não pode ser
+   clicado). */
+button:not(:disabled) svg,
+a svg,
+[role="button"]:not([aria-disabled="true"]) svg {
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+
+button:not(:disabled):hover svg,
+a:hover svg,
+[role="button"]:not([aria-disabled="true"]):hover svg {
+  transform: scale(1.14);
+}
+
+button:not(:disabled):active svg,
+a:active svg,
+[role="button"]:not([aria-disabled="true"]):active svg {
+  transform: scale(0.9);
+}
+
 /* Respeita quem pediu menos animação no sistema */
 @media (prefers-reduced-motion: reduce) {
   *,

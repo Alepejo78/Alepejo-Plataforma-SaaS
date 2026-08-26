@@ -45,7 +45,7 @@ export class DashboardService {
       ? group.map((c) => c.id)
       : [user.companyId];
 
-    const [cashFlow, despesasPorTipo, inventoryItems, hr] =
+    const [cashFlow, despesasPorTipo, receitasPorTipo, inventoryItems, hr] =
       await Promise.all([
         this.financialEntriesService.getCashFlow(
           consolidated ? companyIds : user.companyId,
@@ -55,6 +55,11 @@ export class DashboardService {
           consolidated ? companyIds : user.companyId,
           year,
           FinancialEntryType.PAYABLE,
+        ),
+        this.financialEntriesService.getAccountBreakdown(
+          consolidated ? companyIds : user.companyId,
+          year,
+          FinancialEntryType.RECEIVABLE,
         ),
         this.prisma.inventory.count({
           where: { companyId: { in: companyIds } },
@@ -76,6 +81,7 @@ export class DashboardService {
       inventoryItems,
       cashFlow,
       despesasPorTipo,
+      receitasPorTipo,
       hrAvailable: hr.available,
       employeesAtivos: hr.ativos,
       employeesExperiencia: hr.experiencia,

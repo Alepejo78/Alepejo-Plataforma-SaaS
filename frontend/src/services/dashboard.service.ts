@@ -42,6 +42,7 @@ export interface DashboardOverview {
   inventoryItems: number;
   cashFlow: CashFlow;
   despesasPorTipo: DashboardAccountBreakdownRow[];
+  receitasPorTipo: DashboardAccountBreakdownRow[];
   /** false só se a própria consulta de RH falhar — sem módulo licenciado os números vêm 0 normalmente. */
   hrAvailable: boolean;
   employeesAtivos: number;

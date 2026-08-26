@@ -196,6 +196,36 @@ export class FinancialEntriesRepository {
     });
   }
 
+  /** Mesmo recorte de `findForAccountBreakdown`, só que traz a forma de pagamento em vez do plano de contas. */
+  async findForPaymentMethodBreakdown(
+    companyId: string | string[],
+    year: number,
+    type: FinancialEntryType,
+  ) {
+    const yearStart = new Date(Date.UTC(year, 0, 1));
+    const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
+
+    return this.prisma.financialEntry.findMany({
+      where: {
+        companyId: Array.isArray(companyId)
+          ? { in: companyId }
+          : companyId,
+        type,
+        status: { not: FinancialEntryStatus.CANCELLED },
+        OR: [
+          { dueDate: { gte: yearStart, lt: yearEnd } },
+          { paymentDate: { gte: yearStart, lt: yearEnd } },
+        ],
+      },
+      select: {
+        status: true,
+        amount: true,
+        paidAmount: true,
+        paymentMethod: true,
+      },
+    });
+  }
+
   /**
    * `companyId` aceita um array pro dashboard consolidado do
    * administrador (soma o fluxo de caixa de todas as empresas do

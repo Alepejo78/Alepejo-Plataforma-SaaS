@@ -229,6 +229,9 @@ export default function HomePage() {
   const [despesasPorTipo, setDespesasPorTipo] = useState<
     DashboardAccountBreakdownRow[]
   >([]);
+  const [receitasPorTipo, setReceitasPorTipo] = useState<
+    DashboardAccountBreakdownRow[]
+  >([]);
   const [employeesByGender, setEmployeesByGender] = useState<
     DashboardGenderRow[]
   >([]);
@@ -261,6 +264,7 @@ export default function HomePage() {
         setDashboardCompanies(overview.companies);
         setInventoryItems(overview.inventoryItems);
         setDespesasPorTipo(overview.despesasPorTipo);
+        setReceitasPorTipo(overview.receitasPorTipo);
 
         const cashFlow = overview.cashFlow;
 
@@ -425,11 +429,11 @@ export default function HomePage() {
         )}
 
         {/*
-          Três linhas: A pagar/receber ao lado de despesas por tipo,
-          fluxo de caixa sozinho, e colaboradores ao lado do perfil
-          dos colaboradores.
+          Três linhas: A pagar/receber + despesas a pagar + despesas a
+          receber na mesma linha (3 colunas), fluxo de caixa sozinho,
+          e colaboradores ao lado do perfil dos colaboradores.
         */}
-        <section className="grid gap-5 lg:grid-cols-2">
+        <section className="grid gap-5 lg:grid-cols-3">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Wallet
@@ -539,7 +543,7 @@ export default function HomePage() {
                 />
 
                 <h2 className="font-semibold text-[var(--text-primary)]">
-                  Despesas por tipo
+                  Classificação de conta a pagar
                 </h2>
               </div>
 
@@ -608,6 +612,88 @@ export default function HomePage() {
 
               <p className="mt-4 text-xs text-[var(--text-muted)]">
                 As {Math.min(despesasPorTipo.length, 6)} maiores contas do
+                plano de contas no ano{consolidated ? ", somando o grupo" : ""}.
+                Veja todas em Financeiro → Gráficos de fluxo de caixa.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Receipt
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  Classificação de conta a receber
+                </h2>
+              </div>
+
+              {cashFlowLoading ? (
+                <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+              ) : receitasPorTipo.length === 0 ? (
+                <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+                  Nenhuma receita lançada este ano ainda.
+                </p>
+              ) : (
+                <div
+                  style={{
+                    height: Math.max(
+                      160,
+                      Math.min(receitasPorTipo.length, 6) * 40 + 30
+                    ),
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={receitasPorTipo.slice(0, 6)}
+                      margin={{ top: 4, right: 16, bottom: 0, left: 0 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        horizontal={false}
+                      />
+                      <XAxis
+                        type="number"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        tickFormatter={(v) => moneyCompact(Number(v))}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="description"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        width={110}
+                      />
+                      <Tooltip
+                        contentStyle={dashboardTooltipStyle}
+                        formatter={(v) => money(Number(v))}
+                        cursor={{ fill: "var(--surface-hover)" }}
+                      />
+                      <Bar
+                        dataKey="pago"
+                        name="Recebido"
+                        stackId="receita"
+                        fill="var(--success)"
+                        radius={[0, 0, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="emAberto"
+                        name="Em aberto"
+                        stackId="receita"
+                        fill="var(--warning)"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                As {Math.min(receitasPorTipo.length, 6)} maiores contas do
                 plano de contas no ano{consolidated ? ", somando o grupo" : ""}.
                 Veja todas em Financeiro → Gráficos de fluxo de caixa.
               </p>
