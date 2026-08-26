@@ -298,27 +298,16 @@ function ChooseModulesModal({
   onSaved: () => void;
 }) {
   const [modules, setModules] = useState<LicenseModule[]>([]);
-  const [basePrice, setBasePrice] = useState({ monthly: 0, yearly: 0 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    Promise.all([licenseService.listModules(), licenseService.listPlans()])
-      .then(([list, plans]) => {
+    licenseService
+      .listModules()
+      .then((list) => {
         setModules(list);
-
-        // Base do Customizado — mesma regra do backend
-        // (BillingService.customPlanPriceFromModules, CUSTOM_PLAN_BASE_CODES).
-        const basePlan =
-          plans.find((p) => p.code === "BASICO") ??
-          plans.find((p) => p.code === "ESSENCIAL");
-        setBasePrice({
-          monthly: num(basePlan?.monthlyPrice),
-          yearly: num(basePlan?.yearlyPrice),
-        });
-
         setSelected(new Set(currentModuleIds));
       })
       .catch(() => setError("Não foi possível carregar os módulos."))
@@ -348,8 +337,10 @@ function ChooseModulesModal({
     .filter((m) => selected.has(m.id))
     .reduce((sum, m) => sum + num(m.yearlyPrice), 0);
 
-  const totalMonthly = basePrice.monthly + addOnsMonthly;
-  const totalYearly = basePrice.yearly + addOnsYearly;
+  // Sem taxa-piso: zero módulo escolhido é zero reais (mesma regra do
+  // backend, ver `BillingService.customPlanPriceFromModules`).
+  const totalMonthly = addOnsMonthly;
+  const totalYearly = addOnsYearly;
 
   async function handleSave() {
     setSaving(true);
@@ -450,7 +441,7 @@ function ChooseModulesModal({
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5">
               <div>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Base + {money(addOnsMonthly)} nos módulos escolhidos
+                  {selected.size} módulo(s) escolhido(s)
                 </p>
                 <p className="text-2xl font-bold text-[var(--text-primary)]">
                   {money(totalMonthly)}

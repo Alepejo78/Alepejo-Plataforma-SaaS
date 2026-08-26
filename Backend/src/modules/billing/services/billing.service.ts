@@ -64,34 +64,6 @@ function chargeStatusToMonthStatus(
   return charge.dueDate < today ? 'VENCIDO' : 'A_PAGAR';
 }
 
-/**
- * O Customizado já inclui os módulos mínimos, então parte do preço do
- * plano de entrada que traz exatamente esses módulos e soma só os
- * extras escolhidos. Assim o preço-base acompanha o que estiver
- * cadastrado em Administrar planos, em vez de ficar fixo no código.
- *
- * Em ordem de preferência: o Básico é o plano de entrada de hoje; o
- * Essencial fica de reserva pros catálogos que ainda não têm Básico
- * (era ele o plano de entrada antes). A mesma ordem está na tela de
- * planos — se as duas discordarem, o cliente vê um preço e é cobrado
- * outro.
- */
-const CUSTOM_PLAN_BASE_CODES = ['BASICO', 'ESSENCIAL'];
-
-/** Código do plano sem acento e em maiúsculas — ver comentário acima. */
-function planCode(code: string): string {
-  return code
-    .normalize('NFD')
-    .split('')
-    .filter((letra) => {
-      const codigo = letra.charCodeAt(0);
-
-      return codigo < 0x300 || codigo > 0x36f;
-    })
-    .join('')
-    .toUpperCase();
-}
-
 function addDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
@@ -140,13 +112,11 @@ export class BillingService {
 
   /**
    * Plano Customizado não tem monthlyPrice/yearlyPrice próprio (varia
-   * por empresa) — o valor é o preço do plano de entrada (`CUSTOM_PLAN_
-   * BASE_CODES`, hoje "BÁSICO" — uma taxa-piso, sem nenhum módulo
-   * embutido) + o preço de cada módulo escolhido, no ciclo escolhido.
-   * Nenhum módulo é gratuito por padrão (decisão do usuário,
-   * 26-08-2026): antes havia um mínimo sempre incluído sem cobrar —
-   * virou add-on como qualquer outro, cobrado se tiver preço
-   * cadastrado em Administrar planos e preços.
+   * por empresa) — o valor é só a soma do preço de cada módulo
+   * escolhido, no ciclo escolhido. Sem taxa-piso: zero módulo é zero
+   * reais (decisão do usuário, 26-08-2026 — antes um mínimo de 5
+   * módulos vinha sempre incluído, cobrando o preço do plano de
+   * entrada mesmo sem nenhum módulo marcado).
    *
    * Recebe os ids dos módulos direto (em vez de buscar por empresa)
    * porque o mesmo cálculo serve pra dois momentos: empresa que já
@@ -157,26 +127,8 @@ export class BillingService {
     moduleIds: string[],
     billingCycle: 'MONTHLY' | 'YEARLY',
   ): Promise<number> {
-    // Compara sem acento: o código é digitado à mão em Administrar
-    // planos, e em produção ele foi cadastrado como "BÁSICO". Filtrar
-    // pelo texto cru no banco deixava esse plano de fora e a base caía
-    // pro Essencial, cobrando mais caro do que a tela mostrava.
-    const todosPlanos = await this.prisma.plan.findMany();
-
-    const basePlan = CUSTOM_PLAN_BASE_CODES.map((code) =>
-      todosPlanos.find((plan) => planCode(plan.code) === code),
-    ).find(Boolean);
-
-    const base = basePlan
-      ? Number(
-          (billingCycle === 'YEARLY'
-            ? basePlan.yearlyPrice
-            : basePlan.monthlyPrice) ?? 0,
-        )
-      : 0;
-
     if (moduleIds.length === 0) {
-      return base;
+      return 0;
     }
 
     const addOnModules = await this.prisma.module.findMany({
@@ -186,14 +138,12 @@ export class BillingService {
       },
     });
 
-    const addOns = addOnModules.reduce((sum, mod) => {
+    return addOnModules.reduce((sum, mod) => {
       const price =
         billingCycle === 'YEARLY' ? mod.yearlyPrice : mod.monthlyPrice;
 
       return sum + Number(price ?? 0);
     }, 0);
-
-    return base + addOns;
   }
 
   /**

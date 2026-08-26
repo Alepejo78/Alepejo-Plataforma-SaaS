@@ -25,27 +25,6 @@ function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
 
-/**
- * Código de plano sem acento e em maiúsculas. O código é digitado à
- * mão em Administrar planos, e "BÁSICO" e "BASICO" são o mesmo plano
- * pra quem cadastrou — comparar o texto cru fazia o de produção
- * (com acento) não bater e o montador voltar pro preço do Essencial.
- */
-function codigoPlano(code: string | undefined | null) {
-  // NFD separa a letra do acento; sobra filtrar os acentos soltos,
-  // que ficam todos na faixa 0x300-0x36f da tabela Unicode.
-  return (code ?? "")
-    .normalize("NFD")
-    .split("")
-    .filter((letra) => {
-      const codigo = letra.charCodeAt(0);
-
-      return codigo < 0x300 || codigo > 0x36f;
-    })
-    .join("")
-    .toUpperCase();
-}
-
 function money(value: string | number | null | undefined) {
   return num(value).toLocaleString("pt-BR", {
     style: "currency",
@@ -55,13 +34,10 @@ function money(value: string | number | null | undefined) {
 
 function CustomPlanModal({
   customPlanId,
-  basePrice,
   billingCycle,
   onClose,
 }: {
   customPlanId: string;
-  /** Preço-base do Customizado (taxa-piso, nenhum módulo embutido) — ver `CUSTOM_PLAN_BASE_CODES` no backend. */
-  basePrice: { monthly: number; yearly: number };
   billingCycle: "MONTHLY" | "YEARLY";
   onClose: () => void;
 }) {
@@ -102,8 +78,10 @@ function CustomPlanModal({
     .filter((m) => selected.has(m.id))
     .reduce((sum, m) => sum + num(m.yearlyPrice), 0);
 
-  const totalMonthly = basePrice.monthly + addOnsMonthly;
-  const totalYearly = basePrice.yearly + addOnsYearly;
+  // Sem taxa-piso: zero módulo escolhido é zero reais (mesma regra do
+  // backend, ver `BillingService.customPlanPriceFromModules`).
+  const totalMonthly = addOnsMonthly;
+  const totalYearly = addOnsYearly;
   const totalSavings = totalMonthly * 12 - totalYearly;
   const displayTotal =
     billingCycle === "YEARLY" && totalYearly > 0 ? totalYearly / 12 : totalMonthly;
@@ -207,7 +185,7 @@ function CustomPlanModal({
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5">
               <div>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Base + {money(addOnsMonthly)} nos módulos escolhidos
+                  {selected.size} módulo(s) escolhido(s)
                 </p>
 
                 {billingCycle === "MONTHLY" && totalSavings > 0 && (
@@ -362,23 +340,6 @@ export default function PlanosPage() {
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   const customPlan = plans.find((p) => p.code === "CUSTOM");
-
-  /*
-   * O montador parte do plano de entrada (taxa-piso, sem módulo
-   * nenhum embutido) — todo módulo escolhido soma em cima dele. É o
-   * BASICO; ESSENCIAL fica de reserva pra quem ainda não criou o
-   * Básico no catálogo. Mesma regra do backend (`CUSTOM_PLAN_BASE_
-   * CODES` em billing.service.ts): se as duas pontas discordarem, a
-   * tela mostra um preço e a cobrança sai outro.
-   */
-  const planoBase =
-    plans.find((p) => codigoPlano(p.code) === "BASICO") ??
-    plans.find((p) => codigoPlano(p.code) === "ESSENCIAL");
-
-  const customBasePrice = {
-    monthly: num(planoBase?.monthlyPrice),
-    yearly: num(planoBase?.yearlyPrice),
-  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[var(--background)]">
@@ -651,7 +612,6 @@ export default function PlanosPage() {
       {customOpen && customPlan && (
         <CustomPlanModal
           customPlanId={customPlan.id}
-          basePrice={customBasePrice}
           billingCycle={billingCycle}
           onClose={() => setCustomOpen(false)}
         />
