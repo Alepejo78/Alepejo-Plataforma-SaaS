@@ -11,6 +11,7 @@ import {
   Plus,
   RotateCcw,
   Trash2,
+  Upload,
   X,
   XCircle,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
 
 import {
   DOCUMENT_TYPE_LABELS,
@@ -175,6 +177,7 @@ export function FinancialEntriesScreen({
    */
   const [viewOnly, setViewOnly] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
@@ -549,6 +552,17 @@ export function FinancialEntriesScreen({
                 <Can permission="financial-entry.create">
                   <button
                     type="button"
+                    onClick={() => setImportOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <Upload size={18} />
+                    Importar nota fiscal
+                  </button>
+                </Can>
+
+                <Can permission="financial-entry.create">
+                  <button
+                    type="button"
                     onClick={openCreate}
                     className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
                   >
@@ -859,6 +873,15 @@ export function FinancialEntriesScreen({
           </div>
         )}
       </ListPageLayout>
+
+      {importOpen && (
+        <InvoiceImportModal
+          direction={type === "PAYABLE" ? "PURCHASE" : "SALE"}
+          expenseOnly
+          onClose={() => setImportOpen(false)}
+          onSaved={() => void load()}
+        />
+      )}
 
       {/* Novo título / Editar título */}
       {formOpen && (

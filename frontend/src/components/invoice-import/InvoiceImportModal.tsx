@@ -117,16 +117,26 @@ const emptyPartner: PartnerState = {
 
 interface Props {
   direction: Direction;
-  warehouses: Warehouse[];
+  warehouses?: Warehouse[];
   onClose: () => void;
   onSaved: () => void;
+  /**
+   * Aberto de dentro do Financeiro (sem módulo Compras/Vendas
+   * licenciado): trava em "Lançar direto em Contas a Pagar/Receber",
+   * esconde a aba de Pedido (que precisa de depósito/estoque) e manda
+   * pras rotas `payable-expense`/`receivable-expense` — só exigem
+   * `financial-entry.create` (módulo FINANCE), não `purchase.create`/
+   * `sale.create` (módulo Compras/Vendas).
+   */
+  expenseOnly?: boolean;
 }
 
 export function InvoiceImportModal({
   direction,
-  warehouses,
+  warehouses = [],
   onClose,
   onSaved,
+  expenseOnly = false,
 }: Props) {
   const isPurchase = direction === "PURCHASE";
   const partnerRole: PartnerRole = isPurchase
@@ -139,7 +149,9 @@ export function InvoiceImportModal({
   const [parseWarnings, setParseWarnings] = useState<string[]>([]);
   const [parseError, setParseError] = useState("");
 
-  const [mode, setMode] = useState<Mode>("ORDER");
+  const [mode, setMode] = useState<Mode>(
+    expenseOnly ? "EXPENSE" : "ORDER"
+  );
   const [partner, setPartner] = useState<PartnerState>(emptyPartner);
   const [warehouseId, setWarehouseId] = useState("");
   const [chartOfAccountId, setChartOfAccountId] = useState("");
@@ -595,7 +607,13 @@ export function InvoiceImportModal({
           installments: validInstallments,
         };
 
-        if (isPurchase) {
+        if (expenseOnly) {
+          if (isPurchase) {
+            await invoiceImportService.confirmPayableExpense(payload);
+          } else {
+            await invoiceImportService.confirmReceivableExpense(payload);
+          }
+        } else if (isPurchase) {
           await invoiceImportService.confirmPurchaseExpense(payload);
         } else {
           await invoiceImportService.confirmSaleExpense(payload);
@@ -706,32 +724,39 @@ export function InvoiceImportModal({
             )}
           </div>
 
-          <div className="flex gap-2 rounded-xl border border-[var(--border)] p-1">
-            <button
-              type="button"
-              onClick={() => setMode("ORDER")}
-              className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                mode === "ORDER"
-                  ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-              }`}
-            >
-              Criar Pedido de {isPurchase ? "Compra" : "Venda"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMode("EXPENSE")}
-              className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                mode === "EXPENSE"
-                  ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-              }`}
-            >
+          {expenseOnly ? (
+            <p className="rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)]">
               Lançar direto em Contas a{" "}
               {isPurchase ? "Pagar" : "Receber"}
-            </button>
-          </div>
+            </p>
+          ) : (
+            <div className="flex gap-2 rounded-xl border border-[var(--border)] p-1">
+              <button
+                type="button"
+                onClick={() => setMode("ORDER")}
+                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  mode === "ORDER"
+                    ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                Criar Pedido de {isPurchase ? "Compra" : "Venda"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode("EXPENSE")}
+                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  mode === "EXPENSE"
+                    ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                Lançar direto em Contas a{" "}
+                {isPurchase ? "Pagar" : "Receber"}
+              </button>
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="sm:col-span-2 lg:col-span-2">
@@ -746,33 +771,6 @@ export function InvoiceImportModal({
                 placeholder={`Digite para buscar o ${partnerNoun.toLowerCase()}...`}
                 onSelect={applyPartner}
               />
-
-              {!partner.partnerId && (
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <input
-                    placeholder="CPF/CNPJ"
-                    className={fieldClass}
-                    value={partner.document}
-                    onChange={(e) =>
-                      setPartner((p) => ({
-                        ...p,
-                        document: e.target.value,
-                      }))
-                    }
-                  />
-                  <input
-                    placeholder="Razão social / nome"
-                    className={fieldClass}
-                    value={partner.legalName}
-                    onChange={(e) =>
-                      setPartner((p) => ({
-                        ...p,
-                        legalName: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              )}
             </div>
 
             <div>
@@ -794,6 +792,42 @@ export function InvoiceImportModal({
               />
             </div>
           </div>
+
+          {!partner.partnerId && (
+            <div className="grid gap-4 sm:grid-cols-5">
+              <div>
+                <label className={labelClass}>CPF/CNPJ</label>
+                <input
+                  placeholder="CPF/CNPJ"
+                  className={fieldClass}
+                  value={partner.document}
+                  onChange={(e) =>
+                    setPartner((p) => ({
+                      ...p,
+                      document: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="sm:col-span-4">
+                <label className={labelClass}>
+                  Razão social / nome
+                </label>
+                <input
+                  placeholder="Razão social / nome"
+                  className={fieldClass}
+                  value={partner.legalName}
+                  onChange={(e) =>
+                    setPartner((p) => ({
+                      ...p,
+                      legalName: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>

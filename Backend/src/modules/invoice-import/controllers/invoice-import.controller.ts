@@ -31,6 +31,14 @@ import { ConfirmExpenseImportDto } from '../dto/confirm-expense-import.dto';
  * Vendas e Financeiro normalmente. Por isso reaproveita as permissões
  * de quem os cria (`purchase.create`, `sale.create`) em vez de ter
  * permissão própria — não entra linha nova na matriz de perfis.
+ *
+ * `payable-expense`/`receivable-expense` são o mesmo lançamento de
+ * `purchase-expense`/`sale-expense` (chamam o mesmo service), só que
+ * abertos pela tela de Financeiro — exigem `financial-entry.create`
+ * (módulo FINANCE) em vez de `purchase.create`/`sale.create` (módulo
+ * Compras/Vendas), pra quem não tem esses módulos licenciados
+ * conseguir importar a nota direto em Contas a Pagar/Receber mesmo
+ * assim.
  */
 @ApiTags('Invoice Import')
 @Controller('invoice-import')
@@ -131,6 +139,48 @@ export class InvoiceImportController {
       'Confirma a importação lançando direto em Contas a Receber, sem estoque',
   })
   confirmSaleExpense(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: ConfirmExpenseImportDto,
+  ) {
+    return this.service.confirmSaleExpense(
+      companyId,
+      rootCompanyId,
+      dto,
+      userId,
+    );
+  }
+
+  @Post('payable-expense')
+  @Module('FINANCE')
+  @Permissions('financial-entry.create')
+  @ApiOperation({
+    summary:
+      'Confirma a importação lançando direto em Contas a Pagar — rota do Financeiro, sem depender do módulo Compras',
+  })
+  confirmPayableExpense(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: ConfirmExpenseImportDto,
+  ) {
+    return this.service.confirmPurchaseExpense(
+      companyId,
+      rootCompanyId,
+      dto,
+      userId,
+    );
+  }
+
+  @Post('receivable-expense')
+  @Module('FINANCE')
+  @Permissions('financial-entry.create')
+  @ApiOperation({
+    summary:
+      'Confirma a importação lançando direto em Contas a Receber — rota do Financeiro, sem depender do módulo Vendas',
+  })
+  confirmReceivableExpense(
     @CurrentUser('companyId') companyId: string,
     @CurrentUser('rootCompanyId') rootCompanyId: string,
     @CurrentUser('id') userId: string,

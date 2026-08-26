@@ -150,4 +150,29 @@ export const invoiceImportService = {
 
     return data.data;
   },
+
+  /**
+   * Mesmo lançamento de `confirmPurchaseExpense`, só que pela rota do
+   * Financeiro — exige só `financial-entry.create` (módulo FINANCE),
+   * não `purchase.create` (módulo Compras). Pra quem não tem Compras
+   * licenciado mas quer importar a nota direto em Contas a Pagar.
+   */
+  async confirmPayableExpense(payload: ConfirmExpenseImportPayload) {
+    const { data } = await api.post<ApiEnvelope<unknown>>(
+      "/invoice-import/payable-expense",
+      payload
+    );
+
+    return data.data;
+  },
+
+  /** Mesma ideia de `confirmPayableExpense`, lado Contas a Receber. */
+  async confirmReceivableExpense(payload: ConfirmExpenseImportPayload) {
+    const { data } = await api.post<ApiEnvelope<unknown>>(
+      "/invoice-import/receivable-expense",
+      payload
+    );
+
+    return data.data;
+  },
 };
