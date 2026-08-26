@@ -1229,9 +1229,10 @@ function stepDuration(narration: string) {
 }
 
 /**
- * Vozes femininas em português que os navegadores costumam ter. As do
- * Edge marcadas como "Natural"/"Online" são neurais e soam bem melhor
- * que a voz robótica antiga do Windows — por isso valem pontos extras.
+ * Vozes em português que os navegadores costumam ter, separadas por
+ * gênero pra pontuar a favor da masculina. As do Edge marcadas como
+ * "Natural"/"Online" são neurais e soam bem melhor que a voz robótica
+ * antiga do Windows — por isso valem pontos extras.
  */
 const FEMALE_PT_VOICES = [
   "francisca",
@@ -1271,7 +1272,7 @@ const MALE_PT_VOICES = [
 ];
 
 /**
- * Escolhe a melhor voz disponível: em português, feminina e o mais
+ * Escolhe a melhor voz disponível: em português, masculina e o mais
  * natural possível. Cada navegador tem um conjunto diferente, então em
  * vez de fixar um nome a gente pontua e fica com a melhor colocada.
  */
@@ -1288,11 +1289,11 @@ function pickVoice(voices: SpeechSynthesisVoice[]) {
     const name = voice.name.toLowerCase();
     let points = 0;
 
-    if (FEMALE_PT_VOICES.some((n) => name.includes(n))) {
+    if (MALE_PT_VOICES.some((n) => name.includes(n))) {
       points += 60;
     }
 
-    if (MALE_PT_VOICES.some((n) => name.includes(n))) {
+    if (FEMALE_PT_VOICES.some((n) => name.includes(n))) {
       points -= 60;
     }
 
@@ -1304,16 +1305,11 @@ function pickVoice(voices: SpeechSynthesisVoice[]) {
     /*
      * A voz do Google em pt-BR é a mesma do navegador de mapas: todo
      * mundo já ouviu, e no mascote soa como GPS, não como personagem.
-     * Fica por último entre as femininas — se houver qualquer outra,
+     * Fica por último entre as masculinas — se houver qualquer outra,
      * ela ganha; se for a única do navegador, ainda assim é usada.
      */
     if (name.includes("google")) {
       points -= 25;
-    }
-
-    // Mesma história da voz padrão do Windows, batida de tanto uso.
-    if (name.includes("maria")) {
-      points -= 10;
     }
 
     if (voice.lang.toLowerCase().replace("_", "-") === "pt-br") {
@@ -1334,7 +1330,7 @@ function pickVoice(voices: SpeechSynthesisVoice[]) {
  * As vozes chegam de forma assíncrona no Chrome: na primeira chamada
  * `getVoices()` volta vazio e só depois o evento `voiceschanged`
  * avisa. Sem esperar por ele, o tour começaria com a voz padrão do
- * sistema (masculina, em inglês) em vez da feminina em português.
+ * sistema (em inglês) em vez da masculina em português.
  */
 function useSpeechVoices() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -1426,9 +1422,9 @@ function DemoTour() {
       utterance.lang = "pt-BR";
       // Ritmo normal de fala: abaixo disso a leitura fica arrastada.
       utterance.rate = 1.04;
-      // Um tom acima: afasta do jeito de locução de GPS e combina com
-      // um personagem, que é o que o Pejo é.
-      utterance.pitch = 1.18;
+      // Tom neutro: numa voz masculina, forçar pra cima (como se fazia
+      // com a feminina) soa artificial — natural é ficar perto de 1.
+      utterance.pitch = 1.0;
       utterance.onend = advance;
       // Se a fala falhar (aba sem permissão, voz indisponível), o tour
       // não pode travar parado nesse módulo pra sempre.
