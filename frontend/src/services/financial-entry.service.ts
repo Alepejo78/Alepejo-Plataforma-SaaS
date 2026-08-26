@@ -133,11 +133,15 @@ export interface FinancialEntryPayload {
   chartOfAccountId?: string;
   issueDate: string;
   termDays?: number;
-  dueDate: string;
+  /** Obrigatório só quando não vier `installments`. */
+  dueDate?: string;
   documentNumber?: string;
   documentType?: FinancialDocumentType;
   documentKey?: string;
-  amount: number;
+  /** Obrigatório só quando não vier `installments` (aí é o total). */
+  amount?: number;
+  /** Parcelamento — cada parcela vira um título próprio, com vencimento e valor editáveis. */
+  installments?: { dueDate: string; amount: number }[];
   paymentMethod?: PaymentMethod;
   observation?: string;
 }

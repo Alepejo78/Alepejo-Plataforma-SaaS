@@ -1,4 +1,6 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -9,6 +11,7 @@ import {
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -17,6 +20,8 @@ import {
   FinancialEntryType,
   PaymentMethod,
 } from '@prisma/client';
+
+import { InstallmentDto } from '../../../core/dto/installment.dto';
 
 export class CreateFinancialEntryDto {
   @IsEnum(FinancialEntryType)
@@ -45,8 +50,22 @@ export class CreateFinancialEntryDto {
   @Min(0)
   termDays?: number;
 
+  /// Obrigatório só quando não vier `installments` — parcelado, cada
+  /// parcela tem seu próprio vencimento.
+  @ValidateIf((dto) => !dto.installments || dto.installments.length === 0)
   @IsDateString()
-  dueDate: string;
+  dueDate?: string;
+
+  /// Parcelamento — cada parcela vira um título próprio, com
+  /// vencimento e valor editáveis livremente (não precisa ser em
+  /// dias corridos iguais). Quando informado, `dueDate`/`amount`
+  /// acima são ignorados.
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => InstallmentDto)
+  installments?: InstallmentDto[];
 
   @IsOptional()
   @IsString()
@@ -63,10 +82,12 @@ export class CreateFinancialEntryDto {
   @MaxLength(50)
   documentKey?: string;
 
+  /// Obrigatório só quando não vier `installments` (ver acima).
+  @ValidateIf((dto) => !dto.installments || dto.installments.length === 0)
   @Type(() => Number)
   @IsNumber()
   @IsPositive()
-  amount: number;
+  amount?: number;
 
   @IsOptional()
   @IsEnum(PaymentMethod)

@@ -119,6 +119,14 @@ interface Form {
   observation: string;
 }
 
+/** Uma parcela do título — vencimento e valor sempre editáveis à mão. */
+interface InstallmentRow {
+  /** Dias a partir da emissão — só ajuda a calcular o vencimento. */
+  days: string;
+  dueDate: string;
+  amount: number;
+}
+
 function emptyForm(): Form {
   const today = todayIso();
 
@@ -171,6 +179,7 @@ export function FinancialEntriesScreen({
     null
   );
   const [form, setForm] = useState<Form>(emptyForm());
+  const [installments, setInstallments] = useState<InstallmentRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -251,6 +260,7 @@ export function FinancialEntriesScreen({
     setViewOnly(false);
     setEditingId(null);
     setForm(emptyForm());
+    setInstallments([]);
     setFormError("");
     setFormOpen(true);
   }
@@ -281,6 +291,7 @@ export function FinancialEntriesScreen({
       amount: num(entry.amount),
       observation: entry.observation ?? "",
     });
+    setInstallments([]);
     setFormError("");
     setFormOpen(true);
   }
@@ -298,18 +309,100 @@ export function FinancialEntriesScreen({
     }));
   }
 
+  /**
+   * "Parcelar" começa com a parcela única já digitada no formulário
+   * (mesmo vencimento/valor), pra ninguém perder o que já preencheu —
+   * a partir daí cada parcela vira um título próprio, com vencimento
+   * e valor editáveis livremente.
+   */
+  function startInstallments() {
+    setInstallments([
+      { days: form.termDays, dueDate: form.dueDate, amount: form.amount },
+      { days: "", dueDate: "", amount: 0 },
+    ]);
+  }
+
+  function addInstallment() {
+    setInstallments((prev) => [
+      ...prev,
+      { days: "", dueDate: "", amount: 0 },
+    ]);
+  }
+
+  function removeInstallment(index: number) {
+    setInstallments((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+
+      // Só uma parcela sobrando não é mais "parcelado" — volta pro
+      // formulário simples de vencimento único.
+      return next.length <= 1 ? [] : next;
+    });
+  }
+
+  function updateInstallment(
+    index: number,
+    patch: Partial<InstallmentRow>
+  ) {
+    setInstallments((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) return row;
+
+        const next = { ...row, ...patch };
+
+        if (patch.days !== undefined) {
+          const days = Number(patch.days);
+          next.dueDate =
+            patch.days && Number.isFinite(days)
+              ? addDays(form.issueDate, days)
+              : next.dueDate;
+        }
+
+        return next;
+      })
+    );
+  }
+
+  const installmentsTotal = installments.reduce(
+    (sum, row) => sum + num(row.amount),
+    0
+  );
+
+  const isParceled = installments.length > 1;
+
   async function save() {
-    if (
-      !form.partnerId ||
-      !form.issueDate ||
-      !form.dueDate ||
-      form.amount <= 0
-    ) {
+    if (!form.partnerId || !form.issueDate || form.amount <= 0) {
       setFormError(
-        `Selecione ${partnerLabel.toLowerCase()}, as datas e um valor maior que zero.`
+        `Selecione ${partnerLabel.toLowerCase()}, a emissão e um valor maior que zero.`
       );
 
       return;
+    }
+
+    if (!isParceled && !form.dueDate) {
+      setFormError("Informe o vencimento.");
+      return;
+    }
+
+    let validInstallments: { dueDate: string; amount: number }[] = [];
+
+    if (isParceled) {
+      validInstallments = installments
+        .filter((row) => row.dueDate && row.amount > 0)
+        .map((row) => ({ dueDate: row.dueDate, amount: row.amount }));
+
+      if (validInstallments.length === 0) {
+        setFormError(
+          "Preencha o vencimento e o valor de todas as parcelas."
+        );
+        return;
+      }
+
+      if (Math.abs(installmentsTotal - form.amount) > 0.01) {
+        setFormError(
+          `A soma das parcelas (${money(installmentsTotal)}) precisa bater com o valor total (${money(form.amount)}).`
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -324,10 +417,11 @@ export function FinancialEntriesScreen({
         termDays: form.termDays
           ? Number(form.termDays)
           : undefined,
-        dueDate: form.dueDate,
+        dueDate: isParceled ? undefined : form.dueDate,
         documentNumber: form.documentNumber || undefined,
         documentType: form.documentType || undefined,
-        amount: form.amount,
+        amount: isParceled ? undefined : form.amount,
+        installments: isParceled ? validInstallments : undefined,
         observation: form.observation || undefined,
       };
 
@@ -865,7 +959,12 @@ export function FinancialEntriesScreen({
 
                   <input
                     type="date"
-                    className={fieldClass}
+                    disabled={isParceled}
+                    className={`${fieldClass} ${
+                      isParceled
+                        ? "opacity-60"
+                        : ""
+                    }`}
                     value={form.dueDate}
                     onChange={(e) =>
                       setForm({
@@ -876,6 +975,101 @@ export function FinancialEntriesScreen({
                   />
                 </div>
               </div>
+
+              {!editingId && (
+                <div>
+                  {!isParceled ? (
+                    <button
+                      type="button"
+                      onClick={startInstallments}
+                      className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                    >
+                      <Plus size={14} />
+                      Parcelar
+                    </button>
+                  ) : (
+                    <div className="space-y-2 rounded-xl border border-[var(--border)] p-4">
+                      <div className="flex items-center justify-between">
+                        <label className={labelClass}>
+                          Parcelas
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={addInstallment}
+                          className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                        >
+                          <Plus size={14} />
+                          Adicionar parcela
+                        </button>
+                      </div>
+
+                      {installments.map((row, index) => (
+                        <div
+                          key={index}
+                          className="grid grid-cols-12 items-center gap-2"
+                        >
+                          <input
+                            inputMode="numeric"
+                            placeholder="Dias"
+                            title="Dias a partir da emissão"
+                            className={`${fieldClass} col-span-2`}
+                            value={row.days}
+                            onChange={(e) =>
+                              updateInstallment(index, {
+                                days: e.target.value,
+                              })
+                            }
+                          />
+
+                          <input
+                            type="date"
+                            className={`${fieldClass} col-span-4`}
+                            value={row.dueDate}
+                            onChange={(e) =>
+                              updateInstallment(index, {
+                                dueDate: e.target.value,
+                                days: "",
+                              })
+                            }
+                          />
+
+                          <div className="col-span-5">
+                            <CurrencyInput
+                              className={fieldClass}
+                              value={row.amount}
+                              onChange={(value) =>
+                                updateInstallment(index, {
+                                  amount: value,
+                                })
+                              }
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeInstallment(index)}
+                            className="col-span-1 flex items-center justify-center rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+
+                      <p
+                        className={`text-xs ${
+                          Math.abs(installmentsTotal - form.amount) > 0.01
+                            ? "text-[var(--danger)]"
+                            : "text-[var(--text-muted)]"
+                        }`}
+                      >
+                        Soma das parcelas: {money(installmentsTotal)} de{" "}
+                        {money(form.amount)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>

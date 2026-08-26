@@ -59,6 +59,35 @@ export class FinancialEntriesService {
       );
     }
 
+    if (dto.installments && dto.installments.length > 0) {
+      const entries = await this.prisma.$transaction((tx) =>
+        this.createInstallments(
+          tx,
+          {
+            companyId,
+            type: dto.type,
+            partnerId: dto.partnerId,
+            employeeId: dto.employeeId,
+            chartOfAccountId: dto.chartOfAccountId,
+            issueDate: new Date(dto.issueDate),
+            termDays: dto.termDays,
+            paymentMethod: dto.paymentMethod,
+            documentNumber: dto.documentNumber,
+            documentType: dto.documentType,
+            documentKey: dto.documentKey,
+            observation: dto.observation,
+            installments: dto.installments!.map((installment) => ({
+              dueDate: new Date(installment.dueDate),
+              amount: installment.amount,
+            })),
+          },
+          userId,
+        ),
+      );
+
+      return entries[0];
+    }
+
     return this.repository.create(companyId, {
       type: dto.type,
       partnerId: dto.partnerId,
@@ -66,11 +95,11 @@ export class FinancialEntriesService {
       chartOfAccountId: dto.chartOfAccountId,
       issueDate: new Date(dto.issueDate),
       termDays: dto.termDays,
-      dueDate: new Date(dto.dueDate),
+      dueDate: new Date(dto.dueDate!),
       documentNumber: dto.documentNumber,
       documentType: dto.documentType,
       documentKey: dto.documentKey,
-      amount: dto.amount,
+      amount: dto.amount!,
       paymentMethod: dto.paymentMethod,
       observation: dto.observation,
       createdById: userId,
