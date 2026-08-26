@@ -241,9 +241,6 @@ function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
 
-/** Mesmo mínimo do backend (CompanyOnboardingService/LicenseService) — só efeito visual aqui, quem garante de verdade é o servidor. */
-const MINIMUM_MODULE_CODES = ["BPS", "PRODUCTS", "INVENTORY", "SALES", "PURCHASE"];
-
 function extractMessage(err: unknown, fallback: string) {
   const message = (
     err as { response?: { data?: { message?: unknown } } }
@@ -312,22 +309,17 @@ function ChooseModulesModal({
       .then(([list, plans]) => {
         setModules(list);
 
-        // Módulos mínimos do Customizado são os mesmos do Essencial — o
-        // total parte do preço dele, não de zero.
-        const essencial = plans.find((p) => p.code === "ESSENCIAL");
+        // Base do Customizado — mesma regra do backend
+        // (BillingService.customPlanPriceFromModules, CUSTOM_PLAN_BASE_CODES).
+        const basePlan =
+          plans.find((p) => p.code === "BASICO") ??
+          plans.find((p) => p.code === "ESSENCIAL");
         setBasePrice({
-          monthly: num(essencial?.monthlyPrice),
-          yearly: num(essencial?.yearlyPrice),
+          monthly: num(basePlan?.monthlyPrice),
+          yearly: num(basePlan?.yearlyPrice),
         });
 
-        setSelected(
-          new Set([
-            ...list
-              .filter((m) => MINIMUM_MODULE_CODES.includes(m.code))
-              .map((m) => m.id),
-            ...currentModuleIds,
-          ])
-        );
+        setSelected(new Set(currentModuleIds));
       })
       .catch(() => setError("Não foi possível carregar os módulos."))
       .finally(() => setLoading(false));
@@ -335,10 +327,6 @@ function ChooseModulesModal({
   }, []);
 
   function toggle(mod: LicenseModule) {
-    if (MINIMUM_MODULE_CODES.includes(mod.code)) {
-      return;
-    }
-
     setSelected((previous) => {
       const next = new Set(previous);
 
@@ -353,11 +341,11 @@ function ChooseModulesModal({
   }
 
   const addOnsMonthly = modules
-    .filter((m) => selected.has(m.id) && !MINIMUM_MODULE_CODES.includes(m.code))
+    .filter((m) => selected.has(m.id))
     .reduce((sum, m) => sum + num(m.monthlyPrice), 0);
 
   const addOnsYearly = modules
-    .filter((m) => selected.has(m.id) && !MINIMUM_MODULE_CODES.includes(m.code))
+    .filter((m) => selected.has(m.id))
     .reduce((sum, m) => sum + num(m.yearlyPrice), 0);
 
   const totalMonthly = basePrice.monthly + addOnsMonthly;
@@ -389,9 +377,8 @@ function ChooseModulesModal({
               Módulos da sua empresa
             </h2>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Cadastros, Produtos, Estoque, Vendas e Compras vêm sempre
-              incluídos. Marque o resto conforme sua empresa precisar —
-              isso vira o seu Plano Customizado.
+              Marque os módulos que sua empresa vai usar — sem
+              obrigatoriedade nenhuma. Isso vira o seu Plano Customizado.
             </p>
           </div>
 
@@ -420,37 +407,28 @@ function ChooseModulesModal({
           <>
             <div className="grid gap-3 sm:grid-cols-2">
               {modules.map((mod) => {
-                const isMinimum = MINIMUM_MODULE_CODES.includes(mod.code);
                 const checked = selected.has(mod.id);
 
                 return (
                   <label
                     key={mod.id}
-                    className={`flex items-center justify-between gap-3 rounded-xl border p-4 transition-colors ${
+                    className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-4 transition-colors hover:border-[var(--border-strong)] ${
                       checked
                         ? "border-[var(--primary)]"
                         : "border-[var(--border)]"
-                    } ${isMinimum ? "opacity-80" : "cursor-pointer hover:border-[var(--border-strong)]"}`}
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         checked={checked}
-                        disabled={isMinimum}
                         onChange={() => toggle(mod)}
                         className="h-4 w-4 accent-[var(--primary)]"
                       />
 
-                      <div>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">
-                          {mod.name}
-                        </p>
-                        {isMinimum && (
-                          <p className="text-xs text-[var(--text-muted)]">
-                            Incluído
-                          </p>
-                        )}
-                      </div>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        {mod.name}
+                      </p>
                     </div>
 
                     <span className="shrink-0 text-sm font-semibold text-[var(--text-primary)]">
@@ -472,8 +450,7 @@ function ChooseModulesModal({
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5">
               <div>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Base (Cadastros, Produtos, Estoque, Vendas e Compras) +{" "}
-                  {money(addOnsMonthly)} em módulos extras
+                  Base + {money(addOnsMonthly)} nos módulos escolhidos
                 </p>
                 <p className="text-2xl font-bold text-[var(--text-primary)]">
                   {money(totalMonthly)}

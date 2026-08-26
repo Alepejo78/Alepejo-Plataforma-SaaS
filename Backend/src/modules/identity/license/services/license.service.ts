@@ -10,10 +10,7 @@ import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { CreateModuleDto } from '../dto/create-module.dto';
 import { UpdateModuleDto } from '../dto/update-module.dto';
-import {
-  CUSTOM_PLAN_CODE,
-  MINIMUM_CUSTOM_MODULE_CODES,
-} from '../constants/custom-plan.constants';
+import { CUSTOM_PLAN_CODE } from '../constants/custom-plan.constants';
 
 @Injectable()
 export class LicenseService {
@@ -152,10 +149,12 @@ export class LicenseService {
    * próprio plano por módulo avulso — mesmo mecanismo do plano
    * Customizado no cadastro público (`CompanyOnboardingService.
    * signup`), só que trocando o plano atual em vez de criar empresa.
-   * Sincroniza pra valer: habilita quem entrou, desabilita quem saiu
-   * (menos o mínimo, sempre garantido). Não cobra nada sozinho — quem
-   * cobra é `BillingService.subscribe()` (já sabe somar o preço dos
-   * módulos quando o plano é CUSTOM), chamado à parte pelo frontend.
+   * Sincroniza pra valer: habilita quem entrou, desabilita quem saiu.
+   * Todo módulo é opcional — nenhum é forçado (decisão do usuário,
+   * 26-08-2026: antes havia um mínimo sempre incluído, virou add-on
+   * como qualquer outro). Não cobra nada sozinho — quem cobra é
+   * `BillingService.subscribe()` (já sabe somar o preço dos módulos
+   * quando o plano é CUSTOM), chamado à parte pelo frontend.
    */
   async setCustomModules(companyId: string, moduleIds: string[]) {
     const customPlan = await this.repository.findPlanByCode(
@@ -174,15 +173,11 @@ export class LicenseService {
 
     const allModules = await this.repository.findModules();
 
-    const minimumIds = allModules
-      .filter((m) => MINIMUM_CUSTOM_MODULE_CODES.includes(m.code))
-      .map((m) => m.id);
-
-    const chosenIds = allModules
-      .filter((m) => moduleIds.includes(m.id))
-      .map((m) => m.id);
-
-    const finalIds = new Set([...minimumIds, ...chosenIds]);
+    const finalIds = new Set(
+      allModules
+        .filter((m) => moduleIds.includes(m.id))
+        .map((m) => m.id),
+    );
 
     await this.repository.assignPlan(companyId, customPlan.id);
 
@@ -196,9 +191,7 @@ export class LicenseService {
 
     for (const moduleId of finalIds) {
       const existing = previous.get(moduleId);
-      const licensed = existing
-        ? existing.licensed
-        : minimumIds.includes(moduleId);
+      const licensed = existing ? existing.licensed : false;
 
       await this.enableModule(companyId, moduleId, undefined, licensed);
     }

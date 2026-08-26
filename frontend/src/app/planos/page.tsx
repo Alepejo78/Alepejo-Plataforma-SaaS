@@ -53,9 +53,6 @@ function money(value: string | number | null | undefined) {
   });
 }
 
-/** Mínimo pro sistema funcionar — sempre marcado, sem opção de desmarcar (mesma regra do backend, ver CompanyOnboardingService). */
-const MINIMUM_MODULE_CODES = ["BPS", "PRODUCTS", "INVENTORY", "SALES", "PURCHASE"];
-
 function CustomPlanModal({
   customPlanId,
   basePrice,
@@ -63,7 +60,7 @@ function CustomPlanModal({
   onClose,
 }: {
   customPlanId: string;
-  /** Preço do Essencial — os módulos mínimos do Customizado são os mesmos dele, então o total parte daqui. */
+  /** Preço-base do Customizado (taxa-piso, nenhum módulo embutido) — ver `CUSTOM_PLAN_BASE_CODES` no backend. */
   basePrice: { monthly: number; yearly: number };
   billingCycle: "MONTHLY" | "YEARLY";
   onClose: () => void;
@@ -78,25 +75,12 @@ function CustomPlanModal({
   useEffect(() => {
     companyOnboardingService
       .listPublicModules()
-      .then((list) => {
-        setModules(list);
-        setSelected(
-          new Set(
-            list
-              .filter((m) => MINIMUM_MODULE_CODES.includes(m.code))
-              .map((m) => m.id)
-          )
-        );
-      })
+      .then((list) => setModules(list))
       .catch(() => setError("Não foi possível carregar os módulos."))
       .finally(() => setLoading(false));
   }, []);
 
   function toggle(mod: PublicModule) {
-    if (MINIMUM_MODULE_CODES.includes(mod.code)) {
-      return;
-    }
-
     setSelected((previous) => {
       const next = new Set(previous);
 
@@ -111,11 +95,11 @@ function CustomPlanModal({
   }
 
   const addOnsMonthly = modules
-    .filter((m) => selected.has(m.id) && !MINIMUM_MODULE_CODES.includes(m.code))
+    .filter((m) => selected.has(m.id))
     .reduce((sum, m) => sum + num(m.monthlyPrice), 0);
 
   const addOnsYearly = modules
-    .filter((m) => selected.has(m.id) && !MINIMUM_MODULE_CODES.includes(m.code))
+    .filter((m) => selected.has(m.id))
     .reduce((sum, m) => sum + num(m.yearlyPrice), 0);
 
   const totalMonthly = basePrice.monthly + addOnsMonthly;
@@ -150,9 +134,8 @@ function CustomPlanModal({
               Monte seu plano
             </h2>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Cadastros, Produtos, Estoque, Vendas e Compras vêm sempre
-              incluídos — o mínimo pro sistema funcionar. Adicione o resto
-              conforme sua empresa precisar.
+              Escolha os módulos que sua empresa vai usar — sem
+              obrigatoriedade nenhuma.
             </p>
           </div>
 
@@ -187,37 +170,28 @@ function CustomPlanModal({
           <>
             <div className="grid gap-3 sm:grid-cols-2">
               {modules.map((mod) => {
-                const isMinimum = MINIMUM_MODULE_CODES.includes(mod.code);
                 const checked = selected.has(mod.id);
 
                 return (
                   <label
                     key={mod.id}
-                    className={`flex items-center justify-between gap-3 rounded-xl border p-4 transition-colors ${
+                    className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-4 transition-colors hover:border-[var(--border-strong)] ${
                       checked
                         ? "border-[var(--primary)]"
                         : "border-[var(--border)]"
-                    } ${isMinimum ? "opacity-80" : "cursor-pointer hover:border-[var(--border-strong)]"}`}
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         checked={checked}
-                        disabled={isMinimum}
                         onChange={() => toggle(mod)}
                         className="h-4 w-4 accent-[var(--primary)]"
                       />
 
-                      <div>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">
-                          {mod.name}
-                        </p>
-                        {isMinimum && (
-                          <p className="text-xs text-[var(--text-muted)]">
-                            Incluído
-                          </p>
-                        )}
-                      </div>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        {mod.name}
+                      </p>
                     </div>
 
                     <span className="shrink-0 text-sm font-semibold text-[var(--text-primary)]">
@@ -233,8 +207,7 @@ function CustomPlanModal({
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5">
               <div>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Base (Cadastros, Produtos, Estoque, Vendas e Compras) +{" "}
-                  {money(addOnsMonthly)} em módulos extras
+                  Base + {money(addOnsMonthly)} nos módulos escolhidos
                 </p>
 
                 {billingCycle === "MONTHLY" && totalSavings > 0 && (
@@ -391,12 +364,12 @@ export default function PlanosPage() {
   const customPlan = plans.find((p) => p.code === "CUSTOM");
 
   /*
-   * O montador parte do plano de entrada, que já traz os módulos
-   * mínimos (Cadastros, Produtos, Estoque, Vendas e Compras) — a partir
-   * dele só somam os extras. É o BASICO; ESSENCIAL fica de reserva pra
-   * quem ainda não criou o Básico no catálogo. Mesma regra do backend
-   * (`CUSTOM_PLAN_BASE_CODES` em billing.service.ts): se as duas pontas
-   * discordarem, a tela mostra um preço e a cobrança sai outro.
+   * O montador parte do plano de entrada (taxa-piso, sem módulo
+   * nenhum embutido) — todo módulo escolhido soma em cima dele. É o
+   * BASICO; ESSENCIAL fica de reserva pra quem ainda não criou o
+   * Básico no catálogo. Mesma regra do backend (`CUSTOM_PLAN_BASE_
+   * CODES` em billing.service.ts): se as duas pontas discordarem, a
+   * tela mostra um preço e a cobrança sai outro.
    */
   const planoBase =
     plans.find((p) => codigoPlano(p.code) === "BASICO") ??

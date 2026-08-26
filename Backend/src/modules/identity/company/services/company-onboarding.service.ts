@@ -9,10 +9,7 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../../../../core/prisma/prisma.service';
 import { UsersService } from '../../users/services/users.service';
 import { LicenseService } from '../../license/services/license.service';
-import {
-  CUSTOM_PLAN_CODE,
-  MINIMUM_CUSTOM_MODULE_CODES,
-} from '../../license/constants/custom-plan.constants';
+import { CUSTOM_PLAN_CODE } from '../../license/constants/custom-plan.constants';
 
 import { CompanyRepository } from '../repositories/company.repository';
 import { CompanySignupDto } from '../dto/company-signup.dto';
@@ -221,32 +218,20 @@ export class CompanyOnboardingService {
 
   /**
    * Plano Customizado não tem planModules fixo — o acesso vem inteiro
-   * dos CompanyModule habilitados aqui. O mínimo
-   * (`MINIMUM_CUSTOM_MODULE_CODES`) sempre entra, mesmo que o
-   * montador não tenha mandado (defesa contra bug no front ou
-   * chamada direta da API).
+   * dos CompanyModule habilitados aqui. Todo módulo é opcional, nenhum
+   * é forçado (decisão do usuário, 26-08-2026).
    */
   private async enableCustomModules(
     companyId: string,
     moduleIds: string[],
   ) {
-    const minimumModules = await this.prisma.module.findMany({
-      where: { code: { in: MINIMUM_CUSTOM_MODULE_CODES }, active: true },
-      select: { id: true },
-    });
-
     const chosenModules = await this.prisma.module.findMany({
       where: { id: { in: moduleIds }, active: true },
       select: { id: true },
     });
 
-    const allIds = new Set([
-      ...minimumModules.map((m) => m.id),
-      ...chosenModules.map((m) => m.id),
-    ]);
-
-    for (const moduleId of allIds) {
-      await this.licenseService.enableModule(companyId, moduleId);
+    for (const module of chosenModules) {
+      await this.licenseService.enableModule(companyId, module.id);
     }
   }
 

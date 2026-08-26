@@ -15,10 +15,7 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { AsaasService } from './asaas.service';
 import type { BillingTypeValue } from '../dto/subscribe.dto';
 import type { CreateCheckoutDto } from '../dto/create-checkout.dto';
-import {
-  CUSTOM_PLAN_CODE,
-  MINIMUM_CUSTOM_MODULE_CODES,
-} from '../../identity/license/constants/custom-plan.constants';
+import { CUSTOM_PLAN_CODE } from '../../identity/license/constants/custom-plan.constants';
 
 /** Tolerância após o vencimento antes de bloquear — decisão do usuário. */
 const GRACE_DAYS = 7;
@@ -143,9 +140,13 @@ export class BillingService {
 
   /**
    * Plano Customizado não tem monthlyPrice/yearlyPrice próprio (varia
-   * por empresa) — o valor é o preço do plano de entrada (que já cobre
-   * os módulos mínimos, ver `CUSTOM_PLAN_BASE_CODES`) + o preço de
-   * cada módulo extra escolhido, no ciclo escolhido.
+   * por empresa) — o valor é o preço do plano de entrada (`CUSTOM_PLAN_
+   * BASE_CODES`, hoje "BÁSICO" — uma taxa-piso, sem nenhum módulo
+   * embutido) + o preço de cada módulo escolhido, no ciclo escolhido.
+   * Nenhum módulo é gratuito por padrão (decisão do usuário,
+   * 26-08-2026): antes havia um mínimo sempre incluído sem cobrar —
+   * virou add-on como qualquer outro, cobrado se tiver preço
+   * cadastrado em Administrar planos e preços.
    *
    * Recebe os ids dos módulos direto (em vez de buscar por empresa)
    * porque o mesmo cálculo serve pra dois momentos: empresa que já
@@ -178,12 +179,10 @@ export class BillingService {
       return base;
     }
 
-    // Os mínimos já estão cobertos pelo preço-base — só os extras somam.
     const addOnModules = await this.prisma.module.findMany({
       where: {
         id: { in: moduleIds },
         active: true,
-        code: { notIn: MINIMUM_CUSTOM_MODULE_CODES },
       },
     });
 

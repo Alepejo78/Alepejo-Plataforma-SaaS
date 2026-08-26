@@ -623,10 +623,18 @@ Aparece em `/planos` (público, `POST /companies/signup` aceita
 `moduleIds[]`) e em `/erp/licenciamento` (autenticado, botão
 "Módulos" → `POST /identity/license/me/custom-modules`, sincroniza
 habilitando o que foi marcado e desabilitando o que foi desmarcado).
-Mínimo sempre garantido no servidor (`MINIMUM_CUSTOM_MODULE_CODES` em
-`Backend/src/modules/identity/license/constants/custom-plan.
-constants.ts`, importado tanto pelo signup quanto pelo
-`LicenseService`): Cadastros, Produtos, Estoque, Vendas, Compras.
+**Atualização 26-08-2026**: o mínimo forçado (`MINIMUM_CUSTOM_MODULE_
+CODES`) foi removido — decisão do usuário, "cliente pode escolher
+qualquer módulo para operar". Nenhum módulo é obrigatório nem
+travado no checkbox (`/planos` e `/erp/licenciamento`) — todo módulo
+vira add-on igual aos demais, cobrado se tiver preço cadastrado em
+Administrar planos e preços. `BillingService.customPlanPriceFromModules`
+soma o preço de TODOS os módulos escolhidos (antes excluía os 5
+mínimos, que já vinham "de graça" embutidos no preço-base). O
+preço-base (`CUSTOM_PLAN_BASE_CODES`, plano "BÁSICO") deixou de
+representar "5 módulos inclusos" e passa a ser só uma taxa-piso — se
+o valor cadastrado nesse plano ainda reflete o preço antigo (com os
+5 embutidos), vale revisar em Administrar planos e preços.
 `BillingService.subscribe()` soma o preço dos módulos habilitados
 quando `plan.code === 'CUSTOM'` em vez de ler `plan.monthlyPrice`
 (que é null pro Customizado — o valor varia por empresa).
