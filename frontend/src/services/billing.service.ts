@@ -111,6 +111,16 @@ export interface ChangeCycleResult {
   cobrancaImediata: boolean;
 }
 
+export interface ChangePlanResult {
+  planId: string;
+  planName: string;
+  value: number;
+  dueDate?: string;
+  invoiceUrl?: string | null;
+  /** false = ainda em teste, só trocou o plano, sem cobrança nenhuma. */
+  cobrancaImediata: boolean;
+}
+
 export const billingService = {
   async subscribe(billingType: BillingType): Promise<SubscribeResult> {
     const { data } = await api.post<ApiEnvelope<SubscribeResult>>(
@@ -131,6 +141,19 @@ export const billingService = {
     const { data } = await api.post<ApiEnvelope<ChangeCycleResult>>(
       "/billing/me/cycle",
       { billingCycle }
+    );
+
+    return data.data;
+  },
+
+  /**
+   * Troca o plano contratado (Básico → Completo etc.), mesmo ciclo de
+   * cobrança atual. Em teste, só troca o plano, sem cobrar nada.
+   */
+  async changePlan(planId: string): Promise<ChangePlanResult> {
+    const { data } = await api.post<ApiEnvelope<ChangePlanResult>>(
+      "/billing/me/plan",
+      { planId }
     );
 
     return data.data;

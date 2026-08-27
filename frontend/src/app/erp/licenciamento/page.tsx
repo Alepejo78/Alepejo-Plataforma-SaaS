@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeftRight,
+  Check,
   CheckCircle2,
   CircleDashed,
   Clock,
@@ -10,12 +12,14 @@ import {
   ExternalLink,
   Loader2,
   Package,
+  Star,
   X,
   type LucideIcon,
 } from "lucide-react";
 
 import { OsShell } from "@/components";
 import { PaymentCheckout } from "@/components/billing/PaymentCheckout";
+import { useAuth } from "@/providers/AuthProvider";
 
 import {
   billingService,
@@ -23,6 +27,11 @@ import {
   type ChargeStatus,
   type ChargeType,
 } from "@/services/billing.service";
+
+import {
+  companyOnboardingService,
+  type PublicPlan,
+} from "@/services/company-onboarding.service";
 
 import {
   licenseService,
@@ -477,7 +486,216 @@ function ChooseModulesModal({
   );
 }
 
+function ChangePlanModal({
+  currentPlanId,
+  billingCycle,
+  onClose,
+  onChanged,
+  onWantCustom,
+}: {
+  currentPlanId: string;
+  billingCycle: "MONTHLY" | "YEARLY";
+  onClose: () => void;
+  onChanged: (message: string) => void;
+  onWantCustom: () => void;
+}) {
+  const [plans, setPlans] = useState<PublicPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [changingId, setChangingId] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    companyOnboardingService
+      .listPublicPlans()
+      .then(setPlans)
+      .catch(() => setError("Não foi possível carregar os planos."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const fixedPlans = plans
+    .filter((p) => p.code !== "CUSTOM")
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  async function escolher(plan: PublicPlan) {
+    if (plan.id === currentPlanId || changingId) {
+      return;
+    }
+
+    const preco = num(
+      billingCycle === "YEARLY" ? plan.yearlyPrice : plan.monthlyPrice
+    );
+
+    const aviso =
+      `Trocar para o plano ${plan.name} (${money(preco)}/${
+        billingCycle === "YEARLY" ? "ano" : "mês"
+      })?\n\n` +
+      "Uma cobrança com o valor do plano novo é gerada agora para pagamento. A assinatura atual é encerrada.";
+
+    if (!window.confirm(aviso)) {
+      return;
+    }
+
+    setChangingId(plan.id);
+    setError("");
+
+    try {
+      const result = await billingService.changePlan(plan.id);
+
+      onChanged(
+        result.cobrancaImediata
+          ? `Pronto. Plano trocado para ${result.planName} — a cobrança de ${money(result.value)} aparece em Cobranças.`
+          : `Pronto. Plano trocado para ${result.planName}. Como você ainda está em teste, nada foi cobrado.`
+      );
+
+      onClose();
+    } catch (err) {
+      setError(
+        extractMessage(err, "Não foi possível trocar de plano.")
+      );
+    } finally {
+      setChangingId("");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+      <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">
+              Trocar de plano
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              Preços {billingCycle === "YEARLY" ? "anuais" : "mensais"} —
+              iguais à sua forma de cobrança atual.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {loading && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-56 animate-pulse rounded-2xl bg-[var(--surface-hover)]"
+              />
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+            {error}
+          </div>
+        )}
+
+        {!loading && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {fixedPlans.map((plan) => {
+              const atual = plan.id === currentPlanId;
+              const preco = num(
+                billingCycle === "YEARLY"
+                  ? plan.yearlyPrice
+                  : plan.monthlyPrice
+              );
+              const busy = changingId === plan.id;
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`flex flex-col rounded-2xl border p-5 ${
+                    atual
+                      ? "border-[var(--primary)] bg-[var(--primary-soft)]"
+                      : "border-[var(--border)]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-[var(--text-primary)]">
+                      {plan.name}
+                    </p>
+
+                    {plan.highlighted && !atual && (
+                      <Star
+                        size={14}
+                        className="fill-[var(--warning)] text-[var(--warning)]"
+                      />
+                    )}
+                  </div>
+
+                  {plan.description && (
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      {plan.description}
+                    </p>
+                  )}
+
+                  <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
+                    {money(preco)}
+                    <span className="text-sm font-normal text-[var(--text-muted)]">
+                      /{billingCycle === "YEARLY" ? "ano" : "mês"}
+                    </span>
+                  </p>
+
+                  <ul className="mt-4 flex-1 space-y-1.5">
+                    {(plan.planModules ?? [])
+                      .filter((pm) => pm.included)
+                      .map((pm) => (
+                        <li
+                          key={pm.module.id}
+                          className="flex items-center gap-2 text-xs text-[var(--text-secondary)]"
+                        >
+                          <Check
+                            size={13}
+                            className="shrink-0 text-[var(--success)]"
+                          />
+                          {pm.module.name}
+                        </li>
+                      ))}
+                  </ul>
+
+                  <button
+                    type="button"
+                    disabled={atual || busy}
+                    onClick={() => void escolher(plan)}
+                    className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                  >
+                    {busy && <Loader2 size={15} className="animate-spin" />}
+                    {atual ? "Plano atual" : "Escolher este plano"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && (
+          <p className="mt-5 text-center text-sm text-[var(--text-muted)]">
+            Prefere montar do seu jeito?{" "}
+            <button
+              type="button"
+              onClick={onWantCustom}
+              className="font-medium text-[var(--primary)] hover:underline"
+            >
+              Escolher módulos avulsos (Plano Customizado)
+            </button>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LicenciamentoPage() {
+  const { refreshUser } = useAuth();
+
   const [license, setLicense] = useState<MyLicense | null>(
     null
   );
@@ -487,9 +705,11 @@ export default function LicenciamentoPage() {
   const [error, setError] = useState("");
   const [contractOpen, setContractOpen] = useState(false);
   const [modulesOpen, setModulesOpen] = useState(false);
+  const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [changingCycle, setChangingCycle] = useState(false);
   const [cycleMessage, setCycleMessage] = useState("");
   const [cycleError, setCycleError] = useState("");
+  const [planMessage, setPlanMessage] = useState("");
 
   function loadLicense() {
     licenseService
@@ -508,6 +728,12 @@ export default function LicenciamentoPage() {
       .listCharges()
       .then(setCharges)
       .catch(() => setCharges([]));
+
+    // O menu/permissões do usuário (guardados no AuthProvider) só
+    // atualizam sozinhos no próximo login — sem isso, quem troca de
+    // plano/módulo continua vendo o menu antigo até relogar, mesmo já
+    // tendo o acesso liberado/bloqueado de verdade no backend.
+    void refreshUser();
   }
 
   useEffect(() => {
@@ -584,6 +810,17 @@ export default function LicenciamentoPage() {
               <Package size={18} />
               Módulos
             </button>
+
+            {license?.companyPlan && (
+              <button
+                type="button"
+                onClick={() => setChangePlanOpen(true)}
+                className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+              >
+                <ArrowLeftRight size={18} />
+                Trocar de plano
+              </button>
+            )}
 
             {canContract && (
               <button
@@ -704,6 +941,12 @@ export default function LicenciamentoPage() {
                           : "Mudar para anual"}
                       </button>
                     </div>
+                  )}
+
+                  {planMessage && (
+                    <p className="mt-3 rounded-xl border border-[var(--success)] bg-[var(--success-soft)] p-3 text-sm text-[var(--success)]">
+                      {planMessage}
+                    </p>
                   )}
 
                   {cycleMessage && (
@@ -879,6 +1122,24 @@ export default function LicenciamentoPage() {
           )}
           onClose={() => setModulesOpen(false)}
           onSaved={loadLicense}
+        />
+      )}
+
+      {changePlanOpen && license?.companyPlan && (
+        <ChangePlanModal
+          currentPlanId={license.companyPlan.plan.id}
+          billingCycle={license.companyPlan.billingCycle}
+          onClose={() => setChangePlanOpen(false)}
+          onChanged={(message) => {
+            setPlanMessage(message);
+            setCycleMessage("");
+            setCycleError("");
+            loadLicense();
+          }}
+          onWantCustom={() => {
+            setChangePlanOpen(false);
+            setModulesOpen(true);
+          }}
         />
       )}
     </OsShell>

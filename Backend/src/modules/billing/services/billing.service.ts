@@ -502,6 +502,163 @@ export class BillingService {
   }
 
   /**
+   * Troca de plano (Básico → Completo etc.) — mesmo ciclo de cobrança
+   * atual, preço do plano novo. Em teste, só troca o plano mesmo, sem
+   * gerar cobrança nenhuma (o cliente ainda nem pagou). Já assinando,
+   * encerra a assinatura antiga no Asaas e cria uma nova cobrando o
+   * valor do plano novo — igual à troca de ciclo, sem rateio.
+   */
+  async changePlan(companyId: string, newPlanId: string) {
+    const companyPlan = await this.prisma.companyPlan.findUnique({
+      where: { companyId },
+      include: { plan: true, company: true },
+    });
+
+    if (!companyPlan) {
+      throw new NotFoundException(
+        'Sua empresa ainda não tem um plano — fale com o suporte.',
+      );
+    }
+
+    if (companyPlan.planId === newPlanId) {
+      throw new BadRequestException('Sua empresa já está neste plano.');
+    }
+
+    const newPlan = await this.prisma.plan.findUnique({
+      where: { id: newPlanId },
+    });
+
+    if (!newPlan || !newPlan.active) {
+      throw new NotFoundException('Plano não encontrado.');
+    }
+
+    if (newPlan.code === CUSTOM_PLAN_CODE) {
+      throw new BadRequestException(
+        'Para o Plano Customizado, use o botão "Módulos" e escolha o que sua empresa precisa.',
+      );
+    }
+
+    const price =
+      companyPlan.billingCycle === 'YEARLY'
+        ? newPlan.yearlyPrice
+        : newPlan.monthlyPrice;
+
+    if (!price) {
+      throw new BadRequestException(
+        companyPlan.billingCycle === 'YEARLY'
+          ? 'Este plano ainda não tem preço anual definido — fale com o suporte.'
+          : 'Este plano ainda não tem preço mensal definido — fale com o suporte.',
+      );
+    }
+
+    if (companyPlan.status === 'TRIAL') {
+      await this.prisma.companyPlan.update({
+        where: { id: companyPlan.id },
+        data: { planId: newPlanId },
+      });
+
+      return {
+        planId: newPlanId,
+        planName: newPlan.name,
+        value: Number(price),
+        cobrancaImediata: false,
+      };
+    }
+
+    if (!companyPlan.asaasCustomerId) {
+      throw new BadRequestException(
+        'Sua assinatura ainda não foi contratada — use o botão Contratar.',
+      );
+    }
+
+    const amanha = addDays(new Date(), 1);
+
+    // Herda a forma de pagamento da última cobrança; sem histórico,
+    // UNDEFINED deixa o cliente escolher na própria fatura.
+    const ultima = await this.prisma.billingCharge.findFirst({
+      where: { companyPlanId: companyPlan.id },
+      orderBy: { createdAt: 'desc' },
+      select: { billingType: true },
+    });
+
+    const billingType = (ultima?.billingType ??
+      'UNDEFINED') as BillingTypeValue;
+
+    if (companyPlan.asaasSubscriptionId) {
+      try {
+        await this.asaas.deleteSubscription(companyPlan.asaasSubscriptionId);
+      } catch (err) {
+        // Assinatura já removida no Asaas não pode travar a troca — o
+        // que importa daqui pra frente é a nova.
+        this.logger.warn(
+          `Não consegui encerrar a assinatura ${companyPlan.asaasSubscriptionId}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+
+    const subscription = await this.asaas.createSubscription({
+      customer: companyPlan.asaasCustomerId,
+      billingType,
+      value: Number(price),
+      nextDueDate: formatDate(amanha),
+      cycle: companyPlan.billingCycle,
+      externalReference: companyPlan.id,
+      description: `Assinatura ${newPlan.name} (${
+        companyPlan.billingCycle === 'YEARLY' ? 'anual' : 'mensal'
+      })`,
+    });
+
+    await this.prisma.companyPlan.update({
+      where: { id: companyPlan.id },
+      data: {
+        planId: newPlanId,
+        asaasSubscriptionId: subscription.id,
+      },
+    });
+
+    const payments = await this.asaas.listSubscriptionPayments(
+      subscription.id,
+    );
+
+    const primeira =
+      payments.find((p) => p.status === 'PENDING') ?? payments[0];
+
+    if (primeira) {
+      const charge = await this.prisma.billingCharge.upsert({
+        where: { asaasPaymentId: primeira.id },
+        update: {
+          invoiceUrl: primeira.invoiceUrl,
+          bankSlipUrl: primeira.bankSlipUrl,
+        },
+        create: {
+          companyPlanId: companyPlan.id,
+          asaasPaymentId: primeira.id,
+          type: 'SUBSCRIPTION',
+          billingType,
+          value: primeira.value,
+          dueDate: new Date(primeira.dueDate),
+          status: mapChargeStatus(primeira.status),
+          invoiceUrl: primeira.invoiceUrl,
+          bankSlipUrl: primeira.bankSlipUrl,
+        },
+      });
+
+      await this.syncFinancialEntry(companyId, charge, newPlan.name);
+    }
+
+    return {
+      planId: newPlanId,
+      planName: newPlan.name,
+      value: Number(price),
+      dueDate: formatDate(amanha),
+      invoiceUrl: primeira?.invoiceUrl ?? null,
+      cobrancaImediata: true,
+    };
+  }
+
+  /**
    * "Comprar agora" de /planos: cobra ANTES da empresa existir. Cria o
    * cliente + assinatura no Asaas e guarda um `PendingCheckout` com o
    * plano e os dados do comprador — a empresa só nasce depois, no

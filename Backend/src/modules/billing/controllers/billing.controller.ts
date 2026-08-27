@@ -20,6 +20,7 @@ import { BillingService } from '../services/billing.service';
 import { SubscribeDto } from '../dto/subscribe.dto';
 import { CreateCheckoutDto } from '../dto/create-checkout.dto';
 import { ChangeCycleDto } from '../dto/change-cycle.dto';
+import { ChangePlanDto } from '../dto/change-plan.dto';
 
 @ApiTags('Billing')
 @Controller('billing')
@@ -91,6 +92,18 @@ export class BillingController {
     @Body() dto: ChangeCycleDto,
   ) {
     return this.billingService.changeCycle(companyId, dto.billingCycle);
+  }
+
+  @Post('me/plan')
+  @Permissions('license.view')
+  @ApiOperation({
+    summary: 'Trocar o plano da minha empresa (Básico, Completo etc.)',
+  })
+  changePlan(
+    @CurrentUser('companyId') companyId: string,
+    @Body() dto: ChangePlanDto,
+  ) {
+    return this.billingService.changePlan(companyId, dto.planId);
   }
 
   @Get('me/charges')
