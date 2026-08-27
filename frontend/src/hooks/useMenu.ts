@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { useAuth } from "@/providers/AuthProvider";
+import { useShowLockedModules } from "@/hooks/useShowLockedModules";
 
 import { menu } from "@/components/layout/Sidebar/menu";
 import {
@@ -31,6 +32,7 @@ import {
  */
 export function useMenu(): MenuEntry[] {
   const { user, can, hasModule } = useAuth();
+  const [showLocked] = useShowLockedModules();
 
   return useMemo(() => {
     if (!user) {
@@ -49,7 +51,13 @@ export function useMenu(): MenuEntry[] {
           return visible;
         }
 
-        visible.push({ ...entry, locked: isLocked(entry) });
+        const locked = isLocked(entry);
+
+        if (locked && !showLocked) {
+          return visible;
+        }
+
+        visible.push({ ...entry, locked });
 
         return visible;
       }
@@ -60,7 +68,8 @@ export function useMenu(): MenuEntry[] {
 
       const children = entry.children
         .filter(hasPermission)
-        .map((child) => ({ ...child, locked: isLocked(child) }));
+        .map((child) => ({ ...child, locked: isLocked(child) }))
+        .filter((child) => showLocked || !child.locked);
 
       if (children.length > 0) {
         visible.push({ ...entry, children });
@@ -68,5 +77,5 @@ export function useMenu(): MenuEntry[] {
 
       return visible;
     }, []);
-  }, [user, can, hasModule]);
+  }, [user, can, hasModule, showLocked]);
 }

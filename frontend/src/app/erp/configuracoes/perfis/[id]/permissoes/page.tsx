@@ -7,6 +7,7 @@ import { ArrowLeft, Lock } from "lucide-react";
 import { OsShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { useAuth } from "@/providers/AuthProvider";
+import { useShowLockedModules } from "@/hooks/useShowLockedModules";
 
 import { roleService, type Role } from "@/services/role.service";
 import {
@@ -203,7 +204,7 @@ export default function ConfigurarPerfilPage() {
 
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [showLocked, setShowLocked] = useState(true);
+  const [showLocked, setShowLocked] = useShowLockedModules();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

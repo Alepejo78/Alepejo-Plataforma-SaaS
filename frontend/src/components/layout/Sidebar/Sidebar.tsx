@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import {
   ChevronDown,
+  Eye,
+  EyeOff,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -10,6 +12,7 @@ import {
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useMenu } from "@/hooks/useMenu";
+import { useShowLockedModules } from "@/hooks/useShowLockedModules";
 
 import { SidebarItem } from "./SidebarItem";
 import { sidebarStyles } from "./Sidebar.styles";
@@ -44,6 +47,7 @@ export function Sidebar({
   }>({ interprise: false, empresa: false });
 
   const { user, logout, loading } = useAuth();
+  const [showLocked, setShowLocked] = useShowLockedModules();
 
   const menuItems = useMenu();
 
@@ -108,7 +112,30 @@ export function Sidebar({
         ${collapsed ? "w-[72px]" : "w-72"}
       `}
     >
-      <div className="flex justify-end p-3">
+      <div className="flex justify-end gap-1.5 p-3">
+        {!collapsed && (
+          <button
+            onClick={() => setShowLocked(!showLocked)}
+            aria-label={
+              showLocked
+                ? "Ocultar módulos bloqueados"
+                : "Mostrar módulos bloqueados"
+            }
+            title={
+              showLocked
+                ? "Ocultar módulos bloqueados"
+                : "Mostrar módulos bloqueados"
+            }
+            className={`${sidebarStyles.iconButton} size-9`}
+          >
+            {showLocked ? (
+              <Eye size={18} />
+            ) : (
+              <EyeOff size={18} />
+            )}
+          </button>
+        )}
+
         <button
           onClick={toggleSidebar}
           aria-label={
