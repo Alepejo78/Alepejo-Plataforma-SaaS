@@ -203,6 +203,7 @@ export default function ConfigurarPerfilPage() {
 
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [showLocked, setShowLocked] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -243,6 +244,11 @@ export default function ConfigurarPerfilPage() {
     void load();
   }, [load]);
 
+  function isLocked(row: GroupRow) {
+    const requiredModule = moduleOf(row);
+    return Boolean(requiredModule && !hasModule(requiredModule));
+  }
+
   const rows: GroupRow[] = useMemo(() => {
     const byGroup = new Map<string, GroupRow>();
 
@@ -265,8 +271,10 @@ export default function ConfigurarPerfilPage() {
       .filter((row) =>
         row.groupName.toLowerCase().includes(search.toLowerCase())
       )
+      .filter((row) => showLocked || !isLocked(row))
       .sort((a, b) => a.groupName.localeCompare(b.groupName));
-  }, [permissions, search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissions, search, showLocked, hasModule]);
 
   const appRows = useMemo(
     () => rows.filter((row) => scopeOf(row) === "APP"),
@@ -430,8 +438,7 @@ export default function ConfigurarPerfilPage() {
     2 + GENERIC_COLUMNS.length + BUSINESS_COLUMNS.length;
 
   function renderGroupRow(row: GroupRow) {
-    const requiredModule = moduleOf(row);
-    const locked = Boolean(requiredModule && !hasModule(requiredModule));
+    const locked = isLocked(row);
 
     const rowIds = getRowPermissionIds(row);
     const rowChecked =
@@ -615,6 +622,15 @@ export default function ConfigurarPerfilPage() {
                   className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
                 />
               </div>
+
+              <label className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={showLocked}
+                  onChange={(e) => setShowLocked(e.target.checked)}
+                />
+                Mostrar módulos bloqueados
+              </label>
             </div>
 
             {error && (
