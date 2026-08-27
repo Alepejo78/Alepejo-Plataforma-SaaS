@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import { useAuth } from "@/providers/AuthProvider";
-import { useShowLockedModules } from "@/hooks/useShowLockedModules";
+import { useShowLockedModules } from "@/providers/ShowLockedModulesProvider";
 
 import { menu } from "@/components/layout/Sidebar/menu";
 import {

@@ -7,7 +7,7 @@ import { ArrowLeft, Lock } from "lucide-react";
 import { OsShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { useAuth } from "@/providers/AuthProvider";
-import { useShowLockedModules } from "@/hooks/useShowLockedModules";
+import { useShowLockedModules } from "@/providers/ShowLockedModulesProvider";
 
 import { roleService, type Role } from "@/services/role.service";
 import {

@@ -5,6 +5,7 @@ import { Fira_Code, Fira_Sans } from "next/font/google";
 import { ThemeProvider } from "../providers/theme-provider";
 import { AuthProvider } from "../providers/AuthProvider";
 import { TabsProvider } from "../providers/TabsProvider";
+import { ShowLockedModulesProvider } from "../providers/ShowLockedModulesProvider";
 import { BrandFooter } from "../components/layout/BrandFooter";
 import { BrandColorStyle } from "../components/layout/BrandColorStyle";
 import { MascoteFlutuante } from "../components/marketing/MascoteFlutuante";
@@ -43,14 +44,16 @@ export default function RootLayout({
     >
       <body>
         <AuthProvider>
-          <TabsProvider>
-            <ThemeProvider>
-              <BrandColorStyle />
-              {children}
-              <MascoteFlutuante />
-              <BrandFooter />
-            </ThemeProvider>
-          </TabsProvider>
+          <ShowLockedModulesProvider>
+            <TabsProvider>
+              <ThemeProvider>
+                <BrandColorStyle />
+                {children}
+                <MascoteFlutuante />
+                <BrandFooter />
+              </ThemeProvider>
+            </TabsProvider>
+          </ShowLockedModulesProvider>
         </AuthProvider>
       </body>
     </html>

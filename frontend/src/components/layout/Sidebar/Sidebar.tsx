@@ -12,7 +12,7 @@ import {
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useMenu } from "@/hooks/useMenu";
-import { useShowLockedModules } from "@/hooks/useShowLockedModules";
+import { useShowLockedModules } from "@/providers/ShowLockedModulesProvider";
 
 import { SidebarItem } from "./SidebarItem";
 import { sidebarStyles } from "./Sidebar.styles";
