@@ -18,7 +18,12 @@ export interface SubscribeResult {
   pixQrCodeImage?: string;
 }
 
-export type MonthStatus = "PAGO" | "A_PAGAR" | "VENCIDO" | "VAZIO";
+export type MonthStatus =
+  | "PAGO"
+  | "A_PAGAR"
+  | "VENCIDO"
+  | "EM_TESTE"
+  | "VAZIO";
 
 export interface MonthCell {
   month: number;

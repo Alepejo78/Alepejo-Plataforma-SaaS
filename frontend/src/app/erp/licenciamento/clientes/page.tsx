@@ -52,6 +52,7 @@ const STATUS_LABELS: Record<MonthStatus, string> = {
   PAGO: "Pago",
   A_PAGAR: "A pagar",
   VENCIDO: "Vencido",
+  EM_TESTE: "Em teste",
   VAZIO: "—",
 };
 
@@ -59,6 +60,7 @@ const STATUS_CLASS: Record<MonthStatus, string> = {
   PAGO: "text-[var(--success)]",
   A_PAGAR: "text-[var(--text-muted)]",
   VENCIDO: "text-[var(--danger)]",
+  EM_TESTE: "text-[var(--primary)]",
   VAZIO: "text-[var(--text-muted)]",
 };
 
@@ -285,6 +287,12 @@ export default function ClientesFaturamentoPage() {
                         {cell.status === "VAZIO" ? (
                           <span className="text-[var(--text-muted)]">
                             —
+                          </span>
+                        ) : cell.status === "EM_TESTE" ? (
+                          <span
+                            className={`text-xs font-medium ${STATUS_CLASS.EM_TESTE}`}
+                          >
+                            {STATUS_LABELS.EM_TESTE}
                           </span>
                         ) : (
                           <div>

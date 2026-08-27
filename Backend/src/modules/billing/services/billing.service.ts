@@ -26,7 +26,7 @@ const PLATFORM_COMPANY_CODE = 'ALEPEJO';
 /** Prazo de validade de uma compra sem cadastro concluído. */
 const CHECKOUT_EXPIRES_DAYS = 7;
 
-export type MonthStatus = 'PAGO' | 'A_PAGAR' | 'VENCIDO' | 'VAZIO';
+export type MonthStatus = 'PAGO' | 'A_PAGAR' | 'VENCIDO' | 'EM_TESTE' | 'VAZIO';
 
 export interface MonthCell {
   month: number;
@@ -1039,7 +1039,8 @@ export class BillingService {
         continue;
       }
 
-      const { plan, charges, billingCycle, startDate } = companyPlan;
+      const { plan, charges, billingCycle, startDate, trialEndsAt } =
+        companyPlan;
 
       const [monthly, yearly] =
         plan.code === 'CUSTOM'
@@ -1056,6 +1057,10 @@ export class BillingService {
         yearly,
         charges,
         planStartDate: startDate,
+        // Escolheu fazer teste (trialEndsAt preenchido no cadastro) e
+        // ainda não converteu em compra (checkout zera trialEndsAt) —
+        // não tem cobrança de verdade pra mostrar, só o teste.
+        isTrial: trialEndsAt != null,
         today,
       });
 
@@ -1093,12 +1098,36 @@ export class BillingService {
     yearly: number;
     charges: BillingCharge[];
     planStartDate: Date;
+    isTrial: boolean;
     today: Date;
   }): MonthCell[] {
-    const { year, billingCycle, monthly, yearly, charges, planStartDate, today } =
-      params;
+    const {
+      year,
+      billingCycle,
+      monthly,
+      yearly,
+      charges,
+      planStartDate,
+      isTrial,
+      today,
+    } = params;
 
     const planStartMonth = startOfMonth(planStartDate);
+
+    if (isTrial) {
+      return Array.from({ length: 12 }, (_, i) => {
+        const monthDate = new Date(year, i, 1);
+
+        return {
+          month: i + 1,
+          value: 0,
+          status:
+            monthDate >= planStartMonth
+              ? ('EM_TESTE' as const)
+              : ('VAZIO' as const),
+        };
+      });
+    }
 
     if (billingCycle === 'YEARLY') {
       const yearCharge = charges.find(
