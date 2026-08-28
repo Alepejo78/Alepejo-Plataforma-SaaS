@@ -414,4 +414,25 @@ export class InventoryCountService {
 
     return this.repository.cancel(id, userId);
   }
+
+  async remove(companyId: string, id: string) {
+    const count = await this.repository.findById(
+      companyId,
+      id,
+    );
+
+    if (!count) {
+      throw new NotFoundException(
+        'Contagem de inventário não encontrada.',
+      );
+    }
+
+    if (count.status !== InventoryCountStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Só contagens canceladas podem ser excluídas.',
+      );
+    }
+
+    await this.prisma.inventoryCount.delete({ where: { id } });
+  }
 }

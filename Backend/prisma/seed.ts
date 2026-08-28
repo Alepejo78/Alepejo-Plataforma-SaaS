@@ -454,13 +454,28 @@ const permissionGroups = [
     code: "STOCK_MOVEMENT",
     name: "Movimentação de Estoque",
     permissions: [
-      ["stock-movement.view", "Visualizar Movimentações"],
       // Não confundir com o acesso normal de Compras/Vendas — receber
       // uma compra ou aprovar uma venda já movimenta estoque sozinho,
-      // sem precisar desta permissão (aquilo usa purchase.receive/
-      // sale.approve). Essa aqui é só pro ajuste manual de estoque
-      // (Ajuste de entrada/saída, tipo contagem de inventário).
-      ["stock-movement.adjust", "Ajustar Estoque (Inventário)"],
+      // sem precisar de permissão nenhuma daqui (aquilo usa
+      // purchase.receive/sale.approve). O ajuste manual de estoque
+      // (antigo "Ajuste de entrada/saída") saiu daqui — agora só
+      // acontece via Contagem de Inventário (ver grupo
+      // INVENTORY_COUNT).
+      ["stock-movement.view", "Visualizar Movimentações"],
+    ],
+  },
+  {
+    code: "INVENTORY_COUNT",
+    name: "Contagem de Inventário",
+    permissions: [
+      ["inventory-count.view", "Consultar Contagens de Inventário"],
+      ["inventory-count.create", "Cadastrar Contagens de Inventário"],
+      ["inventory-count.update", "Alterar Contagens de Inventário"],
+      ["inventory-count.cancel", "Cancelar Contagens de Inventário"],
+      ["inventory-count.delete", "Excluir Contagens de Inventário"],
+      // Fecha a contagem e gera as entradas/saídas de estoque
+      // necessárias pra bater com o que foi contado.
+      ["inventory-count.approve", "Aprovar Contagens de Inventário (ajusta o estoque)"],
     ],
   },
   {

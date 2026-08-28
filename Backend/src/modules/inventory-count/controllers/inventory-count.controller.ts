@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -29,7 +30,7 @@ export class InventoryCountController {
   ) {}
 
   @Post()
-  @Permissions('stock-movement.adjust')
+  @Permissions('inventory-count.create')
   @ApiOperation({ summary: 'Cadastrar contagem de inventário' })
   create(
     @CurrentUser('companyId') companyId: string,
@@ -41,7 +42,7 @@ export class InventoryCountController {
   }
 
   @Get()
-  @Permissions('stock-movement.view')
+  @Permissions('inventory-count.view')
   @ApiOperation({ summary: 'Listar contagens de inventário' })
   findAll(
     @CurrentUser('companyId') companyId: string,
@@ -51,7 +52,7 @@ export class InventoryCountController {
   }
 
   @Get(':id')
-  @Permissions('stock-movement.view')
+  @Permissions('inventory-count.view')
   @ApiOperation({ summary: 'Buscar contagem de inventário' })
   findOne(
     @CurrentUser('companyId') companyId: string,
@@ -61,7 +62,7 @@ export class InventoryCountController {
   }
 
   @Patch(':id')
-  @Permissions('stock-movement.adjust')
+  @Permissions('inventory-count.update')
   @ApiOperation({ summary: 'Alterar contagem de inventário' })
   update(
     @CurrentUser('companyId') companyId: string,
@@ -80,7 +81,7 @@ export class InventoryCountController {
   }
 
   @Patch(':id/finalize')
-  @Permissions('stock-movement.adjust')
+  @Permissions('inventory-count.approve')
   @ApiOperation({
     summary:
       'Finalizar contagem — gera os ajustes de estoque necessários',
@@ -94,7 +95,7 @@ export class InventoryCountController {
   }
 
   @Patch(':id/cancel')
-  @Permissions('stock-movement.adjust')
+  @Permissions('inventory-count.cancel')
   @ApiOperation({ summary: 'Cancelar contagem de inventário' })
   cancel(
     @CurrentUser('companyId') companyId: string,
@@ -102,5 +103,15 @@ export class InventoryCountController {
     @Param('id') id: string,
   ) {
     return this.service.cancel(companyId, id, userId);
+  }
+
+  @Delete(':id')
+  @Permissions('inventory-count.delete')
+  @ApiOperation({ summary: 'Excluir contagem de inventário cancelada' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(companyId, id);
   }
 }
