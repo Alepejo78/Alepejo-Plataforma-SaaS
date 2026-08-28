@@ -60,6 +60,8 @@ export interface InventoryCountItem {
   addedDuringCount: boolean;
   /** Só referência — já está incluído em systemQuantity, não desconta dele. */
   reservedQuantity?: string | number;
+  /** Custo médio (Inventory.averageCost) — usado pra calcular o valor contábil do ajuste. */
+  unitCost?: string | number;
 
   product?: {
     id: string;

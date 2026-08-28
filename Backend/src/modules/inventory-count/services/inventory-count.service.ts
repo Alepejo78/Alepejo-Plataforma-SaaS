@@ -220,7 +220,15 @@ export class InventoryCountService {
       filter,
     );
 
-    return attachAuditNames(this.prisma, counts);
+    const withInventoryData = await this.attachInventoryData(
+      companyId,
+      counts,
+    );
+
+    const withCountedBy =
+      await this.attachCountedByNames(withInventoryData);
+
+    return attachAuditNames(this.prisma, withCountedBy);
   }
 
   async findOne(companyId: string, id: string) {
@@ -235,61 +243,86 @@ export class InventoryCountService {
       );
     }
 
-    const withReserved = await this.attachReservedQuantities(
+    const [withInventoryData] = await this.attachInventoryData(
       companyId,
-      count,
+      [count],
     );
 
-    const withCountedBy =
-      await this.attachCountedByNames(withReserved);
+    const [withCountedBy] =
+      await this.attachCountedByNames([withInventoryData]);
 
     return attachAuditName(this.prisma, withCountedBy);
   }
 
   /**
-   * Anexa o saldo reservado atual de cada item, só como referência —
-   * `systemQuantity` já é o total físico (reservado incluso, ver
-   * calculateAvailableQuantity), não desconta nada.
+   * Anexa, por item, o saldo reservado atual (só referência —
+   * `systemQuantity` já é o total físico, reservado incluso, ver
+   * calculateAvailableQuantity, não desconta nada) e o custo médio
+   * (`Inventory.averageCost`) usado pra calcular o valor contábil do
+   * ajuste (diferença × custo). Em lote — uma consulta só, mesmo
+   * cobrindo várias contagens (findAll) com depósitos diferentes.
    */
-  private async attachReservedQuantities<
+  private async attachInventoryData<
     T extends {
       warehouseId: string;
       items: { productId: string }[];
     },
-  >(companyId: string, record: T) {
-    if (record.items.length === 0) {
-      return record;
+  >(companyId: string, records: T[]) {
+    const productIds = new Set<string>();
+    const warehouseIds = new Set<string>();
+
+    for (const record of records) {
+      warehouseIds.add(record.warehouseId);
+      for (const item of record.items) {
+        productIds.add(item.productId);
+      }
+    }
+
+    if (productIds.size === 0) {
+      return records;
     }
 
     const inventories = await this.prisma.inventory.findMany({
       where: {
         companyId,
-        warehouseId: record.warehouseId,
-        productId: {
-          in: record.items.map((i) => i.productId),
-        },
+        warehouseId: { in: [...warehouseIds] },
+        productId: { in: [...productIds] },
       },
-      select: { productId: true, reservedQuantity: true },
+      select: {
+        productId: true,
+        warehouseId: true,
+        reservedQuantity: true,
+        averageCost: true,
+      },
     });
 
-    const reservedByProduct = new Map(
+    const byKey = new Map(
       inventories.map((inv) => [
-        inv.productId,
-        Number(inv.reservedQuantity),
+        `${inv.warehouseId}:${inv.productId}`,
+        {
+          reservedQuantity: Number(inv.reservedQuantity),
+          unitCost: Number(inv.averageCost),
+        },
       ]),
     );
 
-    return {
+    return records.map((record) => ({
       ...record,
-      items: record.items.map((item) => ({
-        ...item,
-        reservedQuantity:
-          reservedByProduct.get(item.productId) ?? 0,
-      })),
-    };
+      items: record.items.map((item) => {
+        const found = byKey.get(
+          `${record.warehouseId}:${item.productId}`,
+        );
+
+        return {
+          ...item,
+          reservedQuantity: found?.reservedQuantity ?? 0,
+          unitCost: found?.unitCost ?? 0,
+        };
+      }),
+    }));
   }
 
-  /** Nome de quem fez cada rodada — resolvido num lote só. */
+  /** Nome de quem fez cada rodada — resolvido num lote só, mesmo cobrindo várias contagens. */
   private async attachCountedByNames<
     T extends {
       items: {
@@ -298,17 +331,19 @@ export class InventoryCountService {
         countedById3: string | null;
       }[];
     },
-  >(record: T) {
+  >(records: T[]) {
     const ids = new Set<string>();
 
-    for (const item of record.items) {
-      if (item.countedById1) ids.add(item.countedById1);
-      if (item.countedById2) ids.add(item.countedById2);
-      if (item.countedById3) ids.add(item.countedById3);
+    for (const record of records) {
+      for (const item of record.items) {
+        if (item.countedById1) ids.add(item.countedById1);
+        if (item.countedById2) ids.add(item.countedById2);
+        if (item.countedById3) ids.add(item.countedById3);
+      }
     }
 
     if (ids.size === 0) {
-      return {
+      return records.map((record) => ({
         ...record,
         items: record.items.map((item) => ({
           ...item,
@@ -316,7 +351,7 @@ export class InventoryCountService {
           countedByName2: null,
           countedByName3: null,
         })),
-      };
+      }));
     }
 
     const users = await this.prisma.user.findMany({
@@ -326,7 +361,7 @@ export class InventoryCountService {
 
     const nameById = new Map(users.map((u) => [u.id, u.name]));
 
-    return {
+    return records.map((record) => ({
       ...record,
       items: record.items.map((item) => ({
         ...item,
@@ -340,7 +375,7 @@ export class InventoryCountService {
           ? (nameById.get(item.countedById3) ?? null)
           : null,
       })),
-    };
+    }));
   }
 
   async update(
