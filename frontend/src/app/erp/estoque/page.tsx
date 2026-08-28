@@ -5,11 +5,9 @@ import Link from "next/link";
 import {
   AlertTriangle,
   Building2,
-  ClipboardCheck,
   History,
   Lock,
   Plus,
-  Settings2,
   Unlock,
   X,
 } from "lucide-react";
@@ -351,22 +349,6 @@ export default function EstoquePage() {
                 >
                   <History size={18} />
                   Movimentações
-                </Link>
-
-                <Link
-                  href="/erp/estoque/inventario"
-                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                >
-                  <ClipboardCheck size={18} />
-                  Contagem de inventário
-                </Link>
-
-                <Link
-                  href="/erp/estoque/depositos"
-                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                >
-                  <Settings2 size={18} />
-                  Depósitos
                 </Link>
 
                 <Can permission="inventory.create">
