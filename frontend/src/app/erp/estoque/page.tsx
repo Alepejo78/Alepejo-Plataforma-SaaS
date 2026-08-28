@@ -4,9 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowDownCircle,
-  ArrowUpCircle,
   Building2,
+  ClipboardCheck,
   History,
   Lock,
   Plus,
@@ -24,12 +23,10 @@ import {
   STOCK_HOLD_TYPE_LABELS,
   inventoryService,
   stockHoldService,
-  stockMovementService,
   warehouseService,
   type InventoryItem,
   type StockHold,
   type StockHoldType,
-  type StockMovementType,
   type Warehouse,
 } from "@/services/inventory.service";
 
@@ -109,17 +106,6 @@ export default function EstoquePage() {
     averageCost: 0,
   });
 
-  // Modal de movimentação
-  const [moveOpen, setMoveOpen] = useState(false);
-  const [moveItem, setMoveItem] =
-    useState<InventoryItem | null>(null);
-  const [moveForm, setMoveForm] = useState({
-    type: "ENTRY" as StockMovementType,
-    quantity: "",
-    unitCost: 0,
-    observation: "",
-  });
-
   // Modal de retenções (bloqueio/reserva/quarentena/avaria)
   const [holdOpen, setHoldOpen] = useState(false);
   const [holdItem, setHoldItem] =
@@ -194,21 +180,6 @@ export default function EstoquePage() {
     setAddOpen(true);
   }
 
-  function openMove(
-    item: InventoryItem,
-    type: StockMovementType
-  ) {
-    setMoveItem(item);
-    setMoveForm({
-      type,
-      quantity: "",
-      unitCost: 0,
-      observation: "",
-    });
-    setFormError("");
-    setMoveOpen(true);
-  }
-
   async function loadHolds(inventoryId: string) {
     setHoldsLoading(true);
 
@@ -279,57 +250,6 @@ export default function EstoquePage() {
         extractMessage(
           err,
           "Não foi possível incluir o produto no estoque."
-        )
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveMove() {
-    if (!moveItem) {
-      return;
-    }
-
-    const quantity = decimal(moveForm.quantity);
-
-    if (quantity <= 0) {
-      setFormError("Informe uma quantidade maior que zero.");
-
-      return;
-    }
-
-    // Movimentação manual (fora de Compra/Venda) — como é ajuste de
-    // inventário, sem nota fiscal por trás, o motivo é obrigatório
-    // pra manter rastreável o porquê da correção.
-    if (!moveForm.observation.trim()) {
-      setFormError(
-        "Informe o motivo do ajuste (ex.: contagem de inventário, perda, quebra)."
-      );
-
-      return;
-    }
-
-    setSaving(true);
-    setFormError("");
-
-    try {
-      await stockMovementService.create({
-        inventoryId: moveItem.id,
-        type: moveForm.type,
-        quantity,
-        unitCost: moveForm.unitCost || undefined,
-        observation: moveForm.observation.trim(),
-      });
-
-      setMoveOpen(false);
-
-      await load();
-    } catch (err) {
-      setFormError(
-        extractMessage(
-          err,
-          "Não foi possível registrar a movimentação."
         )
       );
     } finally {
@@ -431,6 +351,14 @@ export default function EstoquePage() {
                 >
                   <History size={18} />
                   Movimentações
+                </Link>
+
+                <Link
+                  href="/erp/estoque/inventario"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                >
+                  <ClipboardCheck size={18} />
+                  Contagem de inventário
                 </Link>
 
                 <Link
@@ -674,32 +602,6 @@ export default function EstoquePage() {
 
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <Can permission="stock-movement.adjust">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openMove(item, "ENTRY")
-                              }
-                              title="Ajuste de entrada"
-                              aria-label="Ajuste de entrada"
-                              className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)]"
-                            >
-                              <ArrowUpCircle size={16} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openMove(item, "EXIT")
-                              }
-                              title="Ajuste de saída"
-                              aria-label="Ajuste de saída"
-                              className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
-                            >
-                              <ArrowDownCircle size={16} />
-                            </button>
-                          </Can>
-
                           <Can permission="inventory.hold">
                             <button
                               type="button"
@@ -858,126 +760,6 @@ export default function EstoquePage() {
                   className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
                 >
                   {saving ? "Salvando..." : "Incluir"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Movimentação */}
-      {moveOpen && moveItem && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  {moveForm.type === "ENTRY"
-                    ? "Ajuste de entrada"
-                    : "Ajuste de saída"}
-                </h2>
-
-                <p className="text-sm text-[var(--text-muted)]">
-                  {moveItem.product?.description} ·{" "}
-                  {moveItem.warehouse?.code} · saldo atual{" "}
-                  {qty(moveItem.quantity)}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMoveOpen(false)}
-                aria-label="Fechar"
-                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-xs text-[var(--text-muted)]">
-                Ajuste manual de estoque — use pra corrigir o saldo
-                depois de uma contagem de inventário, perda, quebra
-                ou achado, sem estar ligado a uma compra ou venda.
-              </p>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className={labelClass}>Quantidade</label>
-
-                  <input
-                    autoFocus
-                    inputMode="decimal"
-                    placeholder="0"
-                    className={fieldClass}
-                    value={moveForm.quantity}
-                    onChange={(e) =>
-                      setMoveForm({
-                        ...moveForm,
-                        quantity: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Custo unitário (R$)
-                  </label>
-
-                  <CurrencyInput
-                    className={fieldClass}
-                    value={moveForm.unitCost}
-                    onChange={(value) =>
-                      setMoveForm({
-                        ...moveForm,
-                        unitCost: value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Motivo do ajuste
-                  </label>
-
-                  <input
-                    placeholder="Ex.: contagem de inventário"
-                    className={fieldClass}
-                    value={moveForm.observation}
-                    onChange={(e) =>
-                      setMoveForm({
-                        ...moveForm,
-                        observation: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              {formError && (
-                <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-                  {formError}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setMoveOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => void saveMove()}
-                  className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
-                >
-                  {saving ? "Salvando..." : "Confirmar"}
                 </button>
               </div>
             </div>
