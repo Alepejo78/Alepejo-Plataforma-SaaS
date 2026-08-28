@@ -33,6 +33,7 @@ export interface AuthCompany {
   brandingSystemNameEnabled: boolean;
   brandingThemeToggleEnabled: boolean;
   sidebarLayout: SidebarLayout;
+  maxOpenTabs: number;
 }
 
 /**

@@ -53,7 +53,13 @@ function TopLeaf({
 
   const content = (
     <>
-      {Icon ? <Icon size={16} className="shrink-0" /> : null}
+      {Icon ? (
+        <Icon
+          size={16}
+          className="shrink-0"
+          data-icon-anim={item.iconAnim}
+        />
+      ) : null}
       {item.title}
       {item.locked && <Lock size={12} className="shrink-0 opacity-70" />}
     </>
@@ -159,7 +165,11 @@ function TopGroup({
           hasActiveChild && "text-[var(--text-primary)]"
         )}
       >
-        <Icon size={16} className="shrink-0" />
+        <Icon
+          size={16}
+          className="shrink-0"
+          data-icon-anim={entry.iconAnim}
+        />
         {entry.title}
         <ChevronDown
           size={14}

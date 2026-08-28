@@ -131,6 +131,11 @@ model Company {
   /// (barra tipo ribbon no topo). Módulo BRANDING.
   sidebarLayout String @default("vertical") @db.VarChar(10)
 
+  /// Quantas guias de 2º nível (telas abertas) cabem ao mesmo tempo
+  /// em cada app (ERP/OS) — configurável em Personalização, não
+  /// depende de módulo licenciado.
+  maxOpenTabs Int @default(6)
+
   timezone String @default("America/Sao_Paulo") @db.VarChar(60)
 
   language String @default("pt-BR") @db.VarChar(10)

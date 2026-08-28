@@ -6,6 +6,7 @@ import {
   LayoutGrid,
   Lock,
   Monitor,
+  PanelsTopLeft,
   UserRound,
   Upload,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import {
   type CompanyBranding,
   type UpdateCompanyBrandingPayload,
 } from "@/services/company-branding.service";
+import { companyService } from "@/services/company.service";
 import { profileService } from "@/services/profile.service";
 import { brandPalette, parseHex } from "@/lib/brandColor";
 import type { SidebarLayout } from "@/types/auth";
@@ -838,6 +840,99 @@ function BrandingLocked() {
   );
 }
 
+const MIN_OPEN_TABS = 1;
+const MAX_OPEN_TABS = 15;
+
+function MaxOpenTabsSection() {
+  const { user, refreshUser } = useAuth();
+
+  const [value, setValue] = useState(
+    String(user?.company.maxOpenTabs ?? 6)
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const parsed = Number(value);
+  const valid =
+    Number.isInteger(parsed) &&
+    parsed >= MIN_OPEN_TABS &&
+    parsed <= MAX_OPEN_TABS;
+  const changed = parsed !== (user?.company.maxOpenTabs ?? 6);
+
+  async function handleSave() {
+    if (!valid) {
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSaved(false);
+
+    try {
+      await companyService.updateMine({ maxOpenTabs: parsed });
+      await refreshUser();
+
+      setSaved(true);
+    } catch (err) {
+      setError(
+        extractMessage(err, "Não foi possível salvar.")
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <div>
+        <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+          Guias abertas ao mesmo tempo
+        </label>
+
+        <p className="mb-2 max-w-md text-xs text-[var(--text-muted)]">
+          Quantas telas cada usuário pode manter abertas ao mesmo
+          tempo em cada app (Sistema ERP / OS), na barra de guias do
+          topo.
+        </p>
+
+        <input
+          type="number"
+          min={MIN_OPEN_TABS}
+          max={MAX_OPEN_TABS}
+          className={`${fieldClass} w-28`}
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setSaved(false);
+          }}
+        />
+      </div>
+
+      <button
+        type="button"
+        disabled={saving || !valid || !changed}
+        onClick={() => void handleSave()}
+        className="h-11 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
+      >
+        {saving ? "Salvando..." : "Salvar"}
+      </button>
+
+      {saved && (
+        <span className="text-sm text-[var(--success)]">
+          Salvo.
+        </span>
+      )}
+
+      {error && (
+        <span className="text-sm text-[var(--danger)]">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function PersonalizacaoPage() {
   const { hasModule } = useAuth();
 
@@ -873,6 +968,26 @@ export default function PersonalizacaoPage() {
           </p>
 
           <ProfilePhotoSection />
+        </section>
+
+        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <PanelsTopLeft
+              size={18}
+              className="text-[var(--text-secondary)]"
+            />
+
+            <h2 className="font-semibold text-[var(--text-primary)]">
+              Geral
+            </h2>
+          </div>
+
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            Da empresa — vale para todo mundo que usa o sistema aqui,
+            não depende de módulo contratado.
+          </p>
+
+          <MaxOpenTabsSection />
         </section>
 
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">

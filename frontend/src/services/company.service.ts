@@ -38,6 +38,7 @@ export type CompanyUpdatePayload = Partial<{
   city: string;
   state: string;
   active: boolean;
+  maxOpenTabs: number;
 }>;
 
 export const companyService = {

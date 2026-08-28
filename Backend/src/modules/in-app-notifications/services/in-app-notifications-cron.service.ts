@@ -262,12 +262,26 @@ export class InAppNotificationsCronService {
   }
 
   private async checkApprovalPending() {
-    const [quotations, purchases, sales] = await Promise.all([
+    const [
+      quotations,
+      purchasesAwaitingApproval,
+      purchases,
+      salesAwaitingApproval,
+      sales,
+    ] = await Promise.all([
       this.prisma.quotation.findMany({
         where: { status: QuotationStatus.DRAFT },
       }),
       this.prisma.purchase.findMany({
+        where: { status: PurchaseStatus.DRAFT },
+        include: { partner: true },
+      }),
+      this.prisma.purchase.findMany({
         where: { status: PurchaseStatus.APPROVED },
+        include: { partner: true },
+      }),
+      this.prisma.sale.findMany({
+        where: { status: SaleStatus.DRAFT },
         include: { partner: true },
       }),
       this.prisma.sale.findMany({
@@ -290,6 +304,23 @@ export class InAppNotificationsCronService {
       });
     }
 
+    for (const purchase of purchasesAwaitingApproval) {
+      const who =
+        purchase.partner?.tradeName ?? purchase.partner?.legalName ?? '';
+
+      await this.notifications.emit({
+        companyId: purchase.companyId,
+        type: 'APPROVAL_PENDING',
+        dedupeKey: `approval:purchase-draft:${purchase.id}`,
+        title: 'Compra aguardando aprovação',
+        message: `Compra nº ${purchase.number}${who ? ` (${who})` : ''} aguardando aprovação.`,
+        permissionCode: 'purchase.approve',
+        linkUrl: '/erp/compras',
+        documentRef: String(purchase.number),
+        occurredAt: purchase.createdAt,
+      });
+    }
+
     for (const purchase of purchases) {
       const who =
         purchase.partner?.tradeName ?? purchase.partner?.legalName ?? '';
@@ -303,6 +334,22 @@ export class InAppNotificationsCronService {
         permissionCode: 'purchase.view',
         linkUrl: '/erp/compras/recebimento',
         documentRef: String(purchase.number),
+      });
+    }
+
+    for (const sale of salesAwaitingApproval) {
+      const who = sale.partner?.tradeName ?? sale.partner?.legalName ?? '';
+
+      await this.notifications.emit({
+        companyId: sale.companyId,
+        type: 'APPROVAL_PENDING',
+        dedupeKey: `approval:sale-draft:${sale.id}`,
+        title: 'Venda aguardando aprovação',
+        message: `Venda nº ${sale.number}${who ? ` (${who})` : ''} aguardando aprovação.`,
+        permissionCode: 'sale.approve',
+        linkUrl: '/erp/vendas',
+        documentRef: String(sale.number),
+        occurredAt: sale.createdAt,
       });
     }
 
@@ -326,8 +373,16 @@ export class InAppNotificationsCronService {
       quotations.map((q) => q.id),
     );
     await this.clearResolvedApprovals(
+      'approval:purchase-draft:',
+      purchasesAwaitingApproval.map((p) => p.id),
+    );
+    await this.clearResolvedApprovals(
       'approval:purchase:',
       purchases.map((p) => p.id),
+    );
+    await this.clearResolvedApprovals(
+      'approval:sale-draft:',
+      salesAwaitingApproval.map((s) => s.id),
     );
     await this.clearResolvedApprovals(
       'approval:sale:',

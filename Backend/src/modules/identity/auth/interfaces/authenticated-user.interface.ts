@@ -29,6 +29,8 @@ export interface AuthenticatedCompany {
   brandingSystemNameEnabled: boolean;
   brandingThemeToggleEnabled: boolean;
   sidebarLayout: string;
+  /** Quantas guias de 2º nível podem ficar abertas ao mesmo tempo em cada app (ERP/OS). */
+  maxOpenTabs: number;
 }
 
 export interface AuthenticatedUser {

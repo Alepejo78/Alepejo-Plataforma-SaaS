@@ -167,7 +167,7 @@ export interface FinancialEntryFilter {
 
 export interface SettlePayload {
   paymentDate?: string;
-  paymentMethod?: PaymentMethod;
+  paymentMethod: PaymentMethod;
   paidAmount?: number;
   observation?: string;
 }

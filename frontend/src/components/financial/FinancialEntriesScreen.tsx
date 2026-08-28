@@ -526,7 +526,9 @@ export function FinancialEntriesScreen({
     setSettleTarget(entry);
     setSettleForm({
       paymentDate: todayIso(),
-      paymentMethod: "",
+      // Só um ponto de partida (a forma prevista no lançamento) —
+      // confira/corrija pra forma usada de verdade nesta baixa.
+      paymentMethod: entry.paymentMethod ?? "",
       paidAmount: num(entry.amount) - num(entry.paidAmount),
     });
     setSettleError("");
@@ -534,6 +536,14 @@ export function FinancialEntriesScreen({
 
   async function confirmSettle() {
     if (!settleTarget) {
+      return;
+    }
+
+    if (!settleForm.paymentMethod) {
+      setSettleError(
+        "Informe a forma de pagamento usada de verdade — sem isso o gráfico de fluxo de caixa fica com a forma antiga (ou nenhuma)."
+      );
+
       return;
     }
 
@@ -1461,7 +1471,7 @@ export function FinancialEntriesScreen({
                     })
                   }
                 >
-                  <option value="">Não informado</option>
+                  <option value="">Selecione...</option>
 
                   {Object.entries(
                     PAYMENT_METHOD_LABELS

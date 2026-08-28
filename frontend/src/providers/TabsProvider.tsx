@@ -58,8 +58,6 @@ const TabsContext = createContext<TabsContextValue | undefined>(
   undefined
 );
 
-const MAX_TABS = 6;
-
 export const APP_LABEL: Record<AppKey, string> = {
   erp: "Sistema ERP",
   os: "OS",
@@ -200,6 +198,9 @@ export function TabsProvider({
   const pathname = stripCompanySlug(usePathname() ?? "/");
   const router = useRouter();
   const { user } = useAuth();
+  // Configurável por empresa (Personalização) — default 6 enquanto a
+  // sessão ainda não carregou ou pra empresa sem valor salvo.
+  const maxTabs = user?.company.maxOpenTabs ?? 6;
 
   // Sempre inicializa com o default (nunca lê sessionStorage aqui) —
   // no servidor `window` não existe, então o SSR sempre geraria esse
@@ -367,7 +368,7 @@ export function TabsProvider({
       return;
     }
 
-    if (current.openTabs.length >= MAX_TABS) {
+    if (current.openTabs.length >= maxTabs) {
       // Chegou aqui por fora do openTab (ex.: URL colada direto) —
       // deixa acessar mesmo passando do limite, só não vira guia fixa.
       setStateFor(currentApp, {
@@ -402,9 +403,9 @@ export function TabsProvider({
         (tab) => tab.href === entry.href
       );
 
-      if (!alreadyOpen && current.openTabs.length >= MAX_TABS) {
+      if (!alreadyOpen && current.openTabs.length >= maxTabs) {
         setCapMessage(
-          `Limite de ${MAX_TABS} guias abertas atingido — feche uma guia antes de abrir outra.`
+          `Limite de ${maxTabs} guias abertas atingido — feche uma guia antes de abrir outra.`
         );
 
         return false;
@@ -423,7 +424,7 @@ export function TabsProvider({
 
       return true;
     },
-    [stateFor, setStateFor, router]
+    [stateFor, setStateFor, router, maxTabs]
   );
 
   const closeTab = useCallback(
@@ -498,7 +499,7 @@ export function TabsProvider({
       openApps,
       erp,
       os,
-      maxTabs: MAX_TABS,
+      maxTabs,
       capMessage,
       openTab,
       closeTab,
@@ -512,6 +513,7 @@ export function TabsProvider({
       openApps,
       erp,
       os,
+      maxTabs,
       capMessage,
       openTab,
       closeTab,

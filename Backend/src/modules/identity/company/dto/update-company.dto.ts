@@ -3,9 +3,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEmail,
+  IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { CreateCompanyDto } from './create-company.dto';
 
@@ -107,4 +110,15 @@ export class UpdateCompanyDto extends PartialType(CreateCompanyDto) {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @ApiPropertyOptional({
+    example: 6,
+    description:
+      'Quantas guias de 2º nível podem ficar abertas ao mesmo tempo em cada app.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(15)
+  maxOpenTabs?: number;
 }
