@@ -31,6 +31,32 @@ function isItemActive(pathname: string, href: string) {
 }
 
 /**
+ * Entre vários irmãos cujo `href` "bate" com a URL atual (ex.:
+ * `/erp/estoque` e `/erp/estoque/inventario` batem os dois com
+ * `/erp/estoque/inventario`, um é prefixo do outro), só o mais
+ * específico (o `href` mais longo) deve ficar destacado — senão dois
+ * itens do menu acendem ao mesmo tempo.
+ */
+function resolveBestHref(
+  pathname: string,
+  hrefs: string[]
+): string | null {
+  let best: string | null = null;
+
+  for (const href of hrefs) {
+    if (!isItemActive(pathname, href)) {
+      continue;
+    }
+
+    if (!best || href.length > best.length) {
+      best = href;
+    }
+  }
+
+  return best;
+}
+
+/**
  * Item folha do menu (navega para uma rota).
  */
 function LeafItem({
@@ -38,17 +64,26 @@ function LeafItem({
   collapsed,
   nested = false,
   onNavigate,
+  activeOverride,
 }: {
   item: MenuItem;
   collapsed: boolean;
   nested?: boolean;
   onNavigate?: () => void;
+  /**
+   * Quando informado (item renderizado dentro de um `GroupItem`, que já
+   * resolveu qual irmão é o mais específico), vale no lugar do cálculo
+   * isolado — evita dois itens acesos ao mesmo tempo por um `href` ser
+   * prefixo do outro.
+   */
+  activeOverride?: boolean;
 }) {
   const pathname = stripCompanySlug(usePathname());
   const { openTab } = useTabs("erp");
 
   const active =
-    !item.disabled && isItemActive(pathname, item.href);
+    !item.disabled &&
+    (activeOverride ?? isItemActive(pathname, item.href));
 
   function handleClick(
     event: React.MouseEvent<HTMLAnchorElement>
@@ -172,10 +207,13 @@ function GroupItem({
 }) {
   const pathname = stripCompanySlug(usePathname());
 
-  const hasActiveChild = entry.children.some(
-    (child) =>
-      !child.disabled && isItemActive(pathname, child.href)
+  const bestChildHref = resolveBestHref(
+    pathname,
+    entry.children
+      .filter((child) => !child.disabled)
+      .map((child) => child.href)
   );
+  const hasActiveChild = bestChildHref !== null;
 
   const [open, setOpen] = useState(hasActiveChild);
   const [flyoutOpen, setFlyoutOpen] = useState(false);
@@ -293,6 +331,7 @@ function GroupItem({
                   item={child}
                   collapsed={false}
                   nested
+                  activeOverride={child.href === bestChildHref}
                   onNavigate={() => {
                     setFlyoutOpen(false);
                     onNavigate?.();
@@ -350,6 +389,7 @@ function GroupItem({
               item={child}
               collapsed={false}
               nested
+              activeOverride={child.href === bestChildHref}
               onNavigate={onNavigate}
             />
           ))}

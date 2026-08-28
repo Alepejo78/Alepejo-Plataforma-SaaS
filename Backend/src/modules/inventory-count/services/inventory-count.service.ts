@@ -740,7 +740,9 @@ export class InventoryCountService {
       );
     }
 
-    return this.repository.cancel(id, userId);
+    await this.repository.cancel(id, userId);
+
+    return this.findOne(companyId, id);
   }
 
   async remove(companyId: string, id: string) {

@@ -28,6 +28,27 @@ function isItemActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** Ver mesma função em `SidebarItem.tsx` — evita dois itens irmãos
+ * acesos ao mesmo tempo quando um `href` é prefixo do outro. */
+function resolveBestHref(
+  pathname: string,
+  hrefs: string[]
+): string | null {
+  let best: string | null = null;
+
+  for (const href of hrefs) {
+    if (!isItemActive(pathname, href)) {
+      continue;
+    }
+
+    if (!best || href.length > best.length) {
+      best = href;
+    }
+  }
+
+  return best;
+}
+
 const itemClass = [
   "flex h-10 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-medium",
   "text-[var(--text-secondary)] transition-colors duration-200",
@@ -41,13 +62,18 @@ function TopLeaf({
   item,
   fullWidth = false,
   onNavigate,
+  activeOverride,
 }: {
   item: MenuItem;
   fullWidth?: boolean;
   onNavigate?: () => void;
+  /** Ver mesma prop em `SidebarItem.tsx`. */
+  activeOverride?: boolean;
 }) {
   const pathname = stripCompanySlug(usePathname());
-  const active = !item.disabled && isItemActive(pathname, item.href);
+  const active =
+    !item.disabled &&
+    (activeOverride ?? isItemActive(pathname, item.href));
   const Icon = item.icon;
   const { openTab } = useTabs("erp");
 
@@ -148,9 +174,13 @@ function TopGroup({
 }) {
   const pathname = stripCompanySlug(usePathname());
 
-  const hasActiveChild = entry.children.some(
-    (child) => !child.disabled && isItemActive(pathname, child.href)
+  const bestChildHref = resolveBestHref(
+    pathname,
+    entry.children
+      .filter((child) => !child.disabled)
+      .map((child) => child.href)
   );
+  const hasActiveChild = bestChildHref !== null;
 
   const Icon = entry.icon;
 
@@ -190,6 +220,7 @@ function TopGroup({
               key={child.id}
               item={child}
               fullWidth
+              activeOverride={child.href === bestChildHref}
               onNavigate={onNavigate}
             />
           ))}
