@@ -805,17 +805,28 @@ model StockMovement {
 
 enum InventoryCountStatus {
   DRAFT
+  OPEN
+  COUNTING
   FINALIZED
+  ADJUSTED
   CANCELLED
 }
 
-/// Contagem de inventário: substitui o ajuste manual de estoque —
-/// escolhe os produtos de um depósito (geral ou selecionados),
-/// anota a quantidade contada de cada um e, ao finalizar, o sistema
-/// gera sozinho as entradas/saídas necessárias pra bater o saldo com
-/// o que foi contado de verdade. Enquanto está DRAFT, os produtos
-/// dela ficam travados contra recebimento de compra/aprovação de
-/// venda no mesmo depósito (ver PurchaseService/SaleService).
+enum InventoryCountItemStatus {
+  PENDING
+  RECOUNT_2
+  RECOUNT_3
+  DONE
+}
+
+/// Contagem de inventário: escolhe os produtos de um depósito (geral
+/// ou selecionados), conta na tela de leitura (até 3 rodadas por
+/// item, conforme divergência) e, em duas etapas separadas, finaliza
+/// (trava os valores) e ajusta o estoque (gera as entradas/saídas
+/// necessárias). Enquanto não estiver ADJUSTED nem CANCELLED, os
+/// produtos dela ficam travados contra recebimento de compra/
+/// aprovação de venda no mesmo depósito (ver PurchaseService/
+/// SaleService).
 model InventoryCount {
   id String @id @default(cuid())
 
@@ -828,18 +839,21 @@ model InventoryCount {
   warehouseId String
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
-  status InventoryCountStatus @default(DRAFT)
+  status InventoryCountStatus @default(OPEN)
 
   countDate DateTime?
 
   /// Motivo da contagem (ex.: "Contagem mensal de agosto") —
   /// obrigatório, é o rastro de por que o estoque foi ajustado; vai
-  /// junto na StockMovement gerada no fechamento.
+  /// junto na StockMovement gerada no ajuste.
   observation String @db.VarChar(500)
 
   items InventoryCountItem[]
 
+  /// Quando a contagem foi travada (deixou de aceitar leituras).
   finalizedAt DateTime?
+  /// Quando o estoque foi de fato ajustado (StockMovement gerada).
+  adjustedAt  DateTime?
 
   createdById String?
   updatedById String?
@@ -862,12 +876,26 @@ model InventoryCountItem {
   product   Product @relation(fields: [productId], references: [id])
 
   /// Saldo do sistema capturado quando o item entrou na contagem —
-  /// só de referência na tela (mostra se algo mexeu no estoque
-  /// durante a contagem); o fechamento SEMPRE recalcula contra o
-  /// saldo atual de verdade, nunca contra este snapshot congelado.
+  /// é contra ele que cada rodada de contagem é comparada pra
+  /// decidir se precisa recontagem. O ajuste de estoque de verdade
+  /// SEMPRE recalcula contra o saldo atual real, nunca contra este
+  /// snapshot congelado.
   systemQuantity Decimal @db.Decimal(18, 3)
 
-  countedQuantity Decimal? @db.Decimal(18, 3)
+  countedQuantity1 Decimal? @db.Decimal(18, 3)
+  countedQuantity2 Decimal? @db.Decimal(18, 3)
+  countedQuantity3 Decimal? @db.Decimal(18, 3)
+
+  /// Quem fez cada leitura — mostrado no painel de acompanhamento.
+  countedById1 String?
+  countedById2 String?
+  countedById3 String?
+
+  status InventoryCountItemStatus @default(PENDING)
+
+  /// true = item entrou durante a contagem (achado no físico, fora
+  /// da lista de abertura) — nasce com systemQuantity = 0.
+  addedDuringCount Boolean @default(false)
 
   @@unique([inventoryCountId, productId])
   @@index([inventoryCountId])

@@ -15,7 +15,6 @@ const includeRelations = {
 interface ItemInput {
   productId: string;
   systemQuantity: number;
-  countedQuantity?: number;
 }
 
 @Injectable()
@@ -47,7 +46,6 @@ export class InventoryCountRepository {
           create: dto.items.map((item) => ({
             productId: item.productId,
             systemQuantity: item.systemQuantity,
-            countedQuantity: item.countedQuantity,
           })),
         },
       },
@@ -110,7 +108,6 @@ export class InventoryCountRepository {
             create: dto.items.map((item) => ({
               productId: item.productId,
               systemQuantity: item.systemQuantity,
-              countedQuantity: item.countedQuantity,
             })),
           },
         }),

@@ -14,7 +14,6 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
-import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
   STOCK_HOLD_TYPE_LABELS,

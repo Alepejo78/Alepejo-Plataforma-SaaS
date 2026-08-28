@@ -106,7 +106,10 @@ export class PurchaseService {
     const openItem = await this.prisma.inventoryCountItem.findFirst({
       where: {
         productId: { in: productIds },
-        inventoryCount: { warehouseId, status: 'DRAFT' },
+        inventoryCount: {
+          warehouseId,
+          status: { in: ['OPEN', 'COUNTING', 'FINALIZED'] },
+        },
       },
       include: { product: true, inventoryCount: true },
     });

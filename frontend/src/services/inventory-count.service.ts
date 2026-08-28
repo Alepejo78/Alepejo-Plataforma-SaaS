@@ -6,15 +6,40 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
-export type InventoryCountStatus = "DRAFT" | "FINALIZED" | "CANCELLED";
+export type InventoryCountStatus =
+  | "DRAFT"
+  | "OPEN"
+  | "COUNTING"
+  | "FINALIZED"
+  | "ADJUSTED"
+  | "CANCELLED";
 
 export const INVENTORY_COUNT_STATUS_LABELS: Record<
   InventoryCountStatus,
   string
 > = {
-  DRAFT: "Rascunho",
+  DRAFT: "Rascunho (legado)",
+  OPEN: "Aberta",
+  COUNTING: "Em contagem",
   FINALIZED: "Finalizada",
+  ADJUSTED: "Ajustada",
   CANCELLED: "Cancelada",
+};
+
+export type InventoryCountItemStatus =
+  | "PENDING"
+  | "RECOUNT_2"
+  | "RECOUNT_3"
+  | "DONE";
+
+export const INVENTORY_COUNT_ITEM_STATUS_LABELS: Record<
+  InventoryCountItemStatus,
+  string
+> = {
+  PENDING: "Pendente",
+  RECOUNT_2: "Recontar (2ª)",
+  RECOUNT_3: "Recontar (3ª)",
+  DONE: "Finalizado",
 };
 
 export function formatInventoryCountNumber(n: number) {
@@ -25,7 +50,14 @@ export interface InventoryCountItem {
   id: string;
   productId: string;
   systemQuantity: string | number;
-  countedQuantity: string | number | null;
+  countedQuantity1: string | number | null;
+  countedQuantity2: string | number | null;
+  countedQuantity3: string | number | null;
+  countedByName1?: string | null;
+  countedByName2?: string | null;
+  countedByName3?: string | null;
+  status: InventoryCountItemStatus;
+  addedDuringCount: boolean;
   /** Só referência — já está incluído em systemQuantity, não desconta dele. */
   reservedQuantity?: string | number;
 
@@ -33,6 +65,7 @@ export interface InventoryCountItem {
     id: string;
     code: string;
     description: string;
+    barcode?: string | null;
     unit?: { code: string } | null;
   } | null;
 }
@@ -45,6 +78,7 @@ export interface InventoryCount {
   countDate?: string | null;
   observation: string;
   finalizedAt?: string | null;
+  adjustedAt?: string | null;
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;
@@ -59,7 +93,6 @@ export interface InventoryCount {
 
 export interface InventoryCountItemPayload {
   productId: string;
-  countedQuantity?: number;
 }
 
 export interface InventoryCountPayload {
@@ -72,6 +105,12 @@ export interface InventoryCountPayload {
 export interface InventoryCountFilter {
   warehouseId?: string;
   status?: InventoryCountStatus;
+}
+
+export interface CountItemNotInCountError {
+  code: "ITEM_NOT_IN_COUNT";
+  message: string;
+  product: { id: string; code: string; description: string };
 }
 
 export const inventoryCountService = {
@@ -117,9 +156,50 @@ export const inventoryCountService = {
     return data.data;
   },
 
-  async finalize(id: string): Promise<InventoryCount> {
+  async count(
+    id: string,
+    payload: { code: string; quantity: number; confirmAdd?: boolean }
+  ): Promise<InventoryCount> {
     const { data } = await api.patch<ApiEnvelope<InventoryCount>>(
-      `/inventory-counts/${id}/finalize`
+      `/inventory-counts/${id}/count`,
+      payload
+    );
+
+    return data.data;
+  },
+
+  async updateItemReadings(
+    id: string,
+    itemId: string,
+    payload: {
+      countedQuantity1?: number;
+      countedQuantity2?: number;
+      countedQuantity3?: number;
+    }
+  ): Promise<InventoryCount> {
+    const { data } = await api.patch<ApiEnvelope<InventoryCount>>(
+      `/inventory-counts/${id}/items/${itemId}`,
+      payload
+    );
+
+    return data.data;
+  },
+
+  async finalize(
+    id: string,
+    payload: { confirmIncomplete?: boolean } = {}
+  ): Promise<InventoryCount> {
+    const { data } = await api.patch<ApiEnvelope<InventoryCount>>(
+      `/inventory-counts/${id}/finalize`,
+      payload
+    );
+
+    return data.data;
+  },
+
+  async adjust(id: string): Promise<InventoryCount> {
+    const { data } = await api.patch<ApiEnvelope<InventoryCount>>(
+      `/inventory-counts/${id}/adjust`
     );
 
     return data.data;

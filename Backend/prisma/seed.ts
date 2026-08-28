@@ -473,9 +473,13 @@ const permissionGroups = [
       ["inventory-count.update", "Alterar Contagens de Inventário"],
       ["inventory-count.cancel", "Cancelar Contagens de Inventário"],
       ["inventory-count.delete", "Excluir Contagens de Inventário"],
-      // Fecha a contagem e gera as entradas/saídas de estoque
-      // necessárias pra bater com o que foi contado.
-      ["inventory-count.approve", "Aprovar Contagens de Inventário (ajusta o estoque)"],
+      // Cobre as duas etapas: finalizar (trava a contagem) e ajustar
+      // o estoque (gera as entradas/saídas necessárias).
+      ["inventory-count.approve", "Aprovar Contagens de Inventário (finaliza e ajusta o estoque)"],
+      // Libera, no painel de acompanhamento, editar direto as
+      // colunas de Contagem 1/2/3 — corrigir uma leitura já feita ou
+      // digitar a quantidade sem passar pela tela de leitura.
+      ["inventory-count.edit-readings", "Editar Leituras de Contagem (corrigir ou digitar direto)"],
     ],
   },
   {
