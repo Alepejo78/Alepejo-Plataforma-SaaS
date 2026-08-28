@@ -90,6 +90,37 @@ export class SaleService {
     }
   }
 
+  /**
+   * Enquanto um produto está numa Contagem de Inventário em aberto
+   * (rascunho) neste depósito, aprovação/estorno de venda desse
+   * produto fica bloqueado — senão a movimentação furaria a
+   * contagem por baixo, invalidando o que já foi contado.
+   */
+  private async assertNoOpenInventoryCount(
+    warehouseId: string,
+    productIds: string[],
+  ) {
+    if (productIds.length === 0) {
+      return;
+    }
+
+    const openItem = await this.prisma.inventoryCountItem.findFirst({
+      where: {
+        productId: { in: productIds },
+        inventoryCount: { warehouseId, status: 'DRAFT' },
+      },
+      include: { product: true, inventoryCount: true },
+    });
+
+    if (openItem) {
+      const number = `INV-${String(openItem.inventoryCount.number).padStart(6, '0')}`;
+
+      throw new BadRequestException(
+        `Produto ${openItem.product.description} está em contagem de inventário em aberto (${number}) neste depósito — finalize ou cancele a contagem antes de continuar.`,
+      );
+    }
+  }
+
   async create(
     companyId: string,
     rootCompanyId: string,
@@ -507,6 +538,11 @@ export class SaleService {
       );
     }
 
+    await this.assertNoOpenInventoryCount(
+      sale.warehouseId,
+      sale.items.map((item) => item.productId),
+    );
+
     if (dto.invoiceNumber) {
       await this.assertInvoiceNumberNotDuplicated(
         companyId,
@@ -854,6 +890,11 @@ export class SaleService {
         'Esta venda já tem recebimento registrado no financeiro. Estorne a baixa antes de desfazer a aprovação.',
       );
     }
+
+    await this.assertNoOpenInventoryCount(
+      sale.warehouseId,
+      sale.items.map((item) => item.productId),
+    );
 
     return this.prisma.$transaction(async (tx) => {
       for (const item of sale.items) {

@@ -188,6 +188,7 @@ model Company {
   salesOrders       SalesOrder[]
   quotations        Quotation[]
   purchaseOrders    PurchaseOrder[]
+  inventoryCounts   InventoryCount[]
   documentSequences DocumentSequence[]
 
   sectors            Sector[]
@@ -661,6 +662,7 @@ model Product {
   quotationItems           QuotationItem[]
   quotationOfferItems      QuotationOfferItem[]
   purchaseOrderItems       PurchaseOrderItem[]
+  inventoryCountItems      InventoryCountItem[]
   productionOrders         ProductionOrder[]
   financialEntries         FinancialEntry[]
 
@@ -688,6 +690,7 @@ model Warehouse {
   purchaseOrders   PurchaseOrder[]
   sales            Sale[]
   productionOrders ProductionOrder[]
+  inventoryCounts  InventoryCount[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -798,6 +801,77 @@ model StockMovement {
   @@index([companyId])
   @@index([inventoryId])
   @@map("stock_movements")
+}
+
+enum InventoryCountStatus {
+  DRAFT
+  FINALIZED
+  CANCELLED
+}
+
+/// Contagem de inventário: substitui o ajuste manual de estoque —
+/// escolhe os produtos de um depósito (geral ou selecionados),
+/// anota a quantidade contada de cada um e, ao finalizar, o sistema
+/// gera sozinho as entradas/saídas necessárias pra bater o saldo com
+/// o que foi contado de verdade. Enquanto está DRAFT, os produtos
+/// dela ficam travados contra recebimento de compra/aprovação de
+/// venda no mesmo depósito (ver PurchaseService/SaleService).
+model InventoryCount {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
+  number Int
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  status InventoryCountStatus @default(DRAFT)
+
+  countDate DateTime?
+
+  /// Motivo da contagem (ex.: "Contagem mensal de agosto") —
+  /// obrigatório, é o rastro de por que o estoque foi ajustado; vai
+  /// junto na StockMovement gerada no fechamento.
+  observation String @db.VarChar(500)
+
+  items InventoryCountItem[]
+
+  finalizedAt DateTime?
+
+  createdById String?
+  updatedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@map("inventory_counts")
+}
+
+model InventoryCountItem {
+  id String @id @default(cuid())
+
+  inventoryCountId String
+  inventoryCount   InventoryCount @relation(fields: [inventoryCountId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  /// Saldo do sistema capturado quando o item entrou na contagem —
+  /// só de referência na tela (mostra se algo mexeu no estoque
+  /// durante a contagem); o fechamento SEMPRE recalcula contra o
+  /// saldo atual de verdade, nunca contra este snapshot congelado.
+  systemQuantity Decimal @db.Decimal(18, 3)
+
+  countedQuantity Decimal? @db.Decimal(18, 3)
+
+  @@unique([inventoryCountId, productId])
+  @@index([inventoryCountId])
+  @@map("inventory_count_items")
 }
 
 enum PurchaseStatus {

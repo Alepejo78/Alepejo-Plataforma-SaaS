@@ -24,6 +24,7 @@ import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { StockMovementModule } from './modules/stock-movement/stock-movement.module';
 import { StockHoldModule } from './modules/stock-hold/stock-hold.module';
+import { InventoryCountModule } from './modules/inventory-count/inventory-count.module';
 import { PurchaseModule } from './modules/purchase/purchase.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
@@ -74,6 +75,7 @@ import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-
     InventoryModule,
     StockMovementModule,
     StockHoldModule,
+    InventoryCountModule,
     PurchaseModule,
     SalesModule,
     QuotesModule,
