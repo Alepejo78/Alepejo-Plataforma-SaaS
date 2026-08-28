@@ -31,6 +31,15 @@ export class ConfirmPurchaseImportDto {
   @IsString()
   warehouseId: string;
 
+  @ApiProperty({
+    required: false,
+    description:
+      'Pedido de compra de origem — quando informado, a compra nasce vinculada a ele e ele passa para CONVERTED.',
+  })
+  @IsOptional()
+  @IsString()
+  purchaseOrderId?: string;
+
   @ApiProperty()
   @IsString({ message: 'Informe o tipo de despesa.' })
   chartOfAccountId: string;
@@ -98,4 +107,13 @@ export class ConfirmPurchaseImportDto {
   @IsOptional()
   @IsBoolean()
   confirmReceipt?: boolean;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'true quando o usuário confirmou a importação apesar de valor/vencimento/CNPJ divergirem do pedido vinculado — nesse caso a compra nasce em rascunho (não aprova nem recebe sozinha), esperando alguém com a permissão de aprovar dar o aval.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  auditOverridden?: boolean;
 }

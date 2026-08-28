@@ -60,14 +60,22 @@ export class InvoiceImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  parse(@UploadedFile() file: Express.Multer.File) {
+  parse(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
+    @Body('direction') direction?: string,
+  ) {
     if (!file) {
       throw new BadRequestException(
         'Envie o arquivo XML da nota.',
       );
     }
 
-    return this.service.parseXml(file.buffer);
+    return this.service.parseXml(
+      file.buffer,
+      rootCompanyId,
+      direction === 'SALE' ? 'SALE' : 'PURCHASE',
+    );
   }
 
   @Post('purchase')

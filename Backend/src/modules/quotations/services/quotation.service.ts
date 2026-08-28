@@ -354,6 +354,13 @@ export class QuotationService {
 
       purchaseOrderNumber = number;
 
+      // A cotação não tem campo de tipo de despesa próprio — sugere a
+      // do primeiro item que já tiver uma cadastrada no produto, pra
+      // não nascer em branco (dá pra trocar depois, editando o pedido).
+      const suggestedChartOfAccountId =
+        offer.items.find((item) => item.product?.chartOfAccountId)
+          ?.product?.chartOfAccountId ?? undefined;
+
       await tx.purchaseOrder.create({
         data: {
           companyId,
@@ -362,6 +369,8 @@ export class QuotationService {
           warehouseId: quotation.warehouseId,
           quotationId: quotation.id,
           quotationOfferId: offer.id,
+          orderDate: new Date(),
+          chartOfAccountId: suggestedChartOfAccountId,
           termDays: offer.termDays,
           paymentMethod: offer.paymentMethod,
           installmentsCount: offer.installmentsCount,
@@ -458,10 +467,10 @@ export class QuotationService {
 
     const order = await this.prisma.purchaseOrder.findFirst({
       where: { quotationOfferId: winner.id },
-      include: { purchase: true },
+      include: { purchases: true },
     });
 
-    if (order?.purchase) {
+    if (order && order.purchases.length > 0) {
       throw new BadRequestException(
         'O pedido de compra gerado por esta cotação já virou uma compra — não é possível estornar a escolha.',
       );

@@ -59,6 +59,37 @@ export class SaleService {
     private readonly productionOrdersService: ProductionOrdersService,
   ) {}
 
+  /**
+   * Nota fiscal de um mesmo cliente não pode entrar duas vezes —
+   * evita duplicidade (ex.: importar o mesmo XML duas vezes por
+   * engano). Números iguais de clientes DIFERENTES são normais (cada
+   * um numera do jeito dele), por isso o cheque é sempre por cliente,
+   * nunca isolado. Venda cancelada não conta — se a primeira
+   * tentativa foi cancelada, pode lançar de novo.
+   */
+  private async assertInvoiceNumberNotDuplicated(
+    companyId: string,
+    partnerId: string,
+    invoiceNumber: string,
+    excludeId?: string,
+  ) {
+    const duplicate = await this.prisma.sale.findFirst({
+      where: {
+        companyId,
+        partnerId,
+        invoiceNumber,
+        status: { not: 'CANCELLED' },
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+    });
+
+    if (duplicate) {
+      throw new BadRequestException(
+        `Já existe uma venda com a nota fiscal ${invoiceNumber} lançada para este cliente.`,
+      );
+    }
+  }
+
   async create(
     companyId: string,
     rootCompanyId: string,
@@ -138,11 +169,24 @@ export class SaleService {
       termDays: number | null;
       paymentMethod: PaymentMethod | null;
       installmentsCount: number | null;
+      items: { id: string; productId: string }[];
     } | null = null;
+
+    // Quanto está sendo lançado agora, por produto — usado pra
+    // conferir o saldo do pedido e, depois, pra somar no
+    // convertedQuantity de cada item dele.
+    const requestedByProduct = new Map<string, number>();
+    for (const item of dto.items) {
+      requestedByProduct.set(
+        item.productId,
+        (requestedByProduct.get(item.productId) ?? 0) + item.quantity,
+      );
+    }
 
     if (dto.salesOrderId) {
       const order = await this.prisma.salesOrder.findFirst({
         where: { id: dto.salesOrderId, companyId },
+        include: { items: true },
       });
 
       if (!order) {
@@ -151,10 +195,37 @@ export class SaleService {
         );
       }
 
-      if (order.status !== SalesOrderStatus.DRAFT) {
+      if (
+        order.status !== SalesOrderStatus.DRAFT &&
+        order.status !== SalesOrderStatus.PARTIALLY_CONVERTED
+      ) {
         throw new BadRequestException(
-          'Este pedido de venda já foi convertido em venda ou está cancelado.',
+          'Este pedido de venda já foi totalmente convertido em venda ou está cancelado.',
         );
+      }
+
+      // Confere que a quantidade lançada agora não estoura o saldo
+      // disponível (pedida - já convertida) de cada produto do
+      // pedido. Item da venda que não bate com nenhum item do
+      // pedido (lançado à parte) passa direto, sem afetar saldo.
+      for (const orderItem of order.items) {
+        const requested = requestedByProduct.get(orderItem.productId);
+        if (!requested) continue;
+
+        const saldo =
+          Number(orderItem.quantity) -
+          Number(orderItem.convertedQuantity) -
+          Number(orderItem.discardedQuantity);
+
+        if (requested > saldo + 0.0001) {
+          const product = await this.prisma.product.findUnique({
+            where: { id: orderItem.productId },
+            select: { description: true },
+          });
+          throw new BadRequestException(
+            `Saldo insuficiente no pedido de venda: ${product?.description ?? 'produto'} tem ${saldo} disponível, você está lançando ${requested}.`,
+          );
+        }
       }
 
       sourceOrder = order;
@@ -204,10 +275,45 @@ export class SaleService {
         });
       }
 
-      if (dto.salesOrderId) {
+      if (dto.salesOrderId && sourceOrder) {
+        for (const [productId, requested] of requestedByProduct) {
+          const orderItem = sourceOrder.items.find(
+            (item) => item.productId === productId,
+          );
+          if (!orderItem) continue;
+
+          await tx.salesOrderItem.update({
+            where: { id: orderItem.id },
+            data: { convertedQuantity: { increment: requested } },
+          });
+        }
+
+        const updatedItems = await tx.salesOrderItem.findMany({
+          where: { salesOrderId: dto.salesOrderId },
+        });
+
+        const allConverted = updatedItems.every(
+          (item) =>
+            Number(item.quantity) -
+              Number(item.convertedQuantity) -
+              Number(item.discardedQuantity) <=
+            0.0001,
+        );
+        const anyConverted = updatedItems.some(
+          (item) =>
+            Number(item.convertedQuantity) > 0.0001 ||
+            Number(item.discardedQuantity) > 0.0001,
+        );
+
         await tx.salesOrder.update({
           where: { id: dto.salesOrderId },
-          data: { status: SalesOrderStatus.CONVERTED },
+          data: {
+            status: allConverted
+              ? SalesOrderStatus.CONVERTED
+              : anyConverted
+                ? SalesOrderStatus.PARTIALLY_CONVERTED
+                : SalesOrderStatus.DRAFT,
+          },
         });
       }
 
@@ -279,6 +385,15 @@ export class SaleService {
           'Almoxarifado não encontrado.',
         );
       }
+    }
+
+    // Venda vinculada a um pedido consome saldo dele na criação — se
+    // deixasse editar os itens depois, o saldo do pedido ficaria
+    // inconsistente. Cancele e lance de novo se precisar corrigir.
+    if (dto.items && sale.salesOrderId) {
+      throw new BadRequestException(
+        'Esta venda está vinculada a um pedido de venda — os itens não podem ser alterados. Cancele e lance de novo se precisar corrigir produto/quantidade.',
+      );
     }
 
     let items:
@@ -389,6 +504,15 @@ export class SaleService {
     if (sale.status !== 'DRAFT') {
       throw new BadRequestException(
         'Somente vendas em elaboração podem ser aprovadas.',
+      );
+    }
+
+    if (dto.invoiceNumber) {
+      await this.assertInvoiceNumberNotDuplicated(
+        companyId,
+        sale.partnerId,
+        dto.invoiceNumber,
+        sale.id,
       );
     }
 
@@ -636,8 +760,65 @@ export class SaleService {
       );
     }
 
-    await this.prisma.sale.delete({
-      where: { id },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.sale.delete({
+        where: { id },
+      });
+
+      // Nasceu de um Pedido de Venda — devolve pro pedido só o
+      // saldo que ESTA venda tinha consumido (não zera o pedido
+      // inteiro, já que ele pode ter outras vendas parciais
+      // vinculadas), e recalcula o status a partir do saldo que
+      // sobrou depois disso.
+      if (sale.salesOrderId) {
+        const orderItems = await tx.salesOrderItem.findMany({
+          where: { salesOrderId: sale.salesOrderId },
+        });
+
+        for (const saleItem of sale.items) {
+          const orderItem = orderItems.find(
+            (item) => item.productId === saleItem.productId,
+          );
+          if (!orderItem) continue;
+
+          await tx.salesOrderItem.update({
+            where: { id: orderItem.id },
+            data: {
+              convertedQuantity: {
+                decrement: Number(saleItem.quantity),
+              },
+            },
+          });
+        }
+
+        const updatedItems = await tx.salesOrderItem.findMany({
+          where: { salesOrderId: sale.salesOrderId },
+        });
+
+        const allConverted = updatedItems.every(
+          (item) =>
+            Number(item.quantity) -
+              Number(item.convertedQuantity) -
+              Number(item.discardedQuantity) <=
+            0.0001,
+        );
+        const anyConverted = updatedItems.some(
+          (item) =>
+            Number(item.convertedQuantity) > 0.0001 ||
+            Number(item.discardedQuantity) > 0.0001,
+        );
+
+        await tx.salesOrder.update({
+          where: { id: sale.salesOrderId },
+          data: {
+            status: allConverted
+              ? SalesOrderStatus.CONVERTED
+              : anyConverted
+                ? SalesOrderStatus.PARTIALLY_CONVERTED
+                : SalesOrderStatus.DRAFT,
+          },
+        });
+      }
     });
   }
 

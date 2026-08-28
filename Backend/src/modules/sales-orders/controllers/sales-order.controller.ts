@@ -81,4 +81,15 @@ export class SalesOrderController {
   ) {
     return this.service.cancel(companyId, id, userId);
   }
+
+  @Patch(':id/close-balance')
+  @Permissions('sales-order.cancel')
+  @ApiOperation({ summary: 'Zerar saldo restante do pedido de venda' })
+  closeBalance(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.closeBalance(companyId, id, userId);
+  }
 }

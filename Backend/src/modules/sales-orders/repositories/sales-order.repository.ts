@@ -17,7 +17,7 @@ const includeRelations = {
       product: { include: { saleChartOfAccount: true } },
     },
   },
-  sale: true,
+  sales: true,
 };
 
 @Injectable()

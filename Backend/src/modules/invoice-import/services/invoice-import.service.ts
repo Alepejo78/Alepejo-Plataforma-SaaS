@@ -31,8 +31,30 @@ export class InvoiceImportService {
     private readonly saleService: SaleService,
   ) {}
 
-  parseXml(buffer: Buffer) {
-    return this.xmlParser.parse(buffer.toString('utf-8'));
+  async parseXml(
+    buffer: Buffer,
+    rootCompanyId: string,
+    direction: 'PURCHASE' | 'SALE' = 'PURCHASE',
+  ) {
+    // Empresa + todo o grupo (Interprise) — a nota pode ser de
+    // qualquer uma delas, não só da empresa ativa no momento.
+    const companies = await this.prisma.company.findMany({
+      where: {
+        OR: [{ id: rootCompanyId }, { rootCompanyId }],
+        deletedAt: null,
+      },
+      select: { document: true },
+    });
+
+    const companyDocuments = new Set(
+      companies.map((c) => c.document),
+    );
+
+    return this.xmlParser.parse(
+      buffer.toString('utf-8'),
+      companyDocuments,
+      direction,
+    );
   }
 
   /**
@@ -98,25 +120,41 @@ export class InvoiceImportService {
       userId,
     );
 
+    const invoiceIssueDate = dto.invoiceIssueDate
+      ? (dto.invoiceIssueDate as unknown as Date)
+      : undefined;
+
     const purchase = await this.purchaseService.create(
       companyId,
       rootCompanyId,
       {
         partnerId,
         warehouseId: dto.warehouseId,
+        purchaseOrderId: dto.purchaseOrderId,
         chartOfAccountId: dto.chartOfAccountId,
         observation: dto.observation,
+        // Compra já nasce com a data da própria nota — sem isso,
+        // ficava sem "data da compra" nenhuma (a nota tem a data, só
+        // não estava sendo repassada pra cá).
+        purchaseDate: invoiceIssueDate,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
         invoiceNumber: dto.invoiceNumber,
         invoiceKey: dto.invoiceKey,
-        invoiceIssueDate: dto.invoiceIssueDate
-          ? (dto.invoiceIssueDate as unknown as Date)
-          : undefined,
+        invoiceIssueDate,
         items: dto.items,
       },
       userId,
     );
+
+    // Confirmou mesmo com divergência (valor/vencimento/CNPJ
+    // diferente do pedido) — não aprova nem recebe sozinho. Fica em
+    // rascunho, esperando alguém com a permissão de aprovar dar o
+    // aval antes de seguir (segregação: quem importa não pode ser
+    // sempre quem aprova a divergência).
+    if (dto.auditOverridden) {
+      return purchase;
+    }
 
     const approved = await this.purchaseService.approve(
       companyId,
@@ -137,9 +175,7 @@ export class InvoiceImportService {
       {
         invoiceNumber: dto.invoiceNumber,
         invoiceKey: dto.invoiceKey,
-        invoiceIssueDate: dto.invoiceIssueDate
-          ? (dto.invoiceIssueDate as unknown as Date)
-          : undefined,
+        invoiceIssueDate,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
         installments: dto.installments,
@@ -161,14 +197,23 @@ export class InvoiceImportService {
       userId,
     );
 
+    const invoiceIssueDate = dto.invoiceIssueDate
+      ? (dto.invoiceIssueDate as unknown as Date)
+      : undefined;
+
     const sale = await this.saleService.create(
       companyId,
       rootCompanyId,
       {
         partnerId,
         warehouseId: dto.warehouseId,
+        salesOrderId: dto.salesOrderId,
         chartOfAccountId: dto.chartOfAccountId,
         observation: dto.observation,
+        // Venda já nasce com a data da própria nota — mesma correção
+        // do lado de Compras (a nota tem a data, só não estava sendo
+        // repassada pra cá).
+        saleDate: invoiceIssueDate,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
         items: dto.items,
@@ -176,15 +221,20 @@ export class InvoiceImportService {
       userId,
     );
 
+    // Confirmou mesmo com divergência — mesma regra do lado de
+    // Compras: fica em rascunho, esperando alguém com a permissão de
+    // aprovar (não aprova sozinho).
+    if (dto.auditOverridden) {
+      return sale;
+    }
+
     return this.saleService.approve(
       companyId,
       sale.id,
       {
         invoiceNumber: dto.invoiceNumber,
         invoiceKey: dto.invoiceKey,
-        invoiceIssueDate: dto.invoiceIssueDate
-          ? (dto.invoiceIssueDate as unknown as Date)
-          : undefined,
+        invoiceIssueDate,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
         installments: dto.installments,

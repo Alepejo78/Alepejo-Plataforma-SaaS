@@ -58,6 +58,37 @@ export class PurchaseService {
     private readonly documentSequence: DocumentSequenceService,
   ) {}
 
+  /**
+   * Nota fiscal de um mesmo fornecedor não pode entrar duas vezes —
+   * evita duplicidade (ex.: importar o mesmo XML duas vezes por
+   * engano). Números iguais de fornecedores DIFERENTES são normais
+   * (cada um numera do jeito dele), por isso o cheque é sempre por
+   * fornecedor, nunca isolado. Compra cancelada não conta — se a
+   * primeira tentativa foi cancelada, pode lançar de novo.
+   */
+  private async assertInvoiceNumberNotDuplicated(
+    companyId: string,
+    partnerId: string,
+    invoiceNumber: string,
+    excludeId?: string,
+  ) {
+    const duplicate = await this.prisma.purchase.findFirst({
+      where: {
+        companyId,
+        partnerId,
+        invoiceNumber,
+        status: { not: PurchaseStatus.CANCELLED },
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+    });
+
+    if (duplicate) {
+      throw new BadRequestException(
+        `Já existe uma compra com a nota fiscal ${invoiceNumber} lançada para este fornecedor.`,
+      );
+    }
+  }
+
   async create(
     companyId: string,
     rootCompanyId: string,
@@ -72,6 +103,14 @@ export class PurchaseService {
       dto.partnerId,
       BusinessPartnerRole.SUPPLIER,
     );
+
+    if (dto.invoiceNumber) {
+      await this.assertInvoiceNumberNotDuplicated(
+        companyId,
+        dto.partnerId,
+        dto.invoiceNumber,
+      );
+    }
 
     const warehouse =
       await this.prisma.warehouse.findFirst({
@@ -113,14 +152,25 @@ export class PurchaseService {
       termDays: number | null;
       paymentMethod: PaymentMethod | null;
       installmentsCount: number | null;
+      items: { id: string; productId: string }[];
     } | null = null;
 
-    if (dto.purchaseOrderId) {
-      const order = await this.prisma.purchaseOrder.findFirst(
-        {
-          where: { id: dto.purchaseOrderId, companyId },
-        },
+    // Quanto está sendo lançado agora, por produto — usado pra
+    // conferir o saldo do pedido e, depois, pra somar no
+    // convertedQuantity de cada item dele.
+    const requestedByProduct = new Map<string, number>();
+    for (const item of dto.items) {
+      requestedByProduct.set(
+        item.productId,
+        (requestedByProduct.get(item.productId) ?? 0) + item.quantity,
       );
+    }
+
+    if (dto.purchaseOrderId) {
+      const order = await this.prisma.purchaseOrder.findFirst({
+        where: { id: dto.purchaseOrderId, companyId },
+        include: { items: true },
+      });
 
       if (!order) {
         throw new NotFoundException(
@@ -128,10 +178,37 @@ export class PurchaseService {
         );
       }
 
-      if (order.status !== PurchaseOrderStatus.DRAFT) {
+      if (
+        order.status !== PurchaseOrderStatus.DRAFT &&
+        order.status !== PurchaseOrderStatus.PARTIALLY_CONVERTED
+      ) {
         throw new BadRequestException(
-          'Este pedido de compra já foi convertido em compra ou está cancelado.',
+          'Este pedido de compra já foi totalmente convertido em compra ou está cancelado.',
         );
+      }
+
+      // Confere que a quantidade lançada agora não estoura o saldo
+      // disponível (pedida - já convertida) de cada produto do
+      // pedido. Item da compra que não bate com nenhum item do
+      // pedido (lançado à parte) passa direto, sem afetar saldo.
+      for (const orderItem of order.items) {
+        const requested = requestedByProduct.get(orderItem.productId);
+        if (!requested) continue;
+
+        const saldo =
+          Number(orderItem.quantity) -
+          Number(orderItem.convertedQuantity) -
+          Number(orderItem.discardedQuantity);
+
+        if (requested > saldo + 0.0001) {
+          const product = await this.prisma.product.findUnique({
+            where: { id: orderItem.productId },
+            select: { description: true },
+          });
+          throw new BadRequestException(
+            `Saldo insuficiente no pedido de compra: ${product?.description ?? 'produto'} tem ${saldo} disponível, você está lançando ${requested}.`,
+          );
+        }
       }
 
       sourceOrder = order;
@@ -174,10 +251,45 @@ export class PurchaseService {
         userId,
       );
 
-      if (dto.purchaseOrderId) {
+      if (dto.purchaseOrderId && sourceOrder) {
+        for (const [productId, requested] of requestedByProduct) {
+          const orderItem = sourceOrder.items.find(
+            (item) => item.productId === productId,
+          );
+          if (!orderItem) continue;
+
+          await tx.purchaseOrderItem.update({
+            where: { id: orderItem.id },
+            data: { convertedQuantity: { increment: requested } },
+          });
+        }
+
+        const updatedItems = await tx.purchaseOrderItem.findMany({
+          where: { purchaseOrderId: dto.purchaseOrderId },
+        });
+
+        const allConverted = updatedItems.every(
+          (item) =>
+            Number(item.quantity) -
+              Number(item.convertedQuantity) -
+              Number(item.discardedQuantity) <=
+            0.0001,
+        );
+        const anyConverted = updatedItems.some(
+          (item) =>
+            Number(item.convertedQuantity) > 0.0001 ||
+            Number(item.discardedQuantity) > 0.0001,
+        );
+
         await tx.purchaseOrder.update({
           where: { id: dto.purchaseOrderId },
-          data: { status: PurchaseOrderStatus.CONVERTED },
+          data: {
+            status: allConverted
+              ? PurchaseOrderStatus.CONVERTED
+              : anyConverted
+                ? PurchaseOrderStatus.PARTIALLY_CONVERTED
+                : PurchaseOrderStatus.DRAFT,
+          },
         });
       }
 
@@ -258,6 +370,24 @@ export class PurchaseService {
       }
     }
 
+    if (dto.invoiceNumber) {
+      await this.assertInvoiceNumberNotDuplicated(
+        companyId,
+        dto.partnerId ?? purchase.partnerId,
+        dto.invoiceNumber,
+        id,
+      );
+    }
+
+    // Compra vinculada a um pedido consome saldo dele na criação — se
+    // deixasse editar os itens depois, o saldo do pedido ficaria
+    // inconsistente. Cancele e lance de novo se precisar corrigir.
+    if (dto.items && purchase.purchaseOrderId) {
+      throw new BadRequestException(
+        'Esta compra está vinculada a um pedido de compra — os itens não podem ser alterados. Cancele e lance de novo se precisar corrigir produto/quantidade.',
+      );
+    }
+
     let items:
       | {
           productId: string;
@@ -320,6 +450,11 @@ export class PurchaseService {
         dueDate,
         paymentMethod: dto.paymentMethod,
         totalAmount,
+        invoiceNumber: dto.invoiceNumber,
+        invoiceKey: dto.invoiceKey,
+        invoiceIssueDate: dto.invoiceIssueDate
+          ? new Date(dto.invoiceIssueDate)
+          : undefined,
         items,
       },
       userId,
@@ -384,6 +519,15 @@ export class PurchaseService {
     ) {
       throw new BadRequestException(
         'A compra precisa estar aprovada.',
+      );
+    }
+
+    if (dto.invoiceNumber) {
+      await this.assertInvoiceNumberNotDuplicated(
+        companyId,
+        purchase.partnerId,
+        dto.invoiceNumber,
+        purchase.id,
       );
     }
 
@@ -814,8 +958,65 @@ export class PurchaseService {
       );
     }
 
-    await this.prisma.purchase.delete({
-      where: { id },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.purchase.delete({
+        where: { id },
+      });
+
+      // Nasceu de um Pedido de Compra — devolve pro pedido só o
+      // saldo que ESTA compra tinha consumido (não zera o pedido
+      // inteiro, já que ele pode ter outras compras parciais
+      // vinculadas), e recalcula o status a partir do saldo que
+      // sobrou depois disso.
+      if (purchase.purchaseOrderId) {
+        const orderItems = await tx.purchaseOrderItem.findMany({
+          where: { purchaseOrderId: purchase.purchaseOrderId },
+        });
+
+        for (const purchaseItem of purchase.items) {
+          const orderItem = orderItems.find(
+            (item) => item.productId === purchaseItem.productId,
+          );
+          if (!orderItem) continue;
+
+          await tx.purchaseOrderItem.update({
+            where: { id: orderItem.id },
+            data: {
+              convertedQuantity: {
+                decrement: Number(purchaseItem.quantity),
+              },
+            },
+          });
+        }
+
+        const updatedItems = await tx.purchaseOrderItem.findMany({
+          where: { purchaseOrderId: purchase.purchaseOrderId },
+        });
+
+        const allConverted = updatedItems.every(
+          (item) =>
+            Number(item.quantity) -
+              Number(item.convertedQuantity) -
+              Number(item.discardedQuantity) <=
+            0.0001,
+        );
+        const anyConverted = updatedItems.some(
+          (item) =>
+            Number(item.convertedQuantity) > 0.0001 ||
+            Number(item.discardedQuantity) > 0.0001,
+        );
+
+        await tx.purchaseOrder.update({
+          where: { id: purchase.purchaseOrderId },
+          data: {
+            status: allConverted
+              ? PurchaseOrderStatus.CONVERTED
+              : anyConverted
+                ? PurchaseOrderStatus.PARTIALLY_CONVERTED
+                : PurchaseOrderStatus.DRAFT,
+          },
+        });
+      }
     });
   }
 }

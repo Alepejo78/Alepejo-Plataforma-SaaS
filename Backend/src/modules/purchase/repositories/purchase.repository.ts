@@ -164,6 +164,9 @@ export class PurchaseRepository {
       dueDate?: Date;
       paymentMethod?: CreatePurchaseDto['paymentMethod'];
       totalAmount?: number;
+      invoiceNumber?: string;
+      invoiceKey?: string;
+      invoiceIssueDate?: Date;
       items?: {
         productId: string;
         quantity: number;
@@ -201,6 +204,15 @@ export class PurchaseRepository {
         }),
         ...(dto.totalAmount !== undefined && {
           totalAmount: dto.totalAmount,
+        }),
+        ...(dto.invoiceNumber !== undefined && {
+          invoiceNumber: dto.invoiceNumber,
+        }),
+        ...(dto.invoiceKey !== undefined && {
+          invoiceKey: dto.invoiceKey,
+        }),
+        ...(dto.invoiceIssueDate !== undefined && {
+          invoiceIssueDate: dto.invoiceIssueDate,
         }),
         ...(dto.items && {
           items: {

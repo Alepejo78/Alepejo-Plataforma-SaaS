@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -29,6 +30,15 @@ export class ConfirmSaleImportDto {
   @ApiProperty()
   @IsString()
   warehouseId: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Pedido de venda de origem — quando informado, a venda nasce vinculada a ele e ele passa para CONVERTED.',
+  })
+  @IsOptional()
+  @IsString()
+  salesOrderId?: string;
 
   @ApiProperty()
   @IsString({ message: 'Informe o tipo de receita.' })
@@ -87,4 +97,13 @@ export class ConfirmSaleImportDto {
   @ValidateNested({ each: true })
   @Type(() => CreateSaleItemDto)
   items: CreateSaleItemDto[];
+
+  @ApiProperty({
+    required: false,
+    description:
+      'true quando o usuário confirmou a importação apesar de valor/vencimento/CNPJ divergirem do pedido vinculado — nesse caso a venda nasce em rascunho (não aprova sozinha), esperando alguém com a permissão de aprovar dar o aval.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  auditOverridden?: boolean;
 }

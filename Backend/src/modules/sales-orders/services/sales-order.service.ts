@@ -339,4 +339,50 @@ export class SalesOrderService {
 
     return this.repository.cancel(id, userId);
   }
+
+  /**
+   * Fecha o pedido sem gerar venda nenhuma pra sobra — usado quando o
+   * saldo que restou (entregue parcialmente, ex.: cliente não vai
+   * mais levar o resto) não vai mais ser convertido.
+   */
+  async closeBalance(companyId: string, id: string, userId: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (
+      order.status !== SalesOrderStatus.DRAFT &&
+      order.status !== SalesOrderStatus.PARTIALLY_CONVERTED
+    ) {
+      throw new BadRequestException(
+        'Este pedido não tem saldo em aberto pra zerar.',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const item of order.items) {
+        // Descarta só o saldo que sobrou — não mexe em
+        // convertedQuantity, que é reservado pra venda de verdade.
+        // Sem essa distinção, a tela mostraria "convertido" pra
+        // quantidade que na real foi só desistida.
+        const saldo =
+          Number(item.quantity) - Number(item.convertedQuantity);
+
+        if (saldo <= 0) continue;
+
+        await tx.salesOrderItem.update({
+          where: { id: item.id },
+          data: { discardedQuantity: saldo },
+        });
+      }
+
+      await tx.salesOrder.update({
+        where: { id },
+        data: {
+          status: SalesOrderStatus.CONVERTED,
+          updatedById: userId,
+        },
+      });
+    });
+
+    return this.findOne(companyId, id);
+  }
 }

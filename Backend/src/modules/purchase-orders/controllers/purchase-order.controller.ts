@@ -94,4 +94,15 @@ export class PurchaseOrderController {
   ) {
     return this.service.reopen(companyId, id, userId);
   }
+
+  @Patch(':id/close-balance')
+  @Permissions('purchase-order.cancel')
+  @ApiOperation({ summary: 'Zerar saldo restante do pedido de compra' })
+  closeBalance(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.closeBalance(companyId, id, userId);
+  }
 }

@@ -863,8 +863,10 @@ model Purchase {
 
   financialEntries FinancialEntry[]
 
-  /// Preenchido quando a compra nasceu de um pedido de compra.
-  purchaseOrderId String?        @unique
+  /// Preenchido quando a compra nasceu de um pedido de compra — não é
+  /// mais único: um pedido pode virar várias compras (entrega
+  /// parcial), controlado pelo saldo de PurchaseOrderItem.convertedQuantity.
+  purchaseOrderId String?
   purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
   createdById String?
@@ -876,6 +878,7 @@ model Purchase {
   @@unique([companyId, number])
   @@index([companyId])
   @@index([chartOfAccountId])
+  @@index([purchaseOrderId])
   @@map("purchases")
 }
 
@@ -999,15 +1002,21 @@ model QuotationOfferItem {
 
 enum PurchaseOrderStatus {
   DRAFT
+  /// Já virou Compra(s) em parte, mas ainda tem saldo (de algum item)
+  /// disponível pra virar mais — entrega parcial do fornecedor.
+  PARTIALLY_CONVERTED
   CONVERTED
   CANCELLED
 }
 
 /// Pedido de compra: compromisso com o fornecedor antes de virar
 /// Compra. Pode nascer do zero ou puxado do vencedor de uma
-/// Cotação. Se convertido, vira uma Compra (Purchase.purchaseOrderId)
-/// e o status passa a CONVERTED — a partir daí não pode mais ser
-/// editado.
+/// Cotação. Pode virar várias Compras ao longo do tempo (entrega
+/// parcial) — cada PurchaseOrderItem.convertedQuantity controla quanto
+/// já foi convertido; status vira CONVERTED sozinho quando o saldo de
+/// todo item zerar, ou pode ser fechado na mão (ver
+/// PurchaseOrderService.closeBalance) quando sobrar saldo que não vai
+/// mais ser usado. A partir de CONVERTED não pode mais ser editado.
 model PurchaseOrder {
   id String @id @default(cuid())
 
@@ -1044,8 +1053,8 @@ model PurchaseOrder {
 
   totalAmount Decimal @default(0) @db.Decimal(18, 2)
 
-  items    PurchaseOrderItem[]
-  purchase Purchase?
+  items     PurchaseOrderItem[]
+  purchases Purchase[]
 
   /// Preenchido quando o pedido nasceu da proposta vencedora de uma
   /// cotação.
@@ -1076,6 +1085,17 @@ model PurchaseOrderItem {
   quantity        Decimal       @db.Decimal(18, 3)
   unitPrice       Decimal       @db.Decimal(18, 2)
   totalPrice      Decimal       @db.Decimal(18, 2)
+
+  /// Quanto desse item já virou Compra de verdade — saldo disponível
+  /// é `quantity - convertedQuantity - discardedQuantity`. Zerado em
+  /// item antigo (nada convertido ainda quando esse campo nasceu).
+  convertedQuantity Decimal @default(0) @db.Decimal(18, 3)
+
+  /// Quanto desse item foi descartado via "Zerar saldo" — sobra que
+  /// não vai virar Compra nenhuma. Diferente de convertedQuantity
+  /// (que é compra de verdade): serve pra distinguir na tela o que
+  /// foi efetivamente comprado do que foi só desistido.
+  discardedQuantity Decimal @default(0) @db.Decimal(18, 3)
 
   @@index([purchaseOrderId])
   @@map("purchase_order_items")
@@ -1144,9 +1164,12 @@ model Sale {
 
   /// Preenchido quando a venda nasceu de um orçamento ou pedido de
   /// venda (só um dos dois, escolhido no cadastro da venda).
+  /// salesOrderId não é mais único: um pedido pode virar várias
+  /// vendas (entrega parcial), controlado pelo saldo de
+  /// SalesOrderItem.convertedQuantity.
   quoteId      String?     @unique
   quote        Quote?      @relation(fields: [quoteId], references: [id])
-  salesOrderId String?     @unique
+  salesOrderId String?
   salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
 
   createdById String?
@@ -1158,6 +1181,7 @@ model Sale {
   @@unique([companyId, number])
   @@index([companyId])
   @@index([chartOfAccountId])
+  @@index([salesOrderId])
   @@map("sales")
 }
 
@@ -1269,14 +1293,21 @@ model QuoteItem {
 
 enum SalesOrderStatus {
   DRAFT
+  /// Já virou Venda(s) em parte, mas ainda tem saldo (de algum item)
+  /// disponível pra virar mais — entrega parcial pro cliente.
+  PARTIALLY_CONVERTED
   CONVERTED
   CANCELLED
 }
 
 /// Pedido de venda: compromisso firmado com o cliente antes de
-/// virar Venda (diferente do orçamento, que é só uma proposta).
-/// Se convertido, vira uma Venda (Sale.salesOrderId) e o status
-/// passa a CONVERTED — a partir daí não pode mais ser editado.
+/// virar Venda (diferente do orçamento, que é só uma proposta). Pode
+/// virar várias Vendas ao longo do tempo (entrega parcial) — cada
+/// SalesOrderItem.convertedQuantity controla quanto já foi convertido;
+/// status vira CONVERTED sozinho quando o saldo de todo item zerar,
+/// ou pode ser fechado na mão (ver SalesOrderService.closeBalance)
+/// quando sobrar saldo que não vai mais ser usado. A partir de
+/// CONVERTED não pode mais ser editado.
 model SalesOrder {
   id String @id @default(cuid())
 
@@ -1319,7 +1350,7 @@ model SalesOrder {
   chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
 
   items SalesOrderItem[]
-  sale  Sale?
+  sales Sale[]
 
   /// Preenchido quando o pedido nasceu da aprovação automática de um
   /// Orçamento (ver Quote.salesOrder) — não editável, só referência.
@@ -1348,6 +1379,17 @@ model SalesOrderItem {
   quantity     Decimal    @db.Decimal(18, 3)
   unitPrice    Decimal    @db.Decimal(18, 2)
   totalPrice   Decimal    @db.Decimal(18, 2)
+
+  /// Quanto desse item já virou Venda de verdade (uma ou mais) —
+  /// saldo disponível é `quantity - convertedQuantity -
+  /// discardedQuantity`.
+  convertedQuantity Decimal @default(0) @db.Decimal(18, 3)
+
+  /// Quanto desse item foi descartado via "Zerar saldo" — sobra que
+  /// não vai virar Venda nenhuma. Diferente de convertedQuantity
+  /// (que é venda de verdade): serve pra distinguir na tela o que
+  /// foi efetivamente vendido do que foi só desistido.
+  discardedQuantity Decimal @default(0) @db.Decimal(18, 3)
 
   @@index([salesOrderId])
   @@map("sales_order_items")
