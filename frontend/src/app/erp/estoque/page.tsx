@@ -7,7 +7,6 @@ import {
   Building2,
   History,
   Lock,
-  Plus,
   Unlock,
   X,
 } from "lucide-react";
@@ -28,10 +27,6 @@ import {
   type Warehouse,
 } from "@/services/inventory.service";
 
-import {
-  productService,
-  type Product,
-} from "@/services/product.service";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -87,22 +82,12 @@ export default function EstoquePage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>(
     []
   );
-  const [products, setProducts] = useState<Product[]>([]);
 
   const [warehouseId, setWarehouseId] = useState("");
   const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
-
-  // Modal de incluir produto no estoque
-  const [addOpen, setAddOpen] = useState(false);
-  const [addForm, setAddForm] = useState({
-    productId: "",
-    warehouseId: "",
-    quantity: "",
-    averageCost: 0,
-  });
 
   // Modal de retenções (bloqueio/reserva/quarentena/avaria)
   const [holdOpen, setHoldOpen] = useState(false);
@@ -121,17 +106,12 @@ export default function EstoquePage() {
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    Promise.all([
-      warehouseService.list(),
-      productService.list({ limit: 100 }),
-    ])
-      .then(([wh, pr]) => {
-        setWarehouses(wh);
-        setProducts(pr.data ?? []);
-      })
+    warehouseService
+      .list()
+      .then(setWarehouses)
       .catch(() => {
         setListError(
-          "Não foi possível carregar depósitos e produtos."
+          "Não foi possível carregar os depósitos."
         );
       });
   }, []);
@@ -166,17 +146,6 @@ export default function EstoquePage() {
 
     return () => clearTimeout(timer);
   }, [load]);
-
-  function openAdd() {
-    setAddForm({
-      productId: "",
-      warehouseId: warehouses[0]?.id ?? "",
-      quantity: "",
-      averageCost: 0,
-    });
-    setFormError("");
-    setAddOpen(true);
-  }
 
   async function loadHolds(inventoryId: string) {
     setHoldsLoading(true);
@@ -219,41 +188,6 @@ export default function EstoquePage() {
 
     return Number.isFinite(parsed) ? parsed : 0;
   };
-
-  async function saveAdd() {
-    if (!addForm.productId || !addForm.warehouseId) {
-      setFormError(
-        "Selecione o produto e o depósito."
-      );
-
-      return;
-    }
-
-    setSaving(true);
-    setFormError("");
-
-    try {
-      await inventoryService.create({
-        productId: addForm.productId,
-        warehouseId: addForm.warehouseId,
-        quantity: decimal(addForm.quantity),
-        averageCost: addForm.averageCost,
-      });
-
-      setAddOpen(false);
-
-      await load();
-    } catch (err) {
-      setFormError(
-        extractMessage(
-          err,
-          "Não foi possível incluir o produto no estoque."
-        )
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function saveHold() {
     if (!holdItem) {
@@ -350,23 +284,6 @@ export default function EstoquePage() {
                   <History size={18} />
                   Movimentações
                 </Link>
-
-                <Can permission="inventory.create">
-                  <button
-                    type="button"
-                    onClick={openAdd}
-                    disabled={semDeposito}
-                    title={
-                      semDeposito
-                        ? "Cadastre um depósito primeiro"
-                        : undefined
-                    }
-                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
-                  >
-                    <Plus size={18} />
-                    Incluir produto
-                  </button>
-                </Can>
               </div>
             </header>
 
@@ -438,8 +355,8 @@ export default function EstoquePage() {
             </p>
 
             <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Use &quot;Incluir produto&quot; para começar a
-              controlar o saldo.
+              O saldo é gerado por Compra, Venda ou Contagem
+              de inventário.
             </p>
           </div>
         ) : (
@@ -609,145 +526,6 @@ export default function EstoquePage() {
           </div>
         )}
       </ListPageLayout>
-
-      {/* Incluir produto no estoque */}
-      {addOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                Incluir produto no estoque
-              </h2>
-
-              <button
-                type="button"
-                onClick={() => setAddOpen(false)}
-                aria-label="Fechar"
-                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>
-                    Produto
-                  </label>
-
-                  <select
-                    className={fieldClass}
-                    value={addForm.productId}
-                    onChange={(e) =>
-                      setAddForm({
-                        ...addForm,
-                        productId: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Selecione...</option>
-
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.code} — {p.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Depósito
-                  </label>
-
-                  <select
-                    className={fieldClass}
-                    value={addForm.warehouseId}
-                    onChange={(e) =>
-                      setAddForm({
-                        ...addForm,
-                        warehouseId: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Selecione...</option>
-
-                    {warehouses.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.code} — {w.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>
-                    Quantidade inicial
-                  </label>
-
-                  <input
-                    inputMode="decimal"
-                    placeholder="0"
-                    className={fieldClass}
-                    value={addForm.quantity}
-                    onChange={(e) =>
-                      setAddForm({
-                        ...addForm,
-                        quantity: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Custo médio (R$)
-                  </label>
-
-                  <CurrencyInput
-                    className={fieldClass}
-                    value={addForm.averageCost}
-                    onChange={(value) =>
-                      setAddForm({
-                        ...addForm,
-                        averageCost: value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              {formError && (
-                <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-                  {formError}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(false)}
-                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => void saveAdd()}
-                  className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
-                >
-                  {saving ? "Salvando..." : "Incluir"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Retenções de estoque */}
       {holdOpen && holdItem && (

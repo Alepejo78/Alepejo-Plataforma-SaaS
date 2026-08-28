@@ -303,13 +303,27 @@ export default function InventarioPage() {
     setFormError("");
 
     try {
-      const result = await inventoryService.list({
-        warehouseId,
-        limit: 1000,
-      });
+      const all: Awaited<
+        ReturnType<typeof inventoryService.list>
+      >["data"] = [];
+
+      let page = 1;
+      let pages = 1;
+
+      do {
+        const result = await inventoryService.list({
+          warehouseId,
+          page,
+          limit: 100,
+        });
+
+        all.push(...result.data);
+        pages = result.pages;
+        page += 1;
+      } while (page <= pages);
 
       setItems(
-        result.data.map((inv) => ({
+        all.map((inv) => ({
           productId: inv.productId,
           productLabel: inv.product
             ? `${inv.product.code} — ${inv.product.description}`

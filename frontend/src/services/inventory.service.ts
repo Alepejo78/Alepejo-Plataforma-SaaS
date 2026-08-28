@@ -173,6 +173,7 @@ export const inventoryService = {
     search?: string;
     warehouseId?: string;
     productId?: string;
+    page?: number;
     limit?: number;
   } = {}): Promise<Paged<InventoryItem>> {
     const { data } = await api.get<
