@@ -21,7 +21,6 @@ import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
-  MOVEMENT_LABELS,
   STOCK_HOLD_TYPE_LABELS,
   inventoryService,
   stockHoldService,
@@ -38,11 +37,6 @@ import {
   productService,
   type Product,
 } from "@/services/product.service";
-
-import {
-  DOCUMENT_TYPE_LABELS,
-  type FinancialDocumentType,
-} from "@/services/financial-entry.service";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -124,8 +118,6 @@ export default function EstoquePage() {
     quantity: "",
     unitCost: 0,
     observation: "",
-    documentType: "" as FinancialDocumentType | "",
-    documentNumber: "",
   });
 
   // Modal de retenções (bloqueio/reserva/quarentena/avaria)
@@ -212,8 +204,6 @@ export default function EstoquePage() {
       quantity: "",
       unitCost: 0,
       observation: "",
-      documentType: "",
-      documentNumber: "",
     });
     setFormError("");
     setMoveOpen(true);
@@ -309,29 +299,19 @@ export default function EstoquePage() {
       return;
     }
 
+    // Movimentação manual (fora de Compra/Venda) — como é ajuste de
+    // inventário, sem nota fiscal por trás, o motivo é obrigatório
+    // pra manter rastreável o porquê da correção.
+    if (!moveForm.observation.trim()) {
+      setFormError(
+        "Informe o motivo do ajuste (ex.: contagem de inventário, perda, quebra)."
+      );
+
+      return;
+    }
+
     setSaving(true);
     setFormError("");
-
-    const documentNumber =
-      moveForm.type === "ADJUSTMENT"
-        ? undefined
-        : moveForm.documentType || moveForm.documentNumber
-          ? [
-              moveForm.documentType
-                ? DOCUMENT_TYPE_LABELS[moveForm.documentType]
-                : "Documento",
-              moveForm.documentNumber
-                ? `nº ${moveForm.documentNumber}`
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")
-          : undefined;
-
-    const observation =
-      moveForm.type === "ADJUSTMENT"
-        ? moveForm.observation || undefined
-        : undefined;
 
     try {
       await stockMovementService.create({
@@ -339,8 +319,7 @@ export default function EstoquePage() {
         type: moveForm.type,
         quantity,
         unitCost: moveForm.unitCost || undefined,
-        observation,
-        documentNumber,
+        observation: moveForm.observation.trim(),
       });
 
       setMoveOpen(false);
@@ -695,14 +674,14 @@ export default function EstoquePage() {
 
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <Can permission="stock-movement.create">
+                          <Can permission="stock-movement.adjust">
                             <button
                               type="button"
                               onClick={() =>
                                 openMove(item, "ENTRY")
                               }
-                              title="Entrada"
-                              aria-label="Entrada"
+                              title="Ajuste de entrada"
+                              aria-label="Ajuste de entrada"
                               className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)]"
                             >
                               <ArrowUpCircle size={16} />
@@ -713,23 +692,11 @@ export default function EstoquePage() {
                               onClick={() =>
                                 openMove(item, "EXIT")
                               }
-                              title="Saída"
-                              aria-label="Saída"
+                              title="Ajuste de saída"
+                              aria-label="Ajuste de saída"
                               className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
                             >
                               <ArrowDownCircle size={16} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openMove(item, "ADJUSTMENT")
-                              }
-                              title="Ajuste"
-                              aria-label="Ajuste"
-                              className="rounded-lg border border-[var(--border)] px-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                            >
-                              Ajuste
                             </button>
                           </Can>
 
@@ -901,11 +868,13 @@ export default function EstoquePage() {
       {/* Movimentação */}
       {moveOpen && moveItem && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+          <div className="my-8 w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  {MOVEMENT_LABELS[moveForm.type]}
+                  {moveForm.type === "ENTRY"
+                    ? "Ajuste de entrada"
+                    : "Ajuste de saída"}
                 </h2>
 
                 <p className="text-sm text-[var(--text-muted)]">
@@ -926,13 +895,15 @@ export default function EstoquePage() {
             </div>
 
             <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <p className="text-xs text-[var(--text-muted)]">
+                Ajuste manual de estoque — use pra corrigir o saldo
+                depois de uma contagem de inventário, perda, quebra
+                ou achado, sem estar ligado a uma compra ou venda.
+              </p>
+
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <label className={labelClass}>
-                    {moveForm.type === "ADJUSTMENT"
-                      ? "Novo saldo"
-                      : "Quantidade"}
-                  </label>
+                  <label className={labelClass}>Quantidade</label>
 
                   <input
                     autoFocus
@@ -966,81 +937,24 @@ export default function EstoquePage() {
                   />
                 </div>
 
-                {moveForm.type === "ADJUSTMENT" ? (
-                  <div className="sm:col-span-2">
-                    <label className={labelClass}>
-                      Observação
-                    </label>
+                <div>
+                  <label className={labelClass}>
+                    Motivo do ajuste
+                  </label>
 
-                    <input
-                      className={fieldClass}
-                      value={moveForm.observation}
-                      onChange={(e) =>
-                        setMoveForm({
-                          ...moveForm,
-                          observation: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <label className={labelClass}>
-                        Tipo de documento
-                      </label>
-
-                      <select
-                        className={fieldClass}
-                        value={moveForm.documentType}
-                        onChange={(e) =>
-                          setMoveForm({
-                            ...moveForm,
-                            documentType: e.target
-                              .value as
-                              | FinancialDocumentType
-                              | "",
-                          })
-                        }
-                      >
-                        <option value="">Selecione...</option>
-
-                        {Object.entries(
-                          DOCUMENT_TYPE_LABELS
-                        ).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className={labelClass}>
-                        Número do documento
-                      </label>
-
-                      <input
-                        className={fieldClass}
-                        value={moveForm.documentNumber}
-                        onChange={(e) =>
-                          setMoveForm({
-                            ...moveForm,
-                            documentNumber: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </>
-                )}
+                  <input
+                    placeholder="Ex.: contagem de inventário"
+                    className={fieldClass}
+                    value={moveForm.observation}
+                    onChange={(e) =>
+                      setMoveForm({
+                        ...moveForm,
+                        observation: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
-
-              {moveForm.type === "ADJUSTMENT" && (
-                <p className="text-xs text-[var(--text-muted)]">
-                  O ajuste substitui o saldo atual pelo valor
-                  informado.
-                </p>
-              )}
 
               {formError && (
                 <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">

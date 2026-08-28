@@ -187,11 +187,18 @@ export default function RecebimentoPage() {
 
   function openReceive(purchase: Purchase) {
     setReceiveTarget(purchase);
+
+    // A nota já pode ter sido informada no lançamento da compra (na
+    // mão ou por importação de XML) — herda esses dados em vez de
+    // pedir de novo do zero, só continua editável se precisar corrigir.
+    const issueDate =
+      purchase.invoiceIssueDate ?? purchase.purchaseDate ?? null;
+
     setReceiveForm({
-      invoiceNumber: "",
-      invoiceKey: "",
-      invoiceIssueDate: "",
-      documentType: "",
+      invoiceNumber: purchase.invoiceNumber ?? "",
+      invoiceKey: purchase.invoiceKey ?? "",
+      invoiceIssueDate: issueDate ? issueDate.slice(0, 10) : "",
+      documentType: purchase.invoiceKey ? "NOTA_FISCAL" : "",
       termDays:
         purchase.termDays != null
           ? String(purchase.termDays)
