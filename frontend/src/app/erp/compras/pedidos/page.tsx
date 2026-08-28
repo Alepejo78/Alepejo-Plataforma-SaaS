@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Ban,
   Edit,
   Eye,
   FileText,
@@ -68,6 +69,10 @@ function money(value: string | number | null | undefined) {
   });
 }
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function date(value: string | null | undefined) {
   if (!value) {
     return "—";
@@ -109,6 +114,7 @@ const labelClass =
 
 const STATUS_BADGE_CLASS: Record<PurchaseOrderStatus, string> = {
   DRAFT: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  PARTIALLY_CONVERTED: "bg-[var(--warning-soft)] text-[var(--warning)]",
   CONVERTED: "bg-[var(--success-soft)] text-[var(--success)]",
   CANCELLED: "bg-[var(--danger-soft)] text-[var(--danger)]",
 };
@@ -118,6 +124,8 @@ interface ItemForm {
   productLabel: string;
   quantity: string;
   unitPrice: number;
+  convertedQuantity: number;
+  discardedQuantity: number;
 }
 
 function emptyItem(): ItemForm {
@@ -126,6 +134,8 @@ function emptyItem(): ItemForm {
     productLabel: "",
     quantity: "",
     unitPrice: 0,
+    convertedQuantity: 0,
+    discardedQuantity: 0,
   };
 }
 
@@ -134,7 +144,7 @@ function emptyForm() {
     partnerId: "",
     partnerLabel: "",
     warehouseId: "",
-    orderDate: "",
+    orderDate: todayIso(),
     observation: "",
     chartOfAccountId: "",
     chartOfAccountLabel: "",
@@ -313,6 +323,8 @@ export default function PedidosDeCompraPage() {
           )
         ),
         unitPrice: num(it.unitPrice),
+        convertedQuantity: 0,
+        discardedQuantity: 0,
       }))
     );
   }
@@ -392,6 +404,8 @@ export default function PedidosDeCompraPage() {
           : "",
         quantity: String(num(it.quantity)),
         unitPrice: num(it.unitPrice),
+        convertedQuantity: num(it.convertedQuantity),
+        discardedQuantity: num(it.discardedQuantity),
       }))
     );
   }
@@ -567,6 +581,34 @@ export default function PedidosDeCompraPage() {
         extractMessage(
           err,
           "Não foi possível estornar o pedido de compra."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
+  async function closeBalanceOrder(id: string) {
+    if (
+      !window.confirm(
+        "Zerar o saldo restante deste pedido? Ele será marcado como convertido, sem gerar nenhuma compra pra sobra — não tem como desfazer."
+      )
+    ) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await purchaseOrderService.closeBalance(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(
+          err,
+          "Não foi possível zerar o saldo do pedido de compra."
         )
       );
     } finally {
@@ -793,6 +835,25 @@ export default function PedidosDeCompraPage() {
                                 </button>
                               </Can>
                             </>
+                          )}
+
+                          {(o.status === "DRAFT" ||
+                            o.status ===
+                              "PARTIALLY_CONVERTED") && (
+                            <Can permission="purchase-order.cancel">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void closeBalanceOrder(o.id)
+                                }
+                                title="Zerar saldo (fecha o pedido sem gerar compra pra sobra)"
+                                aria-label="Zerar saldo"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"
+                              >
+                                <Ban size={16} />
+                              </button>
+                            </Can>
                           )}
 
                           {o.status === "CONVERTED" && (
@@ -1115,12 +1176,17 @@ export default function PedidosDeCompraPage() {
                   {items.map((it, index) => {
                     const subtotal =
                       decimal(it.quantity) * it.unitPrice;
+                    const saldo =
+                      decimal(it.quantity) -
+                      it.convertedQuantity -
+                      it.discardedQuantity;
 
                     return (
                       <div
                         key={index}
-                        className="grid grid-cols-12 items-start gap-2 rounded-xl border border-[var(--border)] p-2"
+                        className="rounded-xl border border-[var(--border)] p-2"
                       >
+                      <div className="grid grid-cols-12 items-start gap-2">
                         <div className="col-span-5">
                           <SearchSelect<Product>
                             displayLabel={it.productLabel}
@@ -1186,6 +1252,18 @@ export default function PedidosDeCompraPage() {
                         >
                           <Trash2 size={16} />
                         </button>
+                      </div>
+
+                      {viewOnly &&
+                        (it.convertedQuantity > 0 ||
+                          it.discardedQuantity > 0) && (
+                          <p className="mt-1 px-1 text-xs text-[var(--text-muted)]">
+                            Convertido: {it.convertedQuantity}
+                            {it.discardedQuantity > 0 &&
+                              ` · Descartado: ${it.discardedQuantity}`}{" "}
+                            · Saldo: {saldo}
+                          </p>
+                        )}
                       </div>
                     );
                   })}

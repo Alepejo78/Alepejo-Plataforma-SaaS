@@ -54,6 +54,10 @@ function money(value: string | number | null | undefined) {
   });
 }
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function date(value: string | null | undefined) {
   if (!value) {
     return "—";
@@ -121,7 +125,7 @@ function emptyForm() {
     partnerId: "",
     partnerLabel: "",
     warehouseId: "",
-    quoteDate: "",
+    quoteDate: todayIso(),
     validUntil: "",
     observation: "",
     discountValue: 0,

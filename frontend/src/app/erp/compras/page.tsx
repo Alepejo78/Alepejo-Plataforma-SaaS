@@ -84,6 +84,10 @@ function money(value: string | number | null | undefined) {
   });
 }
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function date(value: string | null | undefined) {
   if (!value) {
     return "—";
@@ -128,6 +132,10 @@ interface ItemForm {
   productLabel: string;
   quantity: string;
   unitPrice: number;
+  // Saldo disponível no pedido de compra vinculado (quantidade
+  // pedida - já convertida) — undefined quando o item não veio de
+  // um pedido, ou veio "à parte" sem bater com nenhum item dele.
+  maxQuantity?: number;
 }
 
 function emptyItem(): ItemForm {
@@ -164,13 +172,15 @@ export default function ComprasPage() {
     partnerId: "",
     partnerLabel: "",
     warehouseId: "",
-    purchaseDate: "",
+    purchaseDate: todayIso(),
     observation: "",
     termDays: "",
     installmentsCount: "",
     paymentMethod: "" as PaymentMethod | "",
     chartOfAccountId: "",
     chartOfAccountLabel: "",
+    invoiceNumber: "",
+    invoiceKey: "",
   });
   const [items, setItems] = useState<ItemForm[]>([
     emptyItem(),
@@ -253,9 +263,17 @@ export default function ComprasPage() {
 
   const searchPurchaseOrders = useCallback(
     async (query: string) => {
-      const result = await purchaseOrderService.list({
-        status: "DRAFT",
-      });
+      // Pedido com saldo disponível: rascunho (nada convertido
+      // ainda) ou parcialmente convertido (sobrou saldo de alguma
+      // entrega anterior).
+      const [draft, partial] = await Promise.all([
+        purchaseOrderService.list({ status: "DRAFT" }),
+        purchaseOrderService.list({
+          status: "PARTIALLY_CONVERTED",
+        }),
+      ]);
+
+      const result = [...draft, ...partial];
 
       const q = query.trim().toLowerCase();
 
@@ -323,14 +341,22 @@ export default function ComprasPage() {
     }));
 
     setItems(
-      order.items.map((it) => ({
-        productId: it.productId,
-        productLabel: it.product
-          ? `${it.product.code} — ${it.product.description}`
-          : "",
-        quantity: String(num(it.quantity)),
-        unitPrice: num(it.unitPrice),
-      }))
+      order.items.map((it) => {
+        const saldo =
+          num(it.quantity) -
+          num(it.convertedQuantity) -
+          num(it.discardedQuantity);
+
+        return {
+          productId: it.productId,
+          productLabel: it.product
+            ? `${it.product.code} — ${it.product.description}`
+            : "",
+          quantity: String(saldo),
+          unitPrice: num(it.unitPrice),
+          maxQuantity: saldo,
+        };
+      })
     );
   }
 
@@ -387,11 +413,13 @@ export default function ComprasPage() {
       chartOfAccountId: "",
       chartOfAccountLabel: "",
       warehouseId: warehouses[0]?.id ?? "",
-      purchaseDate: "",
+      purchaseDate: todayIso(),
       observation: "",
       termDays: "",
       installmentsCount: "",
       paymentMethod: "",
+      invoiceNumber: "",
+      invoiceKey: "",
     });
     setItems([emptyItem()]);
     setBarcodeInput("");
@@ -426,6 +454,8 @@ export default function ComprasPage() {
       chartOfAccountLabel: purchase.chartOfAccount
         ? `${purchase.chartOfAccount.code} — ${purchase.chartOfAccount.description}`
         : "",
+      invoiceNumber: purchase.invoiceNumber ?? "",
+      invoiceKey: purchase.invoiceKey ?? "",
     });
     setItems(
       purchase.items.map((it) => ({
@@ -690,6 +720,8 @@ export default function ComprasPage() {
         : undefined,
       paymentMethod: form.paymentMethod as PaymentMethod,
       chartOfAccountId: form.chartOfAccountId,
+      invoiceNumber: form.invoiceNumber || undefined,
+      invoiceKey: form.invoiceKey || undefined,
       purchaseOrderId: sourceOrderId || undefined,
       items: validItems.map((it) => ({
         productId: it.productId,
@@ -1421,6 +1453,42 @@ export default function ComprasPage() {
                 </div>
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>
+                    Nº da nota
+                  </label>
+
+                  <input
+                    className={fieldClass}
+                    value={form.invoiceNumber}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        invoiceNumber: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Chave de acesso
+                  </label>
+
+                  <input
+                    className={fieldClass}
+                    value={form.invoiceKey}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        invoiceKey: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className={labelClass}>
                   Código de barras
@@ -1518,17 +1586,40 @@ export default function ComprasPage() {
                           />
                         </div>
 
-                        <input
-                          inputMode="decimal"
-                          placeholder="Qtd"
-                          className={`${fieldClass} col-span-2`}
-                          value={it.quantity}
-                          onChange={(e) =>
-                            updateItem(index, {
-                              quantity: e.target.value,
-                            })
-                          }
-                        />
+                        <div className="col-span-2">
+                          <input
+                            inputMode="decimal"
+                            placeholder="Qtd"
+                            className={fieldClass}
+                            value={it.quantity}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+
+                              if (
+                                it.maxQuantity != null &&
+                                decimal(raw) > it.maxQuantity
+                              ) {
+                                updateItem(index, {
+                                  quantity: String(
+                                    it.maxQuantity
+                                  ),
+                                });
+
+                                return;
+                              }
+
+                              updateItem(index, {
+                                quantity: raw,
+                              });
+                            }}
+                          />
+
+                          {it.maxQuantity != null && (
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
+                              Saldo do pedido: {it.maxQuantity}
+                            </p>
+                          )}
+                        </div>
 
                         <CurrencyInput
                           placeholder="Preço unit."

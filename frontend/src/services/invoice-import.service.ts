@@ -52,6 +52,8 @@ export interface ParsedInvoice {
   installments: ParsedInvoiceInstallment[];
   grossWeightKg: number | null;
   netWeightKg: number | null;
+  /** Número do Pedido de Compra/Venda referenciado na nota (ex.: "PC-000123" nas informações complementares) — null quando não referencia nenhum. */
+  referencedOrderNumber: number | null;
   warnings: string[];
 }
 
@@ -78,6 +80,10 @@ export interface InvoiceInstallmentPayload {
 export interface ConfirmOrderImportPayload {
   partner: InvoicePartnerPayload;
   warehouseId: string;
+  /** Pedido de compra de origem (achado pelo número na nota, ou escolhido na mão) — só no lado Compras. */
+  purchaseOrderId?: string;
+  /** Pedido de venda de origem — só no lado Vendas. */
+  salesOrderId?: string;
   chartOfAccountId: string;
   invoiceNumber?: string;
   invoiceKey?: string;
@@ -87,6 +93,8 @@ export interface ConfirmOrderImportPayload {
   installments: InvoiceInstallmentPayload[];
   items: { productId: string; quantity: number; unitPrice: number }[];
   confirmReceipt?: boolean;
+  /** true quando confirmou apesar da divergência de valor/vencimento/CNPJ contra o pedido — nesse caso nasce em rascunho, esperando aprovação separada. */
+  auditOverridden?: boolean;
 }
 
 export interface ConfirmExpenseImportPayload {
@@ -103,9 +111,13 @@ export interface ConfirmExpenseImportPayload {
 }
 
 export const invoiceImportService = {
-  async parseXml(file: File): Promise<ParsedInvoice> {
+  async parseXml(
+    file: File,
+    direction: "PURCHASE" | "SALE" = "PURCHASE"
+  ): Promise<ParsedInvoice> {
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("direction", direction);
 
     const { data } = await api.post<ApiEnvelope<ParsedInvoice>>(
       "/invoice-import/parse",

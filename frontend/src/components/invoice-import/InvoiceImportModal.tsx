@@ -27,10 +27,20 @@ import {
   invoiceImportService,
   type ParsedInvoice,
 } from "@/services/invoice-import.service";
+import {
+  purchaseOrderService,
+  type PurchaseOrder,
+} from "@/services/purchase-order.service";
+import {
+  salesOrderService,
+  type SalesOrder,
+} from "@/services/sales-order.service";
 import { calculateDueDatePreview } from "@/lib/dueDate";
 
 type Direction = "PURCHASE" | "SALE";
 type Mode = "ORDER" | "EXPENSE";
+/** Pedido de compra ou de venda — os dois têm os campos que a auditoria/vínculo usa. */
+type SourceOrder = PurchaseOrder | SalesOrder;
 
 const fieldClass = `
   h-11 w-full rounded-xl border border-[var(--border)]
@@ -64,6 +74,12 @@ function toDateInput(value: string | null | undefined) {
   if (!value) return "";
   // Aceita tanto "2026-08-01" quanto "2026-08-01T10:00:00-03:00".
   return value.slice(0, 10);
+}
+
+function formatDateBr(isoDate: string) {
+  if (!isoDate) return "—";
+  const [y, m, d] = isoDate.slice(0, 10).split("-");
+  return `${d}-${m}-${y}`;
 }
 
 interface ItemRow {
@@ -185,6 +201,22 @@ export function InvoiceImportModal({
     { days: "", dueDate: "", amount: 0 },
   ]);
 
+  // Pedido de compra/venda de origem — achado pelo número referenciado
+  // na nota, ou escolhido na mão. Fica opcional o tempo todo.
+  const [sourceOrderId, setSourceOrderId] = useState("");
+  const [sourceOrderLabel, setSourceOrderLabel] = useState("");
+  const [sourceOrder, setSourceOrder] = useState<SourceOrder | null>(
+    null
+  );
+  const [sourceOrderAutoMatched, setSourceOrderAutoMatched] =
+    useState(false);
+  const [sourceOrderNotFound, setSourceOrderNotFound] = useState(false);
+
+  // Auditoria de valor/vencimento contra o pedido vinculado — trava a
+  // confirmação até o usuário reconhecer a divergência.
+  const [auditIssues, setAuditIssues] = useState<string[]>([]);
+  const [auditConfirmed, setAuditConfirmed] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -232,6 +264,179 @@ export function InvoiceImportModal({
     return result.data;
   }, []);
 
+  const searchSourceOrders = useCallback(
+    async (query: string) => {
+      // Pedido com saldo disponível: rascunho (nada convertido
+      // ainda) ou parcialmente convertido (sobrou saldo de alguma
+      // entrega anterior).
+      const [draft, partial] = isPurchase
+        ? await Promise.all([
+            purchaseOrderService.list({ status: "DRAFT" }),
+            purchaseOrderService.list({
+              status: "PARTIALLY_CONVERTED",
+            }),
+          ])
+        : await Promise.all([
+            salesOrderService.list({ status: "DRAFT" }),
+            salesOrderService.list({
+              status: "PARTIALLY_CONVERTED",
+            }),
+          ]);
+
+      const result: SourceOrder[] = [...draft, ...partial];
+
+      const q = query.trim().toLowerCase();
+      const prefix = isPurchase ? "pc" : "pv";
+
+      if (!q) {
+        return result;
+      }
+
+      return result.filter(
+        (it) =>
+          `${prefix}-${String(it.number).padStart(6, "0")}`.includes(
+            q
+          ) ||
+          (it.partner?.tradeName ?? it.partner?.legalName ?? "")
+            .toLowerCase()
+            .includes(q)
+      );
+    },
+    [isPurchase]
+  );
+
+  function clearSourceOrder() {
+    setSourceOrderId("");
+    setSourceOrderLabel("");
+    setSourceOrder(null);
+    setSourceOrderAutoMatched(false);
+  }
+
+  function applySourceOrder(
+    order: SourceOrder,
+    options: {
+      autoMatched?: boolean;
+      /** Não passa `false` quando a nota já trouxe itens/parcelas de verdade — nunca sobrescreve dado real da nota com o combinado no pedido. */
+      fillItems?: boolean;
+      fillInstallments?: boolean;
+    } = {}
+  ) {
+    const {
+      autoMatched = false,
+      // Escolha manual do pedido (sem vir de XML): olha o que já está
+      // na tela agora mesmo — só preenche o que ainda não foi
+      // digitado. Vínculo automático (vindo do XML) manda esses dois
+      // valores explicitamente, calculados na hora do parse — não dá
+      // pra confiar no estado aqui porque o `setItems`/`setInstallments`
+      // do parse ainda não terminou de aplicar nesse ponto da função.
+      fillItems = !items.some((item) => item.productId),
+      fillInstallments = !installments.some(
+        (row) => row.dueDate || row.amount > 0
+      ),
+    } = options;
+
+    setSourceOrderId(order.id);
+    setSourceOrderLabel(
+      `${isPurchase ? "PC" : "PV"}-${String(order.number).padStart(6, "0")}`
+    );
+    setSourceOrder(order);
+    setSourceOrderAutoMatched(autoMatched);
+    setSourceOrderNotFound(false);
+
+    // Só completa o que ainda não veio da nota/do que a pessoa já
+    // escolheu — nunca sobrescreve.
+    if (!partner.partnerId && !partner.document) {
+      setPartner((prev) => ({
+        ...prev,
+        partnerId: order.partnerId,
+        partnerLabel:
+          order.partner?.tradeName ?? order.partner?.legalName ?? "",
+      }));
+    }
+
+    if (!warehouseId && order.warehouseId) {
+      setWarehouseId(order.warehouseId);
+    }
+
+    if (!chartOfAccountId && order.chartOfAccountId) {
+      setChartOfAccountId(order.chartOfAccountId);
+      setChartOfAccountLabel(
+        order.chartOfAccount
+          ? `${order.chartOfAccount.code} — ${order.chartOfAccount.description}`
+          : ""
+      );
+    }
+
+    if (!paymentMethod && order.paymentMethod) {
+      setPaymentMethod(order.paymentMethod);
+    }
+
+    // Itens e parcelas vêm do combinado no pedido — dá pra conferir na
+    // hora se a nota bate ou não (a auditoria de valor/vencimento
+    // continua rodando do mesmo jeito na confirmação).
+    if (fillItems && order.items.length > 0) {
+      setItems(
+        order.items.map((item) => ({
+          productId: item.productId,
+          productLabel: item.product
+            ? `${item.product.code} — ${item.product.description}`
+            : "",
+          hint: "",
+          // Saldo restante do item, não a quantidade pedida — se o
+          // pedido já foi parcialmente convertido, essa nota só pode
+          // cobrir o que ainda sobra.
+          quantity: String(
+            Number(item.quantity) -
+              Number(item.convertedQuantity) -
+              Number(item.discardedQuantity)
+          ),
+          unitPrice: Number(item.unitPrice),
+          tracksStock: true,
+        }))
+      );
+    }
+
+    if (fillInstallments) {
+      const count =
+        order.installmentsCount && order.installmentsCount > 1
+          ? order.installmentsCount
+          : 1;
+      // Saldo restante do pedido (não o total cheio) — mesma lógica
+      // da auditoria de valor.
+      const total = order.items.reduce(
+        (sum, item) =>
+          sum +
+          (Number(item.quantity) -
+            Number(item.convertedQuantity) -
+            Number(item.discardedQuantity)) *
+            Number(item.unitPrice),
+        0
+      );
+      const perInstallment = total / count;
+
+      setInstallments(
+        Array.from({ length: count }, (_, i) => {
+          const days =
+            order.termDays != null ? order.termDays * (i + 1) : null;
+
+          return {
+            days: days != null ? String(days) : "",
+            dueDate:
+              days != null
+                ? toDateInput(
+                    calculateDueDatePreview(
+                      invoiceIssueDate || undefined,
+                      days
+                    ).toISOString()
+                  )
+                : "",
+            amount: perInstallment,
+          };
+        })
+      );
+    }
+  }
+
   function applyPartner(p: BusinessPartner | null) {
     if (!p) {
       setPartner((prev) => ({ ...emptyPartner, document: prev.document }));
@@ -253,6 +458,19 @@ export function InvoiceImportModal({
       city: p.city ?? "",
       state: p.state ?? "",
     });
+  }
+
+  // "Criar {nome}" no campo Razão social/nome — não cadastra nada
+  // ainda (só na confirmação, se não achar por CPF/CNPJ), só usa o
+  // texto digitado como razão social de um parceiro novo. CPF/CNPJ é
+  // campo à parte, digitado do lado — mantém o que já estiver lá.
+  async function createPartnerDraft(name: string) {
+    return {
+      id: "",
+      document: partner.document,
+      legalName: name,
+      tradeName: null,
+    } as unknown as BusinessPartner;
   }
 
   function applyExpenseItem(p: Product | null) {
@@ -343,6 +561,14 @@ export function InvoiceImportModal({
       }
     }
 
+    // Só conta como "item de verdade vindo da nota" se achou um
+    // produto real — o item sintético que a leitura de NFS-e cria a
+    // partir da descrição (sem CNPJ pra bipar, sem produto cadastrado)
+    // não conta: sem isso, uma nota de serviço vinculada a um pedido
+    // nunca preenchia os itens do pedido, e o formulário ficava sem
+    // nenhum item válido pra confirmar.
+    let xmlHasUsableItems = false;
+
     if (parsed.items.length > 0) {
       const rows = await Promise.all(
         parsed.items.map(async (item) => {
@@ -375,10 +601,17 @@ export function InvoiceImportModal({
         })
       );
 
+      xmlHasUsableItems = rows.some((row) => row.productId);
       setItems(rows);
     }
 
-    if (parsed.installments.length > 0) {
+    // O mesmo vale pra parcela: quando a nota não trouxe duplicata
+    // nenhuma, o único vencimento que dá pra montar é um chute (data
+    // de emissão) — não é dado de verdade, então não impede o pedido
+    // vinculado preencher o vencimento combinado de verdade.
+    const xmlHasRealInstallments = parsed.installments.length > 0;
+
+    if (xmlHasRealInstallments) {
       setInstallments(
         parsed.installments.map((installment) => ({
           days: "",
@@ -395,6 +628,48 @@ export function InvoiceImportModal({
         },
       ]);
     }
+
+    // A nota referenciou um pedido (mesmo número que o e-mail da
+    // escolha de vencedor da Cotação pede pro fornecedor informar) —
+    // tenta achar e vincular sozinho pelo número; não achando, avisa
+    // pra escolher na mão. O fornecedor/cliente do pedido bater ou não
+    // com o da nota vira divergência auditada na confirmação (junto
+    // com valor/vencimento), não impede o vínculo em si.
+    if (parsed.referencedOrderNumber) {
+      try {
+        const [draft, partial] = isPurchase
+          ? await Promise.all([
+              purchaseOrderService.list({ status: "DRAFT" }),
+              purchaseOrderService.list({
+                status: "PARTIALLY_CONVERTED",
+              }),
+            ])
+          : await Promise.all([
+              salesOrderService.list({ status: "DRAFT" }),
+              salesOrderService.list({
+                status: "PARTIALLY_CONVERTED",
+              }),
+            ]);
+
+        const orders: SourceOrder[] = [...draft, ...partial];
+
+        const matched = orders.find(
+          (o) => o.number === parsed.referencedOrderNumber
+        );
+
+        if (matched) {
+          applySourceOrder(matched, {
+            autoMatched: true,
+            fillItems: !xmlHasUsableItems,
+            fillInstallments: !xmlHasRealInstallments,
+          });
+        } else {
+          setSourceOrderNotFound(true);
+        }
+      } catch {
+        // Sem sorte na busca — segue sem vincular, fica pra escolha manual.
+      }
+    }
   }
 
   async function handleFile(file: File) {
@@ -403,7 +678,10 @@ export function InvoiceImportModal({
     setParseWarnings([]);
 
     try {
-      const parsed = await invoiceImportService.parseXml(file);
+      const parsed = await invoiceImportService.parseXml(
+        file,
+        direction
+      );
       await applyParsed(parsed);
     } catch (err) {
       setParseError(
@@ -572,9 +850,78 @@ export function InvoiceImportModal({
           );
         }
 
+        // Auditoria contra o pedido vinculado — só roda se tiver pedido
+        // e ainda não foi confirmada a divergência. Sem pedido nenhum
+        // vinculado, segue direto (vínculo é opcional).
+        if (sourceOrder && !auditConfirmed) {
+          const issues: string[] = [];
+
+          const orderPartnerDoc = sourceOrder.partner?.document
+            ?.replace(/\D/g, "");
+          const notePartnerDoc = partner.document.replace(/\D/g, "");
+
+          if (
+            orderPartnerDoc &&
+            notePartnerDoc &&
+            orderPartnerDoc !== notePartnerDoc
+          ) {
+            issues.push(
+              `${partnerNoun} do pedido ${sourceOrderLabel} é diferente do informado na nota — CPF/CNPJ não confere.`
+            );
+          }
+
+          // Compara contra o SALDO restante do pedido (quantidade
+          // pedida - já convertida em outras compras/vendas), não
+          // contra o total cheio — senão uma entrega parcial legítima
+          // (que naturalmente vale menos que o pedido inteiro) seria
+          // acusada de divergência à toa.
+          const expectedTotal = sourceOrder.items.reduce(
+            (sum, item) =>
+              sum +
+              (Number(item.quantity) -
+                Number(item.convertedQuantity) -
+                Number(item.discardedQuantity)) *
+                Number(item.unitPrice),
+            0
+          );
+
+          if (Math.abs(itemsTotal - expectedTotal) > 0.01) {
+            issues.push(
+              `Valor esperado (saldo do pedido ${sourceOrderLabel}): ${money(expectedTotal)} — valor da nota: ${money(itemsTotal)}.`
+            );
+          }
+
+          if (sourceOrder.termDays != null) {
+            orderInstallments.forEach((row, index) => {
+              const expectedIso = toDateInput(
+                calculateDueDatePreview(
+                  invoiceIssueDate || undefined,
+                  sourceOrder.termDays! * (index + 1)
+                ).toISOString()
+              );
+
+              if (row.dueDate && row.dueDate !== expectedIso) {
+                issues.push(
+                  `Vencimento esperado da parcela ${index + 1} (prazo do pedido): ${formatDateBr(expectedIso)} — vencimento da nota: ${formatDateBr(row.dueDate)}.`
+                );
+              }
+            });
+          }
+
+          if (issues.length > 0) {
+            setAuditIssues(issues);
+            return;
+          }
+        }
+
+        setAuditIssues([]);
+
         const payload = {
           partner: buildPartnerPayload(),
           warehouseId: warehouseId || warehouses[0]?.id || "",
+          ...(isPurchase
+            ? { purchaseOrderId: sourceOrderId || undefined }
+            : { salesOrderId: sourceOrderId || undefined }),
           chartOfAccountId,
           invoiceNumber: invoiceNumber || undefined,
           invoiceKey: invoiceKey || undefined,
@@ -588,6 +935,7 @@ export function InvoiceImportModal({
             unitPrice: it.unitPrice,
           })),
           ...(isPurchase ? { confirmReceipt } : {}),
+          auditOverridden: auditConfirmed,
         };
 
         if (isPurchase) {
@@ -652,6 +1000,12 @@ export function InvoiceImportModal({
         }
       }
 
+      if (mode === "ORDER" && auditConfirmed) {
+        window.alert(
+          `${isPurchase ? "Compra" : "Venda"} importada em rascunho — como teve divergência confirmada contra o pedido, precisa ser aprovada por alguém com permissão antes de seguir.`
+        );
+      }
+
       onSaved();
       onClose();
     } catch (err) {
@@ -685,6 +1039,7 @@ export function InvoiceImportModal({
   );
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
       <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
         <div className="mb-6 flex items-center justify-between">
@@ -790,27 +1145,22 @@ export function InvoiceImportModal({
             </div>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="sm:col-span-2 lg:col-span-2">
-              <label className={labelClass}>{partnerNoun}</label>
-
-              <SearchSelect<BusinessPartner>
-                displayLabel={partner.partnerLabel}
-                search={searchPartners}
-                getId={(p) => p.id}
-                getLabel={(p) => p.tradeName ?? p.legalName}
-                getSubLabel={(p) => p.document}
-                placeholder={`Digite para buscar o ${partnerNoun.toLowerCase()}...`}
-                onSelect={applyPartner}
-              />
-            </div>
-
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className={labelClass}>Nº da nota</label>
               <input
                 className={fieldClass}
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Chave de acesso</label>
+              <input
+                className={fieldClass}
+                value={invoiceKey}
+                onChange={(e) => setInvoiceKey(e.target.value)}
               />
             </div>
 
@@ -825,51 +1175,83 @@ export function InvoiceImportModal({
             </div>
           </div>
 
-          {!partner.partnerId && (
-            <div className="grid gap-4 sm:grid-cols-5">
-              <div>
-                <label className={labelClass}>CPF/CNPJ</label>
-                <input
-                  placeholder="CPF/CNPJ"
-                  className={fieldClass}
-                  value={partner.document}
-                  onChange={(e) =>
-                    setPartner((p) => ({
-                      ...p,
-                      document: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="sm:col-span-4">
-                <label className={labelClass}>
-                  Razão social / nome
-                </label>
-                <input
-                  placeholder="Razão social / nome"
-                  className={fieldClass}
-                  value={partner.legalName}
-                  onChange={(e) =>
-                    setPartner((p) => ({
-                      ...p,
-                      legalName: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-5">
             <div>
-              <label className={labelClass}>Chave de acesso</label>
+              <label className={labelClass}>CPF/CNPJ</label>
               <input
+                placeholder="CPF/CNPJ"
                 className={fieldClass}
-                value={invoiceKey}
-                onChange={(e) => setInvoiceKey(e.target.value)}
+                value={partner.document}
+                onChange={(e) =>
+                  setPartner((p) => ({
+                    ...p,
+                    document: e.target.value,
+                  }))
+                }
               />
             </div>
+
+            <div className="sm:col-span-4">
+              <label className={labelClass}>
+                Razão social / nome
+              </label>
+
+              {/* Busca um cadastro já existente (preenche CPF/CNPJ e
+                  o resto sozinho) ou digita um nome novo e clica em
+                  "Criar" — o CPF/CNPJ ao lado continua editável na
+                  mão nos dois casos. */}
+              <SearchSelect<BusinessPartner>
+                displayLabel={partner.partnerLabel || partner.legalName}
+                search={searchPartners}
+                getId={(p) => p.id}
+                getLabel={(p) => p.tradeName ?? p.legalName}
+                getSubLabel={(p) => p.document}
+                onCreate={createPartnerDraft}
+                placeholder={`Digite para buscar o ${partnerNoun.toLowerCase()}...`}
+                onSelect={applyPartner}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {mode === "ORDER" && (
+              <div className="rounded-xl border border-[var(--border)] p-3">
+                <label className={labelClass}>
+                  Pedido de {isPurchase ? "compra" : "venda"} de
+                  origem (opcional)
+                </label>
+
+                <SearchSelect<SourceOrder>
+                  displayLabel={sourceOrderLabel}
+                  search={searchSourceOrders}
+                  getId={(o) => o.id}
+                  getLabel={(o) =>
+                    `${isPurchase ? "PC" : "PV"}-${String(o.number).padStart(6, "0")}`
+                  }
+                  getSubLabel={(o) =>
+                    o.partner?.tradeName ?? o.partner?.legalName
+                  }
+                  placeholder="Digite para buscar o pedido..."
+                  onSelect={(o) =>
+                    o ? applySourceOrder(o) : clearSourceOrder()
+                  }
+                />
+
+                {sourceOrderId && sourceOrderAutoMatched && (
+                  <p className="mt-2 text-xs text-[var(--success)]">
+                    Vinculado automaticamente ao Pedido{" "}
+                    {sourceOrderLabel} (número encontrado na nota).
+                  </p>
+                )}
+
+                {!sourceOrderId && sourceOrderNotFound && (
+                  <p className="mt-2 text-xs text-[var(--warning)]">
+                    Não encontramos o pedido pelo número da nota —
+                    selecione manualmente, se houver um.
+                  </p>
+                )}
+              </div>
+            )}
 
             {mode === "ORDER" && (
               <div>
@@ -1253,5 +1635,66 @@ export function InvoiceImportModal({
         </div>
       </div>
     </div>
+
+    {auditIssues.length > 0 && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-lg rounded-3xl border border-[var(--warning)] bg-[var(--surface)] p-6 shadow-lg">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-base font-bold text-[var(--warning)]">
+              Divergência encontrada
+            </h3>
+
+            <button
+              type="button"
+              onClick={() => setAuditIssues([])}
+              aria-label="Fechar"
+              className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <p className="mb-3 text-sm text-[var(--text-secondary)]">
+            Confira antes de confirmar — os valores abaixo não batem
+            com o que o pedido esperava.
+          </p>
+
+          <ul className="space-y-2 text-sm text-[var(--text-primary)]">
+            {auditIssues.map((issue, i) => (
+              <li
+                key={i}
+                className="rounded-xl bg-[var(--warning-soft)] p-3"
+              >
+                {issue}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-5 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setAuditIssues([])}
+              className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+            >
+              Voltar e revisar
+            </button>
+
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                setAuditConfirmed(true);
+                setAuditIssues([]);
+                void handleSubmit();
+              }}
+              className="rounded-xl border border-[var(--warning)] px-4 py-2.5 text-sm font-semibold text-[var(--warning)] transition-colors hover:bg-[var(--warning-soft)] disabled:opacity-60"
+            >
+              Confirmar mesmo assim, seguir com os dados da nota
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

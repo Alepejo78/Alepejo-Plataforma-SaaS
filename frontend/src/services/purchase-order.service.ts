@@ -9,6 +9,7 @@ interface ApiEnvelope<T> {
 
 export type PurchaseOrderStatus =
   | "DRAFT"
+  | "PARTIALLY_CONVERTED"
   | "CONVERTED"
   | "CANCELLED";
 
@@ -17,6 +18,7 @@ export const PURCHASE_ORDER_STATUS_LABELS: Record<
   string
 > = {
   DRAFT: "Rascunho",
+  PARTIALLY_CONVERTED: "Parcialmente convertido",
   CONVERTED: "Convertido em compra",
   CANCELLED: "Cancelado",
 };
@@ -27,6 +29,8 @@ export interface PurchaseOrderItem {
   quantity: string | number;
   unitPrice: string | number;
   totalPrice: string | number;
+  convertedQuantity: string | number;
+  discardedQuantity: string | number;
 
   product?: {
     id: string;
@@ -65,6 +69,7 @@ export interface PurchaseOrder {
     id: string;
     legalName: string;
     tradeName?: string | null;
+    document?: string;
   } | null;
 
   warehouse?: {
@@ -158,6 +163,14 @@ export const purchaseOrderService = {
     const { data } = await api.patch<
       ApiEnvelope<PurchaseOrder>
     >(`/purchase-orders/${id}/reopen`);
+
+    return data.data;
+  },
+
+  async closeBalance(id: string): Promise<PurchaseOrder> {
+    const { data } = await api.patch<
+      ApiEnvelope<PurchaseOrder>
+    >(`/purchase-orders/${id}/close-balance`);
 
     return data.data;
   },

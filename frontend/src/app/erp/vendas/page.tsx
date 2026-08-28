@@ -67,6 +67,7 @@ import {
 import {
   salesOrderService,
   type SalesOrder,
+  type SalesOrderItem,
 } from "@/services/sales-order.service";
 
 import { calculateDueDatePreview } from "@/lib/dueDate";
@@ -97,6 +98,10 @@ function money(value: string | number | null | undefined) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function date(value: string | null | undefined) {
@@ -144,6 +149,10 @@ interface ItemForm {
   productLabel: string;
   quantity: string;
   unitPrice: number;
+  // Saldo disponível no pedido de venda vinculado (quantidade
+  // pedida - já convertida) — undefined quando o item não veio de
+  // um pedido, ou veio "à parte" sem bater com nenhum item dele.
+  maxQuantity?: number;
 }
 
 function emptyItem(): ItemForm {
@@ -179,7 +188,7 @@ export default function VendasPage() {
     partnerId: "",
     partnerLabel: "",
     warehouseId: "",
-    saleDate: "",
+    saleDate: todayIso(),
     observation: "",
     discountValue: 0,
     freightValue: 0,
@@ -311,7 +320,7 @@ export default function VendasPage() {
       partnerId: "",
       partnerLabel: "",
       warehouseId: warehouses[0]?.id ?? "",
-      saleDate: "",
+      saleDate: todayIso(),
       observation: "",
       discountValue: 0,
       freightValue: 0,
@@ -637,9 +646,17 @@ export default function VendasPage() {
 
   const searchSalesOrders = useCallback(
     async (query: string) => {
-      const result = await salesOrderService.list({
-        status: "DRAFT",
-      });
+      // Pedido com saldo disponível: rascunho (nada convertido
+      // ainda) ou parcialmente convertido (sobrou saldo de alguma
+      // entrega anterior).
+      const [draft, partial] = await Promise.all([
+        salesOrderService.list({ status: "DRAFT" }),
+        salesOrderService.list({
+          status: "PARTIALLY_CONVERTED",
+        }),
+      ]);
+
+      const result = [...draft, ...partial];
 
       const q = query.trim().toLowerCase();
 
@@ -724,14 +741,34 @@ export default function VendasPage() {
     }));
 
     setItems(
-      doc.items.map((it) => ({
-        productId: it.productId,
-        productLabel: it.product
-          ? `${it.product.code} — ${it.product.description}`
-          : "",
-        quantity: String(num(it.quantity)),
-        unitPrice: num(it.unitPrice),
-      }))
+      doc.items.map((it) => {
+        if (type === "salesOrder") {
+          const orderItem = it as SalesOrderItem;
+          const saldo =
+            num(orderItem.quantity) -
+            num(orderItem.convertedQuantity) -
+            num(orderItem.discardedQuantity);
+
+          return {
+            productId: orderItem.productId,
+            productLabel: orderItem.product
+              ? `${orderItem.product.code} — ${orderItem.product.description}`
+              : "",
+            quantity: String(saldo),
+            unitPrice: num(orderItem.unitPrice),
+            maxQuantity: saldo,
+          };
+        }
+
+        return {
+          productId: it.productId,
+          productLabel: it.product
+            ? `${it.product.code} — ${it.product.description}`
+            : "",
+          quantity: String(num(it.quantity)),
+          unitPrice: num(it.unitPrice),
+        };
+      })
     );
   }
 
@@ -1699,17 +1736,40 @@ export default function VendasPage() {
                           />
                         </div>
 
-                        <input
-                          inputMode="decimal"
-                          placeholder="Qtd"
-                          className={`${fieldClass} col-span-2`}
-                          value={it.quantity}
-                          onChange={(e) =>
-                            updateItem(index, {
-                              quantity: e.target.value,
-                            })
-                          }
-                        />
+                        <div className="col-span-2">
+                          <input
+                            inputMode="decimal"
+                            placeholder="Qtd"
+                            className={fieldClass}
+                            value={it.quantity}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+
+                              if (
+                                it.maxQuantity != null &&
+                                decimal(raw) > it.maxQuantity
+                              ) {
+                                updateItem(index, {
+                                  quantity: String(
+                                    it.maxQuantity
+                                  ),
+                                });
+
+                                return;
+                              }
+
+                              updateItem(index, {
+                                quantity: raw,
+                              });
+                            }}
+                          />
+
+                          {it.maxQuantity != null && (
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
+                              Saldo do pedido: {it.maxQuantity}
+                            </p>
+                          )}
+                        </div>
 
                         <CurrencyInput
                           placeholder="Preço unit."

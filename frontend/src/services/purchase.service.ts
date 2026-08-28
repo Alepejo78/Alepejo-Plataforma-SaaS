@@ -111,6 +111,9 @@ export interface PurchasePayload {
   paymentMethod?: PaymentMethod;
   chartOfAccountId?: string;
   purchaseOrderId?: string;
+  invoiceNumber?: string;
+  invoiceKey?: string;
+  invoiceIssueDate?: string;
   items: PurchaseItemPayload[];
 }
 

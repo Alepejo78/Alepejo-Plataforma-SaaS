@@ -60,23 +60,37 @@ interface BracketForm {
   taxType: PayrollTaxType;
   minBase: number;
   maxBase: number;
-  rate: number;
+  // String (não number) igual aos campos de quantidade do resto do
+  // sistema — value de input amarrado direto num number faz o React
+  // apagar a vírgula/ponto assim que o usuário digita, porque
+  // Number("7,") vira 7 e o re-render devolve "7" sem o separador.
+  rate: string;
   deduction: number;
 }
 
 function emptyBracket(taxType: PayrollTaxType): BracketForm {
-  return { taxType, minBase: 0, maxBase: 0, rate: 0, deduction: 0 };
+  return { taxType, minBase: 0, maxBase: 0, rate: "", deduction: 0 };
+}
+
+function parseDecimalInput(value: string) {
+  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const parsed = Number(normalized);
+
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function emptyForm() {
   return {
     validFrom: "",
-    fgtsPercentage: 8,
+    // String (não number) — mesmo motivo do `rate` do BracketForm:
+    // input amarrado direto num number apaga a vírgula/ponto que o
+    // usuário acabou de digitar a cada re-render.
+    fgtsPercentage: "8",
     dependentDeductionValue: 0,
     irrfReliefThreshold: 0,
     irrfReliefPhaseOutEnd: 0,
     irrfReliefBase: 0,
-    irrfReliefFactor: 0,
+    irrfReliefFactor: "0",
   };
 }
 
@@ -151,12 +165,12 @@ export default function ParametrosFiscaisPage() {
     if (current) {
       setForm({
         validFrom: "",
-        fgtsPercentage: num(current.fgtsPercentage),
+        fgtsPercentage: String(num(current.fgtsPercentage)),
         dependentDeductionValue: num(current.dependentDeductionValue),
         irrfReliefThreshold: num(current.irrfReliefThreshold),
         irrfReliefPhaseOutEnd: num(current.irrfReliefPhaseOutEnd),
         irrfReliefBase: num(current.irrfReliefBase),
-        irrfReliefFactor: num(current.irrfReliefFactor),
+        irrfReliefFactor: String(num(current.irrfReliefFactor)),
       });
 
       const toForm = (taxType: PayrollTaxType) =>
@@ -167,7 +181,7 @@ export default function ParametrosFiscaisPage() {
             taxType,
             minBase: num(b.minBase),
             maxBase: num(b.maxBase),
-            rate: num(b.rate),
+            rate: String(num(b.rate)),
             deduction: num(b.deduction),
           }));
 
@@ -230,19 +244,19 @@ export default function ParametrosFiscaisPage() {
     try {
       await payrollTaxTableService.create({
         validFrom: form.validFrom,
-        fgtsPercentage: form.fgtsPercentage,
+        fgtsPercentage: parseDecimalInput(form.fgtsPercentage),
         dependentDeductionValue: form.dependentDeductionValue,
         irrfReliefThreshold: form.irrfReliefThreshold || undefined,
         irrfReliefPhaseOutEnd: form.irrfReliefPhaseOutEnd || undefined,
         irrfReliefBase: form.irrfReliefBase || undefined,
-        irrfReliefFactor: form.irrfReliefFactor || undefined,
+        irrfReliefFactor: parseDecimalInput(form.irrfReliefFactor) || undefined,
         brackets: [
           ...inssBrackets.map((b, i) => ({
             taxType: "INSS" as const,
             order: i + 1,
             minBase: b.minBase,
             maxBase: b.maxBase || undefined,
-            rate: b.rate,
+            rate: parseDecimalInput(b.rate),
             deduction: b.deduction,
           })),
           ...irrfBrackets.map((b, i) => ({
@@ -250,7 +264,7 @@ export default function ParametrosFiscaisPage() {
             order: i + 1,
             minBase: b.minBase,
             maxBase: b.maxBase || undefined,
-            rate: b.rate,
+            rate: parseDecimalInput(b.rate),
             deduction: b.deduction,
           })),
         ],
@@ -340,7 +354,7 @@ export default function ParametrosFiscaisPage() {
                 value={b.rate}
                 onChange={(e) =>
                   updateBracket(taxType, index, {
-                    rate: Number(e.target.value.replace(",", ".")) || 0,
+                    rate: e.target.value,
                   })
                 }
               />
@@ -654,8 +668,7 @@ export default function ParametrosFiscaisPage() {
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        fgtsPercentage:
-                          Number(e.target.value.replace(",", ".")) || 0,
+                        fgtsPercentage: e.target.value,
                       })
                     }
                   />
@@ -728,8 +741,7 @@ export default function ParametrosFiscaisPage() {
                       onChange={(e) =>
                         setForm({
                           ...form,
-                          irrfReliefFactor:
-                            Number(e.target.value.replace(",", ".")) || 0,
+                          irrfReliefFactor: e.target.value,
                         })
                       }
                     />

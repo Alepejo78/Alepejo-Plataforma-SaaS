@@ -65,6 +65,10 @@ function money(value: string | number | null | undefined) {
   });
 }
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function date(value: string | null | undefined) {
   if (!value) {
     return "—";
@@ -135,7 +139,7 @@ export default function CotacoesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({
     warehouseId: "",
-    quotationDate: "",
+    quotationDate: todayIso(),
     observation: "",
   });
   const [items, setItems] = useState<ItemForm[]>([
@@ -236,7 +240,7 @@ export default function CotacoesPage() {
   function openCreate() {
     setForm({
       warehouseId: warehouses[0]?.id ?? "",
-      quotationDate: "",
+      quotationDate: todayIso(),
       observation: "",
     });
     setItems([emptyItem()]);

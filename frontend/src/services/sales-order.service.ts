@@ -9,6 +9,7 @@ interface ApiEnvelope<T> {
 
 export type SalesOrderStatus =
   | "DRAFT"
+  | "PARTIALLY_CONVERTED"
   | "CONVERTED"
   | "CANCELLED";
 
@@ -17,6 +18,7 @@ export const SALES_ORDER_STATUS_LABELS: Record<
   string
 > = {
   DRAFT: "Rascunho",
+  PARTIALLY_CONVERTED: "Parcialmente convertido",
   CONVERTED: "Convertido em venda",
   CANCELLED: "Cancelado",
 };
@@ -27,6 +29,8 @@ export interface SalesOrderItem {
   quantity: string | number;
   unitPrice: string | number;
   totalPrice: string | number;
+  convertedQuantity: string | number;
+  discardedQuantity: string | number;
 
   product?: {
     id: string;
@@ -67,6 +71,7 @@ export interface SalesOrder {
     id: string;
     legalName: string;
     tradeName?: string | null;
+    document?: string;
   } | null;
 
   warehouse?: {
@@ -154,6 +159,14 @@ export const salesOrderService = {
   async cancel(id: string): Promise<SalesOrder> {
     const { data } = await api.patch<ApiEnvelope<SalesOrder>>(
       `/sales-orders/${id}/cancel`
+    );
+
+    return data.data;
+  },
+
+  async closeBalance(id: string): Promise<SalesOrder> {
+    const { data } = await api.patch<ApiEnvelope<SalesOrder>>(
+      `/sales-orders/${id}/close-balance`
     );
 
     return data.data;
