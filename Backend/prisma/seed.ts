@@ -455,7 +455,12 @@ const permissionGroups = [
     name: "Movimentação de Estoque",
     permissions: [
       ["stock-movement.view", "Visualizar Movimentações"],
-      ["stock-movement.create", "Registrar Movimentações"],
+      // Não confundir com o acesso normal de Compras/Vendas — receber
+      // uma compra ou aprovar uma venda já movimenta estoque sozinho,
+      // sem precisar desta permissão (aquilo usa purchase.receive/
+      // sale.approve). Essa aqui é só pro ajuste manual de estoque
+      // (Ajuste de entrada/saída, tipo contagem de inventário).
+      ["stock-movement.adjust", "Ajustar Estoque (Inventário)"],
     ],
   },
   {

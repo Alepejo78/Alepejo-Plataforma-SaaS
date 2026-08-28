@@ -7,26 +7,30 @@ import {
     Post,
     Query,
   } from '@nestjs/common';
-  
+
   import {
     ApiOperation,
     ApiTags,
   } from '@nestjs/swagger';
-  
-    
+
+  import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
+  import { Module } from '../../identity/license/decorators/module.decorator';
+
   import { StockMovementService } from '../services/stock-movement.service';
-  
+
   import { CreateStockMovementDto } from '../dto/create-stock-movement.dto';
   import { StockMovementFilterDto } from '../dto/stock-movement-filter.dto';
-  
+
   @ApiTags('Stock Movements')
   @Controller('stock-movements')
+  @Module('INVENTORY')
   export class StockMovementController {
     constructor(
       private readonly service: StockMovementService,
     ) {}
-  
+
     @Post()
+    @Permissions('stock-movement.adjust')
     @ApiOperation({
       summary: 'Registrar movimentação de estoque',
     })
@@ -39,8 +43,9 @@ import {
         dto,
       );
     }
-  
+
     @Get()
+    @Permissions('stock-movement.view')
     @ApiOperation({
       summary: 'Listar movimentações',
     })
@@ -53,8 +58,9 @@ import {
         filter,
       );
     }
-  
+
     @Get(':id')
+    @Permissions('stock-movement.view')
     @ApiOperation({
       summary: 'Buscar movimentação',
     })
