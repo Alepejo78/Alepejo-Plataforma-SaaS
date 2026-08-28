@@ -62,6 +62,8 @@ const BUSINESS_COLUMNS: {
   { key: "timeClockApiKey", label: "Chave API Ponto", codes: ["time-clock.manage-api-key"] },
   { key: "licenseTrial", label: "Iniciar Teste Grátis", codes: ["license.trial"] },
   { key: "licenseCatalog", label: "Ver Catálogo de Planos", codes: ["license.catalog.view"] },
+  { key: "inventoryCountTrack", label: "Acompanhamento de Inventário (tela)", codes: ["inventory-count.track"] },
+  { key: "inventoryCountEditReadings", label: "Editar Leituras de Contagem", codes: ["inventory-count.edit-readings"] },
   { key: "userActivate", label: "Ativar Usuários", codes: ["user.activate"] },
   { key: "userDeactivate", label: "Desativar Usuários", codes: ["user.deactivate"] },
   { key: "userBlock", label: "Bloquear Usuários", codes: ["user.block"] },
