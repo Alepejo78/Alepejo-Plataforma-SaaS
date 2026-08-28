@@ -480,6 +480,10 @@ const permissionGroups = [
       // colunas de Contagem 1/2/3 — corrigir uma leitura já feita ou
       // digitar a quantidade sem passar pela tela de leitura.
       ["inventory-count.edit-readings", "Editar Leituras de Contagem (corrigir ou digitar direto)"],
+      // Dá acesso à tela de Acompanhamento de inventário (gestão das
+      // contagens em andamento) — as ações lá dentro continuam
+      // valendo suas próprias permissões.
+      ["inventory-count.track", "Acompanhar Contagens de Inventário (tela de acompanhamento)"],
     ],
   },
   {

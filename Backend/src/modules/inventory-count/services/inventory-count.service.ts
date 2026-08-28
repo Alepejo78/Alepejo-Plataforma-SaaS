@@ -470,7 +470,9 @@ export class InventoryCountService {
     }
 
     if (item.status === InventoryCountItemStatus.DONE) {
-      throw new BadRequestException('Este item já foi contado.');
+      throw new BadRequestException(
+        `${product.code} — ${product.description} já está ok, não precisa recontar.`,
+      );
     }
 
     const field = nextRoundField(item);

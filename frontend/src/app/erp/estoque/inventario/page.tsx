@@ -10,15 +10,12 @@ import {
 import Link from "next/link";
 import {
   ArrowLeft,
-  Check,
-  Eye,
+  BarChart3,
   Pencil,
   Plus,
-  RefreshCw,
   ScanLine,
   Trash2,
   X,
-  XCircle,
 } from "lucide-react";
 
 import { AppShell } from "@/components";
@@ -27,13 +24,11 @@ import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 
 import {
-  INVENTORY_COUNT_ITEM_STATUS_LABELS,
   INVENTORY_COUNT_STATUS_LABELS,
   formatInventoryCountNumber,
   inventoryCountService,
   type InventoryCount,
   type InventoryCountItem,
-  type InventoryCountItemStatus,
   type InventoryCountStatus,
 } from "@/services/inventory-count.service";
 
@@ -85,13 +80,6 @@ function extractMessage(err: unknown, fallback: string) {
   return typeof message === "string" ? message : fallback;
 }
 
-function finalQuantity(item: InventoryCountItem): number | null {
-  if (item.countedQuantity3 != null) return num(item.countedQuantity3);
-  if (item.countedQuantity2 != null) return num(item.countedQuantity2);
-  if (item.countedQuantity1 != null) return num(item.countedQuantity1);
-  return null;
-}
-
 const fieldClass = `
   h-11 w-full rounded-xl border border-[var(--border)]
   bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)]
@@ -110,14 +98,9 @@ const STATUS_BADGE_CLASS: Record<InventoryCountStatus, string> = {
   CANCELLED: "bg-[var(--danger-soft)] text-[var(--danger)]",
 };
 
-const ITEM_STATUS_BADGE_CLASS: Record<InventoryCountItemStatus, string> = {
-  PENDING: "bg-[var(--surface-hover)] text-[var(--text-muted)]",
-  RECOUNT_2: "bg-[var(--warning-soft)] text-[var(--warning)]",
-  RECOUNT_3: "bg-[var(--warning-soft)] text-[var(--warning)]",
-  DONE: "bg-[var(--success-soft)] text-[var(--success)]",
-};
-
 type Scope = "GENERAL" | "SELECTED";
+
+type Round = 1 | 2 | 3;
 
 interface ItemForm {
   productId: string;
@@ -137,6 +120,26 @@ function emptyForm() {
   };
 }
 
+/** Quantos itens ainda faltam contar em cada rodada. */
+function pendingByRound(items: InventoryCountItem[]) {
+  return {
+    1: items.filter((i) => i.status === "PENDING").length,
+    2: items.filter((i) => i.status === "RECOUNT_2").length,
+    3: items.filter((i) => i.status === "RECOUNT_3").length,
+  } as Record<Round, number>;
+}
+
+/** Primeira rodada que ainda tem item pra contar (1 se não sobrou nada). */
+function firstOpenRound(items: InventoryCountItem[]): Round {
+  const pending = pendingByRound(items);
+
+  if (pending[1] > 0) return 1;
+  if (pending[2] > 0) return 2;
+  if (pending[3] > 0) return 3;
+
+  return 1;
+}
+
 export default function InventarioPage() {
   const [counts, setCounts] = useState<InventoryCount[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -146,7 +149,7 @@ export default function InventarioPage() {
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
 
-  // Modal de abrir/editar contagem (lista de produtos — só status OPEN)
+  // Modal de abrir/editar contagem (só a lista de produtos a contar)
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm());
@@ -156,27 +159,18 @@ export default function InventarioPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Modal de detalhe (rodadas de contagem, ações)
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detail, setDetail] = useState<InventoryCount | null>(null);
-  const [detailError, setDetailError] = useState("");
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [savingItemId, setSavingItemId] = useState("");
-
   // Modal de leitura (Iniciar contagem)
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanCount, setScanCount] = useState<InventoryCount | null>(null);
+  const [scanRound, setScanRound] = useState<Round>(1);
   const [scanCode, setScanCode] = useState("");
+  const [scanProduct, setScanProduct] = useState<Product | null>(null);
   const [scanQuantity, setScanQuantity] = useState("");
   const [scanError, setScanError] = useState("");
   const [scanBusy, setScanBusy] = useState(false);
   const [scanLog, setScanLog] = useState<
-    { label: string; quantity: string; status: InventoryCountItemStatus }[]
+    { label: string; quantity: string }[]
   >([]);
-  /** Pré-visualização do produto pelo código digitado/lido — undefined
-   * enquanto busca, null quando não encontrou nada. */
-  const [scanPreview, setScanPreview] = useState<
-    Product | null | undefined
-  >(undefined);
   const codeInputRef = useRef<HTMLInputElement>(null);
   const qtyInputRef = useRef<HTMLInputElement>(null);
 
@@ -229,21 +223,6 @@ export default function InventarioPage() {
     void load();
   }, [load]);
 
-  function summarize(items: InventoryCountItem[]) {
-    const counts: Record<InventoryCountItemStatus, number> = {
-      PENDING: 0,
-      RECOUNT_2: 0,
-      RECOUNT_3: 0,
-      DONE: 0,
-    };
-
-    items.forEach((it) => {
-      counts[it.status] += 1;
-    });
-
-    return counts;
-  }
-
   function openCreate() {
     setEditingId(null);
     setForm({ ...emptyForm(), warehouseId: warehouses[0]?.id ?? "" });
@@ -281,25 +260,6 @@ export default function InventarioPage() {
       setActionError(
         extractMessage(err, "Não foi possível carregar a contagem.")
       );
-    }
-  }
-
-  async function openDetail(count: InventoryCount) {
-    setDetail(null);
-    setDetailError("");
-    setDetailOpen(true);
-    setDetailLoading(true);
-
-    try {
-      const fresh = await inventoryCountService.getById(count.id);
-
-      setDetail(fresh);
-    } catch (err) {
-      setDetailError(
-        extractMessage(err, "Não foi possível carregar a contagem.")
-      );
-    } finally {
-      setDetailLoading(false);
     }
   }
 
@@ -480,21 +440,31 @@ export default function InventarioPage() {
     }
   }
 
-  function openScan(count: InventoryCount) {
-    setDetailOpen(false);
-    setDetail(count);
+  async function openScan(count: InventoryCount) {
+    setScanCount(count);
     setScanCode("");
+    setScanProduct(null);
     setScanQuantity("");
     setScanError("");
     setScanLog([]);
-    setScanPreview(undefined);
     setScanOpen(true);
+
+    // Sempre parte do estado real (a lista pode ter mudado desde o
+    // último carregamento da tela).
+    try {
+      const fresh = await inventoryCountService.getById(count.id);
+
+      setScanCount(fresh);
+      setScanRound(firstOpenRound(fresh.items));
+    } catch {
+      setScanRound(firstOpenRound(count.items ?? []));
+    }
 
     setTimeout(() => codeInputRef.current?.focus(), 50);
   }
 
-  // Pré-visualiza o produto do código digitado/lido antes de confirmar
-  // — mesma resolução do backend (barcode exato, senão código exato).
+  // Pré-visualiza o produto do código digitado/lido — mesma resolução
+  // do backend (código de barras exato, senão código exato).
   useEffect(() => {
     if (!scanOpen) {
       return;
@@ -503,14 +473,12 @@ export default function InventarioPage() {
     const code = scanCode.trim();
 
     if (!code) {
-      setScanPreview(undefined);
+      setScanProduct(null);
 
       return;
     }
 
     let cancelled = false;
-
-    setScanPreview(undefined);
 
     const timer = setTimeout(() => {
       productService
@@ -525,11 +493,17 @@ export default function InventarioPage() {
             result.data.find((p) => p.code === code) ??
             null;
 
-          setScanPreview(match);
+          setScanProduct(match);
+
+          if (!match) {
+            setScanError("Produto não encontrado.");
+          } else {
+            setScanError("");
+          }
         })
         .catch(() => {
           if (!cancelled) {
-            setScanPreview(null);
+            setScanProduct(null);
           }
         });
     }, 300);
@@ -541,7 +515,7 @@ export default function InventarioPage() {
   }, [scanCode, scanOpen]);
 
   async function submitScan(confirmAdd = false) {
-    if (!detail || !scanCode.trim()) {
+    if (!scanCount || !scanCode.trim()) {
       return;
     }
 
@@ -551,46 +525,39 @@ export default function InventarioPage() {
     setScanError("");
 
     try {
-      const updated = await inventoryCountService.count(detail.id, {
+      const updated = await inventoryCountService.count(scanCount.id, {
         code: scanCode.trim(),
         quantity,
         confirmAdd: confirmAdd || undefined,
       });
 
-      setDetail(updated);
-
-      const typedCode = scanCode.trim();
-      const item = updated.items.find(
-        (it) =>
-          it.product?.code === typedCode ||
-          it.product?.barcode === typedCode
-      );
+      setScanCount(updated);
 
       setScanLog((prev) => [
         {
-          label: item?.product
-            ? `${item.product.code} — ${item.product.description}`
+          label: scanProduct
+            ? `${scanProduct.code} — ${scanProduct.description}`
             : scanCode.trim(),
           quantity: qty(quantity),
-          status: item?.status ?? "PENDING",
         },
         ...prev,
       ]);
 
       setScanCode("");
+      setScanProduct(null);
       setScanQuantity("");
       codeInputRef.current?.focus();
-    } catch (err) {
-      const message = extractMessage(err, "Não foi possível registrar a leitura.");
 
-      if (
-        !confirmAdd &&
-        message === "Item não consta no inventário."
-      ) {
+      await load();
+    } catch (err) {
+      const message = extractMessage(
+        err,
+        "Não foi possível registrar a leitura."
+      );
+
+      if (!confirmAdd && message === "Item não consta no inventário.") {
         if (
-          window.confirm(
-            "Item não consta no inventário. Deseja incluí-lo?"
-          )
+          window.confirm("Item não consta no inventário. Deseja incluí-lo?")
         ) {
           setScanBusy(false);
 
@@ -598,6 +565,7 @@ export default function InventarioPage() {
         }
 
         setScanCode("");
+        setScanProduct(null);
         codeInputRef.current?.focus();
       } else {
         setScanError(message);
@@ -621,166 +589,20 @@ export default function InventarioPage() {
     }
   }
 
-  async function saveItemReading(
-    itemId: string,
-    field: "countedQuantity1" | "countedQuantity2" | "countedQuantity3",
-    rawValue: string
-  ) {
-    if (!detail) {
-      return;
-    }
-
-    if (rawValue === "") {
-      return;
-    }
-
-    const value = decimal(rawValue);
-
-    setSavingItemId(itemId);
-    setDetailError("");
-
-    try {
-      const updated = await inventoryCountService.updateItemReadings(
-        detail.id,
-        itemId,
-        { [field]: value }
-      );
-
-      setDetail(updated);
-    } catch (err) {
-      setDetailError(
-        extractMessage(err, "Não foi possível salvar a leitura.")
-      );
-    } finally {
-      setSavingItemId("");
-    }
-  }
-
-  async function finalizeCount(id: string, confirmIncomplete = false) {
-    if (
-      !confirmIncomplete &&
-      !window.confirm(
-        "Finalizar esta contagem? Trava os valores contados — pra ajustar o estoque depois é preciso usar \"Ajustar estoque\"."
-      )
-    ) {
-      return;
-    }
-
-    setActionId(id);
-    setActionError("");
-    setDetailError("");
-
-    try {
-      const updated = await inventoryCountService.finalize(id, {
-        confirmIncomplete: confirmIncomplete || undefined,
-      });
-
-      setDetail(updated);
-      await load();
-    } catch (err) {
-      const message = extractMessage(
-        err,
-        "Não foi possível finalizar a contagem."
-      );
-
-      if (!confirmIncomplete && message.includes("Confirma")) {
-        if (window.confirm(message)) {
-          return finalizeCount(id, true);
-        }
-
-        return;
-      }
-
-      setDetailError(message);
-    } finally {
-      setActionId("");
-    }
-  }
-
-  async function adjustCount(id: string) {
-    if (
-      !window.confirm(
-        "Ajustar o estoque agora? Gera as entradas/saídas necessárias pra bater com o que foi contado — não tem como desfazer."
-      )
-    ) {
-      return;
-    }
-
-    setActionId(id);
-    setDetailError("");
-
-    try {
-      const updated = await inventoryCountService.adjust(id);
-
-      setDetail(updated);
-      await load();
-    } catch (err) {
-      setDetailError(
-        extractMessage(err, "Não foi possível ajustar o estoque.")
-      );
-    } finally {
-      setActionId("");
-    }
-  }
-
-  async function cancelCount(id: string, fromDetail = false) {
-    if (!window.confirm("Cancelar esta contagem? Nada é desfeito no estoque que já foi ajustado antes disso.")) {
-      return;
-    }
-
-    setActionId(id);
-    setActionError("");
-    setDetailError("");
-
-    try {
-      const updated = await inventoryCountService.cancel(id);
-
-      if (fromDetail) {
-        setDetail(updated);
-      } else {
-        setDetailOpen(false);
-      }
-
-      await load();
-    } catch (err) {
-      const message = extractMessage(err, "Não foi possível cancelar a contagem.");
-
-      if (fromDetail) {
-        setDetailError(message);
-      } else {
-        setActionError(message);
-      }
-    } finally {
-      setActionId("");
-    }
-  }
-
-  async function removeCount(count: InventoryCount) {
-    if (
-      !window.confirm(
-        `Excluir a contagem ${formatInventoryCountNumber(count.number)}? Essa ação não pode ser desfeita.`
-      )
-    ) {
-      return;
-    }
-
-    setActionId(count.id);
-    setActionError("");
-
-    try {
-      await inventoryCountService.remove(count.id);
-
-      await load();
-    } catch (err) {
-      setActionError(
-        extractMessage(err, "Não foi possível excluir a contagem.")
-      );
-    } finally {
-      setActionId("");
-    }
-  }
-
   const semDeposito = warehouses.length === 0;
+
+  const scanPending = scanCount
+    ? pendingByRound(scanCount.items)
+    : ({ 1: 0, 2: 0, 3: 0 } as Record<Round, number>);
+  const remainingInRound = scanPending[scanRound];
+  const nextRound: Round | null =
+    remainingInRound === 0
+      ? scanRound === 1 && scanPending[2] > 0
+        ? 2
+        : scanRound <= 2 && scanPending[3] > 0
+          ? 3
+          : null
+      : null;
 
   return (
     <AppShell workspaceLabel="Contagem de inventário">
@@ -803,27 +625,40 @@ export default function InventarioPage() {
                   </h1>
 
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    Abra a contagem, conta na tela de leitura (até 3
-                    rodadas por item) e acompanhe o progresso aqui.
+                    Abra a contagem e conte na tela de leitura. Para
+                    acompanhar, corrigir e finalizar, use o
+                    Acompanhamento.
                   </p>
                 </div>
 
-                <Can permission="inventory-count.create">
-                  <button
-                    type="button"
-                    onClick={openCreate}
-                    disabled={semDeposito}
-                    title={
-                      semDeposito
-                        ? "Cadastre um depósito primeiro"
-                        : undefined
-                    }
-                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
-                  >
-                    <Plus size={18} />
-                    Nova contagem
-                  </button>
-                </Can>
+                <div className="flex flex-wrap gap-2">
+                  <Can permission="inventory-count.track">
+                    <Link
+                      href="/erp/estoque/inventario/acompanhamento"
+                      className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                    >
+                      <BarChart3 size={18} />
+                      Acompanhamento
+                    </Link>
+                  </Can>
+
+                  <Can permission="inventory-count.create">
+                    <button
+                      type="button"
+                      onClick={openCreate}
+                      disabled={semDeposito}
+                      title={
+                        semDeposito
+                          ? "Cadastre um depósito primeiro"
+                          : undefined
+                      }
+                      className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                    >
+                      <Plus size={18} />
+                      Nova contagem
+                    </button>
+                  </Can>
+                </div>
               </div>
             </header>
 
@@ -894,21 +729,19 @@ export default function InventarioPage() {
                   <th className="px-4 py-3 font-semibold">Depósito</th>
                   <th className="px-4 py-3 font-semibold">Motivo</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Progresso</th>
+                  <th className="px-4 py-3 font-semibold">Contados</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
 
               <tbody>
                 {counts.map((c) => {
-                  const busy = actionId === c.id;
-                  const s = summarize(c.items ?? []);
-                  const total = c.items?.length ?? 0;
-                  const pendingRecount = s.RECOUNT_2 + s.RECOUNT_3;
-                  const cancelable =
-                    c.status === "OPEN" ||
-                    c.status === "COUNTING" ||
-                    c.status === "FINALIZED";
+                  const items = c.items ?? [];
+                  const done = items.filter(
+                    (i) => i.status === "DONE"
+                  ).length;
+                  const contavel =
+                    c.status === "OPEN" || c.status === "COUNTING";
 
                   return (
                     <tr
@@ -933,34 +766,20 @@ export default function InventarioPage() {
 
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASS[c.status]}`}
+                          className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASS[c.status]}`}
                         >
                           {INVENTORY_COUNT_STATUS_LABELS[c.status]}
                         </span>
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-3 text-xs text-[var(--text-secondary)]">
-                        {total === 0
+                      <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
+                        {items.length === 0
                           ? "—"
-                          : `${s.DONE}/${total} ok${
-                              pendingRecount > 0
-                                ? ` · ${pendingRecount} p/ recontar`
-                                : ""
-                            }`}
+                          : `${done}/${items.length}`}
                       </td>
 
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => void openDetail(c)}
-                            title="Ver"
-                            aria-label="Ver"
-                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                          >
-                            <Eye size={16} />
-                          </button>
-
                           {c.status === "OPEN" && (
                             <Can permission="inventory-count.update">
                               <button
@@ -975,47 +794,17 @@ export default function InventarioPage() {
                             </Can>
                           )}
 
-                          {(c.status === "OPEN" ||
-                            c.status === "COUNTING") && (
+                          {contavel && (
                             <Can permission="inventory-count.update">
                               <button
                                 type="button"
-                                onClick={() => openScan(c)}
+                                disabled={actionId === c.id}
+                                onClick={() => void openScan(c)}
                                 title="Iniciar contagem"
                                 aria-label="Iniciar contagem"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
                               >
                                 <ScanLine size={16} />
-                              </button>
-                            </Can>
-                          )}
-
-                          {cancelable && (
-                            <Can permission="inventory-count.cancel">
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => void cancelCount(c.id)}
-                                title="Cancelar"
-                                aria-label="Cancelar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </Can>
-                          )}
-
-                          {c.status === "CANCELLED" && (
-                            <Can permission="inventory-count.delete">
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => void removeCount(c)}
-                                title="Excluir"
-                                aria-label="Excluir"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
-                              >
-                                <Trash2 size={16} />
                               </button>
                             </Can>
                           )}
@@ -1030,13 +819,15 @@ export default function InventarioPage() {
         )}
       </ListPageLayout>
 
-      {/* Abrir/editar contagem (lista de produtos) */}
+      {/* Abrir/editar contagem (lista de produtos a contar) */}
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-8 w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-start justify-between">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {editingId ? "Editar contagem" : "Nova contagem de inventário"}
+                {editingId
+                  ? "Editar contagem"
+                  : "Nova contagem de inventário"}
               </h2>
 
               <button
@@ -1231,297 +1022,21 @@ export default function InventarioPage() {
         </div>
       )}
 
-      {/* Detalhe da contagem (rodadas, ações) */}
-      {detailOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-6xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  {detail ? formatInventoryCountNumber(detail.number) : "Contagem"}
-                </h2>
-
-                {detail && (
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    {INVENTORY_COUNT_STATUS_LABELS[detail.status]} ·{" "}
-                    {detail.warehouse?.code} · {detail.observation}
-                    {detail.createdByName &&
-                      ` · Criado por ${detail.createdByName} em ${date(detail.createdAt)}`}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setDetailOpen(false)}
-                aria-label="Fechar"
-                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {detailLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-12 animate-pulse rounded-xl bg-[var(--surface-hover)]"
-                  />
-                ))}
-              </div>
-            ) : detail ? (
-              <>
-                <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-                      <tr>
-                        <th className="px-3 py-2 font-semibold">Produto</th>
-                        <th className="px-3 py-2 text-right font-semibold">
-                          Saldo sistema
-                        </th>
-                        <th className="px-3 py-2 text-right font-semibold">
-                          Contagem 1
-                        </th>
-                        <th className="px-3 py-2 text-right font-semibold">
-                          Contagem 2
-                        </th>
-                        <th className="px-3 py-2 text-right font-semibold">
-                          Contagem 3
-                        </th>
-                        <th className="px-3 py-2 text-right font-semibold">
-                          Diferença
-                        </th>
-                        <th className="px-3 py-2 font-semibold">Status</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {detail.items.map((item) => {
-                        const final = finalQuantity(item);
-                        const diff =
-                          final != null
-                            ? final - num(item.systemQuantity)
-                            : null;
-
-                        return (
-                          <tr
-                            key={item.id}
-                            className="border-t border-[var(--border)]"
-                          >
-                            <td className="px-3 py-2">
-                              <p className="text-[var(--text-primary)]">
-                                {item.product
-                                  ? `${item.product.code} — ${item.product.description}`
-                                  : "—"}
-                              </p>
-
-                              {item.addedDuringCount && (
-                                <p className="text-xs text-[var(--warning)]">
-                                  Achado durante a contagem (fora da
-                                  lista de abertura)
-                                </p>
-                              )}
-
-                              {item.reservedQuantity != null &&
-                                num(item.reservedQuantity) > 0 && (
-                                  <p className="text-xs text-[var(--text-muted)]">
-                                    Reservado: {qty(item.reservedQuantity)}
-                                  </p>
-                                )}
-                            </td>
-
-                            <td className="whitespace-nowrap px-3 py-2 text-right text-[var(--text-secondary)]">
-                              {qty(item.systemQuantity)}
-                            </td>
-
-                            {(
-                              [
-                                ["countedQuantity1", item.countedQuantity1, item.countedByName1],
-                                ["countedQuantity2", item.countedQuantity2, item.countedByName2],
-                                ["countedQuantity3", item.countedQuantity3, item.countedByName3],
-                              ] as const
-                            ).map(([field, value, byName]) => (
-                              <td
-                                key={field}
-                                className="whitespace-nowrap px-3 py-2 text-right"
-                              >
-                                <Can
-                                  permission="inventory-count.edit-readings"
-                                  fallback={
-                                    <>
-                                      <span className="text-[var(--text-secondary)]">
-                                        {value != null ? qty(value) : "—"}
-                                      </span>
-                                      {byName && (
-                                        <p className="text-xs text-[var(--text-muted)]">
-                                          {byName}
-                                        </p>
-                                      )}
-                                    </>
-                                  }
-                                >
-                                  <input
-                                    inputMode="decimal"
-                                    defaultValue={
-                                      value != null ? qty(value) : ""
-                                    }
-                                    disabled={
-                                      savingItemId === item.id ||
-                                      detail.status === "ADJUSTED" ||
-                                      detail.status === "CANCELLED"
-                                    }
-                                    onBlur={(e) =>
-                                      void saveItemReading(
-                                        item.id,
-                                        field,
-                                        e.target.value
-                                      )
-                                    }
-                                    className="h-9 w-24 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-right text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)] disabled:opacity-60"
-                                  />
-                                  {byName && (
-                                    <p className="text-xs text-[var(--text-muted)]">
-                                      {byName}
-                                    </p>
-                                  )}
-                                </Can>
-                              </td>
-                            ))}
-
-                            <td className="whitespace-nowrap px-3 py-2 text-right">
-                              {diff != null ? (
-                                <span
-                                  className={
-                                    diff === 0
-                                      ? "text-[var(--text-secondary)]"
-                                      : diff > 0
-                                        ? "text-[var(--success)]"
-                                        : "text-[var(--danger)]"
-                                  }
-                                >
-                                  {diff > 0 ? "+" : ""}
-                                  {qty(diff)}
-                                </span>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-
-                            <td className="whitespace-nowrap px-3 py-2">
-                              <span
-                                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${ITEM_STATUS_BADGE_CLASS[item.status]}`}
-                              >
-                                {INVENTORY_COUNT_ITEM_STATUS_LABELS[item.status]}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {detailError && (
-                  <div className="mt-4 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-                    {detailError}
-                  </div>
-                )}
-
-                <div className="mt-6 flex flex-wrap justify-between gap-3">
-                  <div className="flex flex-wrap gap-3">
-                    {(detail.status === "OPEN" ||
-                      detail.status === "COUNTING") && (
-                      <Can permission="inventory-count.update">
-                        <button
-                          type="button"
-                          onClick={() => openScan(detail)}
-                          className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)]"
-                        >
-                          <ScanLine size={16} />
-                          Iniciar contagem
-                        </button>
-                      </Can>
-                    )}
-
-                    {(detail.status === "OPEN" ||
-                      detail.status === "COUNTING") && (
-                      <Can permission="inventory-count.approve">
-                        <button
-                          type="button"
-                          disabled={actionId === detail.id}
-                          onClick={() => void finalizeCount(detail.id)}
-                          className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-60"
-                        >
-                          <Check size={16} />
-                          Finalizar
-                        </button>
-                      </Can>
-                    )}
-
-                    {detail.status === "FINALIZED" && (
-                      <Can permission="inventory-count.approve">
-                        <button
-                          type="button"
-                          disabled={actionId === detail.id}
-                          onClick={() => void adjustCount(detail.id)}
-                          className="flex items-center gap-2 rounded-xl bg-[var(--success)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-                        >
-                          <RefreshCw size={16} />
-                          Ajustar estoque
-                        </button>
-                      </Can>
-                    )}
-
-                    {(detail.status === "OPEN" ||
-                      detail.status === "COUNTING" ||
-                      detail.status === "FINALIZED") && (
-                      <Can permission="inventory-count.cancel">
-                        <button
-                          type="button"
-                          disabled={actionId === detail.id}
-                          onClick={() => void cancelCount(detail.id, true)}
-                          className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-60"
-                        >
-                          Cancelar contagem
-                        </button>
-                      </Can>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setDetailOpen(false)}
-                    className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
-                  >
-                    Fechar
-                  </button>
-                </div>
-              </>
-            ) : (
-              detailError && (
-                <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-                  {detailError}
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Iniciar contagem (leitura por código de barras/código) */}
-      {scanOpen && detail && (
+      {scanOpen && scanCount && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-start justify-between">
+          <div className="my-8 w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+            <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  Iniciar contagem — {formatInventoryCountNumber(detail.number)}
+                  Contagem {scanRound} —{" "}
+                  {formatInventoryCountNumber(scanCount.number)}
                 </h2>
 
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Leia o código de barras (leitor USB) ou digite o
-                  código do produto.
+                  {remainingInRound > 0
+                    ? `Faltam ${remainingInRound} item(ns) nesta contagem. Leia o código de barras (leitor USB), digite o código ou escolha o produto.`
+                    : "Nada mais a contar nesta rodada."}
                 </p>
               </div>
 
@@ -1535,63 +1050,125 @@ export default function InventarioPage() {
               </button>
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className={labelClass}>Código do produto</label>
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Código do produto</label>
 
-                <input
-                  ref={codeInputRef}
-                  autoFocus
-                  className={fieldClass}
-                  value={scanCode}
-                  disabled={scanBusy}
-                  onChange={(e) => setScanCode(e.target.value)}
-                  onKeyDown={handleCodeKeyDown}
-                  placeholder="Escaneie ou digite..."
-                />
+                  <input
+                    ref={codeInputRef}
+                    autoFocus
+                    className={fieldClass}
+                    value={scanCode}
+                    disabled={scanBusy}
+                    onChange={(e) => setScanCode(e.target.value)}
+                    onKeyDown={handleCodeKeyDown}
+                    placeholder="Escaneie ou digite..."
+                  />
+                </div>
 
-                {scanCode.trim() && scanPreview !== undefined && (
-                  <p
-                    className={`mt-1 text-sm ${
-                      scanPreview
-                        ? "text-[var(--success)]"
-                        : "text-[var(--danger)]"
-                    }`}
+                <div>
+                  <label className={labelClass}>
+                    Ou escolha o produto
+                  </label>
+
+                  <SearchSelect<Product>
+                    displayLabel={
+                      scanProduct
+                        ? `${scanProduct.code} — ${scanProduct.description}`
+                        : ""
+                    }
+                    search={searchProducts}
+                    getId={(p) => p.id}
+                    getLabel={(p) => `${p.code} — ${p.description}`}
+                    placeholder="Clique e busque pelo nome..."
+                    disabled={scanBusy}
+                    onSelect={(p) => {
+                      setScanProduct(p);
+                      setScanCode(p?.code ?? "");
+                      setScanError("");
+
+                      if (p) {
+                        qtyInputRef.current?.focus();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>
+                    Quantidade contada
+                  </label>
+
+                  <input
+                    ref={qtyInputRef}
+                    inputMode="decimal"
+                    className={fieldClass}
+                    value={scanQuantity}
+                    disabled={scanBusy}
+                    onChange={(e) => setScanQuantity(e.target.value)}
+                    onKeyDown={handleQuantityKeyDown}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    disabled={scanBusy || !scanCode.trim()}
+                    onClick={() => void submitScan()}
+                    className="h-11 w-full rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
                   >
-                    {scanPreview
-                      ? `${scanPreview.code} — ${scanPreview.description}`
-                      : "Produto não encontrado."}
-                  </p>
-                )}
+                    {scanBusy ? "Registrando..." : "Confirmar"}
+                  </button>
+                </div>
               </div>
-
-              <div>
-                <label className={labelClass}>Quantidade contada</label>
-
-                <input
-                  ref={qtyInputRef}
-                  inputMode="decimal"
-                  className={fieldClass}
-                  value={scanQuantity}
-                  disabled={scanBusy}
-                  onChange={(e) => setScanQuantity(e.target.value)}
-                  onKeyDown={handleQuantityKeyDown}
-                  placeholder="0"
-                />
-              </div>
-
-              <button
-                type="button"
-                disabled={scanBusy || !scanCode.trim()}
-                onClick={() => void submitScan()}
-                className="w-full rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
-              >
-                {scanBusy ? "Registrando..." : "Confirmar"}
-              </button>
 
               {scanError && (
                 <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
                   {scanError}
+                </div>
+              )}
+
+              {/* Rodada acabou: só o caminho pra próxima, sem listar o
+                  que precisa recontar (isso é do Acompanhamento). */}
+              {remainingInRound === 0 && (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] p-4">
+                  {nextRound ? (
+                    <>
+                      <p className="text-sm text-[var(--text-primary)]">
+                        Contagem {scanRound} concluída. Ainda há
+                        item(ns) para recontar.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScanRound(nextRound);
+                          setScanCode("");
+                          setScanProduct(null);
+                          setScanQuantity("");
+                          setScanError("");
+
+                          setTimeout(
+                            () => codeInputRef.current?.focus(),
+                            50
+                          );
+                        }}
+                        className="mt-3 flex items-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)]"
+                      >
+                        <ScanLine size={16} />
+                        Iniciar contagem {nextRound}
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-[var(--success)]">
+                      Tudo contado. Finalize a contagem no
+                      Acompanhamento de inventário.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -1609,16 +1186,8 @@ export default function InventarioPage() {
                           {entry.label}
                         </span>
 
-                        <span className="flex items-center gap-2">
-                          <span className="text-[var(--text-secondary)]">
-                            {entry.quantity}
-                          </span>
-
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${ITEM_STATUS_BADGE_CLASS[entry.status]}`}
-                          >
-                            {INVENTORY_COUNT_ITEM_STATUS_LABELS[entry.status]}
-                          </span>
+                        <span className="text-[var(--text-secondary)]">
+                          {entry.quantity}
                         </span>
                       </div>
                     ))}
