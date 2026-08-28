@@ -16,6 +16,14 @@ import {
 } from '../interfaces/authenticated-user.interface';
 
 /**
+ * Permissões de administração da PLATAFORMA (não da empresa do
+ * cliente) — mesmo que alguém conceda essa permissão pela matriz de
+ * perfis de acesso, só a conta do dono pode efetivamente usá-la.
+ */
+const PLATFORM_OWNER_ONLY_PERMISSIONS = new Set(['platform.license.manage']);
+const PLATFORM_OWNER_EMAIL = 'alessandro.lourenco@alepejo.com.br';
+
+/**
  * Responsável SOMENTE por checar permissões (RBAC).
  * A checagem de licença/módulo contratado é feita pelo LicenseGuard
  * (identity/license/guards/license.guard.ts) — não duplicar aqui.
@@ -58,6 +66,13 @@ export class PermissionsGuard implements CanActivate {
       : [];
 
     const isGranted = (code: string): boolean => {
+      if (
+        PLATFORM_OWNER_ONLY_PERMISSIONS.has(code) &&
+        user.email?.toLowerCase() !== PLATFORM_OWNER_EMAIL
+      ) {
+        return false;
+      }
+
       const entries = userPermissions.filter((p) => p.code === code);
 
       if (entries.length === 0) {

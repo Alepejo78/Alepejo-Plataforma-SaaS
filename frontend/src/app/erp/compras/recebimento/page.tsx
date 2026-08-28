@@ -259,25 +259,33 @@ export default function RecebimentoPage() {
         Math.trunc(Number(barcodeMultiplier) || 1)
       );
 
-      setConferred((prev) => {
-        const current = prev[item.id] ?? 0;
-        const ordered = num(item.quantity);
+      const current = conferred[item.id] ?? 0;
+      const ordered = num(item.quantity);
+      const remaining = ordered - current;
 
-        if (current >= ordered) {
-          setBarcodeError(
-            `Quantidade de "${product.description}" já conferida por completo (${qty(ordered)}).`
-          );
+      if (remaining <= 0) {
+        setBarcodeError(
+          `Quantidade de "${product.description}" já conferida por completo (${qty(ordered)}).`
+        );
 
-          return prev;
-        }
+        return;
+      }
 
-        return {
-          ...prev,
-          [item.id]: Math.min(current + multiplier, ordered),
-        };
-      });
+      if (multiplier > remaining) {
+        setBarcodeError(
+          `Faltam apenas ${qty(remaining)} para conferir "${product.description}". Ajuste a quantidade.`
+        );
+
+        return;
+      }
+
+      setConferred((prev) => ({
+        ...prev,
+        [item.id]: current + multiplier,
+      }));
 
       setBarcodeInput("");
+      setBarcodeMultiplier("1");
     } catch (err) {
       setBarcodeError(
         extractMessage(

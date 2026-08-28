@@ -48,6 +48,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(
   undefined
 );
 
+/**
+ * Permissões de administração da PLATAFORMA (não da empresa do
+ * cliente) — mesmo que a matriz de perfis conceda essa permissão, só
+ * a conta do dono pode efetivamente usá-la. Espelha a mesma trava no
+ * backend (PermissionsGuard).
+ */
+const PLATFORM_OWNER_ONLY_PERMISSIONS = new Set(["platform.license.manage"]);
+const PLATFORM_OWNER_EMAIL = "alessandro.lourenco@alepejo.com.br";
+
 export function AuthProvider({
   children,
 }: {
@@ -150,6 +159,13 @@ export function AuthProvider({
   const can = useCallback(
     (permission: string) => {
       if (!user) {
+        return false;
+      }
+
+      if (
+        PLATFORM_OWNER_ONLY_PERMISSIONS.has(permission) &&
+        user.email.toLowerCase() !== PLATFORM_OWNER_EMAIL
+      ) {
         return false;
       }
 
