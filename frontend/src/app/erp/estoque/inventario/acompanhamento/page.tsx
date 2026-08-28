@@ -305,10 +305,22 @@ export default function AcompanhamentoInventarioPage() {
 
     const interval = setInterval(() => {
       void load(true);
-    }, 25000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [allowed, load]);
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleManualRefresh() {
+    setRefreshing(true);
+
+    try {
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   const counts = useMemo(
     () =>
@@ -563,12 +575,28 @@ export default function AcompanhamentoInventarioPage() {
                   contagem(ns) em andamento (aberta ou em contagem)
                 </p>
 
-                <p className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-                  <RefreshCw size={12} />
-                  Atualiza sozinho a cada 25s
-                  {lastUpdated &&
-                    ` · Últ. atualização ${lastUpdated.toLocaleTimeString("pt-BR")}`}
-                </p>
+                <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw size={12} />
+                    Atualiza sozinho a cada 5s
+                    {lastUpdated &&
+                      ` · Últ. atualização ${lastUpdated.toLocaleTimeString("pt-BR")}`}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleManualRefresh()}
+                    disabled={refreshing}
+                    title="Atualizar agora"
+                    aria-label="Atualizar agora"
+                    className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      size={14}
+                      className={refreshing ? "animate-spin" : undefined}
+                    />
+                  </button>
+                </div>
               </div>
 
               {dashboard.activeCountsTotal === 0 ? (
