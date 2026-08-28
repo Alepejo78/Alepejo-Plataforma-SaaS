@@ -220,7 +220,7 @@ export const menu: MenuEntry[] = [
         iconAnim: "chart",
         href: "/erp/estoque/inventario/acompanhamento",
         module: "INVENTORY",
-        permission: "inventory-count.track",
+        permission: "inventory-count-tracking.view",
       },
     ],
   },

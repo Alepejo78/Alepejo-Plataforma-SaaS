@@ -632,7 +632,7 @@ export default function InventarioPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Can permission="inventory-count.track">
+                  <Can permission="inventory-count-tracking.view">
                     <Link
                       href="/erp/estoque/inventario/acompanhamento"
                       className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"

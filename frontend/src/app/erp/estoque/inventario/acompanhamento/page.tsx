@@ -123,8 +123,8 @@ export default function AcompanhamentoInventarioPage() {
   const [actionId, setActionId] = useState("");
   const [actionError, setActionError] = useState("");
 
-  const allowed = can("inventory-count.track");
-  const canEditReadings = can("inventory-count.edit-readings");
+  const allowed = can("inventory-count-tracking.view");
+  const canEditReadings = can("inventory-count-tracking.update");
 
   const load = useCallback(async () => {
     setLoading(true);

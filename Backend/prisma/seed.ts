@@ -476,14 +476,23 @@ const permissionGroups = [
       // Cobre as duas etapas: finalizar (trava a contagem) e ajustar
       // o estoque (gera as entradas/saídas necessárias).
       ["inventory-count.approve", "Aprovar Contagens de Inventário (finaliza e ajusta o estoque)"],
-      // Libera, no painel de acompanhamento, editar direto as
-      // colunas de Contagem 1/2/3 — corrigir uma leitura já feita ou
-      // digitar a quantidade sem passar pela tela de leitura.
-      ["inventory-count.edit-readings", "Editar Leituras de Contagem (corrigir ou digitar direto)"],
+    ],
+  },
+  {
+    // Grupo separado (linha própria na matriz de Perfis de acesso) —
+    // fora do grupo INVENTORY_COUNT pra não virar coluna solta ali,
+    // e sim ganhar as colunas padrão Consultar/Editar.
+    code: "INVENTORY_COUNT_TRACKING",
+    name: "Acompanhamento de Inventário",
+    permissions: [
       // Dá acesso à tela de Acompanhamento de inventário (gestão das
       // contagens em andamento) — as ações lá dentro continuam
       // valendo suas próprias permissões.
-      ["inventory-count.track", "Acompanhar Contagens de Inventário (tela de acompanhamento)"],
+      ["inventory-count-tracking.view", "Acessar Acompanhamento de Inventário (tela)"],
+      // Libera, no painel de acompanhamento, editar direto as
+      // colunas de Contagem 1/2/3 — corrigir uma leitura já feita ou
+      // digitar a quantidade sem passar pela tela de leitura.
+      ["inventory-count-tracking.update", "Editar Leituras de Contagem (corrigir ou digitar direto)"],
     ],
   },
   {

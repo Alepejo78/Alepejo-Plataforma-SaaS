@@ -106,7 +106,7 @@ export class InventoryCountController {
   }
 
   @Patch(':id/items/:itemId')
-  @Permissions('inventory-count.edit-readings')
+  @Permissions('inventory-count-tracking.update')
   @ApiOperation({
     summary:
       'Editar direto as leituras de um item (corrigir ou digitar sem passar pela tela de leitura)',
