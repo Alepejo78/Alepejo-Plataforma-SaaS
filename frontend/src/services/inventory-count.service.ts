@@ -132,4 +132,8 @@ export const inventoryCountService = {
 
     return data.data;
   },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/inventory-counts/${id}`);
+  },
 };

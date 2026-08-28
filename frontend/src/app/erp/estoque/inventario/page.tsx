@@ -458,6 +458,31 @@ export default function InventarioPage() {
     }
   }
 
+  async function removeCount(count: InventoryCount) {
+    if (
+      !window.confirm(
+        `Excluir a contagem ${formatInventoryCountNumber(count.number)}? Essa ação não pode ser desfeita.`
+      )
+    ) {
+      return;
+    }
+
+    setActionId(count.id);
+    setActionError("");
+
+    try {
+      await inventoryCountService.remove(count.id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível excluir a contagem.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   const semDeposito = warehouses.length === 0;
   const isDraftDetail = editingId && !viewOnly;
 
@@ -488,7 +513,7 @@ export default function InventarioPage() {
                   </p>
                 </div>
 
-                <Can permission="stock-movement.adjust">
+                <Can permission="inventory-count.create">
                   <button
                     type="button"
                     onClick={openCreate}
@@ -633,7 +658,7 @@ export default function InventarioPage() {
                           </button>
 
                           {c.status === "DRAFT" && (
-                            <Can permission="stock-movement.adjust">
+                            <Can permission="inventory-count.cancel">
                               <button
                                 type="button"
                                 disabled={busy}
@@ -643,6 +668,21 @@ export default function InventarioPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
                               >
                                 <XCircle size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {c.status === "CANCELLED" && (
+                            <Can permission="inventory-count.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void removeCount(c)}
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </Can>
                           )}
@@ -919,7 +959,7 @@ export default function InventarioPage() {
             <div className="mt-4 flex justify-between gap-3">
               <div className="flex gap-3">
                 {isDraftDetail && (
-                  <Can permission="stock-movement.adjust">
+                  <Can permission="inventory-count.approve">
                     <button
                       type="button"
                       disabled={actionId === editingId}
@@ -935,7 +975,7 @@ export default function InventarioPage() {
                 )}
 
                 {isDraftDetail && (
-                  <Can permission="stock-movement.adjust">
+                  <Can permission="inventory-count.cancel">
                     <button
                       type="button"
                       disabled={actionId === editingId}
