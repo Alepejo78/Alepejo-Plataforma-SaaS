@@ -20,7 +20,7 @@ export const PURCHASE_STATUS_LABELS: Record<
   PurchaseStatus,
   string
 > = {
-  DRAFT: "Rascunho",
+  DRAFT: "Falta aprovação",
   APPROVED: "Aprovada",
   RECEIVED: "Recebida",
   CANCELLED: "Cancelada",

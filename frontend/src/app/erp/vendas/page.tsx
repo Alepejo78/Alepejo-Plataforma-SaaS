@@ -136,8 +136,7 @@ const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
 const STATUS_BADGE_CLASS: Record<SaleStatus, string> = {
-  DRAFT:
-    "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  DRAFT: "bg-[var(--warning-soft)] text-[var(--warning)]",
   APPROVED: "bg-[var(--primary-soft)] text-[var(--primary)]",
   INVOICED: "bg-[var(--success-soft)] text-[var(--success)]",
   SHIPPED: "bg-[var(--success-soft)] text-[var(--success)]",
@@ -1313,7 +1312,20 @@ export default function VendasPage() {
                           )}
 
                           {s.status === "DRAFT" && (
-                            <Can permission="sale.approve">
+                            <Can
+                              permission="sale.approve"
+                              fallback={
+                                <button
+                                  type="button"
+                                  disabled
+                                  title="Falta aprovação — você não tem permissão para aprovar, peça pra alguém que tenha"
+                                  aria-label="Falta aprovação"
+                                  className="cursor-not-allowed rounded-lg border border-[var(--border)] p-2 text-[var(--text-muted)] opacity-50"
+                                >
+                                  <Check size={16} />
+                                </button>
+                              }
+                            >
                               <button
                                 type="button"
                                 disabled={busy}

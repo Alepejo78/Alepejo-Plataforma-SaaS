@@ -21,7 +21,7 @@ export const SALE_STATUS_LABELS: Record<
   SaleStatus,
   string
 > = {
-  DRAFT: "Rascunho",
+  DRAFT: "Falta aprovação",
   APPROVED: "Aprovada",
   INVOICED: "Faturada",
   SHIPPED: "Expedida",
