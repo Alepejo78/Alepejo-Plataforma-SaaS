@@ -288,8 +288,22 @@ export default function RecebimentoPage() {
     }
   }
 
+  function isFullyConferred(purchase: Purchase) {
+    return purchase.items.every(
+      (it) => (conferred[it.id] ?? 0) >= num(it.quantity)
+    );
+  }
+
   async function confirmReceive() {
     if (!receiveTarget) {
+      return;
+    }
+
+    if (!isFullyConferred(receiveTarget)) {
+      setReceiveError(
+        "Confira todos os itens (código de barras) antes de confirmar o recebimento."
+      );
+
       return;
     }
 
@@ -756,8 +770,9 @@ export default function RecebimentoPage() {
                 </div>
 
                 <p className="text-xs text-[var(--text-muted)]">
-                  A conferência é só um apoio visual — não altera as
-                  quantidades já lançadas na compra.
+                  Não altera as quantidades já lançadas na compra —
+                  só precisa bater com o que foi pedido pra liberar a
+                  confirmação do recebimento.
                 </p>
               </div>
 
@@ -977,7 +992,15 @@ export default function RecebimentoPage() {
 
                   <button
                     type="button"
-                    disabled={actionId === receiveTarget.id}
+                    disabled={
+                      actionId === receiveTarget.id ||
+                      !isFullyConferred(receiveTarget)
+                    }
+                    title={
+                      !isFullyConferred(receiveTarget)
+                        ? "Confira todos os itens (código de barras) antes de confirmar"
+                        : undefined
+                    }
                     onClick={() => void confirmReceive()}
                     className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
                   >

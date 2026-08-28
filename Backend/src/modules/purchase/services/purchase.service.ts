@@ -764,7 +764,11 @@ export class PurchaseService {
           issueDate,
           termDays,
           paymentMethod,
-          documentNumber: dto.invoiceNumber,
+          // Sem número de nota informado, usa o número da própria
+          // compra — o título sempre precisa de uma referência pra
+          // rastrear em Contas a pagar (mesmo padrão da StockMovement
+          // gerada na entrada, ver acima).
+          documentNumber: dto.invoiceNumber || documentNumber,
           documentKey: dto.invoiceKey,
           documentType,
           chartOfAccountId: purchase.chartOfAccountId,

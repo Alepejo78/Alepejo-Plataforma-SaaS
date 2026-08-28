@@ -732,6 +732,14 @@ export function FinancialEntriesScreen({
                   <th className="px-4 py-3 font-semibold">
                     Documento
                   </th>
+                  <th className="px-4 py-3 font-semibold">
+                    {type === "RECEIVABLE"
+                      ? "Tipo de receita"
+                      : "Tipo de despesa"}
+                  </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Forma de pagamento
+                  </th>
                   <th className="px-4 py-3 text-right font-semibold">
                     Valor
                   </th>
@@ -800,6 +808,18 @@ export function FinancialEntriesScreen({
                             Chave: {entry.documentKey}
                           </p>
                         )}
+                      </td>
+
+                      <td className="px-4 py-3 text-[var(--text-secondary)]">
+                        {entry.chartOfAccount
+                          ? `${entry.chartOfAccount.code} — ${entry.chartOfAccount.description}`
+                          : "—"}
+                      </td>
+
+                      <td className="px-4 py-3 text-[var(--text-secondary)]">
+                        {entry.paymentMethod
+                          ? PAYMENT_METHOD_LABELS[entry.paymentMethod]
+                          : "—"}
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
