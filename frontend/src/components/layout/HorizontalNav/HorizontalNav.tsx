@@ -7,7 +7,7 @@ import { ChevronDown, Lock } from "lucide-react";
 
 import { cn } from "@/lib";
 import { useMenu } from "@/hooks/useMenu";
-import { useTabs } from "@/providers/TabsProvider";
+import { stripCompanySlug, useTabs } from "@/providers/TabsProvider";
 
 import {
   isMenuGroup,
@@ -46,7 +46,7 @@ function TopLeaf({
   fullWidth?: boolean;
   onNavigate?: () => void;
 }) {
-  const pathname = usePathname();
+  const pathname = stripCompanySlug(usePathname());
   const active = !item.disabled && isItemActive(pathname, item.href);
   const Icon = item.icon;
   const { openTab } = useTabs("erp");
@@ -140,7 +140,7 @@ function TopGroup({
   onToggle: () => void;
   onNavigate: () => void;
 }) {
-  const pathname = usePathname();
+  const pathname = stripCompanySlug(usePathname());
 
   const hasActiveChild = entry.children.some(
     (child) => !child.disabled && isItemActive(pathname, child.href)

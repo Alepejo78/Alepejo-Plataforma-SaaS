@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Lock } from "lucide-react";
 
 import { cn } from "@/lib";
-import { useTabs } from "@/providers/TabsProvider";
+import { stripCompanySlug, useTabs } from "@/providers/TabsProvider";
 
 import {
   isMenuGroup,
@@ -44,7 +44,7 @@ function LeafItem({
   nested?: boolean;
   onNavigate?: () => void;
 }) {
-  const pathname = usePathname();
+  const pathname = stripCompanySlug(usePathname());
   const { openTab } = useTabs("erp");
 
   const active =
@@ -170,7 +170,7 @@ function GroupItem({
   collapsed: boolean;
   onNavigate?: () => void;
 }) {
-  const pathname = usePathname();
+  const pathname = stripCompanySlug(usePathname());
 
   const hasActiveChild = entry.children.some(
     (child) =>

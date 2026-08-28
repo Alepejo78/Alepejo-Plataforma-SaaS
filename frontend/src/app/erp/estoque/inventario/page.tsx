@@ -172,6 +172,11 @@ export default function InventarioPage() {
   const [scanLog, setScanLog] = useState<
     { label: string; quantity: string; status: InventoryCountItemStatus }[]
   >([]);
+  /** Pré-visualização do produto pelo código digitado/lido — undefined
+   * enquanto busca, null quando não encontrou nada. */
+  const [scanPreview, setScanPreview] = useState<
+    Product | null | undefined
+  >(undefined);
   const codeInputRef = useRef<HTMLInputElement>(null);
   const qtyInputRef = useRef<HTMLInputElement>(null);
 
@@ -482,10 +487,58 @@ export default function InventarioPage() {
     setScanQuantity("");
     setScanError("");
     setScanLog([]);
+    setScanPreview(undefined);
     setScanOpen(true);
 
     setTimeout(() => codeInputRef.current?.focus(), 50);
   }
+
+  // Pré-visualiza o produto do código digitado/lido antes de confirmar
+  // — mesma resolução do backend (barcode exato, senão código exato).
+  useEffect(() => {
+    if (!scanOpen) {
+      return;
+    }
+
+    const code = scanCode.trim();
+
+    if (!code) {
+      setScanPreview(undefined);
+
+      return;
+    }
+
+    let cancelled = false;
+
+    setScanPreview(undefined);
+
+    const timer = setTimeout(() => {
+      productService
+        .list({ search: code, limit: 5 })
+        .then((result) => {
+          if (cancelled) {
+            return;
+          }
+
+          const match =
+            result.data.find((p) => p.barcode === code) ??
+            result.data.find((p) => p.code === code) ??
+            null;
+
+          setScanPreview(match);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setScanPreview(null);
+          }
+        });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [scanCode, scanOpen]);
 
   async function submitScan(confirmAdd = false) {
     if (!detail || !scanCode.trim()) {
@@ -1496,6 +1549,20 @@ export default function InventarioPage() {
                   onKeyDown={handleCodeKeyDown}
                   placeholder="Escaneie ou digite..."
                 />
+
+                {scanCode.trim() && scanPreview !== undefined && (
+                  <p
+                    className={`mt-1 text-sm ${
+                      scanPreview
+                        ? "text-[var(--success)]"
+                        : "text-[var(--danger)]"
+                    }`}
+                  >
+                    {scanPreview
+                      ? `${scanPreview.code} — ${scanPreview.description}`
+                      : "Produto não encontrado."}
+                  </p>
+                )}
               </div>
 
               <div>

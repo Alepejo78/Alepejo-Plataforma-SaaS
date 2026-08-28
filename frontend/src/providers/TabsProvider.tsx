@@ -15,6 +15,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { menu } from "@/components/layout/Sidebar/menu";
 import { isMenuGroup } from "@/components/layout/Sidebar/Sidebar.types";
 import { isOsPath, OS_PATH_TITLES } from "@/lib/osRoutes";
+import { getRememberedCompanySlug } from "@/lib/companyLogin";
 import { useAuth } from "@/providers/AuthProvider";
 
 export type AppKey = "erp" | "os";
@@ -162,12 +163,41 @@ function isTabEligible(app: AppKey, pathname: string): boolean {
   return titleFor(app, pathname) !== null;
 }
 
+/**
+ * `usePathname()` reflete a URL visível no navegador — com sessão e
+ * empresa conhecida, o middleware faz o navegador mostrar
+ * `/<empresa>/erp/...`/`/<empresa>/os/...` (rewrite por baixo pro
+ * caminho sem o slug, que é o que as páginas realmente servem — ver
+ * `middleware.ts`). Toda comparação de rota deste arquivo (`isOsPath`,
+ * `HOME_TAB`, `OS_PATH_TITLES`, `erpMenuTitles`) usa os caminhos SEM
+ * slug — sem essa normalização, nada aqui reconhece a rota atual
+ * (guia nunca abre sozinha, `currentApp` sempre cai pro "erp"), que é
+ * exatamente o sintoma da guia "grudada" na guia errada.
+ */
+export function stripCompanySlug(pathname: string): string {
+  const slug = getRememberedCompanySlug();
+
+  if (!slug) {
+    return pathname;
+  }
+
+  if (pathname === `/${slug}`) {
+    return "/";
+  }
+
+  if (pathname.startsWith(`/${slug}/`)) {
+    return pathname.slice(slug.length + 1);
+  }
+
+  return pathname;
+}
+
 export function TabsProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname() ?? "/";
+  const pathname = stripCompanySlug(usePathname() ?? "/");
   const router = useRouter();
   const { user } = useAuth();
 
