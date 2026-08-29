@@ -12,7 +12,9 @@ export const ERP_MODULES = {
     SALES: 'sales',
   
     INVENTORY: 'inventory',
-  
+
+    INVENTORY_COUNT: 'inventory_count',
+
     WAREHOUSE: 'warehouse',
   
     FINANCIAL: 'financial',

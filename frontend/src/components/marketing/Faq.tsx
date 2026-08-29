@@ -60,6 +60,11 @@ export const faqItems: FaqItem[] = [
       "Sim, o sistema conta com estoque online: comprou e recebeu, o produto já entra no estoque; confirmou uma venda, o material já é retirado do estoque — com possibilidade de ajustes.",
   },
   {
+    question: "O sistema faz contagem de inventário?",
+    answer:
+      "Sim, com o módulo Inventário — vendido à parte do Estoque. Ele abre a contagem, permite recontagem em até 3 rodadas quando a quantidade não bate, e mostra o acompanhamento e um dashboard com o resultado do último inventário até que o próximo comece.",
+  },
+  {
     question: "O sistema tem controle de RH?",
     answer:
       "Sim, é bem completo pra quem quer controlar colaboradores: função, salários, horas, exames médicos e muito mais.",

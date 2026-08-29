@@ -210,7 +210,7 @@ export const menu: MenuEntry[] = [
         icon: ClipboardCheck,
         iconAnim: "clipboard",
         href: "/erp/estoque/inventario",
-        module: "INVENTORY",
+        module: "INVENTORY_COUNT",
         permission: "inventory-count.view",
       },
       {
@@ -219,7 +219,7 @@ export const menu: MenuEntry[] = [
         icon: BarChart3,
         iconAnim: "chart",
         href: "/erp/estoque/inventario/acompanhamento",
-        module: "INVENTORY",
+        module: "INVENTORY_COUNT",
         permission: "inventory-count-tracking.view",
       },
     ],

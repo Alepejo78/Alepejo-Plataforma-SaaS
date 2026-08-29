@@ -20,6 +20,7 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
+  ClipboardCheck,
   Clock,
   Cloud,
   Factory,
@@ -857,6 +858,15 @@ const moduleGroups = [
     icon: Boxes,
     title: "Estoque",
     items: ["Movimentações", "Saldo em estoque"],
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Inventário",
+    items: [
+      "Contagem de inventário, com recontagem em rodadas",
+      "Acompanhamento de inventário",
+      "Dashboard do último inventário",
+    ],
   },
   {
     icon: Banknote,

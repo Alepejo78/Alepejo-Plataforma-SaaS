@@ -26,7 +26,7 @@ import { UpdateItemReadingsDto } from '../dto/update-item-readings.dto';
 
 @ApiTags('Inventory Counts')
 @Controller('inventory-counts')
-@Module('INVENTORY')
+@Module('INVENTORY_COUNT')
 export class InventoryCountController {
   constructor(
     private readonly service: InventoryCountService,

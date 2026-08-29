@@ -25,13 +25,14 @@ const erpModules: {
   { code: "BPS", name: "Cadastros (Clientes/Fornecedores)", route: "/erp/cadastros", sortOrder: 1 },
   { code: "PRODUCTS", name: "Produtos", route: "/erp/produtos", sortOrder: 2 },
   { code: "INVENTORY", name: "Estoque", route: "/erp/estoque", sortOrder: 3 },
-  { code: "PURCHASE", name: "Compras", route: "/erp/compras", sortOrder: 4 },
-  { code: "SALES", name: "Vendas", route: "/erp/vendas", sortOrder: 5 },
-  { code: "FINANCE", name: "Financeiro", route: "/erp/financeiro", sortOrder: 6 },
-  { code: "BRANDING", name: "Personalização (Marca Própria)", route: "/erp/configuracoes", sortOrder: 7 },
-  { code: "HR", name: "Recursos Humanos", route: "/erp/rh", sortOrder: 8 },
-  { code: "PRODUCTION", name: "Produção", route: "/erp/producao", sortOrder: 9 },
-  { code: "LABOR", name: "Ponto e Folha de Pagamento", route: "/erp/rh/ponto", sortOrder: 10 },
+  { code: "INVENTORY_COUNT", name: "Inventário", route: "/erp/estoque/inventario", sortOrder: 4 },
+  { code: "PURCHASE", name: "Compras", route: "/erp/compras", sortOrder: 5 },
+  { code: "SALES", name: "Vendas", route: "/erp/vendas", sortOrder: 6 },
+  { code: "FINANCE", name: "Financeiro", route: "/erp/financeiro", sortOrder: 7 },
+  { code: "BRANDING", name: "Personalização (Marca Própria)", route: "/erp/configuracoes", sortOrder: 8 },
+  { code: "HR", name: "Recursos Humanos", route: "/erp/rh", sortOrder: 9 },
+  { code: "PRODUCTION", name: "Produção", route: "/erp/producao", sortOrder: 10 },
+  { code: "LABOR", name: "Ponto e Folha de Pagamento", route: "/erp/rh/ponto", sortOrder: 11 },
 ];
 
 /**
@@ -39,7 +40,7 @@ const erpModules: {
  * vendidos à parte. Uma empresa nova só tem acesso a eles se forem
  * habilitados individualmente (ver CompanyModule mais abaixo).
  */
-const ADDON_MODULE_CODES = ["BRANDING", "HR", "PRODUCTION", "LABOR"];
+const ADDON_MODULE_CODES = ["INVENTORY_COUNT", "BRANDING", "HR", "PRODUCTION", "LABOR"];
 
 /**
  * Plano de contas padrão, migrado da aba CAD_DESPESAS da planilha
@@ -1078,6 +1079,31 @@ async function main() {
       create: {
         companyId: company.id,
         moduleId: laborModule.id,
+        enabled: true,
+        licensed: true,
+      },
+    });
+  }
+
+  // Mesma lógica para o add-on INVENTORY_COUNT (Inventário: contagem,
+  // acompanhamento e dashboard), também habilitado na empresa seed
+  // para poder testar.
+  const inventoryCountModule = allModules.find(
+    (mod) => mod.code === "INVENTORY_COUNT",
+  );
+
+  if (inventoryCountModule) {
+    await prisma.companyModule.upsert({
+      where: {
+        companyId_moduleId: {
+          companyId: company.id,
+          moduleId: inventoryCountModule.id,
+        },
+      },
+      update: { enabled: true, licensed: true },
+      create: {
+        companyId: company.id,
+        moduleId: inventoryCountModule.id,
         enabled: true,
         licensed: true,
       },
