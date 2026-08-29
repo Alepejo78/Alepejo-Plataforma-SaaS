@@ -161,10 +161,15 @@ function computeDashboard(activeCounts: InventoryCount[]): DashboardStats {
         awaitingRecount += 1;
       }
 
-      if (item.status === "DONE") {
-        const final = finalQuantity(item);
-        const diff =
-          final != null ? final - num(item.systemQuantity) : 0;
+      // Conta pela última leitura que existir, não só pelos itens já
+      // "Finalizado" — um item "Aguardando recontagem" já tem uma
+      // diferença conhecida (é por isso que está recontando), então
+      // também entra em "Com diferença"/acuracidade, igual já
+      // acontecia na coluna da tabela abaixo.
+      const final = finalQuantity(item);
+
+      if (final != null) {
+        const diff = final - num(item.systemQuantity);
 
         if (Math.abs(diff) < 0.0005) {
           okCount += 1;
@@ -702,8 +707,8 @@ export default function AcompanhamentoInventarioPage() {
 
                       <p className="mt-1 text-xs text-[var(--text-muted)]">
                         {dashboard.accuracyPct != null
-                          ? `${dashboard.okCount} de ${dashboard.okCount + dashboard.diffCount} itens finalizados bateram com o sistema`
-                          : "Sem itens finalizados ainda"}
+                          ? `${dashboard.okCount} de ${dashboard.okCount + dashboard.diffCount} itens já lidos bateram com o sistema`
+                          : "Sem itens lidos ainda"}
                       </p>
                     </div>
 
