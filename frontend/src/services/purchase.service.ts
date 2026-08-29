@@ -125,6 +125,8 @@ export interface ReceivePurchasePayload {
   termDays?: number;
   installmentsCount?: number;
   paymentMethod?: PaymentMethod;
+  /** Parcelas com data/valor escolhidos na mão — tem prioridade sobre installmentsCount. */
+  installments?: { dueDate: string; amount: number }[];
 }
 
 export interface PurchaseFilter {

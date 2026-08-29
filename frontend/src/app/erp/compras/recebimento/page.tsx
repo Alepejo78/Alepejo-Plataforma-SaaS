@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   FileText,
   PackageCheck,
+  RefreshCw,
   ScanBarcode,
   Undo2,
   X,
@@ -35,6 +36,47 @@ import {
 } from "@/services/financial-entry.service";
 
 import { calculateDueDatePreview } from "@/lib/dueDate";
+
+/** Datas de vencimento das parcelas (30/60/90...) — mesma conta que o backend faz sozinho, só que aqui dá pra ver e ajustar antes de confirmar. */
+function buildInstallmentDates(
+  issueDateIso: string | undefined,
+  termDays: number,
+  count: number
+): string[] {
+  const dates: string[] = [];
+
+  for (let i = 1; i <= count; i++) {
+    dates.push(
+      calculateDueDatePreview(issueDateIso, termDays * i)
+        .toISOString()
+        .slice(0, 10)
+    );
+  }
+
+  return dates;
+}
+
+/** Divide o total entre as parcelas — a última absorve o arredondamento, igual ao backend. */
+function buildInstallmentAmounts(
+  totalAmount: number,
+  count: number
+): number[] {
+  const base = Math.floor((totalAmount / count) * 100) / 100;
+  const amounts: number[] = [];
+  let allocated = 0;
+
+  for (let i = 1; i <= count; i++) {
+    const isLast = i === count;
+    const amount = isLast
+      ? Math.round((totalAmount - allocated) * 100) / 100
+      : base;
+
+    allocated += amount;
+    amounts.push(amount);
+  }
+
+  return amounts;
+}
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -113,6 +155,9 @@ export default function RecebimentoPage() {
     paymentMethod: "" as PaymentMethod | "",
   });
   const [receiveError, setReceiveError] = useState("");
+  // Vencimento de cada parcela (YYYY-MM-DD), editável — valor de cada
+  // uma é sempre recalculado (total ÷ parcelas), não precisa editar.
+  const [installmentDates, setInstallmentDates] = useState<string[]>([]);
 
   // Conferência por código de barras
   const [conferred, setConferred] = useState<
@@ -193,28 +238,55 @@ export default function RecebimentoPage() {
     // pedir de novo do zero, só continua editável se precisar corrigir.
     const issueDate =
       purchase.invoiceIssueDate ?? purchase.purchaseDate ?? null;
+    const issueDateStr = issueDate ? issueDate.slice(0, 10) : "";
+    const termDays = purchase.termDays ?? 0;
+    const installmentsCount =
+      purchase.installmentsCount != null &&
+      purchase.installmentsCount > 1
+        ? purchase.installmentsCount
+        : 1;
 
     setReceiveForm({
       invoiceNumber: purchase.invoiceNumber ?? "",
       invoiceKey: purchase.invoiceKey ?? "",
-      invoiceIssueDate: issueDate ? issueDate.slice(0, 10) : "",
+      invoiceIssueDate: issueDateStr,
       documentType: purchase.invoiceKey ? "NOTA_FISCAL" : "",
-      termDays:
-        purchase.termDays != null
-          ? String(purchase.termDays)
-          : "",
+      termDays: purchase.termDays != null ? String(purchase.termDays) : "",
       installmentsCount:
-        purchase.installmentsCount != null &&
-        purchase.installmentsCount > 1
-          ? String(purchase.installmentsCount)
-          : "",
+        installmentsCount > 1 ? String(installmentsCount) : "",
       paymentMethod: purchase.paymentMethod ?? "",
     });
+    setInstallmentDates(
+      installmentsCount > 1
+        ? buildInstallmentDates(issueDateStr, termDays, installmentsCount)
+        : []
+    );
     setReceiveError("");
     setConferred({});
     setBarcodeInput("");
     setBarcodeMultiplier("1");
     setBarcodeError("");
+  }
+
+  /** Regenera as datas das parcelas a partir do que estiver hoje em Dias a vencer/Data de emissão/Nº de parcelas. */
+  function regenerateInstallmentDates() {
+    const count = Number(receiveForm.installmentsCount) || 1;
+
+    if (count <= 1) {
+      setInstallmentDates([]);
+
+      return;
+    }
+
+    setInstallmentDates(
+      buildInstallmentDates(
+        receiveForm.invoiceIssueDate ||
+          receiveTarget?.purchaseDate?.slice(0, 10) ||
+          undefined,
+        Number(receiveForm.termDays) || 0,
+        count
+      )
+    );
   }
 
   async function handleBarcodeSubmit() {
@@ -319,6 +391,17 @@ export default function RecebimentoPage() {
     setReceiveError("");
 
     try {
+      const installments =
+        installmentDates.length > 1
+          ? installmentDates.map((dueDate, index) => ({
+              dueDate,
+              amount: buildInstallmentAmounts(
+                num(receiveTarget.totalAmount),
+                installmentDates.length
+              )[index],
+            }))
+          : undefined;
+
       await purchaseService.receive(receiveTarget.id, {
         invoiceNumber: receiveForm.invoiceNumber || undefined,
         invoiceKey: receiveForm.invoiceKey || undefined,
@@ -328,9 +411,12 @@ export default function RecebimentoPage() {
         termDays: receiveForm.termDays
           ? Number(receiveForm.termDays)
           : undefined,
-        installmentsCount: receiveForm.installmentsCount
-          ? Number(receiveForm.installmentsCount)
-          : undefined,
+        installmentsCount: installments
+          ? undefined
+          : receiveForm.installmentsCount
+            ? Number(receiveForm.installmentsCount)
+            : undefined,
+        installments,
         paymentMethod: receiveForm.paymentMethod || undefined,
       });
 
@@ -973,15 +1059,116 @@ export default function RecebimentoPage() {
                       title="Em quantos títulos o vencimento se divide — 30/60/90 com prazo 30 e 3 parcelas"
                       className={fieldClass}
                       value={receiveForm.installmentsCount}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = e.target.value;
+
                         setReceiveForm({
                           ...receiveForm,
-                          installmentsCount: e.target.value,
-                        })
-                      }
+                          installmentsCount: value,
+                        });
+
+                        const count = Number(value) || 1;
+
+                        setInstallmentDates(
+                          count > 1
+                            ? buildInstallmentDates(
+                                receiveForm.invoiceIssueDate ||
+                                  receiveTarget?.purchaseDate?.slice(
+                                    0,
+                                    10
+                                  ) ||
+                                  undefined,
+                                Number(receiveForm.termDays) || 0,
+                                count
+                              )
+                            : []
+                        );
+                      }}
                     />
                   </div>
                 </div>
+
+                {installmentDates.length > 0 && receiveTarget && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className={labelClass}>
+                        Parcelas — vencimento de cada uma (edite se
+                        precisar)
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={regenerateInstallmentDates}
+                        title="Recalcular datas a partir de Dias a vencer/Data de emissão"
+                        className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)]"
+                      >
+                        <RefreshCw size={12} />
+                        Recalcular
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+                          <tr>
+                            <th className="px-3 py-2 font-semibold">
+                              Parcela
+                            </th>
+                            <th className="px-3 py-2 font-semibold">
+                              Vencimento
+                            </th>
+                            <th className="px-3 py-2 text-right font-semibold">
+                              Valor
+                            </th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {(() => {
+                            const amounts = buildInstallmentAmounts(
+                              num(receiveTarget.totalAmount),
+                              installmentDates.length
+                            );
+
+                            return installmentDates.map(
+                              (dueDate, index) => (
+                                <tr
+                                  key={index}
+                                  className="border-t border-[var(--border)]"
+                                >
+                                  <td className="px-3 py-2 text-[var(--text-secondary)]">
+                                    {index + 1}/{installmentDates.length}
+                                  </td>
+
+                                  <td className="px-3 py-2">
+                                    <input
+                                      type="date"
+                                      className={`${fieldClass} h-9`}
+                                      value={dueDate}
+                                      onChange={(e) =>
+                                        setInstallmentDates((prev) =>
+                                          prev.map((d, i) =>
+                                            i === index
+                                              ? e.target.value
+                                              : d
+                                          )
+                                        )
+                                      }
+                                    />
+                                  </td>
+
+                                  <td className="whitespace-nowrap px-3 py-2 text-right text-[var(--text-secondary)]">
+                                    {money(amounts[index])}
+                                  </td>
+                                </tr>
+                              )
+                            );
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
                 {receiveError && (
                   <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
