@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   Prisma,
+  ProductType,
   StockMovement,
 } from '@prisma/client';
 
@@ -63,6 +64,9 @@ export class StockMovementRepository {
 
     const where: Prisma.StockMovementWhereInput = {
       companyId,
+      // Serviço não tem controle de estoque de verdade — não faz
+      // sentido aparecer nas Movimentações.
+      inventory: { product: { type: { not: ProductType.SERVICE } } },
       ...(inventoryId && { inventoryId }),
       ...(type && { type }),
 

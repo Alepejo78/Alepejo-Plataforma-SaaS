@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   Inventory,
   Prisma,
+  ProductType,
 } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
@@ -80,6 +81,10 @@ export class InventoryRepository {
 
     const where: Prisma.InventoryWhereInput = {
       companyId,
+
+      // Serviço não tem controle de estoque de verdade — não faz
+      // sentido aparecer no Saldo em estoque.
+      product: { type: { not: ProductType.SERVICE } },
 
       ...(productId && {
         productId,
