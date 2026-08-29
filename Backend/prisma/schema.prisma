@@ -947,6 +947,14 @@ model Purchase {
   /// (30/60/90... = termDays × 1/2/3) — 1 ou vazio é um título só.
   installmentsCount Int? @default(1)
 
+  /// Parcelas planejadas na hora da compra (dia/vencimento/valor
+  /// escolhidos na mão, ex.: entrada diferente das demais) —
+  /// `[{ dueDate: string, amount: number }]`. Quando preenchido, o
+  /// recebimento usa essa divisão em vez de recalcular sozinho a
+  /// partir de termDays × installmentsCount; o recebimento ainda pode
+  /// ajustar antes de confirmar.
+  plannedInstallments Json?
+
   /// Vencimento calculado (purchaseDate + termDays), já ajustado para
   /// dia útil (nunca sábado ou domingo).
   dueDate DateTime?

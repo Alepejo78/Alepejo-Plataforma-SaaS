@@ -63,6 +63,8 @@ export interface Purchase {
   totalAmount: string | number;
   termDays?: number | null;
   installmentsCount?: number | null;
+  /** Parcelas planejadas na hora da compra (data/valor escolhidos na mão) — usadas no recebimento em vez de recalcular do zero. */
+  plannedInstallments?: { dueDate: string; amount: number }[] | null;
   dueDate?: string | null;
   paymentMethod?: PaymentMethod | null;
   /** Tipo de despesa — vai junto pro título gerado no recebimento. */
@@ -108,6 +110,8 @@ export interface PurchasePayload {
   observation?: string;
   termDays?: number;
   installmentsCount?: number;
+  /** Parcelas planejadas na hora da compra — tem prioridade sobre installmentsCount. */
+  installments?: { dueDate: string; amount: number }[];
   paymentMethod?: PaymentMethod;
   chartOfAccountId?: string;
   purchaseOrderId?: string;

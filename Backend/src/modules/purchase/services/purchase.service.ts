@@ -48,6 +48,19 @@ function formatPurchaseNumber(n: number) {
   return `C${String(n).padStart(9, '0')}`;
 }
 
+function assertInstallmentsMatchTotal(
+  installments: { dueDate: string; amount: number }[],
+  totalAmount: number,
+) {
+  const sum = installments.reduce((acc, i) => acc + i.amount, 0);
+
+  if (Math.abs(sum - totalAmount) > 0.01) {
+    throw new BadRequestException(
+      `A soma das parcelas (${sum.toFixed(2)}) precisa bater com o total da compra (${totalAmount.toFixed(2)}).`,
+    );
+  }
+}
+
 @Injectable()
 export class PurchaseService {
   constructor(
@@ -179,6 +192,10 @@ export class PurchaseService {
 
       totalAmount +=
         item.quantity * item.unitPrice;
+    }
+
+    if (dto.installments?.length) {
+      assertInstallmentsMatchTotal(dto.installments, totalAmount);
     }
 
     let sourceOrder: {
@@ -458,6 +475,10 @@ export class PurchaseService {
       }));
     }
 
+    if (dto.installments?.length) {
+      assertInstallmentsMatchTotal(dto.installments, totalAmount);
+    }
+
     const purchaseDate = dto.purchaseDate
       ? new Date(dto.purchaseDate)
       : undefined;
@@ -481,6 +502,13 @@ export class PurchaseService {
         purchaseDate,
         observation: dto.observation,
         termDays,
+        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+        plannedInstallments: dto.installments
+          ? dto.installments.map((i) => ({
+              dueDate: i.dueDate,
+              amount: i.amount,
+            }))
+          : undefined,
         dueDate,
         paymentMethod: dto.paymentMethod,
         totalAmount,
@@ -544,6 +572,28 @@ export class PurchaseService {
     if (!purchase) {
       throw new NotFoundException(
         'Compra não encontrada.',
+      );
+    }
+
+    // Parcelas escolhidas na hora do recebimento têm prioridade; sem
+    // isso, usa as planejadas lá na compra (se a pessoa já tiver
+    // ajustado data/valor por lá); só na falta das duas é que cai no
+    // cálculo automático (termDays × installmentsCount) mais abaixo.
+    const effectiveInstallments: { dueDate: string; amount: number }[] =
+      dto.installments?.length
+        ? dto.installments
+        : Array.isArray(purchase.plannedInstallments) &&
+            purchase.plannedInstallments.length > 0
+          ? (purchase.plannedInstallments as unknown as {
+              dueDate: string;
+              amount: number;
+            }[])
+          : [];
+
+    if (effectiveInstallments.length) {
+      assertInstallmentsMatchTotal(
+        effectiveInstallments,
+        Number(purchase.totalAmount),
       );
     }
 
@@ -714,7 +764,7 @@ export class PurchaseService {
           1;
 
         const autoInstallments =
-          !dto.installments?.length &&
+          effectiveInstallments.length === 0 &&
           effectiveInstallmentsCount > 1
             ? buildAutoInstallments(
                 issueDate,
@@ -724,11 +774,11 @@ export class PurchaseService {
               )
             : null;
 
-        // Parcelas (explícitas ou geradas) têm prioridade sobre o
-        // prazo único — cada uma já traz seu próprio vencimento, não
-        // recalcula a partir de termDays.
-        const dueDate = dto.installments?.length
-          ? new Date(dto.installments[0].dueDate)
+        // Parcelas (explícitas, planejadas na compra, ou geradas)
+        // têm prioridade sobre o prazo único — cada uma já traz seu
+        // próprio vencimento, não recalcula a partir de termDays.
+        const dueDate = effectiveInstallments.length
+          ? new Date(effectiveInstallments[0].dueDate)
           : autoInstallments
             ? autoInstallments[0].dueDate
             : calculateDueDate(issueDate, termDays);
@@ -776,12 +826,12 @@ export class PurchaseService {
           observation: `Compra ${purchase.id}`,
         };
 
-        if (dto.installments?.length) {
+        if (effectiveInstallments.length) {
           await this.financialEntriesService.createInstallments(
             tx,
             {
               ...commonEntryData,
-              installments: dto.installments.map(
+              installments: effectiveInstallments.map(
                 (installment) => ({
                   dueDate: new Date(installment.dueDate),
                   amount: installment.amount,

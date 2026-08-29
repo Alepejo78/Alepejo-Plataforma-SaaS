@@ -12,11 +12,13 @@ import {
     IsString,
     MaxLength,
     Min,
+    ValidateNested,
   } from 'class-validator';
   import { Type } from 'class-transformer';
 
   import { PaymentMethod } from '@prisma/client';
 
+  import { InstallmentDto } from '../../../core/dto/installment.dto';
   import { CreatePurchaseItemDto } from './create-purchase-item.dto';
   
   export class CreatePurchaseDto {
@@ -75,6 +77,19 @@ import {
     @IsInt()
     @Min(1)
     installmentsCount?: number;
+
+    @ApiProperty({
+      required: false,
+      type: [InstallmentDto],
+      description:
+        'Parcelas planejadas na hora da compra (data/valor escolhidos na mão, ex.: entrada diferente das demais) — quando informado, tem prioridade sobre installmentsCount/termDays no recebimento (que ainda pode ajustar antes de confirmar). Somadas, precisam bater com o total da compra.',
+    })
+    @IsOptional()
+    @IsArray()
+    @ArrayMinSize(1)
+    @ValidateNested({ each: true })
+    @Type(() => InstallmentDto)
+    installments?: InstallmentDto[];
 
     @ApiProperty({
       required: false,

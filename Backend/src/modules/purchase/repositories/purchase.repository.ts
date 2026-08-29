@@ -63,7 +63,13 @@ export class PurchaseRepository {
         chartOfAccountId: dto.chartOfAccountId,
         totalAmount,
         termDays,
-        installmentsCount: dto.installmentsCount,
+        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+        plannedInstallments: dto.installments
+          ? dto.installments.map((i) => ({
+              dueDate: i.dueDate,
+              amount: i.amount,
+            }))
+          : undefined,
         dueDate: calculateDueDate(issueDate, termDays),
         paymentMethod: dto.paymentMethod,
         purchaseOrderId: dto.purchaseOrderId,
@@ -161,6 +167,8 @@ export class PurchaseRepository {
       observation?: string;
       chartOfAccountId?: string;
       termDays?: number;
+      installmentsCount?: number;
+      plannedInstallments?: { dueDate: string; amount: number }[] | null;
       dueDate?: Date;
       paymentMethod?: CreatePurchaseDto['paymentMethod'];
       totalAmount?: number;
@@ -195,6 +203,15 @@ export class PurchaseRepository {
         }),
         ...(dto.termDays !== undefined && {
           termDays: dto.termDays,
+        }),
+        ...(dto.installmentsCount !== undefined && {
+          installmentsCount: dto.installmentsCount,
+        }),
+        ...(dto.plannedInstallments !== undefined && {
+          plannedInstallments:
+            dto.plannedInstallments === null
+              ? Prisma.JsonNull
+              : dto.plannedInstallments,
         }),
         ...(dto.dueDate !== undefined && {
           dueDate: dto.dueDate,

@@ -50,6 +50,19 @@ function toDateInput(iso: string) {
   return iso.slice(0, 10);
 }
 
+/** Dias entre duas datas (YYYY-MM-DD) — só pra popular o campo "Dias" ao herdar parcelas planejadas na compra. */
+function daysBetween(fromIso: string | undefined, toIso: string) {
+  if (!fromIso) {
+    return "";
+  }
+
+  const from = new Date(`${fromIso}T00:00:00Z`).getTime();
+  const to = new Date(`${toIso}T00:00:00Z`).getTime();
+  const days = Math.round((to - from) / 86400000);
+
+  return days >= 0 ? String(days) : "";
+}
+
 /** Divide o total entre as parcelas — a última absorve o arredondamento, igual ao backend. */
 function buildInstallmentAmounts(
   totalAmount: number,
@@ -274,14 +287,27 @@ export default function RecebimentoPage() {
         installmentsCount > 1 ? String(installmentsCount) : "",
       paymentMethod: purchase.paymentMethod ?? "",
     });
-    setInstallments(
-      buildInstallmentRows(
-        issueDateStr,
-        termDays,
-        installmentsCount,
-        num(purchase.totalAmount)
-      )
-    );
+    if (purchase.plannedInstallments?.length) {
+      // Parcelas já planejadas lá na compra (data/valor escolhidos na
+      // mão) — herda em vez de recalcular do zero; ainda dá pra
+      // ajustar antes de confirmar.
+      setInstallments(
+        purchase.plannedInstallments.map((row) => ({
+          days: daysBetween(issueDateStr, toDateInput(row.dueDate)),
+          dueDate: toDateInput(row.dueDate),
+          amount: row.amount,
+        }))
+      );
+    } else {
+      setInstallments(
+        buildInstallmentRows(
+          issueDateStr,
+          termDays,
+          installmentsCount,
+          num(purchase.totalAmount)
+        )
+      );
+    }
     setReceiveError("");
     setConferred({});
     setBarcodeInput("");
