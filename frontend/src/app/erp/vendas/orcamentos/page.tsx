@@ -325,10 +325,9 @@ export default function OrcamentosPage() {
     const quoteDateStr = quote.quoteDate
       ? quote.quoteDate.slice(0, 10)
       : todayIso();
-    const quoteItemsTotal = quote.items.reduce(
-      (sum, it) => sum + num(it.quantity) * num(it.unitPrice),
-      0
-    );
+    // Base das parcelas é o líquido (o que o cliente paga de fato),
+    // não a soma bruta dos itens.
+    const quoteNetTotal = num(quote.netAmount);
 
     if (quote.plannedInstallments?.length) {
       setInstallments(
@@ -349,7 +348,7 @@ export default function OrcamentosPage() {
           quoteDateStr,
           quote.termDays ?? 0,
           count,
-          quoteItemsTotal
+          quoteNetTotal
         )
       );
     }
@@ -492,10 +491,17 @@ export default function OrcamentosPage() {
       (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
       0
     );
+    // As parcelas dividem o líquido (o que o cliente paga de fato) —
+    // desconto/frete/outras despesas já entram na conta.
+    const validNetTotal =
+      validItemsTotal -
+      form.discountValue +
+      form.freightValue +
+      form.otherExpenses;
     const singleInstallment = installments.length === 1;
 
     const finalInstallments = singleInstallment
-      ? [{ dueDate: installments[0].dueDate, amount: validItemsTotal }]
+      ? [{ dueDate: installments[0].dueDate, amount: validNetTotal }]
       : installments.map((row) => ({
           dueDate: row.dueDate,
           amount: row.amount,
@@ -513,9 +519,9 @@ export default function OrcamentosPage() {
         0
       );
 
-      if (Math.abs(sum - validItemsTotal) > 0.01) {
+      if (Math.abs(sum - validNetTotal) > 0.01) {
         setFormError(
-          `A soma das parcelas (${money(sum)}) precisa bater com o total dos itens (${money(validItemsTotal)}).`
+          `A soma das parcelas (${money(sum)}) precisa bater com o valor líquido (${money(validNetTotal)}).`
         );
 
         return;
@@ -1265,7 +1271,7 @@ export default function OrcamentosPage() {
                           form.quoteDate || undefined,
                           Number(form.termDays) || 0,
                           count,
-                          itemsTotal
+                          netTotal
                         )
                       );
                     }}
@@ -1329,7 +1335,8 @@ export default function OrcamentosPage() {
                 onUpdate={updateInstallment}
                 onAdd={addInstallment}
                 onRemove={removeInstallment}
-                total={itemsTotal}
+                total={netTotal}
+                totalLabel="valor líquido"
               />
 
               <div className="flex justify-end gap-6 text-sm">

@@ -17,6 +17,7 @@ import { ProductionOrdersService } from '../../production/services/production-or
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
+import { buildEmailDocumentSummaryHtml } from '../../../core/utils/email-document-summary.util';
 
 import { SalesOrderRepository } from '../repositories/sales-order.repository';
 
@@ -159,6 +160,32 @@ export class SalesOrderService {
       currency: 'BRL',
     }).format(Number(order.netAmount));
 
+    const summaryHtml = buildEmailDocumentSummaryHtml({
+      items: order.items.map((item) => ({
+        description: item.product?.description ?? item.productId,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+      })),
+      totals: {
+        totalAmount: Number(order.totalAmount),
+        discountValue: Number(order.discountValue),
+        freightValue: Number(order.freightValue),
+        otherExpenses: Number(order.otherExpenses),
+        netAmount: Number(order.netAmount),
+      },
+      meta: order.orderDate
+        ? [
+            {
+              label: 'Data',
+              value: order.orderDate.toLocaleDateString('pt-BR', {
+                timeZone: 'UTC',
+              }),
+            },
+          ]
+        : undefined,
+    });
+
     if (partner.email) {
       void this.emailNotifications.send(
         companyId,
@@ -166,6 +193,7 @@ export class SalesOrderService {
         `Pedido de Venda ${orderNumber} — ${companyName}`,
         `<p>Olá, ${partnerName},</p>
 <p>Segue nosso Pedido de Venda <strong>${orderNumber}</strong> de <strong>${companyName}</strong>, no valor de <strong>${value}</strong>.</p>
+${summaryHtml}
 <p>Qualquer dúvida, estamos à disposição.</p>
 <p>Atenciosamente,<br/>${companyName}</p>`,
       );

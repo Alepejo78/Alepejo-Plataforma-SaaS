@@ -13,6 +13,7 @@ import { WhatsappNotificationsService } from '../../notifications/services/whats
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
+import { buildEmailDocumentSummaryHtml } from '../../../core/utils/email-document-summary.util';
 
 import { QuotationRepository } from '../repositories/quotation.repository';
 
@@ -413,6 +414,22 @@ export class QuotationService {
         purchaseOrderNumber,
       ).padStart(6, '0')}`;
 
+      const summaryHtml = buildEmailDocumentSummaryHtml({
+        items: offer.items.map((item) => ({
+          description: item.product?.description ?? item.productId,
+          quantity: Number(
+            quotation.items.find(
+              (qi) => qi.productId === item.productId,
+            )?.quantity ?? 0,
+          ),
+          unitPrice: Number(item.unitPrice),
+          totalPrice: Number(item.totalPrice),
+        })),
+        totals: {
+          totalAmount: Number(offer.totalAmount),
+        },
+      });
+
       if (offer.partner.email) {
         void this.emailNotifications.send(
           companyId,
@@ -421,6 +438,7 @@ export class QuotationService {
           `<p>Olá, ${partnerName},</p>
 <p>Sua proposta foi escolhida como vencedora na cotação <strong>COT-${quotationNumber}</strong> de <strong>${companyName}</strong>.</p>
 <p>Segue o Pedido de Compra <strong>${orderNumber}</strong> gerado a partir dela.</p>
+${summaryHtml}
 <p>Por favor, informe o número <strong>${orderNumber}</strong> na observação da nota fiscal — isso facilita o rastreamento no recebimento.</p>
 <p>Atenciosamente,<br/>${companyName}</p>`,
         );

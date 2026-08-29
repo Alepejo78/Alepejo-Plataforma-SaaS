@@ -114,13 +114,16 @@ export function InstallmentsEditor({
   onAdd,
   onRemove,
   total,
+  totalLabel = "total dos itens",
 }: {
   installments: InstallmentRow[];
   onUpdate: (index: number, patch: Partial<InstallmentRow>) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
-  /** Total dos itens — usado como valor da parcela única e na conferência de soma. */
+  /** Base das parcelas — usada como valor da parcela única e na conferência de soma. Já deve vir líquida (descontado desconto, somado frete/outras despesas) quando o documento tiver esses campos. */
   total: number;
+  /** Como descrever `total` na mensagem de conferência — ex.: "total dos itens", "valor líquido". */
+  totalLabel?: string;
 }) {
   return (
     <div>
@@ -218,7 +221,7 @@ export function InstallmentsEditor({
                   : "text-[var(--text-muted)]"
               }`}
             >
-              Precisa bater com o total dos itens ({money(total)}).
+              Precisa bater com o {totalLabel} ({money(total)}).
             </p>
           );
         })()}

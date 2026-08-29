@@ -16,6 +16,7 @@ import { WhatsappNotificationsService } from '../../notifications/services/whats
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
+import { buildEmailDocumentSummaryHtml } from '../../../core/utils/email-document-summary.util';
 
 import { PurchaseOrderRepository } from '../repositories/purchase-order.repository';
 
@@ -154,6 +155,28 @@ export class PurchaseOrderService {
     const partnerName = partner.tradeName || partner.legalName;
     const orderNumber = `PC-${String(order.number).padStart(6, '0')}`;
 
+    const summaryHtml = buildEmailDocumentSummaryHtml({
+      items: order.items.map((item) => ({
+        description: item.product?.description ?? item.productId,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+      })),
+      totals: {
+        totalAmount: Number(order.totalAmount),
+      },
+      meta: order.orderDate
+        ? [
+            {
+              label: 'Data',
+              value: order.orderDate.toLocaleDateString('pt-BR', {
+                timeZone: 'UTC',
+              }),
+            },
+          ]
+        : undefined,
+    });
+
     if (partner.email) {
       void this.emailNotifications.send(
         companyId,
@@ -161,6 +184,7 @@ export class PurchaseOrderService {
         `Pedido de Compra ${orderNumber} — ${companyName}`,
         `<p>Olá, ${partnerName},</p>
 <p>Segue nosso Pedido de Compra <strong>${orderNumber}</strong> de <strong>${companyName}</strong>.</p>
+${summaryHtml}
 <p>Por favor, informe o número <strong>${orderNumber}</strong> na observação da nota fiscal — isso facilita o rastreamento no recebimento.</p>
 <p>Atenciosamente,<br/>${companyName}</p>`,
       );

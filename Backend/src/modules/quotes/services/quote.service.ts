@@ -16,6 +16,8 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
+import { buildEmailDocumentSummaryHtml } from '../../../core/utils/email-document-summary.util';
+
 import { QuoteRepository } from '../repositories/quote.repository';
 import { QuotePdfService } from './quote-pdf.service';
 
@@ -145,6 +147,37 @@ export class QuoteService {
       currency: 'BRL',
     }).format(Number(quote.netAmount));
 
+    const formatDate = (value: Date | null) =>
+      value
+        ? value.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+        : undefined;
+
+    const summaryHtml = buildEmailDocumentSummaryHtml({
+      items: quote.items.map((item) => ({
+        description: item.product?.description ?? item.productId,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+      })),
+      totals: {
+        totalAmount: Number(quote.totalAmount),
+        discountValue: Number(quote.discountValue),
+        freightValue: Number(quote.freightValue),
+        otherExpenses: Number(quote.otherExpenses),
+        netAmount: Number(quote.netAmount),
+      },
+      meta: [
+        quote.quoteDate && {
+          label: 'Data',
+          value: formatDate(quote.quoteDate)!,
+        },
+        quote.validUntil && {
+          label: 'Válido até',
+          value: formatDate(quote.validUntil)!,
+        },
+      ].filter((m): m is { label: string; value: string } => Boolean(m)),
+    });
+
     if (partner.email) {
       const pdf = await this.quotePdf
         .generate(quote, company)
@@ -164,6 +197,7 @@ export class QuoteService {
         `Orçamento ${quoteNumber} — ${companyName}`,
         `<p>Olá, ${partnerName},</p>
 <p>Segue nosso orçamento <strong>${quoteNumber}</strong> de <strong>${companyName}</strong>, no valor de <strong>${value}</strong>.</p>
+${summaryHtml}
 <p>Qualquer dúvida, estamos à disposição.</p>
 <p>Atenciosamente,<br/>${companyName}</p>`,
         pdf
