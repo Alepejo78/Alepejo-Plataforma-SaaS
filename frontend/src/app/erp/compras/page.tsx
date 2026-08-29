@@ -418,6 +418,29 @@ export default function ComprasPage() {
         };
       })
     );
+
+    // Recalcula a grade de parcelas com base no que veio do pedido —
+    // `itemsTotal` ainda não reflete o `setItems` acima nesse mesmo
+    // render, então soma o saldo dos itens do pedido direto aqui.
+    const orderItemsTotal = order.items.reduce((sum, it) => {
+      const saldo =
+        num(it.quantity) -
+        num(it.convertedQuantity) -
+        num(it.discardedQuantity);
+
+      return sum + saldo * num(it.unitPrice);
+    }, 0);
+
+    setInstallments(
+      buildInstallmentRows(
+        form.purchaseDate || undefined,
+        order.termDays ?? 0,
+        order.installmentsCount != null && order.installmentsCount > 1
+          ? order.installmentsCount
+          : 1,
+        orderItemsTotal
+      )
+    );
   }
 
   function clearSourceOrder() {
