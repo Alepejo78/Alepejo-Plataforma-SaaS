@@ -475,6 +475,28 @@ export default function ComprasPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Link direto pra consultar uma compra específica (ex.: vindo do
+  // botão "Consultar" na tela de Recebimento).
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get(
+      "view"
+    );
+
+    if (!id) {
+      return;
+    }
+
+    window.history.replaceState(null, "", "/erp/compras");
+
+    purchaseService
+      .getById(id)
+      .then((purchase) => openView(purchase))
+      .catch(() => {
+        setListError("Não foi possível abrir a compra.");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function openCreate() {
     setEditingId(null);
     setViewOnly(false);
@@ -1634,6 +1656,11 @@ export default function ComprasPage() {
                 </div>
               </div>
 
+              {!(
+                viewOnly &&
+                detail &&
+                detail.financialEntries.length > 0
+              ) && (
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label className={labelClass}>Parcelas</label>
@@ -1743,6 +1770,7 @@ export default function ComprasPage() {
                     );
                   })()}
               </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>

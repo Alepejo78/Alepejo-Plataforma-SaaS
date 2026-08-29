@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
+  Eye,
   FileText,
   PackageCheck,
   Plus,
@@ -737,6 +738,17 @@ export default function RecebimentoPage() {
                                 <XCircle size={16} />
                               </button>
                             </Can>
+                          )}
+
+                          {p.status === "RECEIVED" && (
+                            <Link
+                              href={`/erp/compras?view=${p.id}`}
+                              title="Consultar"
+                              aria-label="Consultar"
+                              className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                            >
+                              <Eye size={16} />
+                            </Link>
                           )}
 
                           {p.status === "RECEIVED" && (
