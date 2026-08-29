@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -23,6 +23,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { useAuth } from "@/providers/AuthProvider";
 
 import {
@@ -348,6 +349,7 @@ export default function AcompanhamentoInventarioPage() {
   const { can } = useAuth();
 
   const [tab, setTab] = useState<"track" | "dashboard">("track");
+  const trackTableRef = useRef<HTMLTableElement>(null);
   const [allCounts, setAllCounts] = useState<InventoryCount[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -670,30 +672,40 @@ export default function AcompanhamentoInventarioPage() {
               </p>
             </header>
 
-            <div className="flex gap-2 border-b border-[var(--border)]">
-              <button
-                type="button"
-                onClick={() => setTab("track")}
-                className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  tab === "track"
-                    ? "border-[var(--primary)] text-[var(--primary)]"
-                    : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                Acompanhamento
-              </button>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)]">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTab("track")}
+                  className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                    tab === "track"
+                      ? "border-[var(--primary)] text-[var(--primary)]"
+                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  Acompanhamento
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setTab("dashboard")}
-                className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  tab === "dashboard"
-                    ? "border-[var(--primary)] text-[var(--primary)]"
-                    : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                Painel geral
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("dashboard")}
+                  className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                    tab === "dashboard"
+                      ? "border-[var(--primary)] text-[var(--primary)]"
+                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  Painel geral
+                </button>
+              </div>
+
+              {tab === "track" && (
+                <ExportButton
+                  tableRef={trackTableRef}
+                  filename="acompanhamento-inventario"
+                  sheetName="Inventário"
+                />
+              )}
             </div>
 
             {tab === "dashboard" && (
@@ -1024,7 +1036,10 @@ export default function AcompanhamentoInventarioPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table
+              ref={trackTableRef}
+              className="w-full text-left text-sm"
+            >
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Número</th>
