@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CalendarX,
   CheckCircle2,
@@ -16,6 +16,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 
 import {
@@ -76,6 +77,7 @@ function emptyForm() {
 }
 
 export default function FaltasEAbonosPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [records, setRecords] = useState<AbsenceRecord[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -231,16 +233,24 @@ export default function FaltasEAbonosPage() {
                   </p>
                 </div>
 
-                <Can permission="absence-record.create">
-                  <button
-                    type="button"
-                    onClick={openCreate}
-                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-                  >
-                    <Plus size={18} />
-                    Novo registro
-                  </button>
-                </Can>
+                <div className="flex gap-2">
+                  <ExportButton
+                    tableRef={exportTableRef}
+                    filename="faltas-e-abonos"
+                    sheetName="Faltas e abonos"
+                  />
+
+                  <Can permission="absence-record.create">
+                    <button
+                      type="button"
+                      onClick={openCreate}
+                      className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                    >
+                      <Plus size={18} />
+                      Novo registro
+                    </button>
+                  </Can>
+                </div>
               </div>
             </header>
 
@@ -297,7 +307,7 @@ export default function FaltasEAbonosPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

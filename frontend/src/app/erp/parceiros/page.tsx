@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FileText, Pencil, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
 
@@ -9,6 +9,7 @@ import { maskDocument, maskPhone } from "@/lib/masks";
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { PartnerForm } from "@/components/partners/PartnerForm";
 
 import {
@@ -50,6 +51,7 @@ function extractMessage(err: unknown, fallback: string) {
 }
 
 export default function ParceirosPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [partners, setPartners] = useState<
     BusinessPartner[]
   >([]);
@@ -178,6 +180,12 @@ export default function ParceirosPage() {
               </div>
 
               <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="parceiros"
+                  sheetName="Parceiros"
+                />
+
                 <Link
                   href="/erp/parceiros/relatorio"
                   target="_blank"
@@ -263,7 +271,7 @@ export default function ParceirosPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

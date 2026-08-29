@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   Copy,
@@ -16,6 +16,7 @@ import {
 import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { UserForm } from "@/components/security/UserForm";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -82,6 +83,7 @@ function statusBadge(user: SystemUser) {
 
 export default function UsuariosPage() {
   const { user: currentUser, refreshUser } = useAuth();
+  const exportTableRef = useRef<HTMLTableElement>(null);
 
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -251,6 +253,12 @@ export default function UsuariosPage() {
               </div>
 
               <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="usuarios"
+                  sheetName="Usuários"
+                />
+
                 <div className="relative">
                   <button
                     type="button"
@@ -407,7 +415,7 @@ export default function UsuariosPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="w-10 px-4 py-3" />

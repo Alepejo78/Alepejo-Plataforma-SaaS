@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight, ShieldOff } from "lucide-react";
 
 import { OsShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { useAuth } from "@/providers/AuthProvider";
 
 import {
@@ -72,6 +73,7 @@ const CYCLE_LABELS: Record<"MONTHLY" | "YEARLY", string> = {
 export default function ClientesFaturamentoPage() {
   const { can } = useAuth();
   const allowed = can("platform.license.manage");
+  const exportTableRef = useRef<HTMLTableElement>(null);
 
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [rows, setRows] = useState<CustomerReportRow[]>([]);
@@ -154,10 +156,17 @@ export default function ClientesFaturamentoPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
-                <button
-                  type="button"
-                  onClick={() => setYear((y) => y - 1)}
+              <div className="flex items-center gap-3">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="clientes-e-faturamento"
+                  sheetName="Clientes"
+                />
+
+                <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setYear((y) => y - 1)}
                   aria-label="Ano anterior"
                   className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
                 >
@@ -176,6 +185,7 @@ export default function ClientesFaturamentoPage() {
                 >
                   <ChevronRight size={16} />
                 </button>
+                </div>
               </div>
             </div>
 
@@ -217,7 +227,7 @@ export default function ClientesFaturamentoPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="sticky left-0 z-10 bg-[var(--surface-hover)] px-4 py-3 font-semibold">

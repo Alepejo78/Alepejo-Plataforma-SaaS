@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   MOVEMENT_LABELS,
@@ -72,6 +73,7 @@ function badgeClass(type: StockMovementType) {
 }
 
 export default function MovimentacoesPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [items, setItems] = useState<StockMovement[]>([]);
   const [type, setType] = useState<
     StockMovementType | undefined
@@ -114,23 +116,31 @@ export default function MovimentacoesPage() {
       <ListPageLayout
         header={
           <>
-            <header>
-              <Link
-                href="/erp/estoque"
-                className="mb-3 inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-              >
-                <ArrowLeft size={16} />
-                Voltar para Estoque
-              </Link>
+            <header className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <Link
+                  href="/erp/estoque"
+                  className="mb-3 inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                >
+                  <ArrowLeft size={16} />
+                  Voltar para Estoque
+                </Link>
 
-              <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-                Movimentações
-              </h1>
+                <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+                  Movimentações
+                </h1>
 
-              <p className="mt-1 text-sm text-[var(--text-muted)]">
-                Histórico de entradas, saídas e ajustes de
-                estoque.
-              </p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  Histórico de entradas, saídas e ajustes de
+                  estoque.
+                </p>
+              </div>
+
+              <ExportButton
+                tableRef={exportTableRef}
+                filename="movimentacoes-de-estoque"
+                sheetName="Movimentações"
+              />
             </header>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -196,7 +206,7 @@ export default function MovimentacoesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

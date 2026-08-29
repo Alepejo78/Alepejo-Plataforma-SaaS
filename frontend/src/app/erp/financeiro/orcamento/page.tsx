@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
@@ -65,6 +66,7 @@ const inputClass = `
 `;
 
 export default function OrcamentoPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [budget, setBudget] = useState<BudgetYear | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,28 +156,36 @@ export default function OrcamentoPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setYear((y) => y - 1)}
-                  aria-label="Ano anterior"
-                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
-                >
-                  <ChevronLeft size={18} />
-                </button>
+              <div className="flex items-center gap-3">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="orcamento"
+                  sheetName="Orçamento"
+                />
 
-                <span className="w-16 text-center text-lg font-semibold text-[var(--text-primary)]">
-                  {year}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setYear((y) => y - 1)}
+                    aria-label="Ano anterior"
+                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setYear((y) => y + 1)}
-                  aria-label="Próximo ano"
-                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
-                >
-                  <ChevronRight size={18} />
-                </button>
+                  <span className="w-16 text-center text-lg font-semibold text-[var(--text-primary)]">
+                    {year}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setYear((y) => y + 1)}
+                    aria-label="Próximo ano"
+                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
               </div>
             </header>
 
@@ -198,7 +208,7 @@ export default function OrcamentoPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--table-header-bg)] text-[var(--table-header-fg)]">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">

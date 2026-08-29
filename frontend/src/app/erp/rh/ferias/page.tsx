@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Eye, Plus, XCircle } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   VACATION_STATUS_LABELS,
@@ -54,6 +55,7 @@ const STATUS_BADGE_CLASS: Record<PayrollStatus, string> = {
 };
 
 export default function FeriasPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [grants, setGrants] = useState<VacationGrant[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -119,15 +121,23 @@ export default function FeriasPage() {
                   </p>
                 </div>
 
-                <Can permission="vacation.create">
-                  <Link
-                    href="/erp/rh/ferias/programacao"
-                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-                  >
-                    <Plus size={18} />
-                    Programar férias
-                  </Link>
-                </Can>
+                <div className="flex gap-2">
+                  <ExportButton
+                    tableRef={exportTableRef}
+                    filename="ferias"
+                    sheetName="Férias"
+                  />
+
+                  <Can permission="vacation.create">
+                    <Link
+                      href="/erp/rh/ferias/programacao"
+                      className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                    >
+                      <Plus size={18} />
+                      Programar férias
+                    </Link>
+                  </Can>
+                </div>
               </div>
             </header>
 
@@ -166,7 +176,7 @@ export default function FeriasPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Número</th>

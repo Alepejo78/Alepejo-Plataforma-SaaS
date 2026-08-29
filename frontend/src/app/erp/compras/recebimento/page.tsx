@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -18,6 +18,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
@@ -160,6 +161,7 @@ const labelClass =
 type ViewFilter = "APPROVED" | "RECEIVED";
 
 export default function RecebimentoPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [viewFilter, setViewFilter] =
     useState<ViewFilter>("APPROVED");
@@ -566,14 +568,22 @@ export default function RecebimentoPage() {
                 </p>
               </div>
 
-              <Link
-                href="/erp/compras/recebimento/relatorio"
-                target="_blank"
-                className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-              >
-                <FileText size={18} />
-                Relatório
-              </Link>
+              <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="recebimento-de-compras"
+                  sheetName="Recebimento"
+                />
+
+                <Link
+                  href="/erp/compras/recebimento/relatorio"
+                  target="_blank"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                >
+                  <FileText size={18} />
+                  Relatório
+                </Link>
+              </div>
             </header>
 
             <div className="flex flex-wrap gap-3">
@@ -639,7 +649,7 @@ export default function RecebimentoPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

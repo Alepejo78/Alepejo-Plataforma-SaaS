@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FileText, Trash2, X } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   EXAM_STATUS_LABELS,
@@ -98,6 +99,7 @@ const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
 export default function ExamesMedicosPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [sectors, setSectors] = useState<AuxiliaryRecord[]>([]);
 
@@ -282,6 +284,13 @@ export default function ExamesMedicosPage() {
                   </p>
                 </div>
 
+                <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="exames-medicos"
+                  sheetName="Exames médicos"
+                />
+
                 <Link
                   href="/erp/rh/exames/relatorio"
                   className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
@@ -289,6 +298,7 @@ export default function ExamesMedicosPage() {
                   <FileText size={18} />
                   Relatório
                 </Link>
+                </div>
               </div>
             </header>
 
@@ -364,7 +374,7 @@ export default function ExamesMedicosPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

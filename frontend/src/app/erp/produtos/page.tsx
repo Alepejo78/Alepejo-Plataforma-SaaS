@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileText,
   Pencil,
@@ -14,6 +14,7 @@ import Link from "next/link";
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { ProductForm } from "@/components/products/ProductForm";
 
 import {
@@ -89,6 +90,7 @@ function extractMessage(err: unknown, fallback: string) {
 }
 
 export default function ProdutosPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [products, setProducts] = useState<Product[]>([]);
 
   const [categories, setCategories] = useState<
@@ -244,6 +246,12 @@ export default function ProdutosPage() {
               </div>
 
               <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="produtos"
+                  sheetName="Produtos"
+                />
+
                 <Link
                   href="/erp/produtos/relatorio"
                   target="_blank"
@@ -325,7 +333,7 @@ export default function ProdutosPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

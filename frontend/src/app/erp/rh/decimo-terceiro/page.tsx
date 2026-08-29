@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, Plus, X } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   THIRTEENTH_STATUS_LABELS,
@@ -57,6 +58,7 @@ const STATUS_BADGE_CLASS: Record<PayrollStatus, string> = {
 const now = new Date();
 
 export default function DecimoTerceiroPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [list, setList] = useState<ThirteenthSalary[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -141,16 +143,24 @@ export default function DecimoTerceiroPage() {
                   </p>
                 </div>
 
-                <Can permission="thirteenth-salary.generate">
-                  <button
-                    type="button"
-                    onClick={openGenerate}
-                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-                  >
-                    <Plus size={18} />
-                    Gerar parcela
-                  </button>
-                </Can>
+                <div className="flex gap-2">
+                  <ExportButton
+                    tableRef={exportTableRef}
+                    filename="decimo-terceiro"
+                    sheetName="13º Salário"
+                  />
+
+                  <Can permission="thirteenth-salary.generate">
+                    <button
+                      type="button"
+                      onClick={openGenerate}
+                      className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                    >
+                      <Plus size={18} />
+                      Gerar parcela
+                    </button>
+                  </Can>
+                </div>
               </div>
             </header>
 
@@ -184,7 +194,7 @@ export default function DecimoTerceiroPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Número</th>

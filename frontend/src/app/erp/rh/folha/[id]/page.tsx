@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -19,6 +19,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
@@ -94,6 +95,7 @@ const ITEM_STATUS_BADGE_CLASS: Record<PayrollItemStatus, string> = {
 export default function FolhaDetalhePage() {
   const params = useParams<{ id: string }>();
   const payrollId = params.id;
+  const exportTableRef = useRef<HTMLTableElement>(null);
 
   const [payroll, setPayroll] = useState<Payroll | null>(null);
   const [loading, setLoading] = useState(true);
@@ -286,6 +288,14 @@ export default function FolhaDetalhePage() {
                     </p>
                   </div>
 
+                  <div className="flex gap-2">
+                    <ExportButton
+                      tableRef={exportTableRef}
+                      filename={`folha-${formatPayrollNumber(payroll.number)}`}
+                      sheetName="Folha de pagamento"
+                    />
+                  </div>
+
                   {isDraft && (
                     <div className="flex gap-2">
                       <Can permission="payroll.cancel">
@@ -359,7 +369,7 @@ export default function FolhaDetalhePage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Colaborador</th>

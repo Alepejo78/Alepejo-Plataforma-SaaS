@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, Printer, Trash2, X } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 
 import {
@@ -61,6 +62,7 @@ const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
 export default function FichaEpiPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [employee, setEmployee] = useState<Employee | null>(
     null
   );
@@ -227,12 +229,20 @@ export default function FichaEpiPage() {
                 </p>
               </div>
 
-              <Link
-                href="/erp/rh/cadastros"
-                className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-              >
-                Tipos de EPI
-              </Link>
+              <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="ficha-de-epi"
+                  sheetName="Ficha de EPI"
+                />
+
+                <Link
+                  href="/erp/rh/cadastros"
+                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                >
+                  Tipos de EPI
+                </Link>
+              </div>
             </header>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -323,7 +333,7 @@ export default function FichaEpiPage() {
               </p>
             ) : (
               <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-                <table className="w-full text-left text-sm">
+                <table ref={exportTableRef} className="w-full text-left text-sm">
                   <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                     <tr>
                       <th className="px-4 py-3 font-semibold">

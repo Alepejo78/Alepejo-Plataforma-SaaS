@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Check,
   Eye,
@@ -16,6 +16,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
 import {
@@ -164,6 +165,7 @@ function emptyItem(): ItemForm {
 }
 
 export default function VendasPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>(
     []
@@ -1093,6 +1095,12 @@ export default function VendasPage() {
 
               <Can permission="sale.create">
                 <div className="flex gap-2">
+                  <ExportButton
+                    tableRef={exportTableRef}
+                    filename="vendas"
+                    sheetName="Vendas"
+                  />
+
                   <button
                     type="button"
                     onClick={() => setImportOpen(true)}
@@ -1185,7 +1193,7 @@ export default function VendasPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

@@ -16,6 +16,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 
 import {
@@ -111,6 +112,7 @@ function emptyAdjustForm() {
 }
 
 export default function ControleDePontoPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [from, setFrom] = useState(firstDayOfMonthInput());
   const [to, setTo] = useState(todayInput());
   const [employeeFilterId, setEmployeeFilterId] = useState("");
@@ -493,6 +495,14 @@ export default function ControleDePontoPage() {
         <ListPageLayout
           header={
             <>
+              <div className="flex justify-end">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="folha-de-ponto"
+                  sheetName="Folha de ponto"
+                />
+              </div>
+
               <div className="flex flex-wrap items-end gap-3">
                 <div className="min-w-56">
                   <label className={labelClass}>
@@ -566,7 +576,7 @@ export default function ControleDePontoPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table ref={exportTableRef} className="w-full text-left text-sm">
                 <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                   <tr>
                     <th className="px-4 py-3 font-semibold">

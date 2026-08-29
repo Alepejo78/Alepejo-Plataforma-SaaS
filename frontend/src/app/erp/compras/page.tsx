@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,6 +20,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
 import {
@@ -919,6 +920,7 @@ export default function ComprasPage() {
   }
 
   const semDeposito = warehouses.length === 0;
+  const exportTableRef = useRef<HTMLTableElement>(null);
 
   return (
     <AppShell workspaceLabel="Compras">
@@ -937,6 +939,12 @@ export default function ComprasPage() {
               </div>
 
               <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="compras"
+                  sheetName="Compras"
+                />
+
                 <Link
                   href="/erp/compras/relatorio"
                   target="_blank"
@@ -1039,7 +1047,7 @@ export default function ComprasPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

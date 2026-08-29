@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,6 +18,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 import {
@@ -77,6 +78,7 @@ const ITEM_STATUS_BADGE_CLASS: Record<PayrollItemStatus, string> = {
 export default function DecimoTerceiroDetalhePage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
+  const exportTableRef = useRef<HTMLTableElement>(null);
 
   const [thirteenth, setThirteenth] = useState<ThirteenthSalary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -242,6 +244,14 @@ export default function DecimoTerceiroDetalhePage() {
                     </p>
                   </div>
 
+                  <div className="flex gap-2">
+                    <ExportButton
+                      tableRef={exportTableRef}
+                      filename={`decimo-terceiro-${formatThirteenthNumber(thirteenth.number)}`}
+                      sheetName="13º Salário"
+                    />
+                  </div>
+
                   {isDraft && (
                     <div className="flex gap-2">
                       <Can permission="thirteenth-salary.cancel">
@@ -315,7 +325,7 @@ export default function DecimoTerceiroDetalhePage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Colaborador</th>

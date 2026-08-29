@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   financialEntryService,
@@ -162,6 +163,7 @@ function SectionHeader({
 }
 
 export default function FluxoCaixaPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [cashFlow, setCashFlow] = useState<CashFlow | null>(null);
   const [budget, setBudget] = useState<BudgetYear | null>(null);
@@ -273,7 +275,14 @@ export default function FluxoCaixaPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="fluxo-de-caixa"
+                  sheetName="Fluxo de caixa"
+                />
+
+                <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setYear((y) => y - 1)}
@@ -295,6 +304,7 @@ export default function FluxoCaixaPage() {
                 >
                   <ChevronRight size={18} />
                 </button>
+                </div>
               </div>
             </header>
 
@@ -317,7 +327,7 @@ export default function FluxoCaixaPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--table-header-bg)] text-[var(--table-header-fg)]">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">

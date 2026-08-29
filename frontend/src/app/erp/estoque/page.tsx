@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -14,6 +14,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   STOCK_HOLD_TYPE_LABELS,
@@ -77,6 +78,7 @@ const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
 export default function EstoquePage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>(
     []
@@ -276,6 +278,12 @@ export default function EstoquePage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="saldo-em-estoque"
+                  sheetName="Saldo em estoque"
+                />
+
                 <Link
                   href="/erp/estoque/movimentacoes"
                   className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
@@ -360,7 +368,7 @@ export default function EstoquePage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

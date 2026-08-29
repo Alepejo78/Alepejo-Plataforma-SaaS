@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FileText,
@@ -14,6 +14,7 @@ import {
 import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
@@ -91,6 +92,7 @@ function emptyForm(): FormState {
 }
 
 export default function FuncoesPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [items, setItems] = useState<JobFunction[]>([]);
   const [sectors, setSectors] = useState<AuxiliaryRecord[]>([]);
   const [schedules, setSchedules] = useState<AuxiliaryRecord[]>(
@@ -280,6 +282,12 @@ export default function FuncoesPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="funcoes-e-cargos"
+                  sheetName="Funções e cargos"
+                />
+
                 <Link
                   href="/erp/rh/funcoes/relatorio"
                   target="_blank"
@@ -345,7 +353,7 @@ export default function FuncoesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

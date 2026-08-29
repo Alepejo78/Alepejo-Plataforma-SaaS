@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -19,6 +19,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
@@ -169,6 +170,7 @@ export function FinancialEntriesScreen({
   partnerRole,
   partnerLabel,
 }: Props) {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [entries, setEntries] = useState<FinancialEntry[]>([]);
 
   const [statusFilter, setStatusFilter] = useState("OPEN");
@@ -622,6 +624,12 @@ export function FinancialEntriesScreen({
               </div>
 
               <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename={type === "RECEIVABLE" ? "contas-a-receber" : "contas-a-pagar"}
+                  sheetName={title}
+                />
+
                 <Link
                   href={`/erp/financeiro/contas/relatorio?type=${type}`}
                   target="_blank"
@@ -730,7 +738,7 @@ export function FinancialEntriesScreen({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

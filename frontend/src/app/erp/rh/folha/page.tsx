@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, FileText, Plus, X } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   PAYROLL_STATUS_LABELS,
@@ -72,6 +73,7 @@ const STATUS_BADGE_CLASS: Record<PayrollStatus, string> = {
 const now = new Date();
 
 export default function FolhaPagamentoPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -156,6 +158,12 @@ export default function FolhaPagamentoPage() {
                 </div>
 
                 <div className="flex gap-2">
+                  <ExportButton
+                    tableRef={exportTableRef}
+                    filename="folha-de-pagamento"
+                    sheetName="Folha de pagamento"
+                  />
+
                   <Link
                     href="/erp/rh/folha/relatorio"
                     target="_blank"
@@ -208,7 +216,7 @@ export default function FolhaPagamentoPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Número</th>

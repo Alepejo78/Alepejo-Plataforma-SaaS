@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -10,6 +10,7 @@ import {
 
 import { AppShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   employeeReportsService,
@@ -44,6 +45,7 @@ function extractMessage(err: unknown, fallback: string) {
 }
 
 export default function AniversariantesPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [month, setMonth] = useState(
     () => new Date().getMonth() + 1
   );
@@ -96,7 +98,14 @@ export default function AniversariantesPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="aniversariantes"
+                  sheetName="Aniversariantes"
+                />
+
+                <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() =>
@@ -131,6 +140,7 @@ export default function AniversariantesPage() {
                   <FileText size={18} />
                   Relatório
                 </Link>
+                </div>
               </div>
             </header>
 
@@ -158,7 +168,7 @@ export default function AniversariantesPage() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--table-header-bg)] text-[var(--table-header-fg)]">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold uppercase tracking-wide">

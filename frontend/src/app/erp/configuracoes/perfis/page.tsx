@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Settings, X } from "lucide-react";
 import Link from "next/link";
 
 import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 
 import {
   roleService,
@@ -43,6 +44,7 @@ const emptyForm: RolePayload = {
 };
 
 export default function PerfisPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [search, setSearch] = useState("");
 
@@ -163,16 +165,24 @@ export default function PerfisPage() {
                 </p>
               </div>
 
-              <Can permission="role.create">
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-                >
-                  <Plus size={18} />
-                  Novo perfil
-                </button>
-              </Can>
+              <div className="flex gap-2">
+                <ExportButton
+                  tableRef={exportTableRef}
+                  filename="perfis-de-acesso"
+                  sheetName="Perfis de acesso"
+                />
+
+                <Can permission="role.create">
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                  >
+                    <Plus size={18} />
+                    Novo perfil
+                  </button>
+                </Can>
+              </div>
             </header>
 
             <input
@@ -207,7 +217,7 @@ export default function PerfisPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Nome</th>

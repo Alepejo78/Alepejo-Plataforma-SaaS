@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
@@ -123,6 +124,7 @@ function emptyItem(): ItemForm {
 }
 
 export default function CotacoesPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [quotations, setQuotations] = useState<Quotation[]>(
     []
   );
@@ -554,6 +556,12 @@ export default function CotacoesPage() {
                 </div>
 
                 <div className="flex gap-2">
+                  <ExportButton
+                    tableRef={exportTableRef}
+                    filename="cotacoes"
+                    sheetName="Cotações"
+                  />
+
                   <Link
                     href="/erp/compras/cotacoes/relatorio"
                     target="_blank"
@@ -639,7 +647,7 @@ export default function CotacoesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

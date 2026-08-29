@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -18,6 +18,7 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
@@ -155,6 +156,7 @@ function emptyForm() {
 }
 
 export default function PedidosDeCompraPage() {
+  const exportTableRef = useRef<HTMLTableElement>(null);
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 
@@ -645,6 +647,12 @@ export default function PedidosDeCompraPage() {
                 </div>
 
                 <div className="flex gap-2">
+                  <ExportButton
+                    tableRef={exportTableRef}
+                    filename="pedidos-de-compra"
+                    sheetName="Pedidos de compra"
+                  />
+
                   <Link
                     href="/erp/compras/pedidos/relatorio"
                     target="_blank"
@@ -729,7 +737,7 @@ export default function PedidosDeCompraPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table ref={exportTableRef} className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">
