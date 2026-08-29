@@ -10,6 +10,7 @@ import { SalesOrdersModule } from '../sales-orders/sales-orders.module';
 import { QuoteController } from './controllers/quote.controller';
 import { QuoteRepository } from './repositories/quote.repository';
 import { QuoteService } from './services/quote.service';
+import { QuotePdfService } from './services/quote-pdf.service';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { QuoteService } from './services/quote.service';
 
   controllers: [QuoteController],
 
-  providers: [QuoteRepository, QuoteService],
+  providers: [QuoteRepository, QuoteService, QuotePdfService],
 
   exports: [QuoteRepository, QuoteService],
 })

@@ -5,6 +5,12 @@ import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { EncryptionService } from '../../../core/security/encryption.service';
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
 interface ResolvedSmtpConfig {
   /** company: SMTP próprio da empresa (nodemailer sempre). global: fallback do .env — usa Resend se RESEND_API_KEY estiver setada, senão nodemailer. */
   source: 'company' | 'global';
@@ -120,6 +126,7 @@ export class EmailNotificationsService {
     to: string,
     subject: string,
     html: string,
+    attachments?: EmailAttachment[],
   ): Promise<{ sent: boolean; error?: string }> {
     try {
       const response = await fetch('https://api.resend.com/emails', {
@@ -128,7 +135,18 @@ export class EmailNotificationsService {
           Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from, to, subject, html }),
+        body: JSON.stringify({
+          from,
+          to,
+          subject,
+          html,
+          ...(attachments?.length && {
+            attachments: attachments.map((attachment) => ({
+              filename: attachment.filename,
+              content: attachment.content.toString('base64'),
+            })),
+          }),
+        }),
       });
 
       if (!response.ok) {
@@ -164,12 +182,14 @@ export class EmailNotificationsService {
     to: string,
     subject: string,
     html: string,
+    attachments?: EmailAttachment[],
   ): Promise<boolean> {
     const result = await this.sendVerbose(
       companyId,
       to,
       subject,
       html,
+      attachments,
     );
 
     return result.sent;
@@ -186,6 +206,7 @@ export class EmailNotificationsService {
     to: string,
     subject: string,
     html: string,
+    attachments?: EmailAttachment[],
   ): Promise<{ sent: boolean; error?: string }> {
     const config = await this.resolveConfig(companyId);
 
@@ -200,7 +221,7 @@ export class EmailNotificationsService {
     }
 
     if (config.source === 'global' && process.env.RESEND_API_KEY) {
-      return this.sendViaResend(config.from, to, subject, html);
+      return this.sendViaResend(config.from, to, subject, html, attachments);
     }
 
     const transporter = nodemailer.createTransport({
@@ -225,6 +246,13 @@ export class EmailNotificationsService {
         to,
         subject,
         html,
+        ...(attachments?.length && {
+          attachments: attachments.map((attachment) => ({
+            filename: attachment.filename,
+            content: attachment.content,
+            contentType: attachment.contentType,
+          })),
+        }),
       });
 
       return { sent: true };

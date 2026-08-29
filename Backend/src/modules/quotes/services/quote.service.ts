@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -16,6 +17,7 @@ import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-nam
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { QuoteRepository } from '../repositories/quote.repository';
+import { QuotePdfService } from './quote-pdf.service';
 
 import { CreateQuoteDto } from '../dto/create-quote.dto';
 import { UpdateQuoteDto } from '../dto/update-quote.dto';
@@ -25,6 +27,8 @@ const SEQUENCE_TYPE = 'QUOTE';
 
 @Injectable()
 export class QuoteService {
+  private readonly logger = new Logger(QuoteService.name);
+
   constructor(
     private readonly repository: QuoteRepository,
     private readonly prisma: PrismaService,
@@ -33,6 +37,7 @@ export class QuoteService {
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
     private readonly salesOrderService: SalesOrderService,
+    private readonly quotePdf: QuotePdfService,
   ) {}
 
   async create(
@@ -131,6 +136,18 @@ export class QuoteService {
     }).format(Number(quote.netAmount));
 
     if (partner.email) {
+      const pdf = await this.quotePdf
+        .generate(quote, company)
+        .catch((err: unknown) => {
+          this.logger.warn(
+            `Falha ao gerar PDF do orçamento ${quoteNumber}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+
+          return null;
+        });
+
       void this.emailNotifications.send(
         companyId,
         partner.email,
@@ -139,6 +156,15 @@ export class QuoteService {
 <p>Segue nosso orçamento <strong>${quoteNumber}</strong> de <strong>${companyName}</strong>, no valor de <strong>${value}</strong>.</p>
 <p>Qualquer dúvida, estamos à disposição.</p>
 <p>Atenciosamente,<br/>${companyName}</p>`,
+        pdf
+          ? [
+              {
+                filename: `${quoteNumber}.pdf`,
+                content: pdf,
+                contentType: 'application/pdf',
+              },
+            ]
+          : undefined,
       );
     }
 
