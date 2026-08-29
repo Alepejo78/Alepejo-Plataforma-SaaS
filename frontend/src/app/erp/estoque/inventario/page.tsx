@@ -189,6 +189,7 @@ export default function InventarioPage() {
   const searchProducts = useCallback(async (query: string) => {
     const result = await productService.list({
       search: query || undefined,
+      tracksStock: true,
       limit: 20,
     });
 

@@ -105,6 +105,8 @@ export interface ProductFilter {
   brandId?: string;
   type?: ProductType;
   status?: ProductStatus;
+  /** Só produtos que controlam estoque de verdade — usa em telas de contagem/saldo, não em vendas/compras (onde serviço é item válido). */
+  tracksStock?: boolean;
   page?: number;
   limit?: number;
 }

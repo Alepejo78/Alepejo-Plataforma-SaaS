@@ -5,8 +5,10 @@ import {
 } from '@nestjs/common';
 
 import {
+  InventoryControl,
   InventoryCountItemStatus,
   InventoryCountStatus,
+  ProductType,
   StockMovementType,
 } from '@prisma/client';
 
@@ -475,6 +477,15 @@ export class InventoryCountService {
 
     if (!product) {
       throw new NotFoundException('Produto não encontrado.');
+    }
+
+    if (
+      product.type === ProductType.SERVICE ||
+      product.inventoryControl === InventoryControl.NONE
+    ) {
+      throw new BadRequestException(
+        `${product.code} — ${product.description} é serviço/não controla estoque, não entra em contagem de inventário.`,
+      );
     }
 
     let item:

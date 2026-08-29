@@ -1,4 +1,5 @@
 import {
+    IsBoolean,
     IsEnum,
     IsInt,
     IsOptional,
@@ -6,7 +7,7 @@ import {
     Max,
     Min,
   } from 'class-validator';
-  import { Type } from 'class-transformer';
+  import { Transform, Type } from 'class-transformer';
   
   import {
     InventoryControl,
@@ -51,7 +52,20 @@ import {
     @IsOptional()
     @IsEnum(InventoryControl)
     inventoryControl?: InventoryControl;
-  
+
+    /// Só produtos que de fato controlam estoque (tipo Produto, com
+    /// controle de inventário) — usado em telas que precisam de saldo
+    /// físico pra fazer sentido, ex.: contagem de inventário. Não
+    /// filtra as telas normais de cadastro/venda/compra, onde serviço
+    /// é um item válido.
+    @IsOptional()
+    @Transform(({ value }) => {
+      if (value === undefined) return undefined;
+      return value === 'true' || value === true;
+    })
+    @IsBoolean()
+    tracksStock?: boolean;
+
     @IsOptional()
     @Type(() => Number)
     @IsInt()

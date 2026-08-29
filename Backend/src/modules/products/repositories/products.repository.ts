@@ -62,6 +62,7 @@ export class ProductsRepository {
       type,
       status,
       inventoryControl,
+      tracksStock,
       page,
       limit,
       orderBy,
@@ -108,6 +109,11 @@ export class ProductsRepository {
       ...(type && { type }),
       ...(status && { status }),
       ...(inventoryControl && { inventoryControl }),
+
+      ...(tracksStock && {
+        type: { not: 'SERVICE' },
+        inventoryControl: { not: 'NONE' },
+      }),
     };
 
     const [data, total] = await this.prisma.$transaction([
