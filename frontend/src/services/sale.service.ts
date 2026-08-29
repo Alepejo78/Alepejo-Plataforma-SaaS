@@ -73,6 +73,8 @@ export interface Sale {
   dueDate?: string | null;
   paymentMethod?: PaymentMethod | null;
   installmentsCount?: number | null;
+  /** Parcelas planejadas na hora da venda (herdadas do pedido de venda de origem, quando houver). */
+  plannedInstallments?: { dueDate: string; amount: number }[] | null;
   /** Tipo de receita — vai junto pro título gerado na aprovação. */
   chartOfAccountId?: string | null;
   chartOfAccount?: {
@@ -118,8 +120,11 @@ export interface SalePayload {
   termDays?: number;
   paymentMethod?: PaymentMethod;
   installmentsCount?: number;
+  /** Parcelas planejadas na hora da venda — tem prioridade sobre installmentsCount. Se vier de um pedido de venda e não for informado, usa as parcelas planejadas nele. */
+  installments?: { dueDate: string; amount: number }[];
   chartOfAccountId?: string;
-  quoteId?: string;
+  invoiceNumber?: string;
+  invoiceKey?: string;
   salesOrderId?: string;
   items: SaleItemPayload[];
 }

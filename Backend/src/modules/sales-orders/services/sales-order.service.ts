@@ -321,7 +321,13 @@ export class SalesOrderService {
         chartOfAccountId: dto.chartOfAccountId,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
-        installmentsCount: dto.installmentsCount,
+        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+        plannedInstallments: dto.installments
+          ? dto.installments.map((i) => ({
+              dueDate: i.dueDate,
+              amount: i.amount,
+            }))
+          : undefined,
         items,
       },
       userId,

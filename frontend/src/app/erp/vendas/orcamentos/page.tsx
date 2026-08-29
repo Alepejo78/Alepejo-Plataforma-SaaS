@@ -21,6 +21,18 @@ import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import {
+  InstallmentsEditor,
+  buildInstallmentRows,
+  daysBetween,
+  recalcDueDateFromDays,
+  toDateInput,
+  type InstallmentRow,
+} from "@/components/ui/InstallmentsEditor";
+import {
+  chartOfAccountService,
+  type ChartOfAccount,
+} from "@/services/chart-of-account.service";
 
 import {
   QUOTE_STATUS_LABELS,
@@ -43,6 +55,11 @@ import {
   productService,
   type Product,
 } from "@/services/product.service";
+
+import {
+  PAYMENT_METHOD_LABELS,
+  type PaymentMethod,
+} from "@/services/financial-entry.service";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -132,6 +149,11 @@ function emptyForm() {
     discountValue: 0,
     freightValue: 0,
     otherExpenses: 0,
+    termDays: "",
+    paymentMethod: "" as PaymentMethod | "",
+    installmentsCount: "",
+    chartOfAccountId: "",
+    chartOfAccountLabel: "",
   };
 }
 
@@ -153,6 +175,12 @@ export default function OrcamentosPage() {
   const [form, setForm] = useState(emptyForm());
   const [items, setItems] = useState<ItemForm[]>([
     emptyItem(),
+  ]);
+  // Parcelas planejadas — editável linha a linha (dias, vencimento e
+  // valor), repassadas pro Pedido de Venda e pra Venda gerados na
+  // aprovação (mesmo esquema de Compras).
+  const [installments, setInstallments] = useState<InstallmentRow[]>([
+    { days: "", dueDate: "", amount: 0 },
   ]);
 
   const [detail, setDetail] = useState<Quote | null>(null);
@@ -199,6 +227,18 @@ export default function OrcamentosPage() {
     []
   );
 
+  const searchChartOfAccounts = useCallback(
+    async (query: string) => {
+      const result = await chartOfAccountService.list({
+        search: query || undefined,
+        limit: 20,
+      });
+
+      return result.data;
+    },
+    []
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setListError("");
@@ -236,6 +276,7 @@ export default function OrcamentosPage() {
       warehouseId: warehouses[0]?.id ?? "",
     });
     setItems([emptyItem()]);
+    setInstallments([{ days: "", dueDate: "", amount: 0 }]);
     setFormError("");
     setFormOpen(true);
   }
@@ -258,6 +299,17 @@ export default function OrcamentosPage() {
       discountValue: num(quote.discountValue),
       freightValue: num(quote.freightValue),
       otherExpenses: num(quote.otherExpenses),
+      termDays: quote.termDays ? String(quote.termDays) : "",
+      paymentMethod: quote.paymentMethod ?? "",
+      installmentsCount:
+        quote.installmentsCount != null &&
+        quote.installmentsCount > 1
+          ? String(quote.installmentsCount)
+          : "",
+      chartOfAccountId: quote.chartOfAccountId ?? "",
+      chartOfAccountLabel: quote.chartOfAccount
+        ? `${quote.chartOfAccount.code} — ${quote.chartOfAccount.description}`
+        : "",
     });
     setItems(
       quote.items.map((it) => ({
@@ -269,6 +321,38 @@ export default function OrcamentosPage() {
         unitPrice: num(it.unitPrice),
       }))
     );
+
+    const quoteDateStr = quote.quoteDate
+      ? quote.quoteDate.slice(0, 10)
+      : todayIso();
+    const quoteItemsTotal = quote.items.reduce(
+      (sum, it) => sum + num(it.quantity) * num(it.unitPrice),
+      0
+    );
+
+    if (quote.plannedInstallments?.length) {
+      setInstallments(
+        quote.plannedInstallments.map((row) => ({
+          days: daysBetween(quoteDateStr, toDateInput(row.dueDate)),
+          dueDate: toDateInput(row.dueDate),
+          amount: row.amount,
+        }))
+      );
+    } else {
+      const count =
+        quote.installmentsCount && quote.installmentsCount > 1
+          ? quote.installmentsCount
+          : 1;
+
+      setInstallments(
+        buildInstallmentRows(
+          quoteDateStr,
+          quote.termDays ?? 0,
+          count,
+          quoteItemsTotal
+        )
+      );
+    }
   }
 
   function openEdit(quote: Quote) {
@@ -318,6 +402,44 @@ export default function OrcamentosPage() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function updateInstallment(
+    index: number,
+    patch: Partial<InstallmentRow>
+  ) {
+    setInstallments((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) {
+          return row;
+        }
+
+        const next = { ...row, ...patch };
+
+        // Dias preenchido recalcula o vencimento a partir da data
+        // do orçamento — deixar em branco não mexe: a pessoa digita
+        // a data direto.
+        if (patch.days !== undefined && patch.days !== "") {
+          next.dueDate = recalcDueDateFromDays(
+            form.quoteDate || undefined,
+            patch.days
+          );
+        }
+
+        return next;
+      })
+    );
+  }
+
+  function addInstallment() {
+    setInstallments((prev) => [
+      ...prev,
+      { days: "", dueDate: "", amount: 0 },
+    ]);
+  }
+
+  function removeInstallment(index: number) {
+    setInstallments((prev) => prev.filter((_, i) => i !== index));
+  }
+
   const itemsTotal = items.reduce(
     (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
     0
@@ -348,6 +470,58 @@ export default function OrcamentosPage() {
       return;
     }
 
+    if (!form.chartOfAccountId) {
+      setFormError("Selecione o tipo de receita.");
+
+      return;
+    }
+
+    if (!form.paymentMethod) {
+      setFormError("Selecione a forma de pagamento.");
+
+      return;
+    }
+
+    if (form.termDays === "") {
+      setFormError("Informe o prazo/vencimento.");
+
+      return;
+    }
+
+    const validItemsTotal = validItems.reduce(
+      (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
+      0
+    );
+    const singleInstallment = installments.length === 1;
+
+    const finalInstallments = singleInstallment
+      ? [{ dueDate: installments[0].dueDate, amount: validItemsTotal }]
+      : installments.map((row) => ({
+          dueDate: row.dueDate,
+          amount: row.amount,
+        }));
+
+    if (finalInstallments.some((row) => !row.dueDate)) {
+      setFormError("Preencha o vencimento de todas as parcelas.");
+
+      return;
+    }
+
+    if (!singleInstallment) {
+      const sum = finalInstallments.reduce(
+        (acc, row) => acc + row.amount,
+        0
+      );
+
+      if (Math.abs(sum - validItemsTotal) > 0.01) {
+        setFormError(
+          `A soma das parcelas (${money(sum)}) precisa bater com o total dos itens (${money(validItemsTotal)}).`
+        );
+
+        return;
+      }
+    }
+
     setSaving(true);
     setFormError("");
 
@@ -360,6 +534,13 @@ export default function OrcamentosPage() {
       discountValue: form.discountValue || undefined,
       freightValue: form.freightValue || undefined,
       otherExpenses: form.otherExpenses || undefined,
+      termDays: Number(form.termDays),
+      paymentMethod: form.paymentMethod as PaymentMethod,
+      installmentsCount: form.installmentsCount
+        ? Number(form.installmentsCount)
+        : undefined,
+      installments: finalInstallments,
+      chartOfAccountId: form.chartOfAccountId,
       items: validItems.map((it) => ({
         productId: it.productId,
         quantity: decimal(it.quantity),
@@ -1035,6 +1216,121 @@ export default function OrcamentosPage() {
                   />
                 </div>
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div>
+                  <label className={labelClass}>
+                    Dias a vencer
+                  </label>
+
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    className={fieldClass}
+                    value={form.termDays}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        termDays: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Número de parcelas
+                  </label>
+
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    title="Gera essa quantidade de parcelas abaixo, já calculadas — dá pra editar antes de salvar"
+                    className={fieldClass}
+                    value={form.installmentsCount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setForm({
+                        ...form,
+                        installmentsCount: value,
+                      });
+
+                      const count = Number(value) || 1;
+
+                      setInstallments(
+                        buildInstallmentRows(
+                          form.quoteDate || undefined,
+                          Number(form.termDays) || 0,
+                          count,
+                          itemsTotal
+                        )
+                      );
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Forma de pagamento
+                  </label>
+
+                  <select
+                    className={fieldClass}
+                    value={form.paymentMethod}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        paymentMethod: e.target
+                          .value as PaymentMethod | "",
+                      })
+                    }
+                  >
+                    <option value="">Selecione...</option>
+
+                    {Object.entries(PAYMENT_METHOD_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Tipo de receita
+                  </label>
+
+                  <SearchSelect<ChartOfAccount>
+                    displayLabel={form.chartOfAccountLabel}
+                    search={searchChartOfAccounts}
+                    getId={(c) => c.id}
+                    getLabel={(c) => `${c.code} — ${c.description}`}
+                    placeholder="Digite para buscar a conta..."
+                    onSelect={(c) =>
+                      setForm({
+                        ...form,
+                        chartOfAccountId: c?.id ?? "",
+                        chartOfAccountLabel: c
+                          ? `${c.code} — ${c.description}`
+                          : "",
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <InstallmentsEditor
+                installments={installments}
+                onUpdate={updateInstallment}
+                onAdd={addInstallment}
+                onRemove={removeInstallment}
+                total={itemsTotal}
+              />
 
               <div className="flex justify-end gap-6 text-sm">
                 <span className="text-[var(--text-secondary)]">

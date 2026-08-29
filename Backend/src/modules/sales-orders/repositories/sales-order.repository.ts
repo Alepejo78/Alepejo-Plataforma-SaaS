@@ -51,7 +51,13 @@ export class SalesOrderRepository {
         chartOfAccountId: dto.chartOfAccountId,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
-        installmentsCount: dto.installmentsCount,
+        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+        plannedInstallments: dto.installments
+          ? dto.installments.map((i) => ({
+              dueDate: i.dueDate,
+              amount: i.amount,
+            }))
+          : undefined,
         createdById: userId,
         updatedById: userId,
         items: {
@@ -110,6 +116,7 @@ export class SalesOrderRepository {
       termDays?: number;
       paymentMethod?: PaymentMethod;
       installmentsCount?: number;
+      plannedInstallments?: { dueDate: string; amount: number }[] | null;
       items?: {
         productId: string;
         quantity: number;
@@ -159,6 +166,12 @@ export class SalesOrderRepository {
         }),
         ...(dto.installmentsCount !== undefined && {
           installmentsCount: dto.installmentsCount,
+        }),
+        ...(dto.plannedInstallments !== undefined && {
+          plannedInstallments:
+            dto.plannedInstallments === null
+              ? Prisma.JsonNull
+              : dto.plannedInstallments,
         }),
         ...(dto.items && {
           items: {

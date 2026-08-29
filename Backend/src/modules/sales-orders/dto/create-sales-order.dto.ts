@@ -11,8 +11,11 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+import { InstallmentDto } from '../../../core/dto/installment.dto';
 
 import { CreateSalesOrderItemDto } from './create-sales-order-item.dto';
 
@@ -88,6 +91,19 @@ export class CreateSalesOrderDto {
   @IsInt()
   @Min(1)
   installmentsCount?: number;
+
+  @ApiProperty({
+    required: false,
+    type: [InstallmentDto],
+    description:
+      'Parcelas planejadas na hora do pedido (data/valor escolhidos na mão) — quando informado, tem prioridade sobre installmentsCount/termDays na Venda gerada (que ainda pode ajustar antes de confirmar). Somadas, precisam bater com o total do pedido.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => InstallmentDto)
+  installments?: InstallmentDto[];
 
   @ApiProperty({ type: [CreateSalesOrderItemDto] })
   @IsArray()

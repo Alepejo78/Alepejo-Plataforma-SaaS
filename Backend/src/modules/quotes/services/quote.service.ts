@@ -62,6 +62,16 @@ export class QuoteService {
       );
     }
 
+    const chartOfAccount = await this.prisma.chartOfAccount.findFirst({
+      where: { id: dto.chartOfAccountId, companyId: rootCompanyId },
+    });
+
+    if (!chartOfAccount) {
+      throw new NotFoundException(
+        'Tipo de receita não encontrado.',
+      );
+    }
+
     let totalAmount = 0;
 
     for (const item of dto.items) {
@@ -235,6 +245,23 @@ export class QuoteService {
       }
     }
 
+    if (dto.chartOfAccountId) {
+      const chartOfAccount = await this.prisma.chartOfAccount.findFirst(
+        {
+          where: {
+            id: dto.chartOfAccountId,
+            companyId: rootCompanyId,
+          },
+        },
+      );
+
+      if (!chartOfAccount) {
+        throw new NotFoundException(
+          'Tipo de receita não encontrado.',
+        );
+      }
+    }
+
     let items:
       | {
           productId: string;
@@ -298,6 +325,16 @@ export class QuoteService {
         otherExpenses,
         totalAmount,
         netAmount,
+        chartOfAccountId: dto.chartOfAccountId,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+        plannedInstallments: dto.installments
+          ? dto.installments.map((i) => ({
+              dueDate: i.dueDate,
+              amount: i.amount,
+            }))
+          : undefined,
         items,
       },
       userId,
@@ -349,12 +386,17 @@ export class QuoteService {
       {
         partnerId: quote.partnerId,
         warehouseId: quote.warehouseId,
+        orderDate: quote.quoteDate ?? new Date(),
         observation: quote.observation
           ? `${quote.observation}\n\n${generatedNote}`
           : generatedNote,
         discountValue: Number(quote.discountValue),
         freightValue: Number(quote.freightValue),
         otherExpenses: Number(quote.otherExpenses),
+        chartOfAccountId: quote.chartOfAccountId ?? undefined,
+        termDays: quote.termDays ?? undefined,
+        paymentMethod: quote.paymentMethod ?? undefined,
+        installmentsCount: quote.installmentsCount ?? undefined,
         items: quote.items.map((item) => ({
           productId: item.productId,
           quantity: Number(item.quantity),
@@ -364,9 +406,16 @@ export class QuoteService {
       userId,
     );
 
+    // `plannedInstallments` não faz parte do DTO de criação do pedido
+    // (evita trafegar esse JSON por dentro de todo o fluxo de
+    // validação/produção de SalesOrderService.create) — repassado
+    // aqui, no mesmo update que já linka o pedido ao orçamento.
     await this.prisma.salesOrder.update({
       where: { id: salesOrder.id },
-      data: { quoteId: quote.id },
+      data: {
+        quoteId: quote.id,
+        plannedInstallments: quote.plannedInstallments ?? undefined,
+      },
     });
 
     return this.repository.approve(id, userId);

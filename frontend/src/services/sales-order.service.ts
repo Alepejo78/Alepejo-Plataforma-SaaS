@@ -62,6 +62,8 @@ export interface SalesOrder {
   termDays?: number | null;
   paymentMethod?: PaymentMethod | null;
   installmentsCount?: number | null;
+  /** Parcelas planejadas — herdadas do Orçamento na aprovação ou digitadas direto no pedido. */
+  plannedInstallments?: { dueDate: string; amount: number }[] | null;
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;
@@ -105,6 +107,8 @@ export interface SalesOrderPayload {
   termDays?: number;
   paymentMethod?: PaymentMethod;
   installmentsCount?: number;
+  /** Parcelas planejadas na hora do pedido — tem prioridade sobre installmentsCount. */
+  installments?: { dueDate: string; amount: number }[];
   items: SalesOrderItemPayload[];
 }
 

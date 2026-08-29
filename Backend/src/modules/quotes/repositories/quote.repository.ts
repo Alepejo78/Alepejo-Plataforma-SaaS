@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Quote } from '@prisma/client';
+import { PaymentMethod, Prisma, Quote } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 
@@ -9,6 +9,10 @@ import { QuoteFilterDto } from '../dto/quote-filter.dto';
 const includeRelations = {
   partner: true,
   warehouse: true,
+  // A tela mostra "código — descrição" do tipo de receita, não o id.
+  chartOfAccount: {
+    select: { id: true, code: true, description: true },
+  },
   items: {
     include: {
       product: { include: { saleChartOfAccount: true } },
@@ -49,6 +53,16 @@ export class QuoteRepository {
         otherExpenses: dto.otherExpenses ?? 0,
         totalAmount,
         netAmount,
+        chartOfAccountId: dto.chartOfAccountId,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+        plannedInstallments: dto.installments
+          ? dto.installments.map((i) => ({
+              dueDate: i.dueDate,
+              amount: i.amount,
+            }))
+          : undefined,
         createdById: userId,
         updatedById: userId,
         items: {
@@ -101,6 +115,11 @@ export class QuoteRepository {
       otherExpenses?: number;
       totalAmount?: number;
       netAmount?: number;
+      chartOfAccountId?: string;
+      termDays?: number;
+      paymentMethod?: PaymentMethod;
+      installmentsCount?: number;
+      plannedInstallments?: { dueDate: string; amount: number }[] | null;
       items?: {
         productId: string;
         quantity: number;
@@ -141,6 +160,24 @@ export class QuoteRepository {
         }),
         ...(dto.netAmount !== undefined && {
           netAmount: dto.netAmount,
+        }),
+        ...(dto.chartOfAccountId !== undefined && {
+          chartOfAccountId: dto.chartOfAccountId,
+        }),
+        ...(dto.termDays !== undefined && {
+          termDays: dto.termDays,
+        }),
+        ...(dto.paymentMethod !== undefined && {
+          paymentMethod: dto.paymentMethod,
+        }),
+        ...(dto.installmentsCount !== undefined && {
+          installmentsCount: dto.installmentsCount,
+        }),
+        ...(dto.plannedInstallments !== undefined && {
+          plannedInstallments:
+            dto.plannedInstallments === null
+              ? Prisma.JsonNull
+              : dto.plannedInstallments,
         }),
         ...(dto.items && {
           items: {

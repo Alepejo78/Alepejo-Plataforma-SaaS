@@ -70,11 +70,18 @@ export class SaleRepository {
         netAmount,
 
         termDays,
-        installmentsCount: dto.installmentsCount,
+        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+        plannedInstallments: dto.installments
+          ? dto.installments.map((i) => ({
+              dueDate: i.dueDate,
+              amount: i.amount,
+            }))
+          : undefined,
         dueDate: calculateDueDate(issueDate, termDays),
         paymentMethod: dto.paymentMethod,
+        invoiceNumber: dto.invoiceNumber,
+        invoiceKey: dto.invoiceKey,
 
-        quoteId: dto.quoteId,
         salesOrderId: dto.salesOrderId,
         createdById: userId,
         updatedById: userId,
@@ -173,6 +180,10 @@ export class SaleRepository {
       termDays?: number;
       dueDate?: Date;
       paymentMethod?: CreateSaleDto['paymentMethod'];
+      installmentsCount?: number;
+      plannedInstallments?: { dueDate: string; amount: number }[] | null;
+      invoiceNumber?: string;
+      invoiceKey?: string;
       totalAmount?: number;
       netAmount?: number;
       items?: {
@@ -218,6 +229,21 @@ export class SaleRepository {
         }),
         ...(dto.paymentMethod !== undefined && {
           paymentMethod: dto.paymentMethod,
+        }),
+        ...(dto.installmentsCount !== undefined && {
+          installmentsCount: dto.installmentsCount,
+        }),
+        ...(dto.plannedInstallments !== undefined && {
+          plannedInstallments:
+            dto.plannedInstallments === null
+              ? Prisma.JsonNull
+              : dto.plannedInstallments,
+        }),
+        ...(dto.invoiceNumber !== undefined && {
+          invoiceNumber: dto.invoiceNumber,
+        }),
+        ...(dto.invoiceKey !== undefined && {
+          invoiceKey: dto.invoiceKey,
         }),
         ...(dto.totalAmount !== undefined && {
           totalAmount: dto.totalAmount,

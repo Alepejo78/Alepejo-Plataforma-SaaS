@@ -1,4 +1,5 @@
 import { api } from "./api";
+import type { PaymentMethod } from "./financial-entry.service";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -56,6 +57,18 @@ export interface Quote {
   otherExpenses: string | number;
   totalAmount: string | number;
   netAmount: string | number;
+  termDays?: number | null;
+  paymentMethod?: PaymentMethod | null;
+  installmentsCount?: number | null;
+  /** Parcelas planejadas no orçamento (data/valor escolhidos na mão) — repassadas pro Pedido de Venda e pra Venda gerados na aprovação. */
+  plannedInstallments?: { dueDate: string; amount: number }[] | null;
+  /** Tipo de receita — repassado pro Pedido de Venda e pra Venda na aprovação. */
+  chartOfAccountId?: string | null;
+  chartOfAccount?: {
+    id: string;
+    code: string;
+    description: string;
+  } | null;
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;
@@ -95,6 +108,12 @@ export interface QuotePayload {
   discountValue?: number;
   freightValue?: number;
   otherExpenses?: number;
+  chartOfAccountId?: string;
+  termDays?: number;
+  paymentMethod?: PaymentMethod;
+  installmentsCount?: number;
+  /** Parcelas planejadas no orçamento — tem prioridade sobre installmentsCount. */
+  installments?: { dueDate: string; amount: number }[];
   items: QuoteItemPayload[];
 }
 

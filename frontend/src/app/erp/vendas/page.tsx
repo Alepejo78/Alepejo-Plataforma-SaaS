@@ -24,6 +24,14 @@ import {
   type ChartOfAccount,
 } from "@/services/chart-of-account.service";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import {
+  InstallmentsEditor,
+  buildInstallmentRows,
+  daysBetween,
+  recalcDueDateFromDays,
+  toDateInput,
+  type InstallmentRow,
+} from "@/components/ui/InstallmentsEditor";
 
 import {
   SALE_STATUS_LABELS,
@@ -61,14 +69,8 @@ import {
 } from "@/services/financial-entry.service";
 
 import {
-  quoteService,
-  type Quote,
-} from "@/services/quote.service";
-
-import {
   salesOrderService,
   type SalesOrder,
-  type SalesOrderItem,
 } from "@/services/sales-order.service";
 
 import { calculateDueDatePreview } from "@/lib/dueDate";
@@ -199,18 +201,27 @@ export default function VendasPage() {
     installmentsCount: "",
     chartOfAccountId: "",
     chartOfAccountLabel: "",
+    invoiceNumber: "",
+    invoiceKey: "",
   });
   const [items, setItems] = useState<ItemForm[]>([
     emptyItem(),
+  ]);
+  // Parcelas planejadas — editável linha a linha (dias, vencimento e
+  // valor), herdadas do pedido de venda de origem quando houver e
+  // refletidas na aprovação (mesmo esquema de Compras).
+  const [installments, setInstallments] = useState<InstallmentRow[]>([
+    { days: "", dueDate: "", amount: 0 },
   ]);
 
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeError, setBarcodeError] = useState("");
 
-  // Criar a venda a partir de um orçamento ou pedido de venda
-  const [sourceType, setSourceType] = useState<
-    "" | "quote" | "salesOrder"
-  >("");
+  // Criar a venda a partir de um pedido de venda (venda sempre nasce
+  // de um pedido daqui pra frente — orçamento vira pedido antes).
+  const [sourceType, setSourceType] = useState<"" | "salesOrder">(
+    ""
+  );
   const [sourceId, setSourceId] = useState("");
   const [sourceLabel, setSourceLabel] = useState("");
   const [sourceError, setSourceError] = useState("");
@@ -331,8 +342,11 @@ export default function VendasPage() {
       installmentsCount: "",
       chartOfAccountId: "",
       chartOfAccountLabel: "",
+      invoiceNumber: "",
+      invoiceKey: "",
     });
     setItems([emptyItem()]);
+    setInstallments([{ days: "", dueDate: "", amount: 0 }]);
     setBarcodeInput("");
     setBarcodeError("");
     setSourceType("");
@@ -369,6 +383,8 @@ export default function VendasPage() {
       chartOfAccountLabel: sale.chartOfAccount
         ? `${sale.chartOfAccount.code} — ${sale.chartOfAccount.description}`
         : "",
+      invoiceNumber: sale.invoiceNumber ?? "",
+      invoiceKey: sale.invoiceKey ?? "",
     });
     setItems(
       sale.items.map((it) => ({
@@ -380,6 +396,38 @@ export default function VendasPage() {
         unitPrice: num(it.unitPrice),
       }))
     );
+
+    const saleDateStr = sale.saleDate
+      ? sale.saleDate.slice(0, 10)
+      : todayIso();
+    const saleTotal = sale.items.reduce(
+      (sum, it) => sum + num(it.quantity) * num(it.unitPrice),
+      0
+    );
+
+    if (sale.plannedInstallments?.length) {
+      setInstallments(
+        sale.plannedInstallments.map((row) => ({
+          days: daysBetween(saleDateStr, toDateInput(row.dueDate)),
+          dueDate: toDateInput(row.dueDate),
+          amount: row.amount,
+        }))
+      );
+    } else {
+      const count =
+        sale.installmentsCount && sale.installmentsCount > 1
+          ? sale.installmentsCount
+          : 1;
+
+      setInstallments(
+        buildInstallmentRows(
+          saleDateStr,
+          sale.termDays ?? 0,
+          count,
+          saleTotal
+        )
+      );
+    }
   }
 
   function openEdit(sale: Sale) {
@@ -509,6 +557,44 @@ export default function VendasPage() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function updateInstallment(
+    index: number,
+    patch: Partial<InstallmentRow>
+  ) {
+    setInstallments((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) {
+          return row;
+        }
+
+        const next = { ...row, ...patch };
+
+        // Dias preenchido recalcula o vencimento a partir da data
+        // da venda — deixar em branco não mexe: a pessoa digita a
+        // data direto.
+        if (patch.days !== undefined && patch.days !== "") {
+          next.dueDate = recalcDueDateFromDays(
+            form.saleDate || undefined,
+            patch.days
+          );
+        }
+
+        return next;
+      })
+    );
+  }
+
+  function addInstallment() {
+    setInstallments((prev) => [
+      ...prev,
+      { days: "", dueDate: "", amount: 0 },
+    ]);
+  }
+
+  function removeInstallment(index: number) {
+    setInstallments((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleBarcodeSubmit() {
     const code = barcodeInput.trim();
 
@@ -620,31 +706,6 @@ export default function VendasPage() {
     []
   );
 
-  const searchQuotes = useCallback(async (query: string) => {
-    const result = await quoteService.list({
-      status: "DRAFT",
-    });
-
-    const q = query.trim().toLowerCase();
-
-    if (!q) {
-      return result;
-    }
-
-    return result.filter(
-      (it) =>
-        `orc-${String(it.number).padStart(6, "0")}`.includes(
-          q
-        ) ||
-        (it.partner?.tradeName ??
-          it.partner?.legalName ??
-          ""
-        )
-          .toLowerCase()
-          .includes(q)
-    );
-  }, []);
-
   const searchSalesOrders = useCallback(
     async (query: string) => {
       // Pedido com saldo disponível: rascunho (nada convertido
@@ -682,59 +743,52 @@ export default function VendasPage() {
     []
   );
 
-  async function applySource(
-    type: "quote" | "salesOrder",
-    doc: Quote | SalesOrder
-  ) {
+  async function applySource(sourceOrder: SalesOrder) {
     setSourceError("");
-    setSourceType(type);
-    setSourceId(doc.id);
+    setSourceType("salesOrder");
+    setSourceId(sourceOrder.id);
     setSourceLabel(
-      `${type === "quote" ? "ORC" : "PV"}-${String(
-        doc.number
-      ).padStart(6, "0")}`
+      `PV-${String(sourceOrder.number).padStart(6, "0")}`
     );
 
     // Sugere a classificação do primeiro item que já tiver uma
     // cadastrada, se o formulário ainda não tiver uma escolhida.
-    const suggestedAccount = doc.items.find(
+    const suggestedAccount = sourceOrder.items.find(
       (it) => it.product?.saleChartOfAccountId
     )?.product;
 
-    const sourceOrder = type === "salesOrder" ? doc as SalesOrder : null;
-
     setForm((prev) => ({
       ...prev,
-      partnerId: doc.partnerId,
+      partnerId: sourceOrder.partnerId,
       partnerLabel:
-        doc.partner?.tradeName ??
-        doc.partner?.legalName ??
+        sourceOrder.partner?.tradeName ??
+        sourceOrder.partner?.legalName ??
         "",
-      warehouseId: doc.warehouseId,
-      discountValue: num(doc.discountValue),
-      freightValue: num(doc.freightValue),
-      otherExpenses: num(doc.otherExpenses),
+      warehouseId: sourceOrder.warehouseId,
+      discountValue: num(sourceOrder.discountValue),
+      freightValue: num(sourceOrder.freightValue),
+      otherExpenses: num(sourceOrder.otherExpenses),
       termDays:
         prev.termDays ||
-        (sourceOrder?.termDays != null
+        (sourceOrder.termDays != null
           ? String(sourceOrder.termDays)
           : ""),
       paymentMethod:
-        prev.paymentMethod || sourceOrder?.paymentMethod || "",
+        prev.paymentMethod || sourceOrder.paymentMethod || "",
       installmentsCount:
         prev.installmentsCount ||
-        (sourceOrder?.installmentsCount != null &&
+        (sourceOrder.installmentsCount != null &&
         sourceOrder.installmentsCount > 1
           ? String(sourceOrder.installmentsCount)
           : ""),
       chartOfAccountId:
         prev.chartOfAccountId ||
-        sourceOrder?.chartOfAccountId ||
+        sourceOrder.chartOfAccountId ||
         suggestedAccount?.saleChartOfAccountId ||
         "",
       chartOfAccountLabel: prev.chartOfAccountId
         ? prev.chartOfAccountLabel
-        : sourceOrder?.chartOfAccount
+        : sourceOrder.chartOfAccount
           ? `${sourceOrder.chartOfAccount.code} — ${sourceOrder.chartOfAccount.description}`
           : suggestedAccount?.saleChartOfAccount
             ? `${suggestedAccount.saleChartOfAccount.code} — ${suggestedAccount.saleChartOfAccount.description}`
@@ -742,35 +796,60 @@ export default function VendasPage() {
     }));
 
     setItems(
-      doc.items.map((it) => {
-        if (type === "salesOrder") {
-          const orderItem = it as SalesOrderItem;
-          const saldo =
-            num(orderItem.quantity) -
-            num(orderItem.convertedQuantity) -
-            num(orderItem.discardedQuantity);
-
-          return {
-            productId: orderItem.productId,
-            productLabel: orderItem.product
-              ? `${orderItem.product.code} — ${orderItem.product.description}`
-              : "",
-            quantity: String(saldo),
-            unitPrice: num(orderItem.unitPrice),
-            maxQuantity: saldo,
-          };
-        }
+      sourceOrder.items.map((orderItem) => {
+        const saldo =
+          num(orderItem.quantity) -
+          num(orderItem.convertedQuantity) -
+          num(orderItem.discardedQuantity);
 
         return {
-          productId: it.productId,
-          productLabel: it.product
-            ? `${it.product.code} — ${it.product.description}`
+          productId: orderItem.productId,
+          productLabel: orderItem.product
+            ? `${orderItem.product.code} — ${orderItem.product.description}`
             : "",
-          quantity: String(num(it.quantity)),
-          unitPrice: num(it.unitPrice),
+          quantity: String(saldo),
+          unitPrice: num(orderItem.unitPrice),
+          maxQuantity: saldo,
         };
       })
     );
+
+    const orderTotal = sourceOrder.items.reduce((sum, it) => {
+      const saldo =
+        num(it.quantity) -
+        num(it.convertedQuantity) -
+        num(it.discardedQuantity);
+
+      return sum + saldo * num(it.unitPrice);
+    }, 0);
+
+    if (sourceOrder.plannedInstallments?.length) {
+      setInstallments(
+        sourceOrder.plannedInstallments.map((row) => ({
+          days: daysBetween(
+            form.saleDate || todayIso(),
+            toDateInput(row.dueDate)
+          ),
+          dueDate: toDateInput(row.dueDate),
+          amount: row.amount,
+        }))
+      );
+    } else {
+      const count =
+        sourceOrder.installmentsCount &&
+        sourceOrder.installmentsCount > 1
+          ? sourceOrder.installmentsCount
+          : 1;
+
+      setInstallments(
+        buildInstallmentRows(
+          form.saleDate || todayIso(),
+          sourceOrder.termDays ?? 0,
+          count,
+          orderTotal
+        )
+      );
+    }
   }
 
   function clearSource() {
@@ -827,6 +906,40 @@ export default function VendasPage() {
       return false;
     }
 
+    const validItemsTotal = validItems.reduce(
+      (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
+      0
+    );
+    const singleInstallment = installments.length === 1;
+
+    const finalInstallments = singleInstallment
+      ? [{ dueDate: installments[0].dueDate, amount: validItemsTotal }]
+      : installments.map((row) => ({
+          dueDate: row.dueDate,
+          amount: row.amount,
+        }));
+
+    if (finalInstallments.some((row) => !row.dueDate)) {
+      setFormError("Preencha o vencimento de todas as parcelas.");
+
+      return false;
+    }
+
+    if (!singleInstallment) {
+      const sum = finalInstallments.reduce(
+        (acc, row) => acc + row.amount,
+        0
+      );
+
+      if (Math.abs(sum - validItemsTotal) > 0.01) {
+        setFormError(
+          `A soma das parcelas (${money(sum)}) precisa bater com o total dos itens (${money(validItemsTotal)}).`
+        );
+
+        return false;
+      }
+    }
+
     setSaving(true);
     setFormError("");
 
@@ -843,11 +956,10 @@ export default function VendasPage() {
       installmentsCount: form.installmentsCount
         ? Number(form.installmentsCount)
         : undefined,
+      installments: finalInstallments,
       chartOfAccountId: form.chartOfAccountId,
-      quoteId:
-        sourceType === "quote" && sourceId
-          ? sourceId
-          : undefined,
+      invoiceNumber: form.invoiceNumber || undefined,
+      invoiceKey: form.invoiceKey || undefined,
       salesOrderId:
         sourceType === "salesOrder" && sourceId
           ? sourceId
@@ -1479,10 +1591,6 @@ export default function VendasPage() {
                     [
                       { value: "", label: "Nenhum" },
                       {
-                        value: "quote",
-                        label: "Orçamento",
-                      },
-                      {
                         value: "salesOrder",
                         label: "Pedido de venda",
                       },
@@ -1511,28 +1619,6 @@ export default function VendasPage() {
                   ))}
                 </div>
 
-                {sourceType === "quote" && (
-                  <SearchSelect<Quote>
-                    displayLabel={sourceLabel}
-                    search={searchQuotes}
-                    getId={(q) => q.id}
-                    getLabel={(q) =>
-                      `ORC-${String(q.number).padStart(6, "0")}`
-                    }
-                    getSubLabel={(q) =>
-                      q.partner?.tradeName ??
-                      q.partner?.legalName
-                    }
-                    placeholder="Digite para buscar o orçamento..."
-                    onSelect={(q) =>
-                      q
-                        ? void applySource("quote", q)
-                        : (setSourceId(""),
-                          setSourceLabel(""))
-                    }
-                  />
-                )}
-
                 {sourceType === "salesOrder" && (
                   <SearchSelect<SalesOrder>
                     displayLabel={sourceLabel}
@@ -1548,7 +1634,7 @@ export default function VendasPage() {
                     placeholder="Digite para buscar o pedido de venda..."
                     onSelect={(o) =>
                       o
-                        ? void applySource("salesOrder", o)
+                        ? void applySource(o)
                         : (setSourceId(""),
                           setSourceLabel(""))
                     }
@@ -1685,6 +1771,42 @@ export default function VendasPage() {
                     {barcodeError}
                   </p>
                 )}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>
+                    Nota fiscal
+                  </label>
+
+                  <input
+                    className={fieldClass}
+                    value={form.invoiceNumber}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        invoiceNumber: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Chave de acesso
+                  </label>
+
+                  <input
+                    className={fieldClass}
+                    value={form.invoiceKey}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        invoiceKey: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
 
               <div>
@@ -1921,15 +2043,28 @@ export default function VendasPage() {
                     type="number"
                     min={1}
                     placeholder="1"
-                    title="Em quantos títulos o vencimento se divide na aprovação — 30/60/90 com prazo 30 e 3 parcelas"
+                    title="Gera essa quantidade de parcelas abaixo, já calculadas — dá pra editar antes de salvar"
                     className={fieldClass}
                     value={form.installmentsCount}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const value = e.target.value;
+
                       setForm({
                         ...form,
-                        installmentsCount: e.target.value,
-                      })
-                    }
+                        installmentsCount: value,
+                      });
+
+                      const count = Number(value) || 1;
+
+                      setInstallments(
+                        buildInstallmentRows(
+                          form.saleDate || undefined,
+                          Number(form.termDays) || 0,
+                          count,
+                          itemsTotal
+                        )
+                      );
+                    }}
                   />
                 </div>
 
@@ -1986,6 +2121,14 @@ export default function VendasPage() {
                   />
                 </div>
               </div>
+
+              <InstallmentsEditor
+                installments={installments}
+                onUpdate={updateInstallment}
+                onAdd={addInstallment}
+                onRemove={removeInstallment}
+                total={itemsTotal}
+              />
 
               <div className="flex justify-end gap-6 text-sm">
                 <span className="text-[var(--text-secondary)]">

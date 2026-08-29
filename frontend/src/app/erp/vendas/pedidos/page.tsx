@@ -20,6 +20,14 @@ import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import {
+  InstallmentsEditor,
+  buildInstallmentRows,
+  daysBetween,
+  recalcDueDateFromDays,
+  toDateInput,
+  type InstallmentRow,
+} from "@/components/ui/InstallmentsEditor";
 
 import {
   SALES_ORDER_STATUS_LABELS,
@@ -167,6 +175,12 @@ export default function PedidosDeVendaPage() {
   const [items, setItems] = useState<ItemForm[]>([
     emptyItem(),
   ]);
+  // Parcelas planejadas — editável linha a linha (dias, vencimento e
+  // valor), herdadas do orçamento de origem quando houver e
+  // repassadas pra Venda gerada (mesmo esquema de Compras).
+  const [installments, setInstallments] = useState<InstallmentRow[]>([
+    { days: "", dueDate: "", amount: 0 },
+  ]);
 
   const [detail, setDetail] = useState<SalesOrder | null>(
     null
@@ -263,6 +277,7 @@ export default function PedidosDeVendaPage() {
       warehouseId: warehouses[0]?.id ?? "",
     });
     setItems([emptyItem()]);
+    setInstallments([{ days: "", dueDate: "", amount: 0 }]);
     setFormError("");
     setFormOpen(true);
   }
@@ -307,6 +322,38 @@ export default function PedidosDeVendaPage() {
         discardedQuantity: num(it.discardedQuantity),
       }))
     );
+
+    const orderDateStr = order.orderDate
+      ? order.orderDate.slice(0, 10)
+      : todayIso();
+    const orderItemsTotal = order.items.reduce(
+      (sum, it) => sum + num(it.quantity) * num(it.unitPrice),
+      0
+    );
+
+    if (order.plannedInstallments?.length) {
+      setInstallments(
+        order.plannedInstallments.map((row) => ({
+          days: daysBetween(orderDateStr, toDateInput(row.dueDate)),
+          dueDate: toDateInput(row.dueDate),
+          amount: row.amount,
+        }))
+      );
+    } else {
+      const count =
+        order.installmentsCount && order.installmentsCount > 1
+          ? order.installmentsCount
+          : 1;
+
+      setInstallments(
+        buildInstallmentRows(
+          orderDateStr,
+          order.termDays ?? 0,
+          count,
+          orderItemsTotal
+        )
+      );
+    }
   }
 
   function openEdit(order: SalesOrder) {
@@ -354,6 +401,44 @@ export default function PedidosDeVendaPage() {
 
   function removeItem(index: number) {
     setItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateInstallment(
+    index: number,
+    patch: Partial<InstallmentRow>
+  ) {
+    setInstallments((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) {
+          return row;
+        }
+
+        const next = { ...row, ...patch };
+
+        // Dias preenchido recalcula o vencimento a partir da data
+        // do pedido — deixar em branco não mexe: a pessoa digita a
+        // data direto.
+        if (patch.days !== undefined && patch.days !== "") {
+          next.dueDate = recalcDueDateFromDays(
+            form.orderDate || undefined,
+            patch.days
+          );
+        }
+
+        return next;
+      })
+    );
+  }
+
+  function addInstallment() {
+    setInstallments((prev) => [
+      ...prev,
+      { days: "", dueDate: "", amount: 0 },
+    ]);
+  }
+
+  function removeInstallment(index: number) {
+    setInstallments((prev) => prev.filter((_, i) => i !== index));
   }
 
   const itemsTotal = items.reduce(
@@ -404,6 +489,40 @@ export default function PedidosDeVendaPage() {
       return;
     }
 
+    const validItemsTotal = validItems.reduce(
+      (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
+      0
+    );
+    const singleInstallment = installments.length === 1;
+
+    const finalInstallments = singleInstallment
+      ? [{ dueDate: installments[0].dueDate, amount: validItemsTotal }]
+      : installments.map((row) => ({
+          dueDate: row.dueDate,
+          amount: row.amount,
+        }));
+
+    if (finalInstallments.some((row) => !row.dueDate)) {
+      setFormError("Preencha o vencimento de todas as parcelas.");
+
+      return;
+    }
+
+    if (!singleInstallment) {
+      const sum = finalInstallments.reduce(
+        (acc, row) => acc + row.amount,
+        0
+      );
+
+      if (Math.abs(sum - validItemsTotal) > 0.01) {
+        setFormError(
+          `A soma das parcelas (${money(sum)}) precisa bater com o total dos itens (${money(validItemsTotal)}).`
+        );
+
+        return;
+      }
+    }
+
     setSaving(true);
     setFormError("");
 
@@ -421,6 +540,7 @@ export default function PedidosDeVendaPage() {
       installmentsCount: form.installmentsCount
         ? Number(form.installmentsCount)
         : undefined,
+      installments: finalInstallments,
       items: validItems.map((it) => ({
         productId: it.productId,
         quantity: decimal(it.quantity),
@@ -948,15 +1068,28 @@ export default function PedidosDeVendaPage() {
                     type="number"
                     min={1}
                     placeholder="1"
-                    title="Em quantos títulos o vencimento se divide — 30/60/90 com prazo 30 e 3 parcelas"
+                    title="Gera essa quantidade de parcelas abaixo, já calculadas — dá pra editar antes de salvar"
                     className={fieldClass}
                     value={form.installmentsCount}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const value = e.target.value;
+
                       setForm({
                         ...form,
-                        installmentsCount: e.target.value,
-                      })
-                    }
+                        installmentsCount: value,
+                      });
+
+                      const count = Number(value) || 1;
+
+                      setInstallments(
+                        buildInstallmentRows(
+                          form.orderDate || undefined,
+                          Number(form.termDays) || 0,
+                          count,
+                          itemsTotal
+                        )
+                      );
+                    }}
                   />
                 </div>
 
@@ -988,6 +1121,14 @@ export default function PedidosDeVendaPage() {
                   </select>
                 </div>
               </div>
+
+              <InstallmentsEditor
+                installments={installments}
+                onUpdate={updateInstallment}
+                onAdd={addInstallment}
+                onRemove={removeInstallment}
+                total={itemsTotal}
+              />
 
               <div>
                 <div className="mb-2 flex items-center justify-between">

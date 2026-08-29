@@ -1275,6 +1275,15 @@ model Sale {
   /// (30/60/90... = termDays × 1/2/3) — 1 ou vazio é um título só.
   installmentsCount Int? @default(1)
 
+  /// Parcelas planejadas na hora da venda (dia/vencimento/valor
+  /// escolhidos na mão, herdados do Pedido de Venda quando a venda
+  /// nasce de um) — `[{ dueDate: string, amount: number }]`. Quando
+  /// preenchido, a aprovação usa essa divisão em vez de recalcular
+  /// sozinha a partir de termDays × installmentsCount; a aprovação
+  /// ainda pode ajustar antes de confirmar. Mesmo papel do campo em
+  /// Purchase.
+  plannedInstallments Json?
+
   /// Tipo de receita (conta do plano de contas) desta venda — mesmo
   /// papel do campo em Purchase, só que do lado do que entra.
   chartOfAccountId String?
@@ -1381,6 +1390,24 @@ model Quote {
   totalAmount   Decimal @default(0) @db.Decimal(18, 2)
   netAmount     Decimal @default(0) @db.Decimal(18, 2)
 
+  /// Prazo/forma de pagamento/parcelas — digitados direto no
+  /// orçamento, repassados pro Pedido de Venda e pra Venda na
+  /// aprovação (mesmo papel dos campos equivalentes em PurchaseOrder/
+  /// Purchase).
+  termDays          Int?
+  paymentMethod     PaymentMethod?
+  installmentsCount Int?           @default(1)
+
+  /// Parcelas planejadas no orçamento (dia/vencimento/valor
+  /// escolhidos na mão) — `[{ dueDate: string, amount: number }]`.
+  /// Repassadas pro Pedido de Venda e pra Venda gerados na aprovação;
+  /// cada etapa seguinte ainda pode ajustar por cima.
+  plannedInstallments Json?
+
+  /// Tipo de receita — mesmo papel do campo em PurchaseOrder/Purchase.
+  chartOfAccountId String?
+  chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
   items QuoteItem[]
   sale  Sale?
 
@@ -1463,6 +1490,11 @@ model SalesOrder {
   termDays          Int?
   paymentMethod     PaymentMethod?
   installmentsCount Int?           @default(1)
+
+  /// Parcelas planejadas — herdadas do Orçamento na aprovação (ver
+  /// Quote.plannedInstallments) ou digitadas direto no pedido quando
+  /// criado manualmente. Repassadas pra Venda na conversão.
+  plannedInstallments Json?
 
   /// Tipo de receita — obrigatório na tela de novo Pedido (ver DTO),
   /// nullable aqui só pra não quebrar pedido antigo nem o que nasce
@@ -1556,6 +1588,7 @@ model ChartOfAccount {
   sales            Sale[]
   purchaseOrders   PurchaseOrder[]
   salesOrders      SalesOrder[]
+  quotes           Quote[]
   products         Product[]            @relation("ProductPurchaseChartOfAccount")
   productsForSale  Product[]            @relation("ProductSaleChartOfAccount")
   active           Boolean                      @default(true)

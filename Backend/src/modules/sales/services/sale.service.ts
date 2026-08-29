@@ -180,29 +180,13 @@ export class SaleService {
       (dto.freightValue ?? 0) +
       (dto.otherExpenses ?? 0);
 
-    if (dto.quoteId) {
-      const quote = await this.prisma.quote.findFirst({
-        where: { id: dto.quoteId, companyId },
-      });
-
-      if (!quote) {
-        throw new NotFoundException(
-          'Orçamento não encontrado.',
-        );
-      }
-
-      if (quote.status !== QuoteStatus.DRAFT) {
-        throw new BadRequestException(
-          'Este orçamento já foi convertido em venda ou está cancelado.',
-        );
-      }
-    }
-
     let sourceOrder: {
+      quoteId: string | null;
       chartOfAccountId: string | null;
       termDays: number | null;
       paymentMethod: PaymentMethod | null;
       installmentsCount: number | null;
+      plannedInstallments: unknown;
       items: { id: string; productId: string }[];
     } | null = null;
 
@@ -283,6 +267,12 @@ export class SaleService {
         dto.installmentsCount ??
         sourceOrder?.installmentsCount ??
         undefined,
+      installments: dto.installments?.length
+        ? dto.installments
+        : Array.isArray(sourceOrder?.plannedInstallments) &&
+            sourceOrder.plannedInstallments.length > 0
+          ? sourceOrder.plannedInstallments
+          : undefined,
     };
 
     return this.prisma.$transaction(async (tx) => {
@@ -302,9 +292,12 @@ export class SaleService {
         userId,
       );
 
-      if (dto.quoteId) {
+      // Pedido nascido da aprovação de um Orçamento (ver
+      // QuoteService.approve) — fecha o status do Orçamento junto,
+      // já que a Venda não nasce mais direto dele.
+      if (sourceOrder?.quoteId) {
         await tx.quote.update({
-          where: { id: dto.quoteId },
+          where: { id: sourceOrder.quoteId },
           data: { status: QuoteStatus.CONVERTED },
         });
       }
@@ -502,6 +495,15 @@ export class SaleService {
         termDays,
         dueDate,
         paymentMethod: dto.paymentMethod,
+        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+        plannedInstallments: dto.installments
+          ? dto.installments.map((i) => ({
+              dueDate: i.dueDate,
+              amount: i.amount,
+            }))
+          : undefined,
+        invoiceNumber: dto.invoiceNumber,
+        invoiceKey: dto.invoiceKey,
         totalAmount,
         netAmount,
         items,
@@ -650,14 +652,31 @@ export class SaleService {
       const issueDate =
         invoiceIssueDate ?? sale.saleDate ?? new Date();
 
-      // Sem parcelas explícitas nem quantidade informada na
-      // aprovação, usa a quantidade já registrada na venda (ex.:
+      // Parcelas: o que vier explícito na aprovação vale mais; senão,
+      // usa o que já foi planejado na venda (herdado do pedido de
+      // venda de origem, ver SaleService.create); só na falta dos
+      // dois é que recalcula sozinho a partir de
+      // termDays × installmentsCount — mesma cascata de
+      // PurchaseService.receive().
+      const effectiveInstallments: { dueDate: string; amount: number }[] =
+        dto.installments?.length
+          ? dto.installments
+          : Array.isArray(sale.plannedInstallments) &&
+              sale.plannedInstallments.length > 0
+            ? (sale.plannedInstallments as unknown as {
+                dueDate: string;
+                amount: number;
+              }[])
+            : [];
+
+      // Sem parcelas explícitas/planejadas nem quantidade informada
+      // na aprovação, usa a quantidade já registrada na venda (ex.:
       // herdada do pedido de venda de origem).
       const effectiveInstallmentsCount =
         dto.installmentsCount ?? sale.installmentsCount ?? 1;
 
       const autoInstallments =
-        !dto.installments?.length &&
+        !effectiveInstallments.length &&
         effectiveInstallmentsCount > 1
           ? buildAutoInstallments(
               issueDate,
@@ -667,11 +686,12 @@ export class SaleService {
             )
           : null;
 
-      // Parcelas explícitas (ex.: importação de nota) têm
-      // prioridade sobre o prazo único — cada uma já traz seu
-      // próprio vencimento, não recalcula a partir de termDays.
-      const dueDate = dto.installments?.length
-        ? new Date(dto.installments[0].dueDate)
+      // Parcelas explícitas/planejadas (ex.: importação de nota, ou
+      // vindas do pedido de origem) têm prioridade sobre o prazo
+      // único — cada uma já traz seu próprio vencimento, não
+      // recalcula a partir de termDays.
+      const dueDate = effectiveInstallments.length
+        ? new Date(effectiveInstallments[0].dueDate)
         : autoInstallments
           ? autoInstallments[0].dueDate
           : calculateDueDate(issueDate, termDays);
@@ -715,12 +735,12 @@ export class SaleService {
         observation: `Venda ${sale.id}`,
       };
 
-      if (dto.installments?.length) {
+      if (effectiveInstallments.length) {
         await this.financialEntriesService.createInstallments(
           tx,
           {
             ...commonEntryData,
-            installments: dto.installments.map(
+            installments: effectiveInstallments.map(
               (installment) => ({
                 dueDate: new Date(installment.dueDate),
                 amount: installment.amount,

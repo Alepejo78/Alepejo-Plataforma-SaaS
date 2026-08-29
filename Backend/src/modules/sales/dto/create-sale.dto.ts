@@ -10,10 +10,13 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 import { PaymentMethod } from '@prisma/client';
+
+import { InstallmentDto } from '../../../core/dto/installment.dto';
 
 import { CreateSaleItemDto } from './create-sale-item.dto';
 
@@ -107,12 +110,34 @@ export class CreateSaleDto {
 
   @ApiProperty({
     required: false,
+    type: [InstallmentDto],
     description:
-      'Orçamento de origem — a venda nasce com os dados dele e ele passa para CONVERTED.',
+      'Parcelas planejadas na hora da venda (data/valor escolhidos na mão) — quando informado, tem prioridade sobre installmentsCount/termDays na aprovação (que ainda pode ajustar antes de confirmar). Se vier de um pedido de venda e não for informado, usa as parcelas planejadas nele. Somadas, precisam bater com o total da venda.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => InstallmentDto)
+  installments?: InstallmentDto[];
+
+  @ApiProperty({
+    required: false,
+    description: 'Número da nota fiscal da venda.',
   })
   @IsOptional()
   @IsString()
-  quoteId?: string;
+  @MaxLength(50)
+  invoiceNumber?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Chave de acesso da NF-e (44 dígitos).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  invoiceKey?: string;
 
   @ApiProperty({
     required: false,
