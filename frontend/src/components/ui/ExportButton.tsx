@@ -5,10 +5,10 @@ import { Download, FileSpreadsheet, FileText } from "lucide-react";
 
 import {
   buildCsv,
-  buildXlsHtml,
   extractTableData,
   saveExportFile,
 } from "@/lib/exportTable";
+import { buildXlsx } from "@/lib/xlsxWriter";
 
 interface ExportButtonProps {
   /** Ref da <table> que será lida (cabeçalho + linhas visíveis na tela). */
@@ -46,9 +46,9 @@ export function ExportButton({
       void saveExportFile(buildCsv(data), `${filename}.csv`, "text/csv");
     } else {
       void saveExportFile(
-        buildXlsHtml(data, sheetName ?? filename),
-        `${filename}.xls`,
-        "application/vnd.ms-excel"
+        buildXlsx(data, sheetName ?? filename),
+        `${filename}.xlsx`,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       );
     }
   }

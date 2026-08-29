@@ -39,45 +39,6 @@ export function buildCsv({ headers, rows }: TableExportData): string {
   return "﻿" + lines.join("\r\n");
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-/**
- * Planilha Excel sem depender de biblioteca nenhuma (as libs de .xlsx do
- * client-side têm vulnerabilidade conhecida sem correção) — uma tabela
- * HTML com o MIME do Excel, técnica clássica que o próprio Excel abre
- * como planilha (pode avisar que a extensão não bate com o conteúdo, é
- * só confirmar).
- */
-export function buildXlsHtml(
-  { headers, rows }: TableExportData,
-  sheetName: string
-): string {
-  const headRow = `<tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}</tr>`;
-  const bodyRows = rows
-    .map(
-      (row) =>
-        `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`
-    )
-    .join("");
-
-  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="UTF-8" />
-<!--[if gte mso 9]><xml>
-<x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
-<x:Name>${escapeHtml(sheetName)}</x:Name>
-<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook>
-</xml><![endif]-->
-</head>
-<body><table border="1">${headRow}${bodyRows}</table></body></html>`;
-}
-
 interface SaveFilePickerOptions {
   suggestedName: string;
   types: {
@@ -107,7 +68,7 @@ type WindowWithSavePicker = Window & {
  * (vai pra pasta de downloads padrão do navegador).
  */
 export async function saveExportFile(
-  content: string,
+  content: BlobPart,
   filename: string,
   mimeType: string
 ) {
