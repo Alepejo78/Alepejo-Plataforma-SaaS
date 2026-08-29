@@ -124,6 +124,85 @@ function summarize(items: InventoryCountItem[]) {
   return counts;
 }
 
+interface RoundTiming {
+  start: Date;
+  end: Date;
+}
+
+/** Início/fim de uma rodada (1/2/3): do primeiro ao último item lido nela — direto dos timestamps de leitura de cada item. */
+function roundTiming(
+  items: InventoryCountItem[],
+  round: 1 | 2 | 3
+): RoundTiming | null {
+  const field = (
+    { 1: "countedAt1", 2: "countedAt2", 3: "countedAt3" } as const
+  )[round];
+
+  const timestamps = items
+    .map((item) => item[field])
+    .filter((value): value is string => value != null)
+    .map((value) => new Date(value).getTime());
+
+  if (timestamps.length === 0) {
+    return null;
+  }
+
+  return {
+    start: new Date(Math.min(...timestamps)),
+    end: new Date(Math.max(...timestamps)),
+  };
+}
+
+/** Início/fim da contagem inteira — do primeiro item lido (rodada 1) até o último lido em qualquer rodada. */
+function totalTiming(items: InventoryCountItem[]): RoundTiming | null {
+  const timestamps: number[] = [];
+
+  items.forEach((item) => {
+    ([item.countedAt1, item.countedAt2, item.countedAt3] as const).forEach(
+      (value) => {
+        if (value != null) {
+          timestamps.push(new Date(value).getTime());
+        }
+      }
+    );
+  });
+
+  if (timestamps.length === 0) {
+    return null;
+  }
+
+  return {
+    start: new Date(Math.min(...timestamps)),
+    end: new Date(Math.max(...timestamps)),
+  };
+}
+
+function formatDuration(timing: RoundTiming) {
+  const totalMinutes = Math.round(
+    (timing.end.getTime() - timing.start.getTime()) / 60000
+  );
+
+  if (totalMinutes < 1) {
+    return "menos de 1min";
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes}min`;
+  }
+
+  return minutes > 0 ? `${hours}h ${minutes}min` : `${hours}h`;
+}
+
+function formatTime(value: Date) {
+  return value.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 interface DashboardStats {
   activeCountsTotal: number;
   totalItems: number;
@@ -245,6 +324,7 @@ const ITEM_STATUS_BADGE_CLASS: Record<InventoryCountItemStatus, string> = {
 export default function AcompanhamentoInventarioPage() {
   const { can } = useAuth();
 
+  const [tab, setTab] = useState<"track" | "dashboard">("track");
   const [allCounts, setAllCounts] = useState<InventoryCount[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -573,6 +653,33 @@ export default function AcompanhamentoInventarioPage() {
               </p>
             </header>
 
+            <div className="flex gap-2 border-b border-[var(--border)]">
+              <button
+                type="button"
+                onClick={() => setTab("track")}
+                className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  tab === "track"
+                    ? "border-[var(--primary)] text-[var(--primary)]"
+                    : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                Acompanhamento
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTab("dashboard")}
+                className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  tab === "dashboard"
+                    ? "border-[var(--primary)] text-[var(--primary)]"
+                    : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                Painel geral
+              </button>
+            </div>
+
+            {tab === "dashboard" && (
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -757,7 +864,9 @@ export default function AcompanhamentoInventarioPage() {
                 </>
               )}
             </div>
+            )}
 
+            {tab === "track" && (
             <div className="flex flex-wrap gap-3">
               <select
                 value={statusFilter}
@@ -781,6 +890,7 @@ export default function AcompanhamentoInventarioPage() {
                 ))}
               </select>
             </div>
+            )}
 
             {listError && (
               <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
@@ -796,7 +906,7 @@ export default function AcompanhamentoInventarioPage() {
           </>
         }
       >
-        {loading ? (
+        {tab === "track" && (loading ? (
           <div className="space-y-2 p-4">
             {Array.from({ length: 5 }).map((_, i) => (
               <div
@@ -841,6 +951,9 @@ export default function AcompanhamentoInventarioPage() {
                   <th className="px-4 py-3 text-right font-semibold">
                     Valor a ajustar
                   </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Tempo total
+                  </th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -861,6 +974,7 @@ export default function AcompanhamentoInventarioPage() {
                   }).length;
 
                   const adjustment = countAdjustmentValue(items);
+                  const timing = totalTiming(items);
 
                   return (
                     <tr
@@ -923,6 +1037,12 @@ export default function AcompanhamentoInventarioPage() {
                         {money(adjustment)}
                       </td>
 
+                      <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
+                        {timing
+                          ? formatDuration(timing)
+                          : "—"}
+                      </td>
+
                       <td className="px-4 py-3">
                         <div className="flex justify-end">
                           <button
@@ -942,7 +1062,7 @@ export default function AcompanhamentoInventarioPage() {
               </tbody>
             </table>
           </div>
-        )}
+        ))}
       </ListPageLayout>
 
       {/* Detalhe: rodadas de contagem, correção e ações */}
@@ -1021,6 +1141,55 @@ export default function AcompanhamentoInventarioPage() {
                         }`}
                       >
                         Valor do ajuste: {money(adjustment)}
+                      </span>
+                    </div>
+                  );
+                })()}
+
+                {(() => {
+                  const round1 = roundTiming(detail.items, 1);
+                  const round2 = roundTiming(detail.items, 2);
+                  const round3 = roundTiming(detail.items, 3);
+                  const total = totalTiming(detail.items);
+
+                  if (!total) {
+                    return null;
+                  }
+
+                  return (
+                    <div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-medium">
+                      {round1 && (
+                        <span
+                          className="rounded-full bg-[var(--surface-hover)] px-3 py-1 text-[var(--text-secondary)]"
+                          title={`${formatTime(round1.start)} – ${formatTime(round1.end)}`}
+                        >
+                          Contagem 1: {formatDuration(round1)}
+                        </span>
+                      )}
+
+                      {round2 && (
+                        <span
+                          className="rounded-full bg-[var(--surface-hover)] px-3 py-1 text-[var(--text-secondary)]"
+                          title={`${formatTime(round2.start)} – ${formatTime(round2.end)}`}
+                        >
+                          Contagem 2: {formatDuration(round2)}
+                        </span>
+                      )}
+
+                      {round3 && (
+                        <span
+                          className="rounded-full bg-[var(--surface-hover)] px-3 py-1 text-[var(--text-secondary)]"
+                          title={`${formatTime(round3.start)} – ${formatTime(round3.end)}`}
+                        >
+                          Contagem 3: {formatDuration(round3)}
+                        </span>
+                      )}
+
+                      <span
+                        className="rounded-full bg-[var(--primary-soft)] px-3 py-1 text-[var(--primary)]"
+                        title={`${formatTime(total.start)} – ${formatTime(total.end)}`}
+                      >
+                        Tempo total do inventário: {formatDuration(total)}
                       </span>
                     </div>
                   );

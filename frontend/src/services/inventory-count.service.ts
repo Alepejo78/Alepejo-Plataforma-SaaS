@@ -56,6 +56,10 @@ export interface InventoryCountItem {
   countedByName1?: string | null;
   countedByName2?: string | null;
   countedByName3?: string | null;
+  /** Quando cada rodada foi lida — usado pra calcular o tempo de cada contagem. */
+  countedAt1?: string | null;
+  countedAt2?: string | null;
+  countedAt3?: string | null;
   status: InventoryCountItemStatus;
   addedDuringCount: boolean;
   /** Só referência — já está incluído em systemQuantity, não desconta dele. */

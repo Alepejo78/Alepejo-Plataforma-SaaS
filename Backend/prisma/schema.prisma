@@ -896,6 +896,13 @@ model InventoryCountItem {
   countedById2 String?
   countedById3 String?
 
+  /// Quando cada leitura foi feita — usado pra calcular o tempo de
+  /// cada rodada no painel de acompanhamento (do primeiro ao último
+  /// item lido naquela rodada da contagem).
+  countedAt1 DateTime?
+  countedAt2 DateTime?
+  countedAt3 DateTime?
+
   status InventoryCountItemStatus @default(PENDING)
 
   /// true = item entrou durante a contagem (achado no físico, fora

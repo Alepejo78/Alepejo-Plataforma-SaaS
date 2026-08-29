@@ -514,6 +514,9 @@ export class InventoryCountService {
     const byField = (
       { countedQuantity1: 'countedById1', countedQuantity2: 'countedById2', countedQuantity3: 'countedById3' } as const
     )[field];
+    const atField = (
+      { countedQuantity1: 'countedAt1', countedQuantity2: 'countedAt2', countedQuantity3: 'countedAt3' } as const
+    )[field];
 
     const status = deriveItemStatus({
       ...item,
@@ -525,6 +528,7 @@ export class InventoryCountService {
       data: {
         [field]: dto.quantity,
         [byField]: userId,
+        [atField]: new Date(),
         status,
       },
     });
@@ -582,16 +586,19 @@ export class InventoryCountService {
     if (dto.countedQuantity1 !== undefined) {
       data.countedQuantity1 = dto.countedQuantity1;
       data.countedById1 = userId;
+      data.countedAt1 = new Date();
     }
 
     if (dto.countedQuantity2 !== undefined) {
       data.countedQuantity2 = dto.countedQuantity2;
       data.countedById2 = userId;
+      data.countedAt2 = new Date();
     }
 
     if (dto.countedQuantity3 !== undefined) {
       data.countedQuantity3 = dto.countedQuantity3;
       data.countedById3 = userId;
+      data.countedAt3 = new Date();
     }
 
     data.status = deriveItemStatus({ ...item, ...data });
