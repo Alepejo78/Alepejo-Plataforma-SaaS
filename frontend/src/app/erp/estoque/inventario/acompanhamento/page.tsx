@@ -204,7 +204,6 @@ function formatTime(value: Date) {
 }
 
 interface DashboardStats {
-  activeCountsTotal: number;
   totalItems: number;
   counted: number;
   pendingCount: number;
@@ -215,10 +214,14 @@ interface DashboardStats {
   accuracyPct: number | null;
   adjustmentTotal: number;
   ranking: { name: string; count: number }[];
+  round1: RoundTiming | null;
+  round2: RoundTiming | null;
+  round3: RoundTiming | null;
+  total: RoundTiming | null;
 }
 
-/** Resumo geral das contagens em andamento (OPEN/COUNTING) — base do painel do topo. */
-function computeDashboard(activeCounts: InventoryCount[]): DashboardStats {
+/** Resumo de UMA contagem — a que estiver em andamento agora, ou a última (ver pickCurrentCount). */
+function computeDashboard(items: InventoryCountItem[]): DashboardStats {
   let totalItems = 0;
   let pendingCount = 0;
   let okCount = 0;
@@ -228,50 +231,48 @@ function computeDashboard(activeCounts: InventoryCount[]): DashboardStats {
 
   const userTally = new Map<string, number>();
 
-  activeCounts.forEach((count) => {
-    count.items.forEach((item) => {
-      totalItems += 1;
+  items.forEach((item) => {
+    totalItems += 1;
 
-      if (item.status === "PENDING") {
-        pendingCount += 1;
+    if (item.status === "PENDING") {
+      pendingCount += 1;
+    }
+
+    if (item.status === "RECOUNT_2" || item.status === "RECOUNT_3") {
+      awaitingRecount += 1;
+    }
+
+    // Conta pela última leitura que existir, não só pelos itens já
+    // "Finalizado" — um item "Aguardando recontagem" já tem uma
+    // diferença conhecida (é por isso que está recontando), então
+    // também entra em "Com diferença"/acuracidade, igual já
+    // acontecia na coluna da tabela abaixo.
+    const final = finalQuantity(item);
+
+    if (final != null) {
+      const diff = final - num(item.systemQuantity);
+
+      if (Math.abs(diff) < 0.0005) {
+        okCount += 1;
+      } else {
+        diffCount += 1;
       }
+    }
 
-      if (item.status === "RECOUNT_2" || item.status === "RECOUNT_3") {
-        awaitingRecount += 1;
+    adjustmentTotal += adjustmentValue(item) ?? 0;
+
+    (
+      [item.countedByName1, item.countedByName2, item.countedByName3] as const
+    ).forEach((name, index) => {
+      const value = [
+        item.countedQuantity1,
+        item.countedQuantity2,
+        item.countedQuantity3,
+      ][index];
+
+      if (name && value != null) {
+        userTally.set(name, (userTally.get(name) ?? 0) + 1);
       }
-
-      // Conta pela última leitura que existir, não só pelos itens já
-      // "Finalizado" — um item "Aguardando recontagem" já tem uma
-      // diferença conhecida (é por isso que está recontando), então
-      // também entra em "Com diferença"/acuracidade, igual já
-      // acontecia na coluna da tabela abaixo.
-      const final = finalQuantity(item);
-
-      if (final != null) {
-        const diff = final - num(item.systemQuantity);
-
-        if (Math.abs(diff) < 0.0005) {
-          okCount += 1;
-        } else {
-          diffCount += 1;
-        }
-      }
-
-      adjustmentTotal += adjustmentValue(item) ?? 0;
-
-      (
-        [item.countedByName1, item.countedByName2, item.countedByName3] as const
-      ).forEach((name, index) => {
-        const value = [
-          item.countedQuantity1,
-          item.countedQuantity2,
-          item.countedQuantity3,
-        ][index];
-
-        if (name && value != null) {
-          userTally.set(name, (userTally.get(name) ?? 0) + 1);
-        }
-      });
     });
   });
 
@@ -285,7 +286,6 @@ function computeDashboard(activeCounts: InventoryCount[]): DashboardStats {
     .sort((a, b) => b.count - a.count);
 
   return {
-    activeCountsTotal: activeCounts.length,
     totalItems,
     counted,
     pendingCount,
@@ -296,7 +296,30 @@ function computeDashboard(activeCounts: InventoryCount[]): DashboardStats {
     accuracyPct,
     adjustmentTotal,
     ranking,
+    round1: roundTiming(items, 1),
+    round2: roundTiming(items, 2),
+    round3: roundTiming(items, 3),
+    total: totalTiming(items),
   };
+}
+
+/** Qual contagem mostrar no painel geral: a que estiver em andamento agora (a mais recente entre as ativas); sem nenhuma ativa, a última de todas — assim o painel continua mostrando como foi o inventário até o próximo começar. `allCounts` já vem ordenado do mais novo pro mais antigo. */
+function pickCurrentCount(
+  allCounts: InventoryCount[]
+): { count: InventoryCount; isActive: boolean } | null {
+  if (allCounts.length === 0) {
+    return null;
+  }
+
+  const active = allCounts.find(
+    (c) => c.status === "OPEN" || c.status === "COUNTING"
+  );
+
+  if (active) {
+    return { count: active, isActive: true };
+  }
+
+  return { count: allCounts[0], isActive: false };
 }
 
 const fieldClass = `
@@ -415,17 +438,11 @@ export default function AcompanhamentoInventarioPage() {
     [allCounts, statusFilter]
   );
 
-  const activeCounts = useMemo(
-    () =>
-      allCounts.filter(
-        (c) => c.status === "OPEN" || c.status === "COUNTING"
-      ),
-    [allCounts]
-  );
+  const current = useMemo(() => pickCurrentCount(allCounts), [allCounts]);
 
   const dashboard = useMemo(
-    () => computeDashboard(activeCounts),
-    [activeCounts]
+    () => (current ? computeDashboard(current.count.items) : null),
+    [current]
   );
 
   async function openDetail(count: InventoryCount) {
@@ -683,8 +700,9 @@ export default function AcompanhamentoInventarioPage() {
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  Painel geral — {dashboard.activeCountsTotal}{" "}
-                  contagem(ns) em andamento (aberta ou em contagem)
+                  {current
+                    ? `${current.isActive ? "Em andamento" : "Último inventário"} — ${formatInventoryCountNumber(current.count.number)} · ${INVENTORY_COUNT_STATUS_LABELS[current.count.status]}`
+                    : "Painel geral"}
                 </p>
 
                 <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
@@ -711,12 +729,19 @@ export default function AcompanhamentoInventarioPage() {
                 </div>
               </div>
 
-              {dashboard.activeCountsTotal === 0 ? (
+              {!current || !dashboard ? (
                 <p className="text-sm text-[var(--text-muted)]">
-                  Nenhuma contagem em andamento no momento.
+                  Nenhuma contagem registrada ainda.
                 </p>
               ) : (
                 <>
+                  {!current.isActive && (
+                    <p className="mb-3 text-xs text-[var(--text-muted)]">
+                      Sem contagem em andamento — mostrando o último
+                      inventário até que o próximo comece.
+                    </p>
+                  )}
+
                   <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
                     <div className="rounded-xl border border-[var(--border)] p-3">
                       <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
@@ -842,11 +867,82 @@ export default function AcompanhamentoInventarioPage() {
                     </div>
                   </div>
 
+                  {(dashboard.round1 ||
+                    dashboard.round2 ||
+                    dashboard.round3 ||
+                    dashboard.total) && (
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {dashboard.round1 && (
+                        <div className="rounded-xl border border-[var(--border)] p-3">
+                          <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
+                            <Clock size={14} />
+                            Tempo — Contagem 1
+                          </p>
+                          <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+                            {formatDuration(dashboard.round1)}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {formatTime(dashboard.round1.start)} –{" "}
+                            {formatTime(dashboard.round1.end)}
+                          </p>
+                        </div>
+                      )}
+
+                      {dashboard.round2 && (
+                        <div className="rounded-xl border border-[var(--border)] p-3">
+                          <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
+                            <Clock size={14} />
+                            Tempo — Contagem 2
+                          </p>
+                          <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+                            {formatDuration(dashboard.round2)}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {formatTime(dashboard.round2.start)} –{" "}
+                            {formatTime(dashboard.round2.end)}
+                          </p>
+                        </div>
+                      )}
+
+                      {dashboard.round3 && (
+                        <div className="rounded-xl border border-[var(--border)] p-3">
+                          <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
+                            <Clock size={14} />
+                            Tempo — Contagem 3
+                          </p>
+                          <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+                            {formatDuration(dashboard.round3)}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {formatTime(dashboard.round3.start)} –{" "}
+                            {formatTime(dashboard.round3.end)}
+                          </p>
+                        </div>
+                      )}
+
+                      {dashboard.total && (
+                        <div className="rounded-xl border border-[var(--primary)] bg-[var(--primary-soft)] p-3">
+                          <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--primary)]">
+                            <Clock size={14} />
+                            Tempo total do inventário
+                          </p>
+                          <p className="mt-1 text-xl font-bold text-[var(--primary)]">
+                            {formatDuration(dashboard.total)}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--primary)]">
+                            {formatTime(dashboard.total.start)} –{" "}
+                            {formatTime(dashboard.total.end)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {dashboard.ranking.length > 0 && (
                     <div className="mt-3 rounded-xl border border-[var(--border)] p-3">
                       <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
                         <Users size={14} />
-                        Leituras por usuário (contagens em andamento)
+                        Leituras por usuário
                       </p>
 
                       <div className="flex flex-wrap gap-2">
