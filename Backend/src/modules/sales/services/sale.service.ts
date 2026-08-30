@@ -417,9 +417,27 @@ export class SaleService {
     // Venda vinculada a um pedido consome saldo dele na criação — se
     // deixasse editar os itens depois, o saldo do pedido ficaria
     // inconsistente. Cancele e lance de novo se precisar corrigir.
-    if (dto.items && sale.salesOrderId) {
+    // Parcelas/vencimento não mexem no saldo do pedido, então só trava
+    // quando produto/quantidade/preço realmente mudou — não só porque
+    // o payload de edição sempre reenvia a lista de itens.
+    const itemsChanged =
+      !!dto.items &&
+      (dto.items.length !== sale.items.length ||
+        !dto.items.every((item) => {
+          const current = sale.items.find(
+            (existing) => existing.productId === item.productId,
+          );
+
+          return (
+            current &&
+            Number(current.quantity) === item.quantity &&
+            Number(current.unitPrice) === item.unitPrice
+          );
+        }));
+
+    if (itemsChanged && sale.salesOrderId) {
       throw new BadRequestException(
-        'Esta venda está vinculada a um pedido de venda — os itens não podem ser alterados. Cancele e lance de novo se precisar corrigir produto/quantidade.',
+        'Esta venda está vinculada a um pedido de venda — o produto e a quantidade dos itens não podem ser alterados (parcelas e vencimento podem). Cancele e lance de novo se precisar corrigir produto/quantidade.',
       );
     }
 
