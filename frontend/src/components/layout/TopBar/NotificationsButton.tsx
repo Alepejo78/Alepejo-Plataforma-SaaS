@@ -11,7 +11,7 @@ import {
 
 import { NotificationDetailModal } from "./NotificationDetailModal";
 
-const POLL_INTERVAL_MS = 60000;
+const POLL_INTERVAL_MS = 15000;
 
 function timeAgo(value: string) {
   const diffMs = Date.now() - new Date(value).getTime();
