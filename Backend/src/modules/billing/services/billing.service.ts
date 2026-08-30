@@ -994,6 +994,14 @@ export class BillingService {
 
     const payment = await this.asaas.getPayment(payload.payment.id);
 
+    // Decide pelo status REAL da cobrança (recém-buscado na API), não
+    // pelo nome do evento que disparou esta chamada — o Asaas manda
+    // vários eventos pro mesmo pagamento (criação, atualização,
+    // confirmação...) e o que importa pra liberar o acesso é se ela
+    // está paga agora, não qual evento específico chegou primeiro.
+    const paidStatus = mapChargeStatus(payment.status);
+    const isPaid = paidStatus === 'RECEIVED' || paidStatus === 'CONFIRMED';
+
     const companyPlan = await this.prisma.companyPlan.findFirst({
       where: {
         OR: [
@@ -1020,10 +1028,6 @@ export class BillingService {
       });
 
       if (pending) {
-        const isPaid =
-          payload.event === 'PAYMENT_CONFIRMED' ||
-          payload.event === 'PAYMENT_RECEIVED';
-
         if (isPaid) {
           await this.prisma.pendingCheckout.update({
             where: { id: pending.id },
@@ -1091,10 +1095,7 @@ export class BillingService {
       return { processed: true };
     }
 
-    if (
-      payload.event === 'PAYMENT_CONFIRMED' ||
-      payload.event === 'PAYMENT_RECEIVED'
-    ) {
+    if (isPaid) {
       const periodDays = companyPlan.billingCycle === 'YEARLY' ? 365 : 30;
 
       await this.prisma.companyPlan.update({
@@ -1112,7 +1113,7 @@ export class BillingService {
         where: { companyId: companyPlan.companyId, enabled: true },
         data: { licensed: true },
       });
-    } else if (payload.event === 'PAYMENT_OVERDUE') {
+    } else if (paidStatus === 'OVERDUE') {
       await this.prisma.companyPlan.update({
         where: { id: companyPlan.id },
         data: {
