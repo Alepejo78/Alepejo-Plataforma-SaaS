@@ -104,7 +104,7 @@ export function buildEmailDocumentSummaryHtml(opts: {
   }
 
   return `${metaHtml}
-<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;">
+<table style="width:auto;max-width:520px;border-collapse:collapse;margin:12px 0;font-size:13px;">
   <thead>
     <tr style="background:#f3f4f6;">
       <th style="text-align:left;padding:6px 8px;">Item</th>
@@ -115,7 +115,7 @@ export function buildEmailDocumentSummaryHtml(opts: {
   </thead>
   <tbody>${rows}</tbody>
 </table>
-<table style="width:280px;margin-left:auto;font-size:13px;">
+<table style="width:280px;font-size:13px;">
   <tbody>${totalsRows.join('')}</tbody>
 </table>`;
 }

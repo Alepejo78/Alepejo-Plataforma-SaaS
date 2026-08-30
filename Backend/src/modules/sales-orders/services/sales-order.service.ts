@@ -419,7 +419,14 @@ ${summaryHtml}
       throw new BadRequestException('Este pedido já está aprovado.');
     }
 
-    return this.repository.approve(id, userId);
+    const approved = await this.repository.approve(id, userId);
+
+    // Pedido pode ter sido ajustado entre o lançamento e a aprovação
+    // — o cliente precisa ver de novo o que ficou combinado, já
+    // confirmado.
+    void this.notifyPartner(companyId, await this.findOne(companyId, id));
+
+    return approved;
   }
 
   /**
