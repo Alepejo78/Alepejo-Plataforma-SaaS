@@ -1041,6 +1041,11 @@ export class SaleService {
       // vinculadas), e recalcula o status a partir do saldo que
       // sobrou depois disso.
       if (sale.salesOrderId) {
+        const order = await tx.salesOrder.findUnique({
+          where: { id: sale.salesOrderId },
+          select: { quoteId: true },
+        });
+
         const orderItems = await tx.salesOrderItem.findMany({
           where: { salesOrderId: sale.salesOrderId },
         });
@@ -1088,6 +1093,18 @@ export class SaleService {
                 : SalesOrderStatus.DRAFT,
           },
         });
+
+        // Pedido nascido de um Orçamento e essa venda era o que
+        // fechava a conversão dele — sem mais nada convertido, o
+        // orçamento deixa de estar "convertido em venda" de verdade,
+        // então volta pra rascunho (mesma regra de
+        // SalesOrderService.revertLinkedQuote).
+        if (!allConverted && order?.quoteId) {
+          await tx.quote.update({
+            where: { id: order.quoteId },
+            data: { status: QuoteStatus.DRAFT, updatedById: userId },
+          });
+        }
       }
 
       return cancelled;

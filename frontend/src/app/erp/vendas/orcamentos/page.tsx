@@ -905,6 +905,24 @@ export default function OrcamentosPage() {
                               </Can>
                             </>
                           )}
+
+                          {q.status === "CONVERTED" &&
+                            !q.salesOrder && (
+                              <Can permission="quote.cancel">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void cancelQuote(q.id)
+                                  }
+                                  title="Cancelar (o pedido/venda gerado foi excluído por fora)"
+                                  aria-label="Cancelar"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                >
+                                  <XCircle size={16} />
+                                </button>
+                              </Can>
+                            )}
                         </div>
                       </td>
                     </tr>

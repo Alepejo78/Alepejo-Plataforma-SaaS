@@ -378,7 +378,15 @@ ${summaryHtml}
   async cancel(companyId: string, id: string, userId: string) {
     const quote = await this.findOne(companyId, id);
 
-    if (quote.status !== QuoteStatus.DRAFT) {
+    // "Convertido em venda" órfão — o Pedido/Venda que fechou essa
+    // conversão foi excluído por fora (ex.: cascata de cancelamento
+    // anterior a essa correção), sem devolver o status do orçamento.
+    // Sem essa saída, o orçamento ficava travado pra sempre, sem
+    // Cancelar nem Estornar disponíveis.
+    const orphanedConverted =
+      quote.status === QuoteStatus.CONVERTED && !quote.salesOrder;
+
+    if (quote.status !== QuoteStatus.DRAFT && !orphanedConverted) {
       throw new BadRequestException(
         'Somente orçamentos em rascunho podem ser cancelados.',
       );
