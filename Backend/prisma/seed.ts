@@ -1173,10 +1173,12 @@ const administrator =
     where: {
       email: ADMIN_EMAIL,
     },
+    // Não mexe na senha de quem já existe — só na criação inicial.
+    // Rodar o seed de novo (ex.: pra aplicar permissões novas) não
+    // pode resetar a senha que o usuário já trocou.
     update: {
       companyId: company.id,
       name: "Alessandro Lourenço",
-      passwordHash,
       status: UserStatus.ACTIVE,
       active: true,
     },
