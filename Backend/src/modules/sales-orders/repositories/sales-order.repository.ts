@@ -32,6 +32,7 @@ export class SalesOrderRepository {
     totalAmount: number,
     netAmount: number,
     userId: string,
+    approvedAt?: Date,
   ) {
     return tx.salesOrder.create({
       data: {
@@ -58,6 +59,7 @@ export class SalesOrderRepository {
               amount: i.amount,
             }))
           : undefined,
+        approvedAt,
         createdById: userId,
         updatedById: userId,
         items: {
@@ -189,5 +191,23 @@ export class SalesOrderRepository {
       where: { id },
       data: { status: 'CANCELLED', updatedById: userId },
     });
+  }
+
+  async approve(id: string, userId: string): Promise<SalesOrder> {
+    return this.prisma.salesOrder.update({
+      where: { id },
+      data: { approvedAt: new Date(), updatedById: userId },
+    });
+  }
+
+  async undoApproval(id: string, userId: string): Promise<SalesOrder> {
+    return this.prisma.salesOrder.update({
+      where: { id },
+      data: { approvedAt: null, updatedById: userId },
+    });
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.prisma.salesOrder.delete({ where: { id } });
   }
 }

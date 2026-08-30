@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -91,5 +92,39 @@ export class SalesOrderController {
     @Param('id') id: string,
   ) {
     return this.service.closeBalance(companyId, id, userId);
+  }
+
+  @Patch(':id/approve')
+  @Permissions('sales-order.approve')
+  @ApiOperation({ summary: 'Aprovar pedido de venda' })
+  approve(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.approve(companyId, id, userId);
+  }
+
+  @Patch(':id/undo-approval')
+  @Permissions('sales-order.approve')
+  @ApiOperation({
+    summary: 'Estornar aprovação do pedido de venda',
+  })
+  undoApproval(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.undoApproval(companyId, id, userId);
+  }
+
+  @Delete(':id')
+  @Permissions('sales-order.delete')
+  @ApiOperation({ summary: 'Excluir pedido de venda cancelado' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(companyId, id);
   }
 }

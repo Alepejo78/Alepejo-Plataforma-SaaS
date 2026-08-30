@@ -5,11 +5,13 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Ban,
+  Check,
   Edit,
   Eye,
   FileText,
   Plus,
   Trash2,
+  Undo2,
   X,
   XCircle,
 } from "lucide-react";
@@ -624,6 +626,82 @@ export default function PedidosDeVendaPage() {
     }
   }
 
+  async function approveOrder(id: string) {
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await salesOrderService.approve(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(
+          err,
+          "Não foi possível aprovar o pedido de venda."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
+  async function undoApprovalOrder(id: string) {
+    if (
+      !window.confirm(
+        "Estornar a aprovação deste pedido? Ele volta a precisar de aprovação antes de gerar Venda."
+      )
+    ) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await salesOrderService.undoApproval(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(
+          err,
+          "Não foi possível estornar a aprovação do pedido de venda."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
+  async function removeOrder(id: string) {
+    if (
+      !window.confirm(
+        "Excluir este pedido de venda cancelado? Não tem como desfazer."
+      )
+    ) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await salesOrderService.remove(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(
+          err,
+          "Não foi possível excluir o pedido de venda."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   const semDeposito = warehouses.length === 0;
 
   return (
@@ -820,21 +898,59 @@ export default function PedidosDeVendaPage() {
                           </button>
 
                           {o.status === "DRAFT" && (
-                            <>
-                              <Can permission="sales-order.update">
+                            <Can permission="sales-order.update">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openEdit(o)
+                                }
+                                title="Editar"
+                                aria-label="Editar"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                              >
+                                <Edit size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {o.status === "DRAFT" &&
+                            !o.approvedAt && (
+                              <Can permission="sales-order.approve">
                                 <button
                                   type="button"
+                                  disabled={busy}
                                   onClick={() =>
-                                    openEdit(o)
+                                    void approveOrder(o.id)
                                   }
-                                  title="Editar"
-                                  aria-label="Editar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                                  title="Aprovar"
+                                  aria-label="Aprovar"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
                                 >
-                                  <Edit size={16} />
+                                  <Check size={16} />
                                 </button>
                               </Can>
+                            )}
 
+                          {o.status === "DRAFT" &&
+                            o.approvedAt && (
+                              <Can permission="sales-order.approve">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void undoApprovalOrder(o.id)
+                                  }
+                                  title="Estornar aprovação"
+                                  aria-label="Estornar"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                >
+                                  <Undo2 size={16} />
+                                </button>
+                              </Can>
+                            )}
+
+                          {o.status === "DRAFT" &&
+                            !o.approvedAt && (
                               <Can permission="sales-order.cancel">
                                 <button
                                   type="button"
@@ -849,12 +965,10 @@ export default function PedidosDeVendaPage() {
                                   <XCircle size={16} />
                                 </button>
                               </Can>
-                            </>
-                          )}
+                            )}
 
-                          {(o.status === "DRAFT" ||
-                            o.status ===
-                              "PARTIALLY_CONVERTED") && (
+                          {((o.status === "DRAFT" && o.approvedAt) ||
+                            o.status === "PARTIALLY_CONVERTED") && (
                             <Can permission="sales-order.cancel">
                               <button
                                 type="button"
@@ -867,6 +981,23 @@ export default function PedidosDeVendaPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"
                               >
                                 <Ban size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {o.status === "CANCELLED" && (
+                            <Can permission="sales-order.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void removeOrder(o.id)
+                                }
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </Can>
                           )}

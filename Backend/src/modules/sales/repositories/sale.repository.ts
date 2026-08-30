@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Sale, SaleStatus } from '@prisma/client';
+import { Prisma, SaleStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
@@ -41,7 +41,7 @@ export class SaleRepository {
     totalAmount: number,
     netAmount: number,
     userId: string,
-  ): Promise<Sale> {
+  ) {
     const issueDate = dto.saleDate
       ? new Date(dto.saleDate)
       : new Date();
@@ -194,8 +194,9 @@ export class SaleRepository {
       }[];
     },
     userId: string,
-  ): Promise<Sale> {
-    return this.prisma.sale.update({
+    tx: Prisma.TransactionClient = this.prisma,
+  ) {
+    return tx.sale.update({
       where: { id },
       data: {
         updatedById: userId,

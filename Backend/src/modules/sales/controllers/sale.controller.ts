@@ -86,7 +86,7 @@ export class SaleController {
   @Patch(':id')
   @Permissions('sale.update')
   @ApiOperation({
-    summary: 'Alterar venda (somente rascunho)',
+    summary: 'Alterar venda',
   })
   update(
     @CurrentUser('companyId') companyId: string,
@@ -126,7 +126,7 @@ export class SaleController {
   @Patch(':id/cancel')
   @Permissions('sale.cancel')
   @ApiOperation({
-    summary: 'Cancelar venda (somente rascunho)',
+    summary: 'Cancelar venda (devolve estoque e cancela título gerado, quando aplicável)',
   })
   cancel(
     @CurrentUser('companyId') companyId: string,
@@ -152,23 +152,6 @@ export class SaleController {
     return this.service.remove(
       companyId,
       id,
-    );
-  }
-
-  @Patch(':id/undo-approval')
-  @Permissions('sale.cancel')
-  @ApiOperation({
-    summary: 'Desfazer aprovação da venda (devolve o estoque)',
-  })
-  undoApproval(
-    @CurrentUser('companyId') companyId: string,
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-  ) {
-    return this.service.undoApproval(
-      companyId,
-      id,
-      userId,
     );
   }
 }

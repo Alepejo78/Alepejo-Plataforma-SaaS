@@ -293,7 +293,9 @@ const permissionGroups = [
       ["sales-order.view", "Consultar Pedidos de Venda"],
       ["sales-order.create", "Criar Pedidos de Venda"],
       ["sales-order.update", "Alterar Pedidos de Venda"],
+      ["sales-order.approve", "Aprovar Pedidos de Venda"],
       ["sales-order.cancel", "Cancelar Pedidos de Venda"],
+      ["sales-order.delete", "Excluir Pedidos de Venda"],
     ],
   },
   {

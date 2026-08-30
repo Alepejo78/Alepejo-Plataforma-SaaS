@@ -1111,7 +1111,7 @@ export default function OrcamentosPage() {
                               money(p.salePrice)
                             }
                             placeholder="Digite para buscar o produto..."
-                            onSelect={(p) =>
+                            onSelect={(p) => {
                               updateItem(index, {
                                 productId: p?.id ?? "",
                                 productLabel: p
@@ -1121,8 +1121,25 @@ export default function OrcamentosPage() {
                                   p && !it.unitPrice
                                     ? num(p.salePrice)
                                     : it.unitPrice,
-                              })
-                            }
+                              });
+
+                              // Sugere o tipo de receita a partir do
+                              // produto — só quando o orçamento ainda
+                              // não tem um escolhido (não sobrescreve).
+                              if (
+                                p?.saleChartOfAccountId &&
+                                !form.chartOfAccountId
+                              ) {
+                                setForm((prev) => ({
+                                  ...prev,
+                                  chartOfAccountId:
+                                    p.saleChartOfAccountId!,
+                                  chartOfAccountLabel: p.saleChartOfAccount
+                                    ? `${p.saleChartOfAccount.code} — ${p.saleChartOfAccount.description}`
+                                    : prev.chartOfAccountLabel,
+                                }));
+                              }
+                            }}
                           />
                         </div>
 

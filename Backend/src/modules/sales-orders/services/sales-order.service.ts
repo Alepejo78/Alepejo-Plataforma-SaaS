@@ -6,6 +6,7 @@ import {
 
 import {
   BusinessPartnerRole,
+  Prisma,
   SalesOrderStatus,
 } from '@prisma/client';
 
@@ -44,6 +45,7 @@ export class SalesOrderService {
     rootCompanyId: string,
     dto: CreateSalesOrderDto,
     userId: string,
+    autoApprove = false,
   ) {
     await this.businessPartnersService.assertHasRole(
       rootCompanyId,
@@ -108,6 +110,7 @@ export class SalesOrderService {
         totalAmount,
         netAmount,
         userId,
+        autoApprove ? new Date() : undefined,
       );
     });
 
@@ -362,16 +365,102 @@ ${summaryHtml}
     );
   }
 
+  /**
+   * Volta o Orçamento de origem pra rascunho, pra poder editar/
+   * aprovar/cancelar de novo — chamado quando o Pedido que ele gerou
+   * automaticamente é cancelado, estornado ou excluído (o pedido não
+   * está mais "pronto" nesse ponto, então o orçamento também deixa de
+   * estar).
+   */
+  private async revertLinkedQuote(
+    tx: Prisma.TransactionClient,
+    quoteId: string,
+    userId: string,
+  ) {
+    await tx.quote.update({
+      where: { id: quoteId },
+      data: { status: 'DRAFT', updatedById: userId },
+    });
+  }
+
   async cancel(companyId: string, id: string, userId: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (order.status !== SalesOrderStatus.DRAFT || order.approvedAt) {
+      throw new BadRequestException(
+        'Somente pedidos em rascunho e ainda não aprovados podem ser cancelados — se já foi aprovado, estorne a aprovação primeiro.',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const cancelled = await tx.salesOrder.update({
+        where: { id },
+        data: { status: 'CANCELLED', updatedById: userId },
+      });
+
+      if (order.quoteId) {
+        await this.revertLinkedQuote(tx, order.quoteId, userId);
+      }
+
+      return cancelled;
+    });
+  }
+
+  async approve(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 
     if (order.status !== SalesOrderStatus.DRAFT) {
       throw new BadRequestException(
-        'Somente pedidos em rascunho podem ser cancelados.',
+        'Somente pedidos em rascunho podem ser aprovados.',
       );
     }
 
-    return this.repository.cancel(id, userId);
+    if (order.approvedAt) {
+      throw new BadRequestException('Este pedido já está aprovado.');
+    }
+
+    return this.repository.approve(id, userId);
+  }
+
+  /**
+   * Desfaz a aprovação — só permitido enquanto nada foi convertido em
+   * Venda ainda (senão a aprovação está "amarrada" num documento
+   * posterior). Se o pedido nasceu de um Orçamento, o orçamento volta
+   * pra rascunho junto.
+   */
+  async undoApproval(companyId: string, id: string, userId: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (order.status !== SalesOrderStatus.DRAFT || !order.approvedAt) {
+      throw new BadRequestException(
+        'Somente pedidos aprovados e ainda sem nenhuma venda gerada podem ser estornados.',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const reverted = await tx.salesOrder.update({
+        where: { id },
+        data: { approvedAt: null, updatedById: userId },
+      });
+
+      if (order.quoteId) {
+        await this.revertLinkedQuote(tx, order.quoteId, userId);
+      }
+
+      return reverted;
+    });
+  }
+
+  async remove(companyId: string, id: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (order.status !== SalesOrderStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Só pedidos cancelados podem ser excluídos.',
+      );
+    }
+
+    await this.repository.remove(id);
   }
 
   /**
@@ -391,14 +480,17 @@ ${summaryHtml}
       );
     }
 
+    if (!order.approvedAt) {
+      throw new BadRequestException('Este pedido ainda não foi aprovado.');
+    }
+
     await this.prisma.$transaction(async (tx) => {
       for (const item of order.items) {
         // Descarta só o saldo que sobrou — não mexe em
         // convertedQuantity, que é reservado pra venda de verdade.
         // Sem essa distinção, a tela mostraria "convertido" pra
         // quantidade que na real foi só desistida.
-        const saldo =
-          Number(item.quantity) - Number(item.convertedQuantity);
+        const saldo = Number(item.quantity) - Number(item.convertedQuantity);
 
         if (saldo <= 0) continue;
 

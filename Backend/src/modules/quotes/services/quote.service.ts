@@ -438,6 +438,9 @@ ${summaryHtml}
         })),
       },
       userId,
+      // Orçamento já aprovado pelo cliente — o Pedido gerado nasce
+      // pronto pra virar Venda, sem precisar de aprovação própria.
+      true,
     );
 
     // `plannedInstallments` não faz parte do DTO de criação do pedido

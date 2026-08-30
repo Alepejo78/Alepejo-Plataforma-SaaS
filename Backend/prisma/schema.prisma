@@ -1511,6 +1511,12 @@ model SalesOrder {
   quoteId String? @unique
   quote   Quote?  @relation(fields: [quoteId], references: [id])
 
+  /// Preenchido quando o pedido pode virar Venda — automático (na hora
+  /// de nascer) quando veio da aprovação de um Orçamento, manual via
+  /// approve() quando criado direto. SaleService.create() exige isso
+  /// preenchido antes de aceitar salesOrderId.
+  approvedAt DateTime?
+
   productionOrders ProductionOrder[]
 
   createdById String?

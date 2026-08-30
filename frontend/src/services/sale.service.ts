@@ -201,19 +201,10 @@ export const saleService = {
     return data.data;
   },
 
-  /** Cancela uma venda em rascunho (ainda não aprovada). */
+  /** Cancela a venda — devolve estoque e cancela o título gerado, quando aplicável. */
   async cancel(id: string): Promise<Sale> {
     const { data } = await api.patch<ApiEnvelope<Sale>>(
       `/sales/${id}/cancel`
-    );
-
-    return data.data;
-  },
-
-  /** Desfaz a aprovação: volta a venda para rascunho e devolve o estoque. */
-  async undoApproval(id: string): Promise<Sale> {
-    const { data } = await api.patch<ApiEnvelope<Sale>>(
-      `/sales/${id}/undo-approval`
     );
 
     return data.data;

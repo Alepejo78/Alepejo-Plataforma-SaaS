@@ -64,6 +64,8 @@ export interface SalesOrder {
   installmentsCount?: number | null;
   /** Parcelas planejadas — herdadas do Orçamento na aprovação ou digitadas direto no pedido. */
   plannedInstallments?: { dueDate: string; amount: number }[] | null;
+  /** Preenchido quando o pedido pode virar Venda — automático se veio de um Orçamento aprovado, manual via approve(). */
+  approvedAt?: string | null;
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;
@@ -174,5 +176,25 @@ export const salesOrderService = {
     );
 
     return data.data;
+  },
+
+  async approve(id: string): Promise<SalesOrder> {
+    const { data } = await api.patch<ApiEnvelope<SalesOrder>>(
+      `/sales-orders/${id}/approve`
+    );
+
+    return data.data;
+  },
+
+  async undoApproval(id: string): Promise<SalesOrder> {
+    const { data } = await api.patch<ApiEnvelope<SalesOrder>>(
+      `/sales-orders/${id}/undo-approval`
+    );
+
+    return data.data;
+  },
+
+  async remove(id: string): Promise<void> {
+    await api.delete(`/sales-orders/${id}`);
   },
 };

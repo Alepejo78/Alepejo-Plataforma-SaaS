@@ -11,6 +11,7 @@ import {
   FinancialEntryType,
   InventoryControl,
   PaymentMethod,
+  Prisma,
   QuoteStatus,
   SalesOrderStatus,
 } from '@prisma/client';
@@ -222,6 +223,12 @@ export class SaleService {
         );
       }
 
+      if (!order.approvedAt) {
+        throw new BadRequestException(
+          'Este pedido de venda ainda não foi aprovado.',
+        );
+      }
+
       // Confere que a quantidade lançada agora não estoura o saldo
       // disponível (pedida - já convertida) de cada produto do
       // pedido. Item da venda que não bate com nenhum item do
@@ -274,6 +281,23 @@ export class SaleService {
           ? sourceOrder.plannedInstallments
           : undefined,
     };
+
+    // Venda não passa mais por uma etapa de aprovação separada — ao
+    // ser lançada, já é porque o faturamento aconteceu de verdade, e
+    // create() já faz o que approve() faz (baixa estoque, gera
+    // título). Mesmas checagens que approve() faz antes de começar.
+    await this.assertNoOpenInventoryCount(
+      dto.warehouseId,
+      dto.items.map((item) => item.productId),
+    );
+
+    if (dto.invoiceNumber) {
+      await this.assertInvoiceNumberNotDuplicated(
+        companyId,
+        dto.partnerId,
+        dto.invoiceNumber,
+      );
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
@@ -344,7 +368,13 @@ export class SaleService {
         });
       }
 
-      return sale;
+      return this.applyApproval(
+        tx,
+        companyId,
+        sale,
+        effectiveDto,
+        userId,
+      );
     });
   }
 
@@ -388,9 +418,19 @@ export class SaleService {
   ) {
     const sale = await this.findOne(companyId, id);
 
-    if (sale.status !== 'DRAFT') {
+    if (sale.status !== 'DRAFT' && sale.status !== 'APPROVED') {
       throw new BadRequestException(
-        'Somente vendas em rascunho podem ser alteradas.',
+        'Esta venda não pode ser alterada.',
+      );
+    }
+
+    const hasPaidEntry = sale.financialEntries.some(
+      (entry) => entry.status === FinancialEntryStatus.PAID,
+    );
+
+    if (hasPaidEntry) {
+      throw new BadRequestException(
+        'Este título já foi baixado no financeiro — estorne a baixa antes de editar.',
       );
     }
 
@@ -500,34 +540,387 @@ export class SaleService {
           )
         : undefined;
 
-    return this.repository.update(
-      id,
-      {
-        partnerId: dto.partnerId,
-        warehouseId: dto.warehouseId,
-        saleDate,
-        observation: dto.observation,
-        discountValue: dto.discountValue,
-        freightValue: dto.freightValue,
-        otherExpenses: dto.otherExpenses,
-        termDays,
-        dueDate,
-        paymentMethod: dto.paymentMethod,
-        installmentsCount: dto.installments?.length ?? dto.installmentsCount,
-        plannedInstallments: dto.installments
-          ? dto.installments.map((i) => ({
-              dueDate: i.dueDate,
-              amount: i.amount,
-            }))
-          : undefined,
-        invoiceNumber: dto.invoiceNumber,
-        invoiceKey: dto.invoiceKey,
-        totalAmount,
-        netAmount,
-        items,
-      },
-      userId,
+    // Venda já aprovada (baixou estoque e gerou título) só precisa
+    // desfazer/refazer isso quando o campo alterado de fato afeta o
+    // estoque ou o título gerado — observação/nota fiscal/etc. seguem
+    // como atualização simples, sem esse vaivém.
+    const financialFieldsChanged =
+      sale.status === 'APPROVED' &&
+      (itemsChanged ||
+        dto.discountValue !== undefined ||
+        dto.freightValue !== undefined ||
+        dto.otherExpenses !== undefined ||
+        dto.termDays !== undefined ||
+        dto.paymentMethod !== undefined ||
+        dto.installments !== undefined ||
+        dto.installmentsCount !== undefined ||
+        dto.chartOfAccountId !== undefined);
+
+    const updateData = {
+      partnerId: dto.partnerId,
+      warehouseId: dto.warehouseId,
+      saleDate,
+      observation: dto.observation,
+      chartOfAccountId: dto.chartOfAccountId,
+      discountValue: dto.discountValue,
+      freightValue: dto.freightValue,
+      otherExpenses: dto.otherExpenses,
+      termDays,
+      dueDate,
+      paymentMethod: dto.paymentMethod,
+      installmentsCount: dto.installments?.length ?? dto.installmentsCount,
+      plannedInstallments: dto.installments
+        ? dto.installments.map((i) => ({
+            dueDate: i.dueDate,
+            amount: i.amount,
+          }))
+        : undefined,
+      invoiceNumber: dto.invoiceNumber,
+      invoiceKey: dto.invoiceKey,
+      totalAmount,
+      netAmount,
+      items,
+    };
+
+    if (!financialFieldsChanged) {
+      return this.repository.update(id, updateData, userId);
+    }
+
+    const affectedProductIds = dto.items
+      ? dto.items.map((item) => item.productId)
+      : sale.items.map((item: { productId: string }) => item.productId);
+
+    await this.assertNoOpenInventoryCount(
+      dto.warehouseId ?? sale.warehouseId,
+      affectedProductIds,
     );
+
+    if (dto.invoiceNumber) {
+      await this.assertInvoiceNumberNotDuplicated(
+        companyId,
+        dto.partnerId ?? sale.partnerId,
+        dto.invoiceNumber,
+        sale.id,
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await this.revertApproval(tx, companyId, sale, userId);
+
+      const reloaded = await this.repository.update(
+        id,
+        updateData,
+        userId,
+        tx,
+      );
+
+      return this.applyApproval(
+        tx,
+        companyId,
+        reloaded,
+        dto,
+        userId,
+      );
+    });
+  }
+
+  /**
+   * Baixa o estoque dos itens e gera o(s) título(s) a receber — corpo
+   * de transação reaproveitado tanto por `create()` (a venda já nasce
+   * "aprovada", sem etapa própria) quanto por `approve()` (mantido só
+   * pras vendas antigas que ainda estão em rascunho aguardando
+   * aprovação manual).
+   */
+  private async applyApproval(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    sale: Prisma.SaleGetPayload<{
+      include: { items: { include: { product: true } } };
+    }>,
+    approveFields: ApproveSaleDto,
+    userId: string,
+  ) {
+    const documentNumber = formatSaleNumber(sale.number);
+
+    // Sem tipo informado, mas com chave de acesso: só pode ser
+    // nota fiscal eletrônica.
+    const documentType =
+      approveFields.documentType ??
+      (approveFields.invoiceKey
+        ? FinancialDocumentType.NOTA_FISCAL
+        : undefined);
+
+    const exitObservation = [
+      'Saída',
+      documentType
+        ? DOCUMENT_TYPE_LABELS[documentType]
+        : undefined,
+      approveFields.invoiceNumber,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    for (const item of sale.items) {
+      // Item de produto que não controla estoque (serviço/despesa)
+      // não mexe em Inventory/StockMovement — só entra no valor
+      // total da venda mesmo.
+      if (
+        item.product.inventoryControl ===
+        InventoryControl.NONE
+      ) {
+        continue;
+      }
+
+      const inventory =
+        await tx.inventory.findFirst({
+          where: {
+            companyId,
+            warehouseId: sale.warehouseId,
+            productId: item.productId,
+          },
+        });
+
+      if (!inventory) {
+        throw new BadRequestException(
+          `Produto ${item.productId} sem estoque.`,
+        );
+      }
+
+      const disponivel =
+        calculateAvailableQuantity(inventory);
+      const quantidade = Number(item.quantity);
+
+      if (disponivel < quantidade) {
+        throw new BadRequestException(
+          'Estoque disponível insuficiente, verifique (bloqueado, reservado, em quarentena ou avariado não entra na venda).',
+        );
+      }
+
+      await tx.inventory.update({
+        where: {
+          id: inventory.id,
+        },
+        data: {
+          quantity: {
+            decrement: quantidade,
+          },
+        },
+      });
+
+      await tx.stockMovement.create({
+        data: {
+          companyId,
+          inventoryId: inventory.id,
+          type: 'EXIT',
+          quantity: item.quantity,
+          unitCost: inventory.averageCost,
+          observation: exitObservation,
+          documentNumber,
+        },
+      });
+    }
+
+    const invoiceIssueDate = approveFields.invoiceIssueDate
+      ? new Date(approveFields.invoiceIssueDate)
+      : undefined;
+
+    // Se vier prazo/forma de pagamento aqui, eles valem mais que o
+    // estimado no lançamento, e o vencimento é recalculado a partir
+    // da data de emissão da nota (não da data da venda).
+    const termDays = approveFields.termDays ?? sale.termDays ?? 0;
+    const paymentMethod =
+      approveFields.paymentMethod ?? sale.paymentMethod;
+    const issueDate =
+      invoiceIssueDate ?? sale.saleDate ?? new Date();
+
+    // Parcelas: o que vier explícito vale mais; senão, usa o que já
+    // foi planejado na venda (herdado do pedido de venda de origem,
+    // ver SaleService.create); só na falta dos dois é que recalcula
+    // sozinho a partir de termDays × installmentsCount — mesma
+    // cascata de PurchaseService.receive().
+    const effectiveInstallments: { dueDate: string; amount: number }[] =
+      approveFields.installments?.length
+        ? approveFields.installments
+        : Array.isArray(sale.plannedInstallments) &&
+            sale.plannedInstallments.length > 0
+          ? (sale.plannedInstallments as unknown as {
+              dueDate: string;
+              amount: number;
+            }[])
+          : [];
+
+    // Sem parcelas explícitas/planejadas nem quantidade informada,
+    // usa a quantidade já registrada na venda (ex.: herdada do pedido
+    // de venda de origem).
+    const effectiveInstallmentsCount =
+      approveFields.installmentsCount ?? sale.installmentsCount ?? 1;
+
+    const autoInstallments =
+      !effectiveInstallments.length &&
+      effectiveInstallmentsCount > 1
+        ? buildAutoInstallments(
+            issueDate,
+            termDays,
+            effectiveInstallmentsCount,
+            Number(sale.netAmount),
+          )
+        : null;
+
+    // Parcelas explícitas/planejadas (ex.: importação de nota, ou
+    // vindas do pedido de origem) têm prioridade sobre o prazo
+    // único — cada uma já traz seu próprio vencimento, não recalcula
+    // a partir de termDays.
+    const dueDate = effectiveInstallments.length
+      ? new Date(effectiveInstallments[0].dueDate)
+      : autoInstallments
+        ? autoInstallments[0].dueDate
+        : calculateDueDate(issueDate, termDays);
+
+    const updated = await tx.sale.update({
+      where: {
+        id: sale.id,
+      },
+      data: {
+        status: 'APPROVED',
+        approvedAt: new Date(),
+        invoiceNumber: approveFields.invoiceNumber,
+        invoiceKey: approveFields.invoiceKey,
+        invoiceIssueDate,
+        termDays,
+        installmentsCount: effectiveInstallmentsCount,
+        paymentMethod,
+        dueDate,
+        updatedById: userId,
+      },
+    });
+
+    // Gera automaticamente a conta a receber desta venda, já com os
+    // dados fiscais e financeiros disponíveis — não precisa entrar em
+    // Contas a receber depois para completar vencimento/forma de
+    // pagamento. Com parcelas explícitas, gera uma FinancialEntry por
+    // parcela em vez de uma só.
+    const commonEntryData = {
+      companyId,
+      type: FinancialEntryType.RECEIVABLE,
+      partnerId: sale.partnerId,
+      issueDate,
+      termDays,
+      paymentMethod,
+      documentNumber: approveFields.invoiceNumber,
+      documentKey: approveFields.invoiceKey,
+      documentType,
+      chartOfAccountId: sale.chartOfAccountId,
+      saleId: sale.id,
+      observation: `Venda ${sale.id}`,
+    };
+
+    if (effectiveInstallments.length) {
+      await this.financialEntriesService.createInstallments(
+        tx,
+        {
+          ...commonEntryData,
+          installments: effectiveInstallments.map(
+            (installment) => ({
+              dueDate: new Date(installment.dueDate),
+              amount: installment.amount,
+            }),
+          ),
+        },
+        userId,
+      );
+    } else if (autoInstallments) {
+      await this.financialEntriesService.createInstallments(
+        tx,
+        {
+          ...commonEntryData,
+          installments: autoInstallments,
+        },
+        userId,
+      );
+    } else {
+      await this.financialEntriesService.createFromDocument(
+        tx,
+        {
+          ...commonEntryData,
+          amount: Number(updated.netAmount),
+          dueDate,
+        },
+        userId,
+      );
+    }
+
+    return updated;
+  }
+
+  /**
+   * Devolve o estoque baixado e cancela os títulos ainda abertos
+   * gerados pra essa venda — reaproveitado tanto pelo cancelamento de
+   * uma venda aprovada quanto pela edição de campos que afetam
+   * estoque/título (que primeiro desfaz, depois chama `applyApproval`
+   * de novo com os valores atualizados).
+   */
+  private async revertApproval(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    sale: Prisma.SaleGetPayload<{
+      include: { items: { include: { product: true } } };
+    }>,
+    userId: string,
+  ) {
+    for (const item of sale.items) {
+      if (
+        item.product.inventoryControl ===
+        InventoryControl.NONE
+      ) {
+        continue;
+      }
+
+      const inventory = await tx.inventory.findFirst({
+        where: {
+          companyId,
+          warehouseId: sale.warehouseId,
+          productId: item.productId,
+        },
+      });
+
+      if (!inventory) {
+        throw new BadRequestException(`Estoque não encontrado para ${item.productId}.`);
+      }
+
+      await tx.inventory.update({
+        where: { id: inventory.id },
+        data: {
+          quantity: Number(inventory.quantity) + Number(item.quantity),
+        },
+      });
+
+      await tx.stockMovement.create({
+        data: {
+          companyId,
+          inventoryId: inventory.id,
+          type: 'ENTRY',
+          quantity: item.quantity,
+          unitCost: inventory.averageCost,
+          observation: 'Estorno da venda',
+          documentNumber: formatSaleNumber(sale.number),
+        },
+      });
+    }
+
+    // Título gerado não faz mais sentido se a venda foi cancelada ou
+    // vai ser refeita com valores novos. Se já foi baixado (o cliente
+    // já pagou), não deveria ter chegado até aqui — quem chama já
+    // barrou isso antes.
+    await tx.financialEntry.updateMany({
+      where: {
+        saleId: sale.id,
+        status: 'OPEN',
+      },
+      data: {
+        status: 'CANCELLED',
+        updatedById: userId,
+      },
+    });
   }
 
   async approve(
@@ -575,221 +968,9 @@ export class SaleService {
       );
     }
 
-    const updatedSale = await this.prisma.$transaction(async (tx) => {
-      const documentNumber = formatSaleNumber(sale.number);
-
-      // Sem tipo informado, mas com chave de acesso: só pode ser
-      // nota fiscal eletrônica.
-      const documentType =
-        dto.documentType ??
-        (dto.invoiceKey
-          ? FinancialDocumentType.NOTA_FISCAL
-          : undefined);
-
-      const exitObservation = [
-        'Saída',
-        documentType
-          ? DOCUMENT_TYPE_LABELS[documentType]
-          : undefined,
-        dto.invoiceNumber,
-      ]
-        .filter(Boolean)
-        .join(' ');
-
-      for (const item of sale.items) {
-        // Item de produto que não controla estoque (serviço/despesa)
-        // não mexe em Inventory/StockMovement — só entra no valor
-        // total da venda mesmo.
-        if (
-          item.product.inventoryControl ===
-          InventoryControl.NONE
-        ) {
-          continue;
-        }
-
-        const inventory =
-          await tx.inventory.findFirst({
-            where: {
-              companyId,
-              warehouseId: sale.warehouseId,
-              productId: item.productId,
-            },
-          });
-
-        if (!inventory) {
-          throw new BadRequestException(
-            `Produto ${item.productId} sem estoque.`,
-          );
-        }
-
-        const disponivel =
-          calculateAvailableQuantity(inventory);
-        const quantidade = Number(item.quantity);
-
-        if (disponivel < quantidade) {
-          throw new BadRequestException(
-            'Estoque disponível insuficiente, verifique (bloqueado, reservado, em quarentena ou avariado não entra na venda).',
-          );
-        }
-
-        await tx.inventory.update({
-          where: {
-            id: inventory.id,
-          },
-          data: {
-            quantity: {
-              decrement: quantidade,
-            },
-          },
-        });
-
-        await tx.stockMovement.create({
-          data: {
-            companyId,
-            inventoryId: inventory.id,
-            type: 'EXIT',
-            quantity: item.quantity,
-            unitCost: inventory.averageCost,
-            observation: exitObservation,
-            documentNumber,
-          },
-        });
-      }
-
-      const invoiceIssueDate = dto.invoiceIssueDate
-        ? new Date(dto.invoiceIssueDate)
-        : undefined;
-
-      // Aprovação é quando a nota fiscal de venda é emitida — se
-      // vier prazo/forma de pagamento aqui, eles valem mais que o
-      // estimado no lançamento, e o vencimento é recalculado a
-      // partir da data de emissão da nota (não da data da venda).
-      const termDays = dto.termDays ?? sale.termDays ?? 0;
-      const paymentMethod =
-        dto.paymentMethod ?? sale.paymentMethod;
-      const issueDate =
-        invoiceIssueDate ?? sale.saleDate ?? new Date();
-
-      // Parcelas: o que vier explícito na aprovação vale mais; senão,
-      // usa o que já foi planejado na venda (herdado do pedido de
-      // venda de origem, ver SaleService.create); só na falta dos
-      // dois é que recalcula sozinho a partir de
-      // termDays × installmentsCount — mesma cascata de
-      // PurchaseService.receive().
-      const effectiveInstallments: { dueDate: string; amount: number }[] =
-        dto.installments?.length
-          ? dto.installments
-          : Array.isArray(sale.plannedInstallments) &&
-              sale.plannedInstallments.length > 0
-            ? (sale.plannedInstallments as unknown as {
-                dueDate: string;
-                amount: number;
-              }[])
-            : [];
-
-      // Sem parcelas explícitas/planejadas nem quantidade informada
-      // na aprovação, usa a quantidade já registrada na venda (ex.:
-      // herdada do pedido de venda de origem).
-      const effectiveInstallmentsCount =
-        dto.installmentsCount ?? sale.installmentsCount ?? 1;
-
-      const autoInstallments =
-        !effectiveInstallments.length &&
-        effectiveInstallmentsCount > 1
-          ? buildAutoInstallments(
-              issueDate,
-              termDays,
-              effectiveInstallmentsCount,
-              Number(sale.netAmount),
-            )
-          : null;
-
-      // Parcelas explícitas/planejadas (ex.: importação de nota, ou
-      // vindas do pedido de origem) têm prioridade sobre o prazo
-      // único — cada uma já traz seu próprio vencimento, não
-      // recalcula a partir de termDays.
-      const dueDate = effectiveInstallments.length
-        ? new Date(effectiveInstallments[0].dueDate)
-        : autoInstallments
-          ? autoInstallments[0].dueDate
-          : calculateDueDate(issueDate, termDays);
-
-      const updated = await tx.sale.update({
-        where: {
-          id: sale.id,
-        },
-        data: {
-          status: 'APPROVED',
-          approvedAt: new Date(),
-          invoiceNumber: dto.invoiceNumber,
-          invoiceKey: dto.invoiceKey,
-          invoiceIssueDate,
-          termDays,
-          installmentsCount: effectiveInstallmentsCount,
-          paymentMethod,
-          dueDate,
-          updatedById: userId,
-        },
-      });
-
-      // Gera automaticamente a conta a receber desta venda, já com
-      // os dados fiscais e financeiros informados na aprovação —
-      // não precisa entrar em Contas a receber depois para
-      // completar vencimento/forma de pagamento. Com parcelas
-      // explícitas, gera uma FinancialEntry por parcela em vez de
-      // uma só.
-      const commonEntryData = {
-        companyId,
-        type: FinancialEntryType.RECEIVABLE,
-        partnerId: sale.partnerId,
-        issueDate,
-        termDays,
-        paymentMethod,
-        documentNumber: dto.invoiceNumber,
-        documentKey: dto.invoiceKey,
-        documentType,
-        chartOfAccountId: sale.chartOfAccountId,
-        saleId: sale.id,
-        observation: `Venda ${sale.id}`,
-      };
-
-      if (effectiveInstallments.length) {
-        await this.financialEntriesService.createInstallments(
-          tx,
-          {
-            ...commonEntryData,
-            installments: effectiveInstallments.map(
-              (installment) => ({
-                dueDate: new Date(installment.dueDate),
-                amount: installment.amount,
-              }),
-            ),
-          },
-          userId,
-        );
-      } else if (autoInstallments) {
-        await this.financialEntriesService.createInstallments(
-          tx,
-          {
-            ...commonEntryData,
-            installments: autoInstallments,
-          },
-          userId,
-        );
-      } else {
-        await this.financialEntriesService.createFromDocument(
-          tx,
-          {
-            ...commonEntryData,
-            amount: Number(updated.netAmount),
-            dueDate,
-          },
-          userId,
-        );
-      }
-
-      return updated;
-    });
+    const updatedSale = await this.prisma.$transaction((tx) =>
+      this.applyApproval(tx, companyId, sale, dto, userId),
+    );
 
     // Best-effort: confere se algum item ficou no mínimo/abaixo e
     // gera ordem de produção sozinha — ver
@@ -806,6 +987,14 @@ export class SaleService {
     return updatedSale;
   }
 
+  /**
+   * Une o que antes eram dois passos (cancelar rascunho / desfazer
+   * aprovação) numa ação só — Venda não passa mais por aprovação
+   * separada, então "cancelar" já reverte estoque e título quando
+   * aplicável (rascunho legado não tem nada pra reverter). Devolve
+   * pro Pedido de origem o saldo que essa venda tinha consumido, pra
+   * ele poder ser estornado/cancelado/excluído em seguida.
+   */
   async cancel(
     companyId: string,
     id: string,
@@ -813,33 +1002,37 @@ export class SaleService {
   ) {
     const sale = await this.findOne(companyId, id);
 
-    if (sale.status !== 'DRAFT') {
+    if (sale.status !== 'DRAFT' && sale.status !== 'APPROVED') {
       throw new BadRequestException(
-        'Somente vendas em rascunho podem ser canceladas — se já foi aprovada, desfaça a aprovação primeiro.',
+        'Esta venda não pode ser cancelada.',
       );
     }
 
-    return this.prisma.sale.update({
-      where: { id },
-      data: { status: 'CANCELLED', updatedById: userId },
-    });
-  }
+    const hasPaidEntry = sale.financialEntries.some(
+      (entry) => entry.status === FinancialEntryStatus.PAID,
+    );
 
-  async remove(
-    companyId: string,
-    id: string,
-  ) {
-    const sale = await this.findOne(companyId, id);
-
-    if (sale.status !== 'CANCELLED') {
+    if (hasPaidEntry) {
       throw new BadRequestException(
-        'Só vendas canceladas podem ser excluídas.',
+        'Esta venda já tem recebimento registrado no financeiro. Estorne a baixa antes de cancelar.',
       );
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.sale.delete({
+    if (sale.status === 'APPROVED') {
+      await this.assertNoOpenInventoryCount(
+        sale.warehouseId,
+        sale.items.map((item) => item.productId),
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (sale.status === 'APPROVED') {
+        await this.revertApproval(tx, companyId, sale, userId);
+      }
+
+      const cancelled = await tx.sale.update({
         where: { id },
+        data: { status: 'CANCELLED', updatedById: userId },
       });
 
       // Nasceu de um Pedido de Venda — devolve pro pedido só o
@@ -896,110 +1089,25 @@ export class SaleService {
           },
         });
       }
+
+      return cancelled;
     });
   }
 
-  async undoApproval(
+  async remove(
     companyId: string,
     id: string,
-    userId: string,
   ) {
-    const sale = await this.prisma.sale.findFirst({
-      where: { id, companyId },
-      include: {
-        items: { include: { product: true } },
-        financialEntries: true,
-      },
-    });
+    const sale = await this.findOne(companyId, id);
 
-    if (!sale) throw new NotFoundException('Venda não encontrada.');
-
-    if (sale.status === 'INVOICED') {
-      throw new BadRequestException('Venda faturada não pode ser cancelada.');
-    }
-
-    if (sale.status !== 'APPROVED') {
-      throw new BadRequestException('Somente vendas aprovadas podem ser canceladas.');
-    }
-
-    const jaRecebido = sale.financialEntries.some(
-      (entry) => entry.status === FinancialEntryStatus.PAID,
-    );
-
-    if (jaRecebido) {
+    if (sale.status !== 'CANCELLED') {
       throw new BadRequestException(
-        'Esta venda já tem recebimento registrado no financeiro. Estorne a baixa antes de desfazer a aprovação.',
+        'Só vendas canceladas podem ser excluídas.',
       );
     }
 
-    await this.assertNoOpenInventoryCount(
-      sale.warehouseId,
-      sale.items.map((item) => item.productId),
-    );
-
-    return this.prisma.$transaction(async (tx) => {
-      for (const item of sale.items) {
-        if (
-          item.product.inventoryControl ===
-          InventoryControl.NONE
-        ) {
-          continue;
-        }
-
-        const inventory = await tx.inventory.findFirst({
-          where: {
-            companyId,
-            warehouseId: sale.warehouseId,
-            productId: item.productId,
-          },
-        });
-
-        if (!inventory) {
-          throw new BadRequestException(`Estoque não encontrado para ${item.productId}.`);
-        }
-
-        await tx.inventory.update({
-          where: { id: inventory.id },
-          data: {
-            quantity: Number(inventory.quantity) + Number(item.quantity),
-          },
-        });
-
-        await tx.stockMovement.create({
-          data: {
-            companyId,
-            inventoryId: inventory.id,
-            type: 'ENTRY',
-            quantity: item.quantity,
-            unitCost: inventory.averageCost,
-            observation: 'Cancelamento da venda',
-            documentNumber: formatSaleNumber(sale.number),
-          },
-        });
-      }
-
-      // A conta a receber gerada na aprovação não faz mais sentido
-      // se a venda volta a ser rascunho. Se já foi baixada (o cliente
-      // já pagou), deixa como está — não é seguro cancelar sozinho.
-      await tx.financialEntry.updateMany({
-        where: {
-          saleId: sale.id,
-          status: 'OPEN',
-        },
-        data: {
-          status: 'CANCELLED',
-        },
-      });
-
-      return tx.sale.update({
-        where: { id: sale.id },
-        data: {
-          status: 'DRAFT',
-          approvedAt: null,
-          updatedById: userId,
-        },
-      });
+    await this.prisma.sale.delete({
+      where: { id },
     });
   }
-
 }

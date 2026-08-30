@@ -7,7 +7,6 @@ import {
   Pencil,
   Plus,
   Trash2,
-  Undo2,
   Upload,
   X,
   XCircle,
@@ -957,6 +956,48 @@ export default function VendasPage() {
       }
     }
 
+    const payloadItems = validItems.map((it) => ({
+      productId: it.productId,
+      quantity: decimal(it.quantity),
+      unitPrice: it.unitPrice,
+    }));
+
+    // Venda aprovada já baixou estoque e gerou título — mudar algo
+    // que afeta isso exige desfazer e refazer a baixa/título, então
+    // confirma antes (observação/nota fiscal isoladas não entram
+    // aqui, é atualização simples do lado do backend).
+    if (editingId && detail?.status === "APPROVED") {
+      const itemsChanged =
+        JSON.stringify(payloadItems) !==
+        JSON.stringify(
+          detail.items.map((it) => ({
+            productId: it.productId,
+            quantity: num(it.quantity),
+            unitPrice: num(it.unitPrice),
+          }))
+        );
+
+      const financialFieldsChanged =
+        itemsChanged ||
+        num(form.discountValue) !== num(detail.discountValue) ||
+        num(form.freightValue) !== num(detail.freightValue) ||
+        num(form.otherExpenses) !== num(detail.otherExpenses) ||
+        Number(form.termDays) !== (detail.termDays ?? 0) ||
+        form.paymentMethod !== (detail.paymentMethod ?? "") ||
+        form.chartOfAccountId !== (detail.chartOfAccountId ?? "") ||
+        JSON.stringify(finalInstallments) !==
+          JSON.stringify(detail.plannedInstallments ?? []);
+
+      if (
+        financialFieldsChanged &&
+        !window.confirm(
+          "Alterar isso vai refazer a baixa de estoque e o título financeiro gerado por esta venda. Confirma?"
+        )
+      ) {
+        return false;
+      }
+    }
+
     setSaving(true);
     setFormError("");
 
@@ -981,11 +1022,7 @@ export default function VendasPage() {
         sourceType === "salesOrder" && sourceId
           ? sourceId
           : undefined,
-      items: validItems.map((it) => ({
-        productId: it.productId,
-        quantity: decimal(it.quantity),
-        unitPrice: it.unitPrice,
-      })),
+      items: payloadItems,
     };
 
     try {
@@ -1016,26 +1053,28 @@ export default function VendasPage() {
     }
   }
 
-  async function runAction(
-    id: string,
-    action: "cancel" | "undoApproval"
-  ) {
-    setActionId(id);
+  async function cancelSale(sale: Sale) {
+    const confirmMessage =
+      sale.status === "APPROVED"
+        ? `Cancelar a venda ${formatSaleNumber(sale.number)}? O estoque baixado volta e o título gerado no financeiro é cancelado.`
+        : `Cancelar a venda ${formatSaleNumber(sale.number)}?`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setActionId(sale.id);
     setActionError("");
 
     try {
-      if (action === "undoApproval") {
-        await saleService.undoApproval(id);
-      } else {
-        await saleService.cancel(id);
-      }
+      await saleService.cancel(sale.id);
 
       await load();
     } catch (err) {
       setActionError(
         extractMessage(
           err,
-          "Não foi possível concluir a ação."
+          "Não foi possível cancelar a venda."
         )
       );
     } finally {
@@ -1434,19 +1473,34 @@ export default function VendasPage() {
                             <Eye size={16} />
                           </button>
 
-                          {s.status === "DRAFT" && (
-                            <Can permission="sale.update">
-                              <button
-                                type="button"
-                                onClick={() => openEdit(s)}
-                                title="Editar"
-                                aria-label="Editar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                              >
-                                <Pencil size={16} />
-                              </button>
-                            </Can>
-                          )}
+                          {(s.status === "DRAFT" ||
+                            s.status === "APPROVED") &&
+                            (() => {
+                              const hasPaidEntry = s.financialEntries.some(
+                                (entry) => entry.status === "PAID"
+                              );
+
+                              return (
+                                <Can permission="sale.update">
+                                  <button
+                                    type="button"
+                                    disabled={hasPaidEntry}
+                                    onClick={() =>
+                                      !hasPaidEntry && openEdit(s)
+                                    }
+                                    title={
+                                      hasPaidEntry
+                                        ? "Título já baixado no financeiro — estorne a baixa antes de editar"
+                                        : "Editar"
+                                    }
+                                    aria-label="Editar"
+                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    <Pencil size={16} />
+                                  </button>
+                                </Can>
+                              );
+                            })()}
 
                           {s.status === "DRAFT" && (
                             <Can
@@ -1476,42 +1530,22 @@ export default function VendasPage() {
                             </Can>
                           )}
 
-                          {s.status === "DRAFT" && (
+                          {(s.status === "DRAFT" ||
+                            s.status === "APPROVED") && (
                             <Can permission="sale.cancel">
                               <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() =>
-                                  void runAction(
-                                    s.id,
-                                    "cancel"
-                                  )
+                                onClick={() => void cancelSale(s)}
+                                title={
+                                  s.status === "APPROVED"
+                                    ? "Cancelar (devolve estoque e cancela o título gerado; só se ainda não houver recebimento no financeiro)"
+                                    : "Cancelar"
                                 }
-                                title="Cancelar"
                                 aria-label="Cancelar"
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
                               >
                                 <XCircle size={16} />
-                              </button>
-                            </Can>
-                          )}
-
-                          {s.status === "APPROVED" && (
-                            <Can permission="sale.cancel">
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() =>
-                                  void runAction(
-                                    s.id,
-                                    "undoApproval"
-                                  )
-                                }
-                                title="Desfazer aprovação (volta para rascunho e devolve o estoque; só se ainda não houver recebimento no financeiro)"
-                                aria-label="Desfazer aprovação"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
-                              >
-                                <Undo2 size={16} />
                               </button>
                             </Can>
                           )}
