@@ -26,6 +26,14 @@ const PLATFORM_COMPANY_CODE = 'ALEPEJO';
 /** Prazo de validade de uma compra sem cadastro concluído. */
 const CHECKOUT_EXPIRES_DAYS = 7;
 
+/**
+ * Tipo de despesa padrão da mensalidade do ERP — criado sozinho na
+ * empresa do cliente na primeira cobrança, já que uma empresa nova
+ * nasce sem plano de contas nenhum.
+ */
+const SYSTEM_EXPENSE_ACCOUNT_CODE = '01.01.01';
+const SYSTEM_EXPENSE_ACCOUNT_DESCRIPTION = 'Despesas com Sistema';
+
 export type MonthStatus = 'PAGO' | 'A_PAGAR' | 'VENCIDO' | 'EM_TESTE' | 'VAZIO';
 
 export interface MonthCell {
@@ -224,11 +232,14 @@ export class BillingService {
         },
       }));
 
+    const chartOfAccount = await this.ensureSystemExpenseAccount(companyId);
+
     await this.prisma.financialEntry.create({
       data: {
         companyId,
         billingChargeId: charge.id,
         partnerId: partner.id,
+        chartOfAccountId: chartOfAccount.id,
         type: 'PAYABLE',
         status: pago ? 'PAID' : 'OPEN',
         issueDate: new Date(),
@@ -240,6 +251,54 @@ export class BillingService {
           charge.type === 'SETUP_FEE'
             ? `Taxa de implantação — ${planName}`
             : `Assinatura ${planName} — AlePejo ERP Cloud`,
+      },
+    });
+  }
+
+  /**
+   * Tipo de despesa "01.01.01 — Despesas com Sistema" na empresa do
+   * cliente — encontra se já existir, cria (com a classificação
+   * junto) na primeira cobrança, já que empresa nova nasce sem plano
+   * de contas nenhum.
+   */
+  private async ensureSystemExpenseAccount(companyId: string) {
+    const existing = await this.prisma.chartOfAccount.findFirst({
+      where: { companyId, code: SYSTEM_EXPENSE_ACCOUNT_CODE },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    const classification =
+      await this.prisma.chartOfAccountClassification.upsert({
+        where: {
+          companyId_name: {
+            companyId,
+            name: SYSTEM_EXPENSE_ACCOUNT_DESCRIPTION,
+          },
+        },
+        update: {},
+        create: {
+          companyId,
+          name: SYSTEM_EXPENSE_ACCOUNT_DESCRIPTION,
+        },
+      });
+
+    return this.prisma.chartOfAccount.upsert({
+      where: {
+        companyId_code: {
+          companyId,
+          code: SYSTEM_EXPENSE_ACCOUNT_CODE,
+        },
+      },
+      update: {},
+      create: {
+        companyId,
+        code: SYSTEM_EXPENSE_ACCOUNT_CODE,
+        classificationId: classification.id,
+        description: SYSTEM_EXPENSE_ACCOUNT_DESCRIPTION,
+        type: 'DESPESA',
       },
     });
   }

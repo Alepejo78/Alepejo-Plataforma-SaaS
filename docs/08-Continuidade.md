@@ -3,6 +3,70 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Asaas produção — chave real ativada, webhook corrigido e testado (30-08-2026)
+
+Troca de sandbox pra produção: `ASAAS_API_KEY`/`ASAAS_API_URL`
+(`https://api.asaas.com/v3`) e `ASAAS_WEBHOOK_TOKEN` setados no
+Railway. O mecanismo de toggle já existia pronto no código
+(`AsaasService.baseUrl` cai pra sandbox se `ASAAS_API_URL` não
+setada) — só faltava configurar de verdade e testar ponta a ponta com
+dinheiro real, o que **nunca tinha sido feito** (a entrada anterior
+deste doc que dizia "já configurado" registrava só a variável, o
+webhook nunca tinha sido cadastrado no painel do Asaas).
+
+**Dois bugs reais encontrados e corrigidos durante o teste:**
+
+1. **`BillingService.handleWebhook`** decidia ativar o `CompanyPlan`
+   olhando o *nome do evento* (`PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED`)
+   que disparou aquela chamada específica, não o status real da
+   cobrança. Se um evento diferente chegasse depois de a cobrança já
+   estar paga de verdade (comum — o Asaas manda vários eventos pro
+   mesmo pagamento), o título ficava marcado como pago mas o plano
+   nunca virava `ACTIVE`. Corrigido: agora decide pelo `payment.status`
+   rebuscado na API (mesma fonte que já era usada pra marcar o título
+   como pago), não pelo nome do evento.
+
+2. **URL do webhook cadastrada errada no painel do Asaas** — faltava o
+   prefixo `/api` (`app.setGlobalPrefix('api')` em `main.ts`). A URL
+   certa é `https://alepejo-plataforma-saas-production.up.railway.app/api/billing/webhook`,
+   não `.../billing/webhook`. Sem o prefixo, todo POST do Asaas caía
+   em 404 — o pedido nem chegava no `BillingController`, e como o
+   erro foi só de rota (não de auth), nem aparecia no log de "Webhook
+   recusado".
+
+**Também ganhou nessa passada**: cada cobrança de mensalidade agora
+classifica sozinha o título gerado em Financeiro como
+`01.01.01 — Despesas com Sistema` na empresa do cliente (antes entrava
+sem tipo de despesa nenhum) — a conta é criada automaticamente na
+primeira cobrança, já que empresa nova nasce sem plano de contas.
+
+**Confirmado funcionando**: compra real (cartão de débito e Pix,
+ambos com valor baixo, plano de teste dedicado — nunca mexe no preço
+do plano comercial de verdade) → webhook chega → `CompanyPlan` vira
+`ACTIVE` → módulos liberados. Duas tentativas anteriores (feitas antes
+da URL corrigida) ficaram presas sem jeito de reprocessar — não tem
+como reenviar nem cancelar aquelas cobranças específicas no painel do
+Asaas, e não existe (ainda, ver pendência abaixo) forma de excluir a
+empresa/reconciliar manualmente. Ficaram como lixo de teste, sem
+risco — nenhuma é cliente real.
+
+## 🟡 PENDÊNCIA: Excluir empresa (só sem movimentação) (30-08-2026)
+
+Ainda não existe nenhuma tela/endpoint pra excluir uma empresa — o
+método `CompanyService.remove()`/`CompanyRepository.softDelete()`
+existe no código, mas está morto, sem nenhuma rota de controller
+ligada a ele (confirmado via grep, nenhuma chamada em nenhum
+controller). Foi pedido durante um teste real de pagamento (Asaas
+produção) que criou uma "empresa teste" que não dá pra limpar — o
+contorno usado foi testar de novo com CNPJ/e-mail diferentes, sem
+mexer na empresa antiga.
+
+**A construir**: tela em OS (admin da plataforma) pra excluir empresa,
+**só permitida se a empresa não tiver nenhuma movimentação** (vendas,
+compras, títulos financeiros, folha, etc. — critério exato a definir
+na hora de implementar). Sem essa trava, dá pra apagar histórico real
+de cliente pagante por engano.
+
 ## 🟢 Login com senha certa não entrava em produção (19-08-2026)
 
 Sintoma: após trocar a senha pelo link de redefinição, digitar a senha
