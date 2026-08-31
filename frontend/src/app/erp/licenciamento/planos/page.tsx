@@ -234,6 +234,25 @@ export default function PlanosAdminPage() {
     }
   }
 
+  async function toggleActive(plan: LicensePlan) {
+    setRemovingId(plan.id);
+    setListError("");
+
+    try {
+      await licenseService.updatePlan(plan.id, { active: !plan.active });
+      await load();
+    } catch (err) {
+      setListError(
+        extractMessage(
+          err,
+          "Não foi possível alterar a situação do plano."
+        )
+      );
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
   async function saveTrialDays() {
     const days = Number(trialDays);
 
@@ -453,9 +472,17 @@ export default function PlanosAdminPage() {
                   </span>
                 )}
 
-                <p className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-                  {plan.code}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold uppercase text-[var(--text-muted)]">
+                    {plan.code}
+                  </p>
+
+                  {plan.active === false && (
+                    <span className="rounded-full bg-[var(--danger-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--danger)]">
+                      Inativo
+                    </span>
+                  )}
+                </div>
 
                 <h2 className="text-lg font-bold text-[var(--text-primary)]">
                   {plan.name}
@@ -519,6 +546,20 @@ export default function PlanosAdminPage() {
                     className="flex-1 rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                   >
                     Editar
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={removingId === plan.id}
+                    onClick={() => void toggleActive(plan)}
+                    title={
+                      plan.active === false
+                        ? "Voltar a mostrar esse plano pra novos clientes"
+                        : "Parar de mostrar esse plano pra novos clientes, sem excluir (empresas já assinantes não são afetadas)"
+                    }
+                    className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                  >
+                    {plan.active === false ? "Ativar" : "Desativar"}
                   </button>
 
                   <button

@@ -108,7 +108,16 @@ export class CompanyDeletionService {
       // por violação de FK. Todo o resto (Role, BusinessPartner,
       // Product, ChartOfAccount, FinancialEntry, Employee, etc.)
       // cascade a partir da própria Company.
+      //
+      // `PendingCheckout.companyId` NÃO é uma relação de verdade no
+      // schema (é só um `String? @unique` solto, sem `@relation`) —
+      // não cascade, não quebra a exclusão da empresa, mas sobra
+      // órfã pra sempre com o `planId` dela ainda apontando pro
+      // Plano (`onDelete: Restrict`), travando a exclusão do Plano
+      // depois. Apaga também, já que é só o registro do checkout que
+      // originou esta empresa — sem valor sozinho depois que ela some.
       await this.prisma.$transaction([
+        this.prisma.pendingCheckout.deleteMany({ where: { companyId } }),
         this.prisma.user.deleteMany({ where: { companyId } }),
         this.prisma.company.delete({ where: { id: companyId } }),
       ]);
