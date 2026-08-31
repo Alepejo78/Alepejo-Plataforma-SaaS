@@ -3,6 +3,51 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Empresa nova ganha cadastros padrão; Excluir empresa implementado (31-08-2026)
+
+Fecha a pendência abaixo ("PENDÊNCIA: Excluir empresa"). Plano
+completo em `docs/projetos/empresa-nova-defaults-e-excluir-empresa.md`.
+
+**Cadastros padrão de empresa nova** (`CompanyOnboardingService.signup`/
+`createAdditional`, via novo `DefaultAccountingService` em
+`Backend/src/core/default-accounting/`): 42 contas de despesa em 6
+classificações, unidade `UN - Unidade` e o serviço
+`0001 - Compra sistema ERP` — antes empresa nova nascia com tudo
+vazio. A conta `01.01.01` (agora classificação **Sistemas**, descrição
+**Despesas com sistema ERP** — renomeada da antiga "Despesas com
+Sistema") e o produto `0001` também preenchem o título automático da
+mensalidade do próprio ERP (`BillingService.syncFinancialEntry`), que
+antes entrava sem produto nem classificação. Script de backfill em
+`Backend/prisma/scripts/backfill-default-accounting.ts` (com
+`--dry-run`) pra acertar empresas já existentes — **ainda não rodado
+em produção**, rodar só depois do deploy confirmar.
+
+**Excluir empresa** (`DELETE /companies/:id?confirmDocument=...`,
+`CompanyDeletionService`): restrito ao dono da plataforma (permissão
+nova `platform.company.delete`, mesma trava de e-mail de
+`platform.license.manage`), exclusão FÍSICA (libera CNPJ/slug/código
+pra reuso imediato — decisão consciente: soft delete não resolveria o
+problema original, já que esses campos são únicos globais), só
+permitida sem nenhuma movimentação (venda/compra/pedido/orçamento/
+cotação/título lançado pelo cliente/estoque/produção/EPI/folha/ponto —
+título gerado pela própria mensalidade do ERP NÃO conta, senão nenhuma
+empresa que já testou pagamento seria excluível). Bloqueia também se
+algum usuário da empresa tiver login compartilhado com outra empresa
+do grupo (evita apagar acesso de cliente pagante). Cancela a
+assinatura no Asaas (best-effort) e audita em log antes/depois de
+excluir. Tela em Licenciamento → Clientes e faturamento.
+
+Passou por duas revisões de código independentes antes de ir pra
+produção — a primeira achou 2 bloqueantes reais (título de mensalidade
+contando como "movimentação", e risco de apagar login de cliente
+pagante num grupo com filial), corrigidos e confirmados numa segunda
+passada. Testado local no navegador ponta a ponta: bloqueio por CNPJ
+errado, exclusão de empresa sem movimentação, e reuso do mesmo CNPJ
+logo em seguida.
+
+Também ganhou nessa entrega: botão "Ver fatura" na tela de Cobranças
+do cliente (usa o `invoiceUrl` que o Asaas já devolve).
+
 ## 🟢 Asaas produção — chave real ativada, webhook corrigido e testado (30-08-2026)
 
 Troca de sandbox pra produção: `ASAAS_API_KEY`/`ASAAS_API_URL`
@@ -50,7 +95,7 @@ Asaas, e não existe (ainda, ver pendência abaixo) forma de excluir a
 empresa/reconciliar manualmente. Ficaram como lixo de teste, sem
 risco — nenhuma é cliente real.
 
-## 🟡 PENDÊNCIA: Excluir empresa (só sem movimentação) (30-08-2026)
+## 🟢 RESOLVIDO em 31-08-2026 (ver entrada acima) — Excluir empresa (só sem movimentação) (30-08-2026)
 
 Ainda não existe nenhuma tela/endpoint pra excluir uma empresa — o
 método `CompanyService.remove()`/`CompanyRepository.softDelete()`
