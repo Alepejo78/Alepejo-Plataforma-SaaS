@@ -177,6 +177,7 @@ export class BillingService {
       status: BillingChargeStatus;
       paidAt: Date | null;
       type: string;
+      invoiceNumber?: string | null;
     },
     planName: string,
   ) {
@@ -240,6 +241,7 @@ export class BillingService {
         billingChargeId: charge.id,
         partnerId: partner.id,
         chartOfAccountId: chartOfAccount.id,
+        documentNumber: charge.invoiceNumber ?? undefined,
         type: 'PAYABLE',
         status: pago ? 'PAID' : 'OPEN',
         issueDate: new Date(),
@@ -353,6 +355,7 @@ export class BillingService {
                 : null,
               invoiceUrl: payment.invoiceUrl,
               bankSlipUrl: payment.bankSlipUrl,
+              invoiceNumber: payment.invoiceNumber,
             },
             create: {
               companyPlanId: companyPlan.id,
@@ -367,6 +370,7 @@ export class BillingService {
                 : null,
               invoiceUrl: payment.invoiceUrl,
               bankSlipUrl: payment.bankSlipUrl,
+              invoiceNumber: payment.invoiceNumber,
             },
           });
 
@@ -529,6 +533,7 @@ export class BillingService {
         update: {
           invoiceUrl: primeira.invoiceUrl,
           bankSlipUrl: primeira.bankSlipUrl,
+          invoiceNumber: primeira.invoiceNumber,
         },
         create: {
           companyPlanId: companyPlan.id,
@@ -540,6 +545,7 @@ export class BillingService {
           status: mapChargeStatus(primeira.status),
           invoiceUrl: primeira.invoiceUrl,
           bankSlipUrl: primeira.bankSlipUrl,
+          invoiceNumber: primeira.invoiceNumber,
         },
       });
 
@@ -690,6 +696,7 @@ export class BillingService {
         update: {
           invoiceUrl: primeira.invoiceUrl,
           bankSlipUrl: primeira.bankSlipUrl,
+          invoiceNumber: primeira.invoiceNumber,
         },
         create: {
           companyPlanId: companyPlan.id,
@@ -701,6 +708,7 @@ export class BillingService {
           status: mapChargeStatus(primeira.status),
           invoiceUrl: primeira.invoiceUrl,
           bankSlipUrl: primeira.bankSlipUrl,
+          invoiceNumber: primeira.invoiceNumber,
         },
       });
 
@@ -1122,6 +1130,7 @@ export class BillingService {
         paidAt: payment.paymentDate ? new Date(payment.paymentDate) : null,
         invoiceUrl: payment.invoiceUrl,
         bankSlipUrl: payment.bankSlipUrl,
+        invoiceNumber: payment.invoiceNumber,
       },
       create: {
         companyPlanId: companyPlan.id,
@@ -1134,6 +1143,7 @@ export class BillingService {
         paidAt: payment.paymentDate ? new Date(payment.paymentDate) : null,
         invoiceUrl: payment.invoiceUrl,
         bankSlipUrl: payment.bankSlipUrl,
+        invoiceNumber: payment.invoiceNumber,
       },
     });
 

@@ -20,6 +20,8 @@ export interface AsaasPayment {
   billingType: string;
   invoiceUrl?: string;
   bankSlipUrl?: string;
+  /** Número da fatura que o Asaas gera pra cobrança (ex.: "00000123"). */
+  invoiceNumber?: string;
 }
 
 export interface AsaasSubscription {

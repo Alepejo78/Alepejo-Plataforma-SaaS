@@ -2371,6 +2371,10 @@ model BillingCharge {
   bankSlipUrl String? @db.VarChar(255)
   pixPayload  String?
 
+  /// Número da fatura que o Asaas gera pra cobrança — vira o
+  /// "Documento" do título a pagar correspondente no Financeiro.
+  invoiceNumber String? @db.VarChar(50)
+
   /// Conta a pagar gerada na empresa cliente por esta cobrança.
   financialEntry FinancialEntry?
 
