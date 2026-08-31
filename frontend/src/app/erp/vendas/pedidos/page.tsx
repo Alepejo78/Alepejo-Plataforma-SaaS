@@ -1151,123 +1151,6 @@ export default function PedidosDeVendaPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-4">
-                <div>
-                  <label className={labelClass}>
-                    Tipo de receita
-                  </label>
-
-                  <SearchSelect<ChartOfAccount>
-                    displayLabel={form.chartOfAccountLabel}
-                    search={searchChartOfAccounts}
-                    getId={(c) => c.id}
-                    getLabel={(c) =>
-                      `${c.code} — ${c.description}`
-                    }
-                    placeholder="Digite para buscar a conta..."
-                    onSelect={(c) =>
-                      setForm({
-                        ...form,
-                        chartOfAccountId: c?.id ?? "",
-                        chartOfAccountLabel: c
-                          ? `${c.code} — ${c.description}`
-                          : "",
-                      })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Prazo (dias)
-                  </label>
-
-                  <input
-                    type="number"
-                    min={0}
-                    className={fieldClass}
-                    value={form.termDays}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        termDays: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Número de parcelas
-                  </label>
-
-                  <input
-                    type="number"
-                    min={1}
-                    placeholder="1"
-                    title="Gera essa quantidade de parcelas abaixo, já calculadas — dá pra editar antes de salvar"
-                    className={fieldClass}
-                    value={form.installmentsCount}
-                    onChange={(e) => {
-                      const value = e.target.value;
-
-                      setForm({
-                        ...form,
-                        installmentsCount: value,
-                      });
-
-                      const count = Number(value) || 1;
-
-                      setInstallments(
-                        buildInstallmentRows(
-                          form.orderDate || undefined,
-                          Number(form.termDays) || 0,
-                          count,
-                          netTotal
-                        )
-                      );
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Forma de pagamento
-                  </label>
-
-                  <select
-                    className={fieldClass}
-                    value={form.paymentMethod}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        paymentMethod: e.target
-                          .value as PaymentMethod | "",
-                      })
-                    }
-                  >
-                    <option value="">Selecione...</option>
-
-                    {Object.entries(PAYMENT_METHOD_LABELS).map(
-                      ([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              <InstallmentsEditor
-                installments={installments}
-                onUpdate={updateInstallment}
-                onAdd={addInstallment}
-                onRemove={removeInstallment}
-                total={netTotal}
-                totalLabel="valor líquido"
-              />
-
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label className={labelClass}>Itens</label>
@@ -1309,7 +1192,7 @@ export default function PedidosDeVendaPage() {
                               money(p.salePrice)
                             }
                             placeholder="Digite para buscar o produto..."
-                            onSelect={(p) =>
+                            onSelect={(p) => {
                               updateItem(index, {
                                 productId: p?.id ?? "",
                                 productLabel: p
@@ -1319,8 +1202,25 @@ export default function PedidosDeVendaPage() {
                                   p && !it.unitPrice
                                     ? num(p.salePrice)
                                     : it.unitPrice,
-                              })
-                            }
+                              });
+
+                              // Sugere o tipo de receita a partir do
+                              // produto — só quando o pedido ainda não
+                              // tem um escolhido (não sobrescreve).
+                              if (
+                                p?.saleChartOfAccountId &&
+                                !form.chartOfAccountId
+                              ) {
+                                setForm((prev) => ({
+                                  ...prev,
+                                  chartOfAccountId:
+                                    p.saleChartOfAccountId!,
+                                  chartOfAccountLabel: p.saleChartOfAccount
+                                    ? `${p.saleChartOfAccount.code} — ${p.saleChartOfAccount.description}`
+                                    : prev.chartOfAccountLabel,
+                                }));
+                              }
+                            }}
                           />
                         </div>
 
@@ -1442,6 +1342,123 @@ export default function PedidosDeVendaPage() {
                   Líquido: {money(netTotal)}
                 </span>
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div>
+                  <label className={labelClass}>
+                    Tipo de receita
+                  </label>
+
+                  <SearchSelect<ChartOfAccount>
+                    displayLabel={form.chartOfAccountLabel}
+                    search={searchChartOfAccounts}
+                    getId={(c) => c.id}
+                    getLabel={(c) =>
+                      `${c.code} — ${c.description}`
+                    }
+                    placeholder="Digite para buscar a conta..."
+                    onSelect={(c) =>
+                      setForm({
+                        ...form,
+                        chartOfAccountId: c?.id ?? "",
+                        chartOfAccountLabel: c
+                          ? `${c.code} — ${c.description}`
+                          : "",
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Prazo (dias)
+                  </label>
+
+                  <input
+                    type="number"
+                    min={0}
+                    className={fieldClass}
+                    value={form.termDays}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        termDays: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Número de parcelas
+                  </label>
+
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    title="Gera essa quantidade de parcelas abaixo, já calculadas — dá pra editar antes de salvar"
+                    className={fieldClass}
+                    value={form.installmentsCount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setForm({
+                        ...form,
+                        installmentsCount: value,
+                      });
+
+                      const count = Number(value) || 1;
+
+                      setInstallments(
+                        buildInstallmentRows(
+                          form.orderDate || undefined,
+                          Number(form.termDays) || 0,
+                          count,
+                          netTotal
+                        )
+                      );
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Forma de pagamento
+                  </label>
+
+                  <select
+                    className={fieldClass}
+                    value={form.paymentMethod}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        paymentMethod: e.target
+                          .value as PaymentMethod | "",
+                      })
+                    }
+                  >
+                    <option value="">Selecione...</option>
+
+                    {Object.entries(PAYMENT_METHOD_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <InstallmentsEditor
+                installments={installments}
+                onUpdate={updateInstallment}
+                onAdd={addInstallment}
+                onRemove={removeInstallment}
+                total={netTotal}
+                totalLabel="valor líquido"
+              />
 
               {formError && (
                 <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
