@@ -12,6 +12,9 @@ const includeRelations = {
   salesOrder: {
     select: { id: true, number: true },
   },
+  sale: {
+    select: { id: true, number: true },
+  },
 };
 
 @Injectable()
@@ -30,8 +33,9 @@ export class ProductionOrderRepository {
       productionDays: number;
       expectedDate: Date;
       observation?: string;
-      origin?: 'MANUAL' | 'SALES_ORDER' | 'LOW_STOCK';
+      origin?: 'MANUAL' | 'SALES_ORDER' | 'LOW_STOCK' | 'SALE';
       salesOrderId?: string;
+      saleId?: string;
     },
   ) {
     return tx.productionOrder.create({
@@ -47,6 +51,7 @@ export class ProductionOrderRepository {
         observation: data.observation,
         origin: data.origin ?? 'MANUAL',
         salesOrderId: data.salesOrderId,
+        saleId: data.saleId,
       },
       include: includeRelations,
     });

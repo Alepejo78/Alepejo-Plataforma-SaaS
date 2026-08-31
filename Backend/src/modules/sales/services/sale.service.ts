@@ -299,7 +299,13 @@ export class SaleService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const productionShortfalls: {
+      productId: string;
+      warehouseId: string;
+      shortfall: number;
+    }[] = [];
+
+    const createdSale = await this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
         tx,
         companyId,
@@ -374,8 +380,22 @@ export class SaleService {
         sale,
         effectiveDto,
         userId,
+        productionShortfalls,
       );
     });
+
+    // Best-effort: gera ordem de produção pra cada item que só seguiu
+    // porque o usuário confirmou "continuar mesmo assim" com estoque
+    // insuficiente (ver ProductionOrdersService.autoGenerateForSaleItem
+    // — só age se a empresa tiver o módulo PRODUCTION licenciado).
+    for (const shortfall of productionShortfalls) {
+      void this.productionOrdersService.autoGenerateForSaleItem(
+        companyId,
+        { ...shortfall, saleId: createdSale.id },
+      );
+    }
+
+    return createdSale;
   }
 
   async findAll(
@@ -604,7 +624,13 @@ export class SaleService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updateShortfalls: {
+      productId: string;
+      warehouseId: string;
+      shortfall: number;
+    }[] = [];
+
+    const updatedSale = await this.prisma.$transaction(async (tx) => {
       await this.revertApproval(tx, companyId, sale, userId);
 
       const reloaded = await this.repository.update(
@@ -620,8 +646,18 @@ export class SaleService {
         reloaded,
         dto,
         userId,
+        updateShortfalls,
       );
     });
+
+    for (const shortfall of updateShortfalls) {
+      void this.productionOrdersService.autoGenerateForSaleItem(
+        companyId,
+        { ...shortfall, saleId: updatedSale.id },
+      );
+    }
+
+    return updatedSale;
   }
 
   /**
@@ -639,6 +675,18 @@ export class SaleService {
     }>,
     approveFields: ApproveSaleDto,
     userId: string,
+    /**
+     * Recebe (side-channel — `applyApproval` já tem retorno próprio) a
+     * falta de saldo de cada item que só seguiu porque
+     * `approveFields.allowInsufficientStock` veio marcado — quem chama
+     * usa isso depois que a transação terminar pra gerar a ordem de
+     * produção correspondente (ver `create`/`update`/`approve`).
+     */
+    productionShortfalls?: {
+      productId: string;
+      warehouseId: string;
+      shortfall: number;
+    }[],
   ) {
     const documentNumber = formatSaleNumber(sale.number);
 
@@ -691,9 +739,21 @@ export class SaleService {
       const quantidade = Number(item.quantity);
 
       if (disponivel < quantidade) {
-        throw new BadRequestException(
-          'Estoque disponível insuficiente, verifique (bloqueado, reservado, em quarentena ou avariado não entra na venda).',
-        );
+        if (!approveFields.allowInsufficientStock) {
+          throw new BadRequestException(
+            'Estoque disponível insuficiente, verifique (bloqueado, reservado, em quarentena ou avariado não entra na venda).',
+          );
+        }
+
+        // Usuário confirmou que quer seguir mesmo assim — o saldo
+        // fica negativo (decrementa a quantidade inteira pedida, não
+        // só o que havia disponível) e quem chamou gera uma ordem de
+        // produção pra cobrir a falta depois que a transação terminar.
+        productionShortfalls?.push({
+          productId: item.productId,
+          warehouseId: sale.warehouseId,
+          shortfall: quantidade - disponivel,
+        });
       }
 
       await tx.inventory.update({
@@ -968,9 +1028,32 @@ export class SaleService {
       );
     }
 
+    const approveShortfalls: {
+      productId: string;
+      warehouseId: string;
+      shortfall: number;
+    }[] = [];
+
     const updatedSale = await this.prisma.$transaction((tx) =>
-      this.applyApproval(tx, companyId, sale, dto, userId),
+      this.applyApproval(
+        tx,
+        companyId,
+        sale,
+        dto,
+        userId,
+        approveShortfalls,
+      ),
     );
+
+    // Best-effort: gera ordem de produção pra cada item que só seguiu
+    // porque o usuário confirmou "continuar mesmo assim" com estoque
+    // insuficiente.
+    for (const shortfall of approveShortfalls) {
+      void this.productionOrdersService.autoGenerateForSaleItem(
+        companyId,
+        { ...shortfall, saleId: updatedSale.id },
+      );
+    }
 
     // Best-effort: confere se algum item ficou no mínimo/abaixo e
     // gera ordem de produção sozinha — ver

@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -154,4 +155,14 @@ export class CreateSaleDto {
   @IsArray()
   @ArrayMinSize(1)
   items: CreateSaleItemDto[];
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description:
+      'Confirma o lançamento mesmo com estoque insuficiente em algum item — o saldo fica negativo e uma ordem de produção é gerada automaticamente para cobrir a falta (módulo PRODUCTION). Sem isto, estoque insuficiente bloqueia a venda.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowInsufficientStock?: boolean;
 }

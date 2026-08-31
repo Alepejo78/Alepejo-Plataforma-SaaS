@@ -25,7 +25,8 @@ export const PRODUCTION_ORDER_STATUS_LABELS: Record<
 export type ProductionOrderOrigin =
   | "MANUAL"
   | "SALES_ORDER"
-  | "LOW_STOCK";
+  | "LOW_STOCK"
+  | "SALE";
 
 export const PRODUCTION_ORDER_ORIGIN_LABELS: Record<
   ProductionOrderOrigin,
@@ -34,6 +35,7 @@ export const PRODUCTION_ORDER_ORIGIN_LABELS: Record<
   MANUAL: "Manual",
   SALES_ORDER: "Pedido de venda",
   LOW_STOCK: "Estoque mínimo",
+  SALE: "Venda",
 };
 
 export interface ProductionOrder {
@@ -44,6 +46,7 @@ export interface ProductionOrder {
   quantity: string | number;
   origin: ProductionOrderOrigin;
   salesOrderId?: string | null;
+  saleId?: string | null;
   status: ProductionOrderStatus;
   orderDate: string;
   productionDays: number;
@@ -67,6 +70,7 @@ export interface ProductionOrder {
   } | null;
 
   salesOrder?: { id: string; number: number } | null;
+  sale?: { id: string; number: number } | null;
 }
 
 export interface ProductionOrderPayload {

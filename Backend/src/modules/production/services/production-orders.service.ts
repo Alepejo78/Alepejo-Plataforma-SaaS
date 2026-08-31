@@ -48,6 +48,8 @@ function addDays(date: Date, days: number): Date {
  * EmailNotificationsService/WhatsappNotificationsService):
  * - `autoGenerateForSalesOrderItem`: pedido de venda pedindo mais do
  *   que o saldo disponível no almoxarifado do pedido.
+ * - `autoGenerateForSaleItem`: venda lançada com quantidade maior que
+ *   o saldo disponível, seguindo mesmo assim.
  * - `autoGenerateForLowStock`: saldo de um produto (somado em todos
  *   os almoxarifados) chegando ao mínimo cadastrado
  *   (`Product.minimumStock`).
@@ -400,6 +402,55 @@ export class ProductionOrdersService {
   }
 
   /**
+   * Gatilho automático #1b: venda lançada com quantidade maior que o
+   * saldo disponível, seguindo mesmo assim (usuário escolheu
+   * continuar apesar do aviso de estoque insuficiente — ver
+   * SaleService.applyApproval). Diferente do gatilho do pedido de
+   * venda, o saldo já foi decrementado (foi para negativo) antes de
+   * chamar isto — a `shortfall` já vem calculada por quem chamou.
+   * Best-effort — nunca lança, uma falha aqui nunca deve derrubar a
+   * venda já concluída.
+   */
+  async autoGenerateForSaleItem(
+    companyId: string,
+    params: {
+      productId: string;
+      warehouseId: string;
+      shortfall: number;
+      saleId: string;
+    },
+  ): Promise<void> {
+    try {
+      if (!(await this.licenseService.hasModule(companyId, 'PRODUCTION'))) {
+        return;
+      }
+
+      const settings = await this.settingsRepository.getOrCreate(
+        companyId,
+      );
+
+      if (!settings.autoGenerateOnSalesOrder) {
+        return;
+      }
+
+      await this.generateIfNotOpen(companyId, {
+        productId: params.productId,
+        warehouseId: params.warehouseId,
+        shortfall: params.shortfall,
+        origin: 'SALE',
+        saleId: params.saleId,
+        settings,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Falha ao gerar ordem de produção (venda ${params.saleId}, produto ${params.productId}): ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+    }
+  }
+
+  /**
    * Gatilho automático #2: saldo de um produto (somado em todos os
    * almoxarifados) chegando ao mínimo cadastrado. Best-effort — nunca
    * lança, chamar depois de qualquer baixa de estoque real (aprovação
@@ -477,8 +528,9 @@ export class ProductionOrdersService {
       productId: string;
       warehouseId: string;
       shortfall: number;
-      origin: 'SALES_ORDER' | 'LOW_STOCK';
+      origin: 'SALES_ORDER' | 'LOW_STOCK' | 'SALE';
       salesOrderId?: string;
+      saleId?: string;
       settings: {
         minBatchSize: Prisma.Decimal | number;
         defaultProductionDays: number;
@@ -527,10 +579,13 @@ export class ProductionOrdersService {
         expectedDate,
         origin: params.origin,
         salesOrderId: params.salesOrderId,
+        saleId: params.saleId,
         observation:
           params.origin === 'SALES_ORDER'
             ? 'Gerada automaticamente — pedido de venda maior que o saldo disponível.'
-            : 'Gerada automaticamente — saldo do produto chegou ao mínimo.',
+            : params.origin === 'SALE'
+              ? 'Gerada automaticamente — venda lançada com quantidade maior que o saldo disponível.'
+              : 'Gerada automaticamente — saldo do produto chegou ao mínimo.',
       });
     });
   }

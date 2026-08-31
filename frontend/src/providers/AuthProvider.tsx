@@ -57,6 +57,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(
 const PLATFORM_OWNER_ONLY_PERMISSIONS = new Set([
   "platform.license.manage",
   "platform.company.delete",
+  "platform.cbo.manage",
 ]);
 const PLATFORM_OWNER_EMAIL = "alessandro.lourenco@alepejo.com.br";
 

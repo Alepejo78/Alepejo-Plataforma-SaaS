@@ -127,6 +127,8 @@ export interface SalePayload {
   invoiceKey?: string;
   salesOrderId?: string;
   items: SaleItemPayload[];
+  /** Confirma o lançamento mesmo com estoque insuficiente — gera ordem de produção automática pra cobrir a falta. */
+  allowInsufficientStock?: boolean;
 }
 
 export interface ApproveSalePayload {

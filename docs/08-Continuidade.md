@@ -3,6 +3,56 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Venda com estoque insuficiente gera ordem de produção; Tabela CBO editável; Técnico em Escolaridade; bug de aniversariantes do mês (31-08-2026)
+
+**Venda com saldo insuficiente pode seguir mesmo assim**
+(`SaleService.applyApproval`, campo novo `CreateSaleDto.
+allowInsufficientStock`): antes travava sem saída. Agora, se o usuário
+confirmar no diálogo "Confirmar venda" (frontend já existia, só
+checava saldo antes de salvar — texto e o `saveCreate(allow)` foram
+atualizados pra realmente pedir a exceção ao backend em vez de só
+reenviar e travar de novo), o estoque desse item fica negativo e uma
+`ProductionOrder` é gerada automaticamente (best-effort, fora da
+transação da venda) com a quantidade que falta — mesmo mecanismo que
+já existia pra Pedido de Venda (`ProductionOrdersService.
+autoGenerateForSalesOrderItem`), agora generalizado
+(`generateIfNotOpen` aceita origin `SALE` além de `SALES_ORDER`/
+`LOW_STOCK`) num novo `autoGenerateForSaleItem`. `ProductionOrder`
+ganhou `saleId`/origin `SALE` (migration
+`20260831191923_production_order_sale_origin`). Mesmo tratamento em
+`create`/`update`/`approve` (legado) da Venda.
+
+**Tabela CBO agora tem tela de gestão** (`/erp/rh/cbo`, card em OS →
+Configurações → RH): o dataset importado (`prisma/data/cbo.csv`,
+Ministério do Trabalho) não é completo — faltava por exemplo
+"2527-15 — Analista de logística", já cadastrado manualmente como
+teste. CRUD restrito ao dono da plataforma (permissão nova
+`platform.cbo.manage`, mesma trava de e-mail das outras
+`platform.*`) porque é catálogo global (todas as empresas), não por
+empresa — qualquer edição afeta o autocomplete de CBO de Função em
+todo mundo. `GET /cbo` continua liberado por `job-function.view`
+(autocomplete) e passou a paginar (`CboFilterDto.page`, resposta
+`{data,total,page,limit,pages}` — frontend `cboService.list()`
+ajustado pra ler `data.data.data`).
+
+**Escolaridade ganhou "Técnico"** (`EducationLevel.TECNICO`, entre
+Médio completo e Superior incompleto) — faltava na lista.
+
+**Bug corrigido: "Aniversariantes do mês" (Visão geral) podia sumir
+um colaborador do próprio mês** — `EmployeesService.buildBirthdays`
+comparava o mês do aniversário em UTC (`birthDate.getUTCMonth()`)
+contra o mês "hoje" em horário LOCAL do servidor (`new
+Date().getMonth()`). Se o servidor roda em UTC (Railway) e for tarde
+da noite no Brasil (últimas ~3h de qualquer dia, mais visível no
+último dia do mês), o servidor já considera o mês seguinte e a lista
+fica vazia mesmo com aniversariante certo no mês local. Corrigido pra
+`getUTCMonth()` dos dois lados, mesma convenção já usada em outros
+cálculos de "mês atual" no backend (ex.:
+`thirteenth-salary.service.ts`). **Diferente** da pendência abaixo
+sobre o aviso "Feliz aniversário" do usuário logado (esse é outro bug,
+de e-mail não bater entre Colaborador e Login) — ainda não resolvida,
+ver pendência.
+
 ## 🟢 Empresa nova ganha cadastros padrão; Excluir empresa implementado (31-08-2026)
 
 Fecha a pendência abaixo ("PENDÊNCIA: Excluir empresa"). Plano

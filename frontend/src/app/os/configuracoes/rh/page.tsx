@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Percent, Tags, Wallet } from "lucide-react";
+import { BookMarked, ClipboardList, Percent, Tags, Wallet } from "lucide-react";
 
 import { OsCardLink, OsShell } from "@/components";
 import { useAuth } from "@/providers/AuthProvider";
@@ -40,6 +40,14 @@ export default function OsConfiguracoesRhPage() {
       icon: Percent,
       iconAnim: "percent",
       visible: can("payroll-tax-table.view"),
+    },
+    {
+      title: "Tabela CBO",
+      description: "Catálogo global de ocupações (todas as empresas)",
+      href: "/erp/rh/cbo",
+      icon: BookMarked,
+      iconAnim: "clipboard",
+      visible: can("platform.cbo.manage"),
     },
   ].filter((card) => card.visible);
 

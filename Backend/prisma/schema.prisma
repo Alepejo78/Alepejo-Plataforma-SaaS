@@ -1303,6 +1303,8 @@ model Sale {
   salesOrderId String?
   salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
 
+  productionOrders ProductionOrder[]
+
   createdById String?
   updatedById String?
 
@@ -2666,6 +2668,7 @@ enum EducationLevel {
   FUNDAMENTAL_COMPLETO
   MEDIO_INCOMPLETO
   MEDIO_COMPLETO
+  TECNICO
   SUPERIOR_INCOMPLETO
   SUPERIOR_COMPLETO
   POS_GRADUACAO
@@ -2994,6 +2997,7 @@ enum ProductionOrderOrigin {
   MANUAL
   SALES_ORDER
   LOW_STOCK
+  SALE
 }
 
 /// Ordem de produção — módulo licenciável opcional (PRODUCTION),
@@ -3024,6 +3028,12 @@ model ProductionOrder {
   /// Só preenchido quando origin = SALES_ORDER.
   salesOrderId String?
   salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
+
+  /// Só preenchido quando origin = SALE — venda lançada com quantidade
+  /// maior que o saldo disponível, seguindo mesmo assim (ver
+  /// ProductionOrdersService.autoGenerateForSaleItem).
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id])
 
   status ProductionOrderStatus @default(AGUARDANDO_PRODUCAO)
 

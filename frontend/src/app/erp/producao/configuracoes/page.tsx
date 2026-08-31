@@ -267,8 +267,8 @@ export default function ConfiguracoesDeProducaoPage() {
               </div>
 
               <ToggleRow
-                title="Gerar ordem ao faltar saldo num pedido de venda"
-                description="Se um pedido de venda pedir mais do que o saldo disponível no depósito escolhido, gera uma ordem de produção sozinha pela diferença."
+                title="Gerar ordem ao faltar saldo numa venda ou pedido"
+                description="Se um pedido de venda pedir mais do que o saldo disponível, ou se uma venda for lançada mesmo com estoque insuficiente, gera uma ordem de produção sozinha pela diferença."
                 checked={settings.autoGenerateOnSalesOrder}
                 disabled={updating}
                 onChange={(value) =>

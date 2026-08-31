@@ -6,6 +6,7 @@ import {
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -101,4 +102,14 @@ export class ApproveSaleDto {
   @IsInt()
   @Min(1)
   installmentsCount?: number;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description:
+      'Confirma a aprovação mesmo com estoque insuficiente em algum item — o saldo fica negativo e uma ordem de produção é gerada automaticamente para cobrir a falta (módulo PRODUCTION).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowInsufficientStock?: boolean;
 }

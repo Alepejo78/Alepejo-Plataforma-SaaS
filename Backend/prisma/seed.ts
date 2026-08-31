@@ -667,6 +667,11 @@ const permissionGroups = [
       ["job-function.create", "Cadastrar Funções"],
       ["job-function.update", "Alterar Funções"],
       ["job-function.delete", "Excluir Funções"],
+      // Tabela CBO é catálogo global (todas as empresas), não por
+      // empresa — restrita ao dono da plataforma, mesma trava de
+      // e-mail de platform.company.delete (ver
+      // PLATFORM_OWNER_ONLY_PERMISSIONS em permissions.guard.ts).
+      ["platform.cbo.manage", "Gerenciar Tabela CBO (Plataforma)"],
     ],
   },
   {

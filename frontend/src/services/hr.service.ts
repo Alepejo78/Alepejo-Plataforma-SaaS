@@ -177,13 +177,53 @@ export interface CboOccupation {
   title: string;
 }
 
-export const cboService = {
-  async list(search?: string): Promise<CboOccupation[]> {
-    const { data } = await api.get<
-      ApiEnvelope<CboOccupation[]>
-    >("/cbo", { params: { search, limit: 20 } });
+export interface CboFilter {
+  search?: string;
+  page?: number;
+  limit?: number;
+}
 
-    return data.data ?? [];
+export const cboService = {
+  /** Autocomplete (Função) — só os primeiros resultados, sem paginação. */
+  async list(search?: string): Promise<CboOccupation[]> {
+    const { data } = await api.get<ApiEnvelope<Paged<CboOccupation>>>(
+      "/cbo",
+      { params: { search, limit: 20 } }
+    );
+
+    return data.data?.data ?? [];
+  },
+
+  /** Listagem paginada — tela de gestão da Tabela CBO (dono da plataforma). */
+  async listPaged(filter: CboFilter = {}): Promise<Paged<CboOccupation>> {
+    const { data } = await api.get<ApiEnvelope<Paged<CboOccupation>>>(
+      "/cbo",
+      { params: filter }
+    );
+
+    return data.data;
+  },
+
+  async create(payload: CboOccupation): Promise<CboOccupation> {
+    const { data } = await api.post<ApiEnvelope<CboOccupation>>(
+      "/cbo",
+      payload
+    );
+
+    return data.data;
+  },
+
+  async update(code: string, title: string): Promise<CboOccupation> {
+    const { data } = await api.patch<ApiEnvelope<CboOccupation>>(
+      `/cbo/${code}`,
+      { title }
+    );
+
+    return data.data;
+  },
+
+  async remove(code: string): Promise<void> {
+    await api.delete(`/cbo/${code}`);
   },
 };
 
@@ -325,6 +365,7 @@ export type EducationLevel =
   | "FUNDAMENTAL_COMPLETO"
   | "MEDIO_INCOMPLETO"
   | "MEDIO_COMPLETO"
+  | "TECNICO"
   | "SUPERIOR_INCOMPLETO"
   | "SUPERIOR_COMPLETO"
   | "POS_GRADUACAO"
@@ -339,6 +380,7 @@ export const EDUCATION_LEVEL_LABELS: Record<
   FUNDAMENTAL_COMPLETO: "Fundamental completo",
   MEDIO_INCOMPLETO: "Médio incompleto",
   MEDIO_COMPLETO: "Médio completo",
+  TECNICO: "Técnico",
   SUPERIOR_INCOMPLETO: "Superior incompleto",
   SUPERIOR_COMPLETO: "Superior completo",
   POS_GRADUACAO: "Pós-graduação",

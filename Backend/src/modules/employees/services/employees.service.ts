@@ -398,7 +398,7 @@ export class EmployeesService {
     const targetMonth =
       month && month >= 1 && month <= 12
         ? month
-        : new Date().getMonth() + 1;
+        : new Date().getUTCMonth() + 1;
 
     return employees
       .filter(

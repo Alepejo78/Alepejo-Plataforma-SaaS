@@ -878,7 +878,9 @@ export default function VendasPage() {
     form.freightValue +
     form.otherExpenses;
 
-  async function saveCreate(): Promise<boolean> {
+  async function saveCreate(
+    allowInsufficientStock = false
+  ): Promise<boolean> {
     if (!form.partnerId || !form.warehouseId) {
       setFormError("Selecione o cliente e o depósito.");
 
@@ -1025,11 +1027,44 @@ export default function VendasPage() {
       items: payloadItems,
     };
 
+    const send = (allow: boolean) =>
+      editingId
+        ? saleService.update(editingId, {
+            ...payload,
+            allowInsufficientStock: allow,
+          })
+        : saleService.create({
+            ...payload,
+            allowInsufficientStock: allow,
+          });
+
     try {
-      if (editingId) {
-        await saleService.update(editingId, payload);
-      } else {
-        await saleService.create(payload);
+      try {
+        await send(allowInsufficientStock);
+      } catch (err) {
+        const message = extractMessage(
+          err,
+          editingId
+            ? "Não foi possível salvar as alterações."
+            : "Não foi possível cadastrar a venda."
+        );
+
+        // Rede de segurança: o diálogo "Confirmar venda"
+        // (openCreateConfirm/confirmCreate) já checa o saldo antes de
+        // chegar aqui, mas se aquela checagem falhar silenciosamente
+        // (ver catch em openCreateConfirm) ou o saldo mudar entre a
+        // checagem e o salvamento, ainda oferece a saída aqui.
+        if (
+          !allowInsufficientStock &&
+          message.includes("Estoque disponível insuficiente") &&
+          window.confirm(
+            `${message}\n\nDeseja continuar mesmo assim? O saldo fica negativo e uma ordem de produção é gerada automaticamente para cobrir a falta.`
+          )
+        ) {
+          await send(true);
+        } else {
+          throw err;
+        }
       }
 
       setCreateOpen(false);
@@ -1219,8 +1254,10 @@ export default function VendasPage() {
       );
 
       if (insuficiente) {
-        // Aprovação continua travando por saldo — aqui é só um
-        // aviso: deixa registrar a venda em rascunho mesmo assim.
+        // Venda já nasce com estoque baixado — sem confirmar aqui,
+        // o cadastro é bloqueado no backend. Mostra o aviso e deixa o
+        // usuário decidir se quer seguir com saldo negativo (gera
+        // ordem de produção automática pra cobrir a falta).
         setConfirmCreateOpen(true);
       } else {
         await saveCreate();
@@ -1235,7 +1272,7 @@ export default function VendasPage() {
   }
 
   async function confirmCreate() {
-    const ok = await saveCreate();
+    const ok = await saveCreate(true);
 
     if (ok) {
       setConfirmCreateOpen(false);
@@ -2440,8 +2477,9 @@ export default function VendasPage() {
 
             <div className="mt-4 rounded-xl border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm text-[var(--warning)]">
               Saldo disponível insuficiente para um ou mais
-              itens. A aprovação da venda vai continuar
-              bloqueada até regularizar o estoque — deseja
+              itens. Continuando, o saldo desses itens fica
+              negativo e uma ordem de produção é gerada
+              automaticamente para cobrir a falta — deseja
               registrar a venda mesmo assim?
             </div>
 

@@ -10,6 +10,12 @@ export class CboFilterDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(50)
+  page = 1;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
   limit = 20;
 }
