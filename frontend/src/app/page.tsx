@@ -336,14 +336,20 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!user?.email || colaboradoresList.length === 0) {
+    if (!user || colaboradoresList.length === 0) {
       return;
     }
 
-    const meuCadastro = colaboradoresList.find(
-      (c) =>
-        c.email?.toLowerCase() === user.email.toLowerCase()
-    );
+    // Prioriza o vínculo explícito (campo "Usuário do sistema" no
+    // cadastro do colaborador, Employee.userId) — o e-mail do login e
+    // o do colaborador são cadastros independentes e nem sempre
+    // batem. Some pra quem ainda não tem o vínculo feito.
+    const meuCadastro =
+      colaboradoresList.find((c) => c.userId === user.id) ??
+      colaboradoresList.find(
+        (c) =>
+          c.email?.toLowerCase() === user.email.toLowerCase()
+      );
 
     if (!meuCadastro?.birthDate) {
       return;

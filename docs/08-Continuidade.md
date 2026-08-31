@@ -3,6 +3,36 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Base da Tabela CBO ampliada (265 ocupações novas); aviso de aniversário do usuário logado agora usa o vínculo de login (31-08-2026)
+
+**`Backend/prisma/data/cbo.csv` ganhou 265 códigos que faltavam**
+(2445 → 2710), incluindo o "2527-15 — Analista de logística" citado
+como exemplo. Fonte: PDF oficial "CBO 2002 Títulos" do
+gov.br/trabalho-e-emprego (`cbo2002_lista.pdf`), filtrado só pelas
+linhas tipo "Ocupação" (título canônico — o schema só guarda um
+título por código) e comparado contra o CSV atual pra achar só o que
+faltava. **Cuidado se for buscar esse PDF nesta fonte de novo**: a
+fonte embutida no PDF tem um bug real de renderização — alguns "i"
+(acentuados ou não) somem em certas palavras de forma inconsistente
+(`pdftotext` e `pypdfium2`, duas bibliotecas diferentes, reproduzem o
+mesmo defeito — não é bug de extração, é do PDF em si). As 265 linhas
+novas foram revisadas e corrigidas manualmente (grafia, um título
+truncado no meio de um parêntese, um "Sinônimo" vs "Ocupação"
+inconsistente) antes de entrar no CSV — não é uma cópia direta da
+extração. Rodar `npx prisma db seed` aplica só o que falta
+(`skipDuplicates`, nunca sobrescreve título que o cliente já tenha
+ajustado pela tela nova de gestão — ver entrada acima).
+
+**Aviso "Feliz aniversário" do usuário logado** (Visão geral) — fecha
+a pendência abaixo que dizia "só funciona se o e-mail bater": agora
+usa primeiro o vínculo explícito `Employee.userId` ("Usuário do
+sistema" no cadastro do colaborador, campo que já existia pra
+autoatendimento mas não era usado aqui), com o e-mail como
+alternativa só pra quem ainda não tem esse vínculo feito
+(`frontend/src/app/page.tsx`). Testado localmente: sem o vínculo, o
+aviso não aparecia mesmo com aniversário certo; com o vínculo,
+aparece.
+
 ## 🟢 Venda com estoque insuficiente gera ordem de produção; Tabela CBO editável; Técnico em Escolaridade; bug de aniversariantes do mês (31-08-2026)
 
 **Venda com saldo insuficiente pode seguir mesmo assim**
@@ -4602,17 +4632,11 @@ novas e ao revisitar as existentes.
   (`NotificationsModule`/`EmailNotificationsService`, nodemailer, SMTP
   Gmail já configurado e testado). WhatsApp (Baileys) continua
   pendente, ver "Próximo na fila" item 1.
-- **Aviso de aniversário do usuário logado** (Visão geral, mensagem
-  "Desejando um feliz aniversário") só funciona se `Employee.email`
-  bater exatamente com `User.email` (login) — são cadastros
-  independentes. No cadastro atual do Alessandro os e-mails são
-  diferentes (`ale.lourenco.net@gmail.com` no Colaborador vs
-  `alessandro.lourenco@alepejo.com.br` no login), então a mensagem não
-  aparece pra ele hoje. Testado forçando os e-mails iguais e funciona
-  certo. **Perguntei ao usuário se quer igualar os e-mails ou linkar
-  por outro campo (ex.: `Employee.userId`) — ele não respondeu ainda,
-  ficou testando outras coisas.** Retomar essa pergunta antes de
-  mexer nisso.
+- ~~Aviso de aniversário do usuário logado só funciona se
+  `Employee.email` bater com `User.email`~~ — **feito em 31-08-2026**,
+  ver entrada no topo do documento: agora usa `Employee.userId` (o
+  vínculo "Usuário do sistema" do cadastro) primeiro, e-mail só como
+  alternativa.
 - Cotação/Pedido de Compra/Orçamento/Pedido de Venda não têm tela de
   edição de item avulsa nem duplicação — só editar tudo de novo
   enquanto DRAFT.
