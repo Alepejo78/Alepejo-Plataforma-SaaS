@@ -7,6 +7,7 @@ import {
 import * as crypto from 'crypto';
 
 import { PrismaService } from '../../../../core/prisma/prisma.service';
+import { DefaultAccountingService } from '../../../../core/default-accounting/default-accounting.service';
 import { UsersService } from '../../users/services/users.service';
 import { LicenseService } from '../../license/services/license.service';
 import { CUSTOM_PLAN_CODE } from '../../license/constants/custom-plan.constants';
@@ -56,6 +57,7 @@ export class CompanyOnboardingService {
     private readonly companyRepository: CompanyRepository,
     private readonly usersService: UsersService,
     private readonly licenseService: LicenseService,
+    private readonly defaultAccounting: DefaultAccountingService,
   ) {}
 
   /** Cliente novo, sem login prévio — a própria empresa nasce raiz. */
@@ -144,6 +146,16 @@ export class CompanyOnboardingService {
       dto.adminEmail,
       roleId,
     );
+
+    // Plano de contas padrão (42 contas / 6 classificações), unidade
+    // "UN - Unidade" e o produto/serviço "0001 - Compra sistema ERP" —
+    // sem isso a empresa nasce sem conseguir lançar nada no Financeiro
+    // (decisão do usuário, 31-08-2026). Roda numa transação própria
+    // (ver DefaultAccountingService), por último de propósito: se
+    // falhar aqui a empresa já tem plano + perfil + login prontos, dá
+    // pra entrar e reclamar / rodar o backfill manual depois — bem
+    // mais recuperável do que falhar antes do login existir.
+    await this.defaultAccounting.seedDefaultAccounting(company.id);
 
     return { companyId: company.id, userId: user.id };
   }
@@ -351,6 +363,14 @@ export class CompanyOnboardingService {
       create: { userId: requesterUserId, roleId },
       update: {},
     });
+
+    // Empresa adicional do grupo também precisa dos padrões — herda o
+    // plano/módulos da raiz (copyLicense acima), mas o plano de CONTAS
+    // é sempre próprio de cada empresa (ChartOfAccount é escopado por
+    // companyId, não por grupo). Por último de propósito, mesmo motivo
+    // do signup(): se falhar aqui, a empresa já tem plano + perfil +
+    // vínculo de acesso prontos, dá pra entrar e resolver depois.
+    await this.defaultAccounting.seedDefaultAccounting(company.id);
 
     return { companyId: company.id };
   }

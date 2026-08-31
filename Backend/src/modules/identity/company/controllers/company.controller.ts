@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
+  Query,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -24,12 +26,14 @@ import { setSessionCookies } from '../../auth/constants/cookie.constants';
 
 import { CompanyService } from '../services/company.service';
 import { CompanyOnboardingService } from '../services/company-onboarding.service';
+import { CompanyDeletionService } from '../services/company-deletion.service';
 import { LicenseService } from '../../license/services/license.service';
 
 import { CreateCompanyDto } from '../dto/create-company.dto';
 import { UpdateCompanyDto } from '../dto/update-company.dto';
 import { CompanySignupDto } from '../dto/company-signup.dto';
 import { CompanyAdditionalDto } from '../dto/company-additional.dto';
+import { DeleteCompanyDto } from '../dto/delete-company.dto';
 
 /**
  * Não existe (ainda) um conceito de administrador de plataforma
@@ -42,7 +46,12 @@ import { CompanyAdditionalDto } from '../dto/company-additional.dto';
  * os próprios dados (identificados pelo token JWT).
  *
  * A listagem/edição/exclusão de empresas arbitrárias por ID foi
- * removida propositalmente para evitar vazamento entre tenants.
+ * removida propositalmente para evitar vazamento entre tenants — a
+ * ÚNICA exceção é `DELETE /companies/:id` (exclusão física, dono da
+ * plataforma), restrita por `platform.company.delete`, que só o
+ * e-mail do dono consegue de fato usar (ver PermissionsGuard). Não é
+ * "gestão arbitrária de empresa", é a operação de encerramento de
+ * conta em si — decisão do usuário, 31-08-2026.
  */
 @ApiTags('Companies')
 @Controller('companies')
@@ -50,6 +59,7 @@ export class CompanyController {
   constructor(
     private readonly companyService: CompanyService,
     private readonly onboardingService: CompanyOnboardingService,
+    private readonly deletionService: CompanyDeletionService,
     private readonly licenseService: LicenseService,
     private readonly authService: AuthService,
   ) {}
@@ -242,5 +252,38 @@ export class CompanyController {
     @Body() dto: UpdateCompanyDto,
   ) {
     return this.companyService.updateInGroup(companyId, id, dto);
+  }
+
+  /**
+   * Exclusão FÍSICA de empresa — restrita ao dono da plataforma
+   * (`platform.company.delete`, mesma trava de e-mail de
+   * `platform.license.manage` — ver PermissionsGuard). Só permitida
+   * sem nenhuma movimentação (CompanyDeletionService.assertNoMovement)
+   * e exige confirmar o CNPJ/CPF da empresa via `confirmDocument`.
+   */
+  @Delete(':id')
+  @Permissions('platform.company.delete')
+  @ApiOperation({
+    summary:
+      'Excluir empresa permanentemente (dono da plataforma, só sem movimentação)',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'CNPJ/CPF de confirmação não confere com o da empresa.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'A empresa tem movimentação — exclusão bloqueada.',
+  })
+  deletePermanently(
+    @Param('id') id: string,
+    @Query() dto: DeleteCompanyDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.deletionService.deletePermanently(
+      id,
+      dto.confirmDocument,
+      { id: user.id, email: user.email, name: user.name },
+    );
   }
 }

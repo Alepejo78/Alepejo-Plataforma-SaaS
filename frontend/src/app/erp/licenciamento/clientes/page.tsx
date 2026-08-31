@@ -2,9 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronLeft, ChevronRight, ShieldOff } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  ShieldOff,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { OsShell } from "@/components";
+import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { useAuth } from "@/providers/AuthProvider";
@@ -14,6 +23,8 @@ import {
   type CustomerReportRow,
   type MonthStatus,
 } from "@/services/billing.service";
+
+import { companyService } from "@/services/company.service";
 
 function money(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -70,6 +81,136 @@ const CYCLE_LABELS: Record<"MONTHLY" | "YEARLY", string> = {
   YEARLY: "Anual",
 };
 
+/**
+ * Modal de confirmação para excluir permanentemente uma empresa
+ * cliente da plataforma. Só a plataforma (`platform.company.delete`)
+ * chega até aqui — o gate de permissão fica no botão que abre este
+ * modal. O backend recusa (400) se `confirmDocument` não bater com o
+ * CNPJ/CPF real, e recusa (409) se a empresa tiver qualquer
+ * movimentação — nos dois casos a mensagem já vem pronta pra exibir.
+ */
+function DeleteCompanyModal({
+  company,
+  onClose,
+  onDeleted,
+}: {
+  company: CustomerReportRow;
+  onClose: () => void;
+  onDeleted: (legalName: string) => void;
+}) {
+  const [confirmDocument, setConfirmDocument] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleDelete() {
+    setDeleting(true);
+    setError("");
+
+    try {
+      await companyService.remove(company.companyId, confirmDocument);
+      onDeleted(company.legalName);
+      onClose();
+    } catch (err) {
+      setError(
+        extractMessage(err, "Não foi possível excluir a empresa.")
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+      <div className="my-8 w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">
+            Excluir empresa
+          </h2>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="mb-1 text-sm font-medium text-[var(--text-secondary)]">
+              Empresa
+            </p>
+            <p className="text-sm text-[var(--text-primary)]">
+              {company.legalName}
+            </p>
+          </div>
+
+          <div>
+            <p className="mb-1 text-sm font-medium text-[var(--text-secondary)]">
+              CNPJ/CPF
+            </p>
+            <p className="text-sm text-[var(--text-primary)]">
+              {company.document}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+          Atenção: essa exclusão é permanente e não pode ser desfeita.
+          Todos os dados da empresa são apagados. Só é permitido
+          excluir empresa sem nenhuma movimentação.
+        </div>
+
+        <div className="mt-5">
+          <label
+            htmlFor="confirmDocument"
+            className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+          >
+            Para confirmar, digite o CNPJ/CPF da empresa ({company.document})
+          </label>
+
+          <input
+            id="confirmDocument"
+            type="text"
+            value={confirmDocument}
+            onChange={(e) => setConfirmDocument(e.target.value)}
+            placeholder="Digite o CNPJ/CPF para confirmar"
+            className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
+          />
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            disabled={deleting || confirmDocument.trim().length === 0}
+            onClick={() => void handleDelete()}
+            className="flex items-center gap-2 rounded-xl bg-[var(--danger)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+          >
+            {deleting && <Loader2 size={16} className="animate-spin" />}
+            Excluir permanentemente
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ClientesFaturamentoPage() {
   const { can } = useAuth();
   const allowed = can("platform.license.manage");
@@ -79,6 +220,9 @@ export default function ClientesFaturamentoPage() {
   const [rows, setRows] = useState<CustomerReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [companyToDelete, setCompanyToDelete] =
+    useState<CustomerReportRow | null>(null);
+  const [deletedMessage, setDeletedMessage] = useState("");
 
   const load = useCallback(async () => {
     if (!allowed) {
@@ -203,6 +347,12 @@ export default function ClientesFaturamentoPage() {
                 {error}
               </div>
             )}
+
+            {deletedMessage && (
+              <div className="rounded-xl border border-[var(--success)] bg-[var(--success-soft)] p-3 text-sm text-[var(--success)]">
+                {deletedMessage}
+              </div>
+            )}
           </>
         }
       >
@@ -247,6 +397,9 @@ export default function ClientesFaturamentoPage() {
                   ))}
                   <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">
                     Total
+                  </th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                    Ações
                   </th>
                 </tr>
               </thead>
@@ -322,6 +475,23 @@ export default function ClientesFaturamentoPage() {
                     <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-[var(--text-primary)]">
                       {money(row.total)}
                     </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <Can permission="platform.company.delete">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeletedMessage("");
+                            setCompanyToDelete(row);
+                          }}
+                          title="Excluir empresa"
+                          aria-label="Excluir empresa"
+                          className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </Can>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -329,6 +499,17 @@ export default function ClientesFaturamentoPage() {
           </div>
         )}
       </ListPageLayout>
+
+      {companyToDelete && (
+        <DeleteCompanyModal
+          company={companyToDelete}
+          onClose={() => setCompanyToDelete(null)}
+          onDeleted={(legalName) => {
+            setDeletedMessage(`Empresa ${legalName} excluída com sucesso.`);
+            void load();
+          }}
+        />
+      )}
     </OsShell>
   );
 }

@@ -530,6 +530,13 @@ const permissionGroups = [
       ["license.trial", "Iniciar Trial de Módulo"],
       ["license.catalog.view", "Ver Catálogo de Planos/Módulos"],
       ["platform.license.manage", "Gerenciar Licenciamento (Plataforma)"],
+      // Exclusão FÍSICA de empresa (irreversível) — restrita ao dono da
+      // plataforma, mesma trava de e-mail de platform.license.manage
+      // (ver PLATFORM_OWNER_ONLY_PERMISSIONS em permissions.guard.ts).
+      // Não confundir com "company.delete" (grupo COMPANY): aquela é
+      // uma permissão de tenant que hoje não tem nenhuma rota que a
+      // use (código morto) — esta aqui é a de verdade.
+      ["platform.company.delete", "Excluir Empresa Permanentemente (Plataforma)"],
     ],
   },
   {

@@ -12,6 +12,8 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
+import { DefaultAccountingService } from '../../../core/default-accounting/default-accounting.service';
+import { PLATFORM_COMPANY_CODE } from '../../../core/constants/platform.constants';
 import { AsaasService } from './asaas.service';
 import type { BillingTypeValue } from '../dto/subscribe.dto';
 import type { CreateCheckoutDto } from '../dto/create-checkout.dto';
@@ -20,19 +22,8 @@ import { CUSTOM_PLAN_CODE } from '../../identity/license/constants/custom-plan.c
 /** Tolerância após o vencimento antes de bloquear — decisão do usuário. */
 const GRACE_DAYS = 7;
 
-/** Empresa dona da plataforma — é ela o "fornecedor" da mensalidade. */
-const PLATFORM_COMPANY_CODE = 'ALEPEJO';
-
 /** Prazo de validade de uma compra sem cadastro concluído. */
 const CHECKOUT_EXPIRES_DAYS = 7;
-
-/**
- * Tipo de despesa padrão da mensalidade do ERP — criado sozinho na
- * empresa do cliente na primeira cobrança, já que uma empresa nova
- * nasce sem plano de contas nenhum.
- */
-const SYSTEM_EXPENSE_ACCOUNT_CODE = '01.01.01';
-const SYSTEM_EXPENSE_ACCOUNT_DESCRIPTION = 'Despesas com Sistema';
 
 export type MonthStatus = 'PAGO' | 'A_PAGAR' | 'VENCIDO' | 'EM_TESTE' | 'VAZIO';
 
@@ -116,6 +107,7 @@ export class BillingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly asaas: AsaasService,
+    private readonly defaultAccounting: DefaultAccountingService,
   ) {}
 
   /**
@@ -233,7 +225,13 @@ export class BillingService {
         },
       }));
 
-    const chartOfAccount = await this.ensureSystemExpenseAccount(companyId);
+    const chartOfAccount =
+      await this.defaultAccounting.ensureSystemExpenseAccount(companyId);
+    const unit = await this.defaultAccounting.ensureDefaultUnit(companyId);
+    const product = await this.defaultAccounting.ensureSystemExpenseProduct(
+      companyId,
+      unit.id,
+    );
 
     await this.prisma.financialEntry.create({
       data: {
@@ -241,6 +239,7 @@ export class BillingService {
         billingChargeId: charge.id,
         partnerId: partner.id,
         chartOfAccountId: chartOfAccount.id,
+        productId: product.id,
         documentNumber: charge.invoiceNumber ?? undefined,
         type: 'PAYABLE',
         status: pago ? 'PAID' : 'OPEN',
@@ -253,54 +252,6 @@ export class BillingService {
           charge.type === 'SETUP_FEE'
             ? `Taxa de implantação — ${planName}`
             : `Assinatura ${planName} — AlePejo ERP Cloud`,
-      },
-    });
-  }
-
-  /**
-   * Tipo de despesa "01.01.01 — Despesas com Sistema" na empresa do
-   * cliente — encontra se já existir, cria (com a classificação
-   * junto) na primeira cobrança, já que empresa nova nasce sem plano
-   * de contas nenhum.
-   */
-  private async ensureSystemExpenseAccount(companyId: string) {
-    const existing = await this.prisma.chartOfAccount.findFirst({
-      where: { companyId, code: SYSTEM_EXPENSE_ACCOUNT_CODE },
-    });
-
-    if (existing) {
-      return existing;
-    }
-
-    const classification =
-      await this.prisma.chartOfAccountClassification.upsert({
-        where: {
-          companyId_name: {
-            companyId,
-            name: SYSTEM_EXPENSE_ACCOUNT_DESCRIPTION,
-          },
-        },
-        update: {},
-        create: {
-          companyId,
-          name: SYSTEM_EXPENSE_ACCOUNT_DESCRIPTION,
-        },
-      });
-
-    return this.prisma.chartOfAccount.upsert({
-      where: {
-        companyId_code: {
-          companyId,
-          code: SYSTEM_EXPENSE_ACCOUNT_CODE,
-        },
-      },
-      update: {},
-      create: {
-        companyId,
-        code: SYSTEM_EXPENSE_ACCOUNT_CODE,
-        classificationId: classification.id,
-        description: SYSTEM_EXPENSE_ACCOUNT_DESCRIPTION,
-        type: 'DESPESA',
       },
     });
   }

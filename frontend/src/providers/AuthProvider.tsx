@@ -54,7 +54,10 @@ const AuthContext = createContext<AuthContextValue | undefined>(
  * a conta do dono pode efetivamente usá-la. Espelha a mesma trava no
  * backend (PermissionsGuard).
  */
-const PLATFORM_OWNER_ONLY_PERMISSIONS = new Set(["platform.license.manage"]);
+const PLATFORM_OWNER_ONLY_PERMISSIONS = new Set([
+  "platform.license.manage",
+  "platform.company.delete",
+]);
 const PLATFORM_OWNER_EMAIL = "alessandro.lourenco@alepejo.com.br";
 
 export function AuthProvider({

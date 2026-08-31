@@ -1074,17 +1074,31 @@ export default function LicenciamentoPage() {
                             </td>
 
                             <td className="px-4 py-3 text-right">
-                              {emAberto && link && (
-                                <a
-                                  href={link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-                                >
-                                  Pagar
-                                  <ExternalLink size={13} />
-                                </a>
-                              )}
+                              <div className="flex items-center justify-end gap-2">
+                                {emAberto && link && (
+                                  <a
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                                  >
+                                    Pagar
+                                    <ExternalLink size={13} />
+                                  </a>
+                                )}
+
+                                {charge.invoiceUrl && (
+                                  <a
+                                    href={charge.invoiceUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] px-3.5 py-2 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                                  >
+                                    Ver fatura
+                                    <ExternalLink size={13} />
+                                  </a>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

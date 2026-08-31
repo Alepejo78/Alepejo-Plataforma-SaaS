@@ -89,4 +89,17 @@ export const companyService = {
 
     return data.data;
   },
+
+  /**
+   * Só a plataforma (`platform.company.delete`) — exclusão permanente
+   * de uma empresa cliente. `confirmDocument` precisa bater com o
+   * CNPJ/CPF real da empresa; o backend também recusa empresa com
+   * qualquer movimentação.
+   */
+  async remove(id: string, confirmDocument: string): Promise<void> {
+    await api.delete<ApiEnvelope<null>>(
+      `/companies/${id}`,
+      { params: { confirmDocument } }
+    );
+  },
 };

@@ -20,7 +20,10 @@ import {
  * cliente) — mesmo que alguém conceda essa permissão pela matriz de
  * perfis de acesso, só a conta do dono pode efetivamente usá-la.
  */
-const PLATFORM_OWNER_ONLY_PERMISSIONS = new Set(['platform.license.manage']);
+const PLATFORM_OWNER_ONLY_PERMISSIONS = new Set([
+  'platform.license.manage',
+  'platform.company.delete',
+]);
 const PLATFORM_OWNER_EMAIL = 'alessandro.lourenco@alepejo.com.br';
 
 /**
