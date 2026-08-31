@@ -168,6 +168,36 @@ function ConfirmarEpiContent() {
                 </p>
               </div>
 
+              <div className="space-y-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+                <p>
+                  Declaro, para os devidos fins, ter recebido os
+                  E.P.I.(s) acima relacionados, bem como as
+                  devidas orientações quanto a sua utilização,
+                  conservação e finalidade efetuadas pela{" "}
+                  <strong>{info.companyName}</strong>, em
+                  conformidade com a legislação vigente (Portaria
+                  3214/78, NR-6, item 6.7) e que estes se adaptam
+                  à preservação de minha integridade física e
+                  estão diretamente relacionados ao desempenho de
+                  minhas funções.
+                </p>
+
+                <p>
+                  Declaro, ainda, que estou ciente e de acordo
+                  que a perda e/ou má utilização dos itens acima
+                  relacionados implicará na restituição dos
+                  mesmos à <strong>{info.companyName}</strong>.
+                  Para tanto, autorizo o desconto em folha dos
+                  itens perdidos e/ou danificados nestas
+                  condições.
+                </p>
+
+                <p className="font-medium text-[var(--text-primary)]">
+                  De acordo, confirmo o recebimento clicando no
+                  botão abaixo.
+                </p>
+              </div>
+
               {error && (
                 <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
                   {error}
