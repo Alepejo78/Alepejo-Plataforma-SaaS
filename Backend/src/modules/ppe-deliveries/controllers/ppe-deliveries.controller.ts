@@ -76,7 +76,7 @@ export class PpeDeliveriesController {
   }
 
   @Patch(':id/confirm')
-  @Permissions('ppe-delivery.confirm')
+  @Permissions('ppe-delivery.approve')
   confirm(
     @CurrentUser('companyId') companyId: string,
     @CurrentUser('id') userId: string,
@@ -86,7 +86,7 @@ export class PpeDeliveriesController {
   }
 
   @Post(':id/send-confirmation')
-  @Permissions('ppe-delivery.confirm')
+  @Permissions('ppe-delivery.approve')
   sendConfirmation(
     @CurrentUser('companyId') companyId: string,
     @Param('id') id: string,

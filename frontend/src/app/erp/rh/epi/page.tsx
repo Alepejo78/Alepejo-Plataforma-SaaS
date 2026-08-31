@@ -465,7 +465,7 @@ export default function FichaEpiPage() {
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
                             {d.status === "PENDENTE" && (
-                              <Can permission="ppe-delivery.confirm">
+                              <Can permission="ppe-delivery.approve">
                                 <button
                                   type="button"
                                   disabled={actionId === d.id}
