@@ -17,6 +17,9 @@
  *   de `/planos`.
  * - `/privacidade`: Política de Privacidade — precisa ser acessível sem
  *   login (é referenciada no cadastro, antes de qualquer conta existir).
+ * - `/confirmar-epi`: link de confirmação de recebimento de EPI, enviado
+ *   por e-mail/WhatsApp — o colaborador confirma sem ter (ou precisar de)
+ *   login no sistema.
  * - `/<empresa>/login`: login com o nome da empresa fixo na URL — o
  *   link que o e-mail de "definir senha" passa a mostrar como o
  *   acesso permanente do usuário (ver `sendPasswordResetLink` no
@@ -39,6 +42,7 @@ export const PUBLIC_ROUTES = [
   "/checkout",
   "/institucional",
   "/privacidade",
+  "/confirmar-epi",
 ] as const;
 
 /** `/<slug>/login` — exatamente dois segmentos, o segundo literalmente "login". */

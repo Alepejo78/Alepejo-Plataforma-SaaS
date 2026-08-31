@@ -3,6 +3,40 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Confirmação digital de entrega de EPI — manual e por link e-mail/WhatsApp (31-08-2026)
+
+`PpeDelivery` ganha `status` (`PENDENTE`/`CONFIRMADO`), `confirmedAt`,
+`confirmedById` (nulo quando confirmado pelo link público — sem
+sessão, ninguém do sistema pra registrar) e
+`confirmationTokenHash`/`confirmationTokenExpiresAt`/
+`confirmationSentAt` (migration `20260831215231_ppe_delivery_confirmation`).
+Duas formas de confirmar, as duas pedidas pelo usuário:
+
+1. **Botão "Confirmar entrega" na tela** (`/erp/rh/epi`) — RH confirma
+   na hora, presencial. `PATCH /ppe-deliveries/:id/confirm`.
+2. **Link por e-mail e/ou WhatsApp** — botão "Enviar confirmação"
+   gera um token (só o hash SHA-256 fica salvo, igual ao reset de
+   senha em `UsersService.sendPasswordResetLink`) e manda pros
+   contatos que a empresa tiver (`Employee.email`/`mobile`, mesmo
+   padrão best-effort de `SalesOrderService.notifyPartner`). O
+   colaborador abre `/confirmar-epi?id=...&token=...` **sem
+   precisar de login** (rota pública, `@Public()` nos dois lados —
+   backend em `PpeDeliveriesController`, frontend em
+   `PUBLIC_ROUTES`), vê o que vai confirmar e clica — token de uso
+   único, zerado depois de consumido.
+
+Na ficha impressa (`/erp/rh/epi/ficha/[employeeId]`), item confirmado
+mostra **"Assinado digitalmente" + data/hora** na coluna Assinatura em
+vez do espaço em branco pra assinar à mão. Permissão nova
+`ppe-delivery.confirm` cobre os dois botões.
+
+Testado local ponta a ponta: confirmação manual, link público
+(inclusive reuso do token depois de consumido, bloqueado
+corretamente), e o próprio envio por WhatsApp funcionou de verdade
+(sessão do Baileys já estava conectada no ambiente local) — pode ter
+mandado uma mensagem de teste real pro WhatsApp cadastrado no
+colaborador usado no teste.
+
 ## 🟢 Base da Tabela CBO ampliada (265 ocupações novas); aviso de aniversário do usuário logado agora usa o vínculo de login (31-08-2026)
 
 **`Backend/prisma/data/cbo.csv` ganhou 265 códigos que faltavam**

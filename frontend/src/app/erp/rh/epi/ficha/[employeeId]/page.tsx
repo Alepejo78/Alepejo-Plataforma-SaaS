@@ -34,6 +34,14 @@ function date(value: string | null | undefined) {
   });
 }
 
+function datetime(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  return new Date(value).toLocaleString("pt-BR");
+}
+
 export default function FichaEpiImpressaoPage() {
   const params = useParams<{ employeeId: string }>();
   const router = useRouter();
@@ -221,7 +229,17 @@ export default function FichaEpiImpressaoPage() {
                   <td className="border border-black p-2 text-right">
                     {qty(d.quantity)}
                   </td>
-                  <td className="border border-black p-2" />
+                  <td className="border border-black p-2 text-center text-[10px] leading-tight">
+                    {d.status === "CONFIRMADO" ? (
+                      <>
+                        <span className="italic">
+                          Assinado digitalmente
+                        </span>
+                        <br />
+                        {datetime(d.confirmedAt)}
+                      </>
+                    ) : null}
+                  </td>
                 </tr>
               ))
             )}

@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, Printer, Trash2, X } from "lucide-react";
+import {
+  Check,
+  Mail,
+  Plus,
+  Printer,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
@@ -14,6 +21,7 @@ import {
   employeeService,
   ppeDeliveryService,
   ppeTypeService,
+  PPE_DELIVERY_STATUS_LABELS,
   type AuxiliaryRecord,
   type Employee,
   type PpeDelivery,
@@ -77,6 +85,7 @@ export default function FichaEpiPage() {
 
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState("");
+  const [actionId, setActionId] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
@@ -208,6 +217,70 @@ export default function FichaEpiPage() {
           "Não foi possível remover a entrega."
         )
       );
+    }
+  }
+
+  async function confirmDelivery(delivery: PpeDelivery) {
+    if (
+      !window.confirm(
+        `Confirmar que "${delivery.employee?.name}" recebeu o EPI "${delivery.ppeType?.name}"? Na ficha impressa, isso substitui a assinatura por "assinado digitalmente".`
+      )
+    ) {
+      return;
+    }
+
+    setActionId(delivery.id);
+    setListError("");
+
+    try {
+      await ppeDeliveryService.confirm(delivery.id);
+
+      if (employee) {
+        await load(employee.id);
+      }
+    } catch (err) {
+      setListError(
+        extractMessage(
+          err,
+          "Não foi possível confirmar a entrega."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
+  async function sendConfirmation(delivery: PpeDelivery) {
+    setActionId(delivery.id);
+    setListError("");
+
+    try {
+      const result = await ppeDeliveryService.sendConfirmation(
+        delivery.id
+      );
+
+      const channelLabel = result.channels
+        .map((c) => (c === "email" ? "e-mail" : "WhatsApp"))
+        .join(" e ");
+
+      window.alert(
+        result.sent
+          ? `Link de confirmação enviado por ${channelLabel}.`
+          : "Não foi possível enviar por nenhum canal — confira se o e-mail/WhatsApp da empresa está configurado."
+      );
+
+      if (employee) {
+        await load(employee.id);
+      }
+    } catch (err) {
+      setListError(
+        extractMessage(
+          err,
+          "Não foi possível enviar o link de confirmação."
+        )
+      );
+    } finally {
+      setActionId("");
     }
   }
 
@@ -348,6 +421,9 @@ export default function FichaEpiPage() {
                       <th className="px-4 py-3 text-right font-semibold">
                         Qtde
                       </th>
+                      <th className="px-4 py-3 font-semibold">
+                        Status
+                      </th>
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
@@ -374,8 +450,50 @@ export default function FichaEpiPage() {
                           {qty(d.quantity)}
                         </td>
 
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              d.status === "CONFIRMADO"
+                                ? "bg-[var(--success-soft)] text-[var(--success)]"
+                                : "bg-[var(--warning-soft)] text-[var(--warning)]"
+                            }`}
+                          >
+                            {PPE_DELIVERY_STATUS_LABELS[d.status]}
+                          </span>
+                        </td>
+
                         <td className="px-4 py-3">
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-2">
+                            {d.status === "PENDENTE" && (
+                              <Can permission="ppe-delivery.confirm">
+                                <button
+                                  type="button"
+                                  disabled={actionId === d.id}
+                                  onClick={() =>
+                                    void sendConfirmation(d)
+                                  }
+                                  title="Enviar link de confirmação por e-mail/WhatsApp"
+                                  aria-label="Enviar confirmação"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-40"
+                                >
+                                  <Mail size={16} />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={actionId === d.id}
+                                  onClick={() =>
+                                    void confirmDelivery(d)
+                                  }
+                                  title="Confirmar entrega manualmente"
+                                  aria-label="Confirmar entrega"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-40"
+                                >
+                                  <Check size={16} />
+                                </button>
+                              </Can>
+                            )}
+
                             <Can permission="ppe-delivery.delete">
                               <button
                                 type="button"

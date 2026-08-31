@@ -825,6 +825,16 @@ export const employeeReportsService = {
 // Entrega de EPI (ficha de EPI)
 // ============================================================
 
+export type PpeDeliveryStatus = "PENDENTE" | "CONFIRMADO";
+
+export const PPE_DELIVERY_STATUS_LABELS: Record<
+  PpeDeliveryStatus,
+  string
+> = {
+  PENDENTE: "Aguardando confirmação",
+  CONFIRMADO: "Entrega confirmada",
+};
+
 export interface PpeDelivery {
   id: string;
   employeeId: string;
@@ -835,6 +845,10 @@ export interface PpeDelivery {
   observation?: string | null;
   createdAt: string;
 
+  status: PpeDeliveryStatus;
+  confirmedAt?: string | null;
+  confirmationSentAt?: string | null;
+
   ppeType?: AuxiliaryRecord | null;
 
   employee?: {
@@ -842,6 +856,8 @@ export interface PpeDelivery {
     name: string;
     rg?: string | null;
     cpf?: string | null;
+    email?: string | null;
+    mobile?: string | null;
     workCard?: string | null;
     workCardSeries?: string | null;
     jobFunction?: {
@@ -884,6 +900,55 @@ export const ppeDeliveryService = {
 
   async remove(id: string) {
     await api.delete(`/ppe-deliveries/${id}`);
+  },
+
+  async confirm(id: string): Promise<PpeDelivery> {
+    const { data } = await api.patch<ApiEnvelope<PpeDelivery>>(
+      `/ppe-deliveries/${id}/confirm`
+    );
+
+    return data.data;
+  },
+
+  async sendConfirmation(
+    id: string
+  ): Promise<{ sent: boolean; channels: string[] }> {
+    const { data } = await api.post<
+      ApiEnvelope<{ sent: boolean; channels: string[] }>
+    >(`/ppe-deliveries/${id}/send-confirmation`);
+
+    return data.data;
+  },
+};
+
+export interface PpeDeliveryPublicInfo {
+  employeeName: string;
+  companyName: string;
+  ppeTypeName: string;
+  quantity: string | number;
+  deliveryDate: string;
+  status: PpeDeliveryStatus;
+}
+
+/** Rotas públicas (sem login) do link de confirmação enviado por e-mail/WhatsApp. */
+export const ppeDeliveryPublicService = {
+  async getInfo(
+    id: string,
+    token: string
+  ): Promise<PpeDeliveryPublicInfo> {
+    const { data } = await api.get<
+      ApiEnvelope<PpeDeliveryPublicInfo>
+    >(`/ppe-deliveries/public/${id}`, { params: { token } });
+
+    return data.data;
+  },
+
+  async confirm(id: string, token: string): Promise<void> {
+    await api.post(
+      `/ppe-deliveries/public/${id}/confirm`,
+      undefined,
+      { params: { token } }
+    );
   },
 };
 

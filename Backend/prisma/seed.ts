@@ -695,6 +695,7 @@ const permissionGroups = [
       ["ppe-delivery.view", "Visualizar Entregas de EPI"],
       ["ppe-delivery.create", "Registrar Entregas de EPI"],
       ["ppe-delivery.delete", "Excluir Entregas de EPI"],
+      ["ppe-delivery.confirm", "Confirmar Recebimento de EPI (manual ou enviar link)"],
     ],
   },
   {

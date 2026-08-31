@@ -2975,11 +2975,33 @@ model PpeDelivery {
   deliveryDate DateTime @default(now())
   observation  String?  @db.VarChar(255)
 
+  status PpeDeliveryStatus @default(PENDENTE)
+
+  /// Confirmação de recebimento — manual (RH clica "Confirmar entrega"
+  /// na tela, `confirmedById` preenchido) ou feita pelo próprio
+  /// colaborador via link público enviado por e-mail/WhatsApp
+  /// (`confirmedById` nulo — sem sessão, ninguém pra registrar).
+  confirmedAt   DateTime?
+  confirmedById String?
+
+  /// Token do link de confirmação — só o hash (SHA-256) fica salvo,
+  /// nunca o valor puro (mesmo padrão do reset de senha, ver
+  /// UsersService.sendPasswordResetLink). Renovado a cada novo envio;
+  /// zerado ao confirmar (uso único).
+  confirmationTokenHash      String?   @db.VarChar(64)
+  confirmationTokenExpiresAt DateTime?
+  confirmationSentAt         DateTime?
+
   createdAt DateTime @default(now())
 
   @@index([companyId])
   @@index([employeeId])
   @@map("ppe_deliveries")
+}
+
+enum PpeDeliveryStatus {
+  PENDENTE
+  CONFIRMADO
 }
 
 /// Etapas em sequência: aguardando -> em produção -> finalizada.
