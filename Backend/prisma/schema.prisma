@@ -1630,6 +1630,7 @@ enum FinancialDocumentType {
   CARNE
   CUPOM_FISCAL
   NOTA_FISCAL
+  FATURA
   RECIBO
   OUTRO
 }

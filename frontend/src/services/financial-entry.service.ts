@@ -32,6 +32,7 @@ export type FinancialDocumentType =
   | "CARNE"
   | "CUPOM_FISCAL"
   | "NOTA_FISCAL"
+  | "FATURA"
   | "RECIBO"
   | "OUTRO";
 
@@ -64,6 +65,7 @@ export const DOCUMENT_TYPE_LABELS: Record<
   CARNE: "Carnê",
   CUPOM_FISCAL: "Cupom Fiscal",
   NOTA_FISCAL: "Nota Fiscal",
+  FATURA: "Fatura",
   RECIBO: "Recibo",
   OUTRO: "Outro",
 };

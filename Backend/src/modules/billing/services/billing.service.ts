@@ -241,6 +241,7 @@ export class BillingService {
         chartOfAccountId: chartOfAccount.id,
         productId: product.id,
         documentNumber: charge.invoiceNumber ?? undefined,
+        documentType: 'FATURA',
         type: 'PAYABLE',
         status: pago ? 'PAID' : 'OPEN',
         issueDate: new Date(),
