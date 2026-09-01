@@ -133,6 +133,10 @@ export class ThirteenthSalaryItemBuilderService {
 
       inssBase = grossAmount;
       inssAmount = this.calc.calculateInss(inssBase, params.taxTable);
+      const inssRate = this.calc.findBracketRate(
+        inssBase,
+        params.taxTable.brackets.filter((b) => b.taxType === 'INSS'),
+      );
 
       const eligibleDependents = employee.dependents.filter((d) => d.irrfEligible).length;
       const irrf = this.calc.calculateIrrf(
@@ -144,13 +148,17 @@ export class ThirteenthSalaryItemBuilderService {
 
       irrfBase = irrf.base;
       irrfAmount = irrf.amount;
+      const irrfRate = this.calc.findBracketRate(
+        irrfBase,
+        params.taxTable.brackets.filter((b) => b.taxType === 'IRRF'),
+      );
 
       if (inssAmount > 0) {
         lines.push({
           type: PayrollLineType.DESCONTO,
           code: 'INSS',
           description: 'INSS (sobre o 13º total)',
-          referenceValue: `sobre ${inssBase.toFixed(2)}`,
+          referenceValue: inssRate !== null ? `${inssRate.toFixed(2).replace('.', ',')}%` : undefined,
           amount: inssAmount,
           sortOrder: sortOrder++,
         });
@@ -161,7 +169,7 @@ export class ThirteenthSalaryItemBuilderService {
           type: PayrollLineType.DESCONTO,
           code: 'IRRF',
           description: 'IRRF (sobre o 13º total)',
-          referenceValue: `sobre ${irrfBase.toFixed(2)}`,
+          referenceValue: irrfRate !== null ? `${irrfRate.toFixed(2).replace('.', ',')}%` : undefined,
           amount: irrfAmount,
           sortOrder: sortOrder++,
         });

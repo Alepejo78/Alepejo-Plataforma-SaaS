@@ -105,16 +105,24 @@ export class VacationGrantBuilderService {
 
     const inssBase = grossAmount;
     const inssAmount = this.calc.calculateInss(inssBase, params.taxTable);
+    const inssRate = this.calc.findBracketRate(
+      inssBase,
+      params.taxTable.brackets.filter((b) => b.taxType === 'INSS'),
+    );
 
     const eligibleDependents = params.dependents.filter((d) => d.irrfEligible).length;
     const irrf = this.calc.calculateIrrf(grossAmount, inssAmount, eligibleDependents, params.taxTable);
+    const irrfRate = this.calc.findBracketRate(
+      irrf.base,
+      params.taxTable.brackets.filter((b) => b.taxType === 'IRRF'),
+    );
 
     if (inssAmount > 0) {
       lines.push({
         type: PayrollLineType.DESCONTO,
         code: 'INSS',
         description: 'INSS (sobre férias + 1/3, sem o abono)',
-        referenceValue: `sobre ${inssBase.toFixed(2)}`,
+        referenceValue: inssRate !== null ? `${inssRate.toFixed(2).replace('.', ',')}%` : undefined,
         amount: inssAmount,
         sortOrder: sortOrder++,
       });
@@ -125,7 +133,7 @@ export class VacationGrantBuilderService {
         type: PayrollLineType.DESCONTO,
         code: 'IRRF',
         description: 'IRRF (sobre férias + 1/3, sem o abono)',
-        referenceValue: `sobre ${irrf.base.toFixed(2)}`,
+        referenceValue: irrfRate !== null ? `${irrfRate.toFixed(2).replace('.', ',')}%` : undefined,
         amount: irrf.amount,
         sortOrder: sortOrder++,
       });

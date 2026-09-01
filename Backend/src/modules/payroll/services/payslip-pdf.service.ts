@@ -168,33 +168,33 @@ export class PayslipPdfService {
     // ---- Dados do colaborador ----------------------------------------------
     const employee = input.employee;
 
-    this.drawRow(doc, left, cursorY, pageWidth, [
-      `Matrícula: ${employee.employeeNumber ?? '—'} — Nome: ${employee.name}`,
-      `CPF: ${employee.cpf ?? '—'}`,
-    ]);
-    cursorY = doc.y + 4;
-    this.drawRow(doc, left, cursorY, pageWidth, [
-      `Admissão: ${formatDate(employee.admissionDate)}`,
-      `Cargo: ${employee.jobFunction?.name ?? '—'}`,
-    ]);
-    cursorY = doc.y + 10;
+    cursorY =
+      this.drawRow(doc, left, cursorY, pageWidth, [
+        `Matrícula: ${employee.employeeNumber ?? '—'} — Nome: ${employee.name}`,
+        `CPF: ${employee.cpf ?? '—'}`,
+      ]) + 4;
+    cursorY =
+      this.drawRow(doc, left, cursorY, pageWidth, [
+        `Admissão: ${formatDate(employee.admissionDate)}`,
+        `Cargo: ${employee.jobFunction?.name ?? '—'}`,
+      ]) + 10;
 
     doc.moveTo(left, cursorY).lineTo(left + pageWidth, cursorY).strokeColor('#d1d5db').stroke();
     cursorY += 8;
 
     if (input.baseSalary !== undefined) {
-      this.drawRow(doc, left, cursorY, pageWidth, [
-        `Salário Base: ${formatMoney(input.baseSalary)}`,
-        input.hourlyRate !== undefined ? `Salário Hora: ${formatMoney(input.hourlyRate)}` : '',
-      ]);
-      cursorY = doc.y + 4;
+      cursorY =
+        this.drawRow(doc, left, cursorY, pageWidth, [
+          `Salário Base: ${formatMoney(input.baseSalary)}`,
+          input.hourlyRate !== undefined ? `Salário Hora: ${formatMoney(input.hourlyRate)}` : '',
+        ]) + 4;
     }
 
-    this.drawRow(doc, left, cursorY, pageWidth, [
-      `Banco/Agência: ${employee.bankName ?? '—'} / ${employee.bankAgency ?? '—'}`,
-      `C/C: ${employee.bankAccount ?? '—'}`,
-    ]);
-    cursorY = doc.y + 10;
+    cursorY =
+      this.drawRow(doc, left, cursorY, pageWidth, [
+        `Banco/Agência: ${employee.bankName ?? '—'} / ${employee.bankAgency ?? '—'}`,
+        `C/C: ${employee.bankAccount ?? '—'}`,
+      ]) + 10;
 
     // ---- Tabela de linhas ---------------------------------------------------
     cursorY = this.drawLinesTable(doc, input.lines, left, cursorY, pageWidth);
@@ -272,14 +272,24 @@ export class PayslipPdfService {
       });
   }
 
-  private drawRow(doc: PDFKit.PDFDocument, left: number, y: number, pageWidth: number, values: string[]) {
+  /**
+   * Retorna `y + altura fixa` em vez de `doc.y` — o PDFKit não avança
+   * `doc.y` de forma confiável quando uma das colunas é string vazia
+   * (ex.: "Salário Hora" só existe pra HORISTA), o que fazia a linha
+   * seguinte ser desenhada quase em cima desta.
+   */
+  private drawRow(doc: PDFKit.PDFDocument, left: number, y: number, pageWidth: number, values: string[]): number {
     doc.fontSize(8).font('Helvetica').fillColor('#374151');
 
     const colWidth = pageWidth / values.length;
 
     values.forEach((value, index) => {
-      doc.text(value, left + index * colWidth, y, { width: colWidth - 6 });
+      if (value) {
+        doc.text(value, left + index * colWidth, y, { width: colWidth - 6 });
+      }
     });
+
+    return y + 12;
   }
 
   private drawLinesTable(
