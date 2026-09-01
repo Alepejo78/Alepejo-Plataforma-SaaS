@@ -44,6 +44,17 @@ export class UsersRepository {
         companyId: true,
       },
     },
+    // Só pra badge "Bloqueado (férias)"/"Bloqueado (afastado)" na lista —
+    // o bloqueio de login em si é checado direto em AuthService, aqui é
+    // só leitura pra exibir.
+    employee: {
+      select: {
+        onVacation: true,
+        vacationEndDate: true,
+        onLeave: true,
+        leaveEndDate: true,
+      },
+    },
   } as const;
 
   // `companyIds` é o grupo inteiro (empresa raiz + todas as

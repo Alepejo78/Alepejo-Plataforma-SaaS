@@ -34,6 +34,13 @@ export interface SystemUser {
   companies?: { companyId: string }[];
   /** Empresa em que este login entra por padrão ao fazer login. */
   defaultCompanyId?: string | null;
+  /** Colaborador vinculado — férias/afastamento daqui bloqueiam o login (ver AuthService). */
+  employee?: {
+    onVacation: boolean;
+    vacationEndDate?: string | null;
+    onLeave: boolean;
+    leaveEndDate?: string | null;
+  } | null;
 }
 
 export type UserPayload = {

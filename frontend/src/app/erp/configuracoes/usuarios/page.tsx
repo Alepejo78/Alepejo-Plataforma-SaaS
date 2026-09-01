@@ -57,11 +57,40 @@ function isBlocked(user: SystemUser) {
   );
 }
 
+/** Férias/afastamento do colaborador vinculado também bloqueiam o login (ver AuthService.assertEmployeeCanLogin). */
+function employeeBlockReason(user: SystemUser) {
+  if (user.employee?.onVacation) {
+    const until = user.employee.vacationEndDate
+      ? new Date(user.employee.vacationEndDate).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+      : null;
+    return until ? `Bloqueado (férias até ${until})` : "Bloqueado (férias)";
+  }
+
+  if (user.employee?.onLeave) {
+    const until = user.employee.leaveEndDate
+      ? new Date(user.employee.leaveEndDate).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+      : null;
+    return until ? `Bloqueado (afastado até ${until})` : "Bloqueado (afastado)";
+  }
+
+  return null;
+}
+
 function statusBadge(user: SystemUser) {
   if (!user.active) {
     return (
       <span className="rounded bg-[var(--surface-hover)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--text-muted)]">
         Inativo
+      </span>
+    );
+  }
+
+  const employeeReason = employeeBlockReason(user);
+
+  if (employeeReason) {
+    return (
+      <span className="rounded bg-[var(--danger-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--danger)]">
+        {employeeReason}
       </span>
     );
   }
