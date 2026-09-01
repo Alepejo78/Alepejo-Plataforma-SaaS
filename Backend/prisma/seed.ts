@@ -2,6 +2,7 @@ import { PrismaClient, PermissionEffect, UserStatus } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import * as fs from "fs";
 import * as path from "path";
+import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/core/default-accounting/default-accounting.constants";
 
 const prisma = new PrismaClient();
 
@@ -43,95 +44,16 @@ const erpModules: {
 const ADDON_MODULE_CODES = ["INVENTORY_COUNT", "BRANDING", "HR", "PRODUCTION", "LABOR"];
 
 /**
- * Plano de contas padrão, migrado da aba CAD_DESPESAS da planilha
- * "Controle Dedicar V1.0" (78 contas, todas de despesa). Serve só de
- * ESTRUTURA inicial para a empresa seed — nenhum valor monetário é
- * trazido da planilha, só o cadastro (código, classificação, descrição).
+ * Plano de contas padrão — o mesmo usado pra toda empresa nova
+ * (ver `default-accounting.constants.ts`). A AlePejo usava até
+ * 01-09-2026 uma lista própria migrada da planilha "Controle Dedicar
+ * V1.0" (78 contas, numeração incompatível — ex.: 02.01.08 era "Juros"
+ * em vez de "Adiantamento Salarial"), o que fazia a folha/férias/13º/
+ * adiantamento gerarem título sem classificação ou com a errada.
+ * Decisão do usuário (01-09-2026): desconsiderar a lista antiga da
+ * AlePejo e usar sempre esta, a mesma de toda empresa nova.
  */
-const defaultChartOfAccounts: {
-  code: string;
-  classification: string;
-  description: string;
-}[] = [
-  { code: "01.01.01", classification: "Adm - Internet", description: "Certificados" },
-  { code: "01.01.02", classification: "Adm - Internet", description: "Dominio emails" },
-  { code: "01.01.03", classification: "Adm - Internet", description: "Internet" },
-  { code: "01.01.04", classification: "Adm - Internet", description: "Site" },
-  { code: "01.02.01", classification: "ADM Escritorio", description: "Material de Escritório" },
-  { code: "01.03.01", classification: "ADM Limpeza", description: "Material de Limpeza" },
-  { code: "01.04.01", classification: "Adminstrativo", description: "Aluguel" },
-  { code: "01.04.02", classification: "Adminstrativo", description: "Ativo Imobilizado" },
-  { code: "01.04.03", classification: "Adminstrativo", description: "Comissão" },
-  { code: "01.04.04", classification: "Adminstrativo", description: "Correios" },
-  { code: "01.04.05", classification: "Adminstrativo", description: "DAS" },
-  { code: "01.04.06", classification: "Adminstrativo", description: "Despesa Água" },
-  { code: "01.04.07", classification: "Adminstrativo", description: "Despesas Telefone" },
-  { code: "01.04.08", classification: "Adminstrativo", description: "Energia Elétrica" },
-  { code: "01.04.09", classification: "Adminstrativo", description: "IPTU" },
-  { code: "01.04.10", classification: "Adminstrativo", description: "Outras Despesas" },
-  { code: "01.04.11", classification: "Adminstrativo", description: "Registro" },
-  { code: "01.04.12", classification: "Adminstrativo", description: "Honorários" },
-  { code: "01.04.13", classification: "Adminstrativo", description: "Reembolso/Devolução" },
-  { code: "02.01.01", classification: "Bancos/Taxas", description: "Boleto" },
-  { code: "02.01.02", classification: "Bancos/Taxas", description: "Cartao de Crédito" },
-  { code: "02.01.03", classification: "Bancos/Taxas", description: "Cheque BB" },
-  { code: "02.01.04", classification: "Bancos/Taxas", description: "Contrato" },
-  { code: "02.01.05", classification: "Bancos/Taxas", description: "Empréstimo" },
-  { code: "02.01.06", classification: "Bancos/Taxas", description: "GRRF" },
-  { code: "02.01.07", classification: "Bancos/Taxas", description: "ISS" },
-  { code: "02.01.08", classification: "Bancos/Taxas", description: "Juros" },
-  { code: "02.01.09", classification: "Bancos/Taxas", description: "Renegociação" },
-  { code: "02.01.10", classification: "Bancos/Taxas", description: "Tarifas/Taxas bancárias" },
-  { code: "03.01.01", classification: "Fretes", description: "Despesas Transporte" },
-  { code: "03.01.02", classification: "Fretes", description: "Frete" },
-  { code: "04.01.01", classification: "Funcionários", description: "Exames médicos" },
-  { code: "04.01.03", classification: "Funcionários", description: "Laudos" },
-  { code: "04.01.04", classification: "Funcionários", description: "Pro labore" },
-  { code: "04.01.05", classification: "Funcionários", description: "Reclamatória Trabalhista" },
-  { code: "04.01.06", classification: "Funcionários", description: "Reembolso Despesas" },
-  { code: "04.01.07", classification: "Funcionários", description: "Vale Transporte" },
-  { code: "04.01.08", classification: "Funcionários", description: "13 salário" },
-  { code: "04.01.09", classification: "Funcionários", description: "Adiantamento Salarial" },
-  { code: "04.01.10", classification: "Funcionários", description: "Alimentação" },
-  { code: "04.01.12", classification: "Funcionários", description: "Extras" },
-  { code: "04.01.13", classification: "Funcionários", description: "Férias" },
-  { code: "04.01.14", classification: "Funcionários", description: "FGTS" },
-  { code: "04.01.15", classification: "Funcionários", description: "Horas Extras" },
-  { code: "04.01.16", classification: "Funcionários", description: "INSS" },
-  { code: "04.01.17", classification: "Funcionários", description: "Rescisão" },
-  { code: "04.01.18", classification: "Funcionários", description: "Salários" },
-  { code: "05.01.01", classification: "Manutenção", description: "Manutenção de Computadores" },
-  { code: "05.01.02", classification: "Manutenção", description: "Manutenção Maquinas/Equipamentos" },
-  { code: "05.01.03", classification: "Manutenção", description: "Manutenção Predial" },
-  { code: "05.01.04", classification: "Manutenção", description: "Ferramentas" },
-  { code: "06.01.01", classification: "Fabrica", description: "Aluguel de equipamentos" },
-  { code: "06.01.02", classification: "Fabrica", description: "Avaria Equipamentos" },
-  { code: "06.01.03", classification: "Fabrica", description: "Locação de Maquinas/Equipamentos" },
-  { code: "06.01.04", classification: "Fabrica", description: "Maquinas e Equipamentos" },
-  { code: "06.01.05", classification: "Fabrica", description: "Maquinas/Equipamento" },
-  { code: "06.01.06", classification: "Fabrica", description: "Matéria-prima" },
-  { code: "07.01.01", classification: "MKT", description: "ART" },
-  { code: "07.01.02", classification: "MKT", description: "Gráfica" },
-  { code: "07.01.03", classification: "MKT", description: "Plotagem" },
-  { code: "07.01.04", classification: "MKT", description: "Projetista" },
-  { code: "07.01.05", classification: "MKT", description: "Propaganda" },
-  { code: "08.01.01", classification: "Particular", description: "Despesas Diversas" },
-  { code: "08.01.02", classification: "Particular", description: "Particular" },
-  { code: "09.01.01", classification: "Segurança", description: "EPIs" },
-  { code: "10.01.01", classification: "Terceiros", description: "Despesas com terceiros" },
-  { code: "11.01.01", classification: "Veiculo", description: "Aluguel de Veículo" },
-  { code: "11.01.02", classification: "Veiculo", description: "Combustível" },
-  { code: "11.01.03", classification: "Veiculo", description: "Despesas Carro" },
-  { code: "11.01.04", classification: "Veiculo", description: "Documento veículo" },
-  { code: "11.01.05", classification: "Veiculo", description: "Financiamento veículos" },
-  { code: "11.01.06", classification: "Veiculo", description: "IPVA" },
-  { code: "11.01.07", classification: "Veiculo", description: "Manutenção de veículo" },
-  { code: "11.01.08", classification: "Veiculo", description: "Multas" },
-  { code: "11.01.09", classification: "Veiculo", description: "Veículos" },
-  { code: "11.01.10", classification: "Viagens", description: "Despesas com viagens" },
-  { code: "12.01.01", classification: "Viagens", description: "Hospedagem" },
-  { code: "12.01.02", classification: "Viagens", description: "Despesas com refeição" },
-];
+const defaultChartOfAccounts = DEFAULT_CHART_OF_ACCOUNTS;
 
 /**
  * RH — dados reais migrados da aba CAD_FUNCAO da planilha "Controle

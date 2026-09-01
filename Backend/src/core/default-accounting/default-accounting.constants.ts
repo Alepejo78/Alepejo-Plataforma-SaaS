@@ -1,7 +1,8 @@
 /**
  * Plano de contas padrão de toda empresa nova (cliente do AlePejo ERP
- * Cloud) — DIFERENTE do plano de contas da própria ALEPEJO, que é
- * povoado só uma vez por `prisma/seed.ts` e não deve ser tocado aqui.
+ * Cloud) — desde 01-09-2026 é também o plano de contas da própria
+ * ALEPEJO (`prisma/seed.ts` importa esta mesma lista, ver comentário
+ * lá).
  *
  * 6 classificações / 42 contas, todas tipo DESPESA (decisão do
  * usuário, 31-08-2026). Ortografia corrigida em relação à lista
