@@ -13,8 +13,10 @@ import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Public } from '../../../core/decorators/public.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 import { Module } from '../../identity/license/decorators/module.decorator';
+import type { AuthenticatedUser } from '../../identity/auth/interfaces/authenticated-user.interface';
 
 import { PpeDeliveriesService } from '../services/ppe-deliveries.service';
+import { EmployeesService } from '../../employees/services/employees.service';
 
 import { CreatePpeDeliveryDto } from '../dto/create-ppe-delivery.dto';
 import { PpeDeliveryFilterDto } from '../dto/ppe-delivery-filter.dto';
@@ -22,7 +24,10 @@ import { PpeDeliveryFilterDto } from '../dto/ppe-delivery-filter.dto';
 @Controller('ppe-deliveries')
 @Module('HR')
 export class PpeDeliveriesController {
-  constructor(private readonly service: PpeDeliveriesService) {}
+  constructor(
+    private readonly service: PpeDeliveriesService,
+    private readonly employeesService: EmployeesService,
+  ) {}
 
   @Post()
   @Permissions('ppe-delivery.create')
@@ -35,11 +40,15 @@ export class PpeDeliveriesController {
 
   @Get()
   @Permissions('ppe-delivery.view')
-  findAll(
-    @CurrentUser('companyId') companyId: string,
+  async findAll(
+    @CurrentUser() user: AuthenticatedUser,
     @Query() filter: PpeDeliveryFilterDto,
   ) {
-    return this.service.findAll(companyId, filter);
+    filter.employeeId = await this.employeesService.resolveViewableEmployeeId(
+      user,
+      filter.employeeId,
+    );
+    return this.service.findAll(user.companyId, filter);
   }
 
   /**

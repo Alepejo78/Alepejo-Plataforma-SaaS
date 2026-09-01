@@ -7,6 +7,7 @@ import { ArrowLeft, Download, Printer } from "lucide-react";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { companyService } from "@/services/company.service";
 import { exportCsv } from "@/lib/exportCsv";
+import { useAuth } from "@/providers/AuthProvider";
 
 import {
   employeeService,
@@ -125,6 +126,12 @@ function IndicatorCard({
 }
 
 export default function AcompanhamentoDeHorasPage() {
+  const { can } = useAuth();
+  // Sem `employee.view` (não é RH/admin) o backend já força pro
+  // próprio colaborador (ver resolveViewableEmployeeId) — aqui só
+  // pula a busca e abre direto no próprio acompanhamento.
+  const isSelfService = !can("employee.view");
+
   const [companyName, setCompanyName] = useState("");
 
   const [employeeId, setEmployeeId] = useState("");
@@ -141,6 +148,22 @@ export default function AcompanhamentoDeHorasPage() {
       .then((c) => setCompanyName(c.tradeName || c.legalName || ""))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isSelfService) {
+      return;
+    }
+
+    employeeService
+      .getMine()
+      .then((own) => {
+        setEmployeeId(own.id);
+        setEmployeeLabel(own.name);
+      })
+      .catch(() => {
+        // sem colaborador vinculado — segue sem pré-selecionar
+      });
+  }, [isSelfService]);
 
   const searchEmployees = useCallback(async (query: string) => {
     const result = await employeeService.list({
@@ -337,21 +360,23 @@ export default function AcompanhamentoDeHorasPage() {
         </p>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <label className={labelClass}>Colaborador</label>
+          {!isSelfService && (
+            <div>
+              <label className={labelClass}>Colaborador</label>
 
-            <SearchSelect<Employee>
-              displayLabel={employeeLabel}
-              search={searchEmployees}
-              getId={(e) => e.id}
-              getLabel={(e) => e.name}
-              placeholder="Todos os colaboradores"
-              onSelect={(e) => {
-                setEmployeeId(e?.id ?? "");
-                setEmployeeLabel(e?.name ?? "");
-              }}
-            />
-          </div>
+              <SearchSelect<Employee>
+                displayLabel={employeeLabel}
+                search={searchEmployees}
+                getId={(e) => e.id}
+                getLabel={(e) => e.name}
+                placeholder="Todos os colaboradores"
+                onSelect={(e) => {
+                  setEmployeeId(e?.id ?? "");
+                  setEmployeeLabel(e?.name ?? "");
+                }}
+              />
+            </div>
+          )}
 
           <div>
             <label className={labelClass}>Mês</label>

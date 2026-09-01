@@ -8,6 +8,8 @@ import { Employee, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
+import { hasPermission } from '../../../core/utils/permission.util';
+import type { AuthenticatedUser } from '../../identity/auth/interfaces/authenticated-user.interface';
 
 import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
 
@@ -351,6 +353,26 @@ export class EmployeesService {
     await this.reconcileExperience([employee]);
 
     return employee;
+  }
+
+  /**
+   * Trava de autoatendimento pra telas com filtro de colaborador
+   * (Ponto, EPI, Acompanhamento de horas): quem tem `employee.view`
+   * (RH/admin) filtra livre, pelo `employeeId` que a tela mandar; quem
+   * NÃO tem, o `employeeId` recebido é ignorado e sempre vira o
+   * próprio colaborador do usuário logado — impede um usuário
+   * limitado de ver dado de outro colaborador só forçando a URL/API.
+   */
+  async resolveViewableEmployeeId(
+    user: AuthenticatedUser,
+    requestedEmployeeId?: string,
+  ): Promise<string | undefined> {
+    if (hasPermission(user, 'employee.view')) {
+      return requestedEmployeeId;
+    }
+
+    const own = await this.findMine(user.companyId, user.id);
+    return own.id;
   }
 
   async update(

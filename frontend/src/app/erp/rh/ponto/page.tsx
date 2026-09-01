@@ -18,6 +18,7 @@ import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { useAuth } from "@/providers/AuthProvider";
 
 import {
   employeeService,
@@ -112,6 +113,13 @@ function emptyAdjustForm() {
 }
 
 export default function ControleDePontoPage() {
+  const { can } = useAuth();
+  // Sem `employee.view` (não é RH/admin) o backend já força qualquer
+  // filtro pro próprio colaborador (ver resolveViewableEmployeeId) —
+  // aqui só escondemos a busca e pré-preenchemos, pra não obrigar
+  // quem só vê a si mesmo a se procurar numa lista.
+  const isSelfService = !can("employee.view");
+
   const exportTableRef = useRef<HTMLTableElement>(null);
   const [from, setFrom] = useState(firstDayOfMonthInput());
   const [to, setTo] = useState(todayInput());
@@ -151,6 +159,25 @@ export default function ControleDePontoPage() {
     TimeEntryAdjustment[]
   >([]);
   const [consultLoading, setConsultLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isSelfService) {
+      return;
+    }
+
+    employeeService
+      .getMine()
+      .then((own) => {
+        setEmployeeFilterId(own.id);
+        setEmployeeFilterLabel(own.name);
+        setRegEmployeeId(own.id);
+        setRegEmployeeLabel(own.name);
+      })
+      .catch(() => {
+        // sem colaborador vinculado — segue sem pré-selecionar, o
+        // backend segue travando em "nenhum" (ver findMine)
+      });
+  }, [isSelfService]);
 
   const searchEmployees = useCallback(async (query: string) => {
     const result = await employeeService.list({
@@ -416,18 +443,24 @@ export default function ControleDePontoPage() {
               <div className="min-w-64 flex-1">
                 <label className={labelClass}>Colaborador</label>
 
-                <SearchSelect<Employee>
-                  displayLabel={regEmployeeLabel}
-                  search={searchEmployees}
-                  getId={(e) => e.id}
-                  getLabel={(e) => e.name}
-                  placeholder="Digite para buscar o colaborador..."
-                  onSelect={(e) => {
-                    setRegEmployeeId(e?.id ?? "");
-                    setRegEmployeeLabel(e?.name ?? "");
-                    setRegFeedback("");
-                  }}
-                />
+                {isSelfService ? (
+                  <div className="flex h-11 items-center rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-3 text-sm text-[var(--text-primary)]">
+                    {regEmployeeLabel || "Carregando..."}
+                  </div>
+                ) : (
+                  <SearchSelect<Employee>
+                    displayLabel={regEmployeeLabel}
+                    search={searchEmployees}
+                    getId={(e) => e.id}
+                    getLabel={(e) => e.name}
+                    placeholder="Digite para buscar o colaborador..."
+                    onSelect={(e) => {
+                      setRegEmployeeId(e?.id ?? "");
+                      setRegEmployeeLabel(e?.name ?? "");
+                      setRegFeedback("");
+                    }}
+                  />
+                )}
               </div>
 
               <button
@@ -504,23 +537,25 @@ export default function ControleDePontoPage() {
               </div>
 
               <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-56">
-                  <label className={labelClass}>
-                    Colaborador
-                  </label>
+                {!isSelfService && (
+                  <div className="min-w-56">
+                    <label className={labelClass}>
+                      Colaborador
+                    </label>
 
-                  <SearchSelect<Employee>
-                    displayLabel={employeeFilterLabel}
-                    search={searchEmployees}
-                    getId={(e) => e.id}
-                    getLabel={(e) => e.name}
-                    placeholder="Todos os colaboradores"
-                    onSelect={(e) => {
-                      setEmployeeFilterId(e?.id ?? "");
-                      setEmployeeFilterLabel(e?.name ?? "");
-                    }}
-                  />
-                </div>
+                    <SearchSelect<Employee>
+                      displayLabel={employeeFilterLabel}
+                      search={searchEmployees}
+                      getId={(e) => e.id}
+                      getLabel={(e) => e.name}
+                      placeholder="Todos os colaboradores"
+                      onSelect={(e) => {
+                        setEmployeeFilterId(e?.id ?? "");
+                        setEmployeeFilterLabel(e?.name ?? "");
+                      }}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className={labelClass}>De</label>

@@ -16,6 +16,7 @@ import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
+import { useAuth } from "@/providers/AuthProvider";
 
 import {
   employeeService,
@@ -70,6 +71,12 @@ const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
 
 export default function FichaEpiPage() {
+  const { can } = useAuth();
+  // Sem `employee.view` (não é RH/admin) o backend já força pro
+  // próprio colaborador (ver resolveViewableEmployeeId) — aqui só
+  // pula a busca e abre direto na própria ficha.
+  const isSelfService = !can("employee.view");
+
   const exportTableRef = useRef<HTMLTableElement>(null);
   const [employee, setEmployee] = useState<Employee | null>(
     null
@@ -125,6 +132,23 @@ export default function FichaEpiPage() {
       .then((r) => setPpeTypes(r.data))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isSelfService) {
+      return;
+    }
+
+    employeeService
+      .getMine()
+      .then((own) => {
+        setEmployee(own);
+        setEmployeeLabel(own.name);
+      })
+      .catch(() => {
+        // sem colaborador vinculado — segue sem ficha, backend
+        // travaria em "nenhum" mesmo se tentasse buscar
+      });
+  }, [isSelfService]);
 
   useEffect(() => {
     if (employee) {
@@ -318,20 +342,22 @@ export default function FichaEpiPage() {
               </div>
             </header>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <SearchSelect<Employee>
-                displayLabel={employeeLabel}
-                search={searchEmployees}
-                getId={(e) => e.id}
-                getLabel={(e) => e.name}
-                getSubLabel={(e) => e.jobFunction?.name}
-                placeholder="Digite para buscar o colaborador..."
-                onSelect={(e) => {
-                  setEmployee(e);
-                  setEmployeeLabel(e?.name ?? "");
-                }}
-              />
-            </div>
+            {!isSelfService && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <SearchSelect<Employee>
+                  displayLabel={employeeLabel}
+                  search={searchEmployees}
+                  getId={(e) => e.id}
+                  getLabel={(e) => e.name}
+                  getSubLabel={(e) => e.jobFunction?.name}
+                  placeholder="Digite para buscar o colaborador..."
+                  onSelect={(e) => {
+                    setEmployee(e);
+                    setEmployeeLabel(e?.name ?? "");
+                  }}
+                />
+              </div>
+            )}
 
             {listError && (
               <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">

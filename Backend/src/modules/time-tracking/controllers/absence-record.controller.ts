@@ -14,8 +14,10 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 import { Module } from '../../identity/license/decorators/module.decorator';
+import type { AuthenticatedUser } from '../../identity/auth/interfaces/authenticated-user.interface';
 
 import { AbsenceService } from '../services/absence.service';
+import { EmployeesService } from '../../employees/services/employees.service';
 
 import { CreateAbsenceRecordDto } from '../dto/create-absence-record.dto';
 import { UpdateAbsenceRecordDto } from '../dto/update-absence-record.dto';
@@ -25,7 +27,10 @@ import { AbsenceFilterDto } from '../dto/absence-filter.dto';
 @Controller('absence-records')
 @Module('LABOR')
 export class AbsenceRecordController {
-  constructor(private readonly service: AbsenceService) {}
+  constructor(
+    private readonly service: AbsenceService,
+    private readonly employeesService: EmployeesService,
+  ) {}
 
   @Post()
   @Permissions('absence-record.create')
@@ -40,11 +45,15 @@ export class AbsenceRecordController {
   @Get()
   @Permissions('absence-record.view')
   @ApiOperation({ summary: 'Listar faltas e abonos' })
-  findAll(
-    @CurrentUser('companyId') companyId: string,
+  async findAll(
+    @CurrentUser() user: AuthenticatedUser,
     @Query() filter: AbsenceFilterDto,
   ) {
-    return this.service.findAll(companyId, filter);
+    filter.employeeId = await this.employeesService.resolveViewableEmployeeId(
+      user,
+      filter.employeeId,
+    );
+    return this.service.findAll(user.companyId, filter);
   }
 
   @Get(':id')

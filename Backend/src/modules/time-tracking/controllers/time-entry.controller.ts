@@ -14,8 +14,10 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 import { Module } from '../../identity/license/decorators/module.decorator';
+import type { AuthenticatedUser } from '../../identity/auth/interfaces/authenticated-user.interface';
 
 import { TimeTrackingService } from '../services/time-tracking.service';
+import { EmployeesService } from '../../employees/services/employees.service';
 
 import { CreateTimeEntryDto } from '../dto/create-time-entry.dto';
 import { TimeEntryFilterDto } from '../dto/time-entry-filter.dto';
@@ -27,7 +29,10 @@ import { SelfReportDayDto } from '../dto/self-report-day.dto';
 @Controller('time-entries')
 @Module('LABOR')
 export class TimeEntryController {
-  constructor(private readonly service: TimeTrackingService) {}
+  constructor(
+    private readonly service: TimeTrackingService,
+    private readonly employeesService: EmployeesService,
+  ) {}
 
   @Post()
   @Permissions('time-entry.create')
@@ -44,11 +49,15 @@ export class TimeEntryController {
   @ApiOperation({
     summary: 'Folha de ponto por dia (batidas + horas + status)',
   })
-  getDaySummary(
-    @CurrentUser('companyId') companyId: string,
+  async getDaySummary(
+    @CurrentUser() user: AuthenticatedUser,
     @Query() filter: TimeEntryFilterDto,
   ) {
-    return this.service.getDaySummaries(companyId, filter);
+    filter.employeeId = await this.employeesService.resolveViewableEmployeeId(
+      user,
+      filter.employeeId,
+    );
+    return this.service.getDaySummaries(user.companyId, filter);
   }
 
   @Get('adjustments')
@@ -56,11 +65,15 @@ export class TimeEntryController {
   @ApiOperation({
     summary: 'Histórico de ajustes manuais de ponto',
   })
-  getAdjustments(
-    @CurrentUser('companyId') companyId: string,
+  async getAdjustments(
+    @CurrentUser() user: AuthenticatedUser,
     @Query() filter: TimeEntryFilterDto,
   ) {
-    return this.service.getAdjustments(companyId, filter);
+    filter.employeeId = await this.employeesService.resolveViewableEmployeeId(
+      user,
+      filter.employeeId,
+    );
+    return this.service.getAdjustments(user.companyId, filter);
   }
 
   @Delete(':id')

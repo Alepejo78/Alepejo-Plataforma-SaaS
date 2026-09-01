@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from '../../core/prisma/prisma.module';
 import { LicenseModule } from '../identity/license/license.module';
+import { EmployeesModule } from '../employees/employees.module';
 
 import { TimeEntryController } from './controllers/time-entry.controller';
 import { AbsenceRecordController } from './controllers/absence-record.controller';
@@ -20,7 +21,7 @@ import { TimeClockApiKeyService } from './services/time-clock-api-key.service';
 import { TimeClockApiKeyGuard } from './guards/time-clock-api-key.guard';
 
 @Module({
-  imports: [PrismaModule, LicenseModule],
+  imports: [PrismaModule, LicenseModule, EmployeesModule],
 
   controllers: [
     TimeEntryController,
