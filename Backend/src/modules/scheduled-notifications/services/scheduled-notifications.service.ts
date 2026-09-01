@@ -46,6 +46,33 @@ export class ScheduledNotificationsService {
 
     await this.notifyExamReminders();
     await this.notifyBirthdays();
+    await this.reconcileVacationAndLeave();
+  }
+
+  /**
+   * Desmarca sozinho "em férias"/"afastado" quando a data de fim já
+   * passou — é isso que libera o login de novo (AuthService.
+   * assertEmployeeCanLogin) sem precisar de ação manual do RH.
+   */
+  private async reconcileVacationAndLeave() {
+    const todayUtc = new Date(utcMidnight(new Date()));
+
+    const [vacationCount, leaveCount] = await Promise.all([
+      this.prisma.employee.updateMany({
+        where: { onVacation: true, vacationEndDate: { lt: todayUtc } },
+        data: { onVacation: false, vacationStartDate: null, vacationDays: null, vacationEndDate: null },
+      }),
+      this.prisma.employee.updateMany({
+        where: { onLeave: true, leaveEndDate: { lt: todayUtc } },
+        data: { onLeave: false, leaveStartDate: null, leaveDays: null, leaveEndDate: null },
+      }),
+    ]);
+
+    if (vacationCount.count > 0 || leaveCount.count > 0) {
+      this.logger.log(
+        `Reconciliação férias/afastamento: ${vacationCount.count} colaborador(es) voltou(aram) de férias, ${leaveCount.count} voltou(aram) de afastamento.`,
+      );
+    }
   }
 
   private async notifyExamReminders() {

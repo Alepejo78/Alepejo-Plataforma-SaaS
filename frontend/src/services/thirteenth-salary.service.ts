@@ -1,5 +1,6 @@
 import { api } from "./api";
 import type {
+  PayrollConfirmationStatus,
   PayrollItemLine,
   PayrollStatus,
   PayrollItemStatus,
@@ -40,6 +41,9 @@ export interface ThirteenthSalaryItem {
   irrfAmount: string | number;
   netAmount: string | number;
   employerFgtsAmount: string | number;
+  confirmationStatus: PayrollConfirmationStatus;
+  confirmedAt?: string | null;
+  confirmationSentAt?: string | null;
   lines: PayrollItemLine[];
   employee?: {
     id: string;
@@ -174,6 +178,64 @@ export const thirteenthSalaryService = {
   async cancel(id: string): Promise<ThirteenthSalary> {
     const { data } = await api.patch<ApiEnvelope<ThirteenthSalary>>(
       `/thirteenth-salary/${id}/cancel`
+    );
+
+    return data.data;
+  },
+
+  async confirmItem(id: string, itemId: string): Promise<ThirteenthSalaryItem> {
+    const { data } = await api.patch<ApiEnvelope<ThirteenthSalaryItem>>(
+      `/thirteenth-salary/${id}/items/${itemId}/confirm`
+    );
+
+    return data.data;
+  },
+
+  async sendConfirmation(
+    id: string,
+    itemId: string
+  ): Promise<{ sent: boolean; channels: string[] }> {
+    const { data } = await api.post<
+      ApiEnvelope<{ sent: boolean; channels: string[] }>
+    >(`/thirteenth-salary/${id}/items/${itemId}/send-confirmation`);
+
+    return data.data;
+  },
+};
+
+export interface ThirteenthPublicInfo {
+  employeeName: string;
+  companyName: string;
+  companyLogo?: string | null;
+  year: number;
+  installment: number;
+  netAmount: number;
+  status: PayrollConfirmationStatus;
+}
+
+export const thirteenthConfirmationPublicService = {
+  async getInfo(
+    id: string,
+    itemId: string,
+    token: string
+  ): Promise<ThirteenthPublicInfo> {
+    const { data } = await api.get<ApiEnvelope<ThirteenthPublicInfo>>(
+      `/thirteenth-salary/public/${id}/${itemId}`,
+      { params: { token } }
+    );
+
+    return data.data;
+  },
+
+  async confirm(
+    id: string,
+    itemId: string,
+    token: string
+  ): Promise<{ success: boolean }> {
+    const { data } = await api.post<ApiEnvelope<{ success: boolean }>>(
+      `/thirteenth-salary/public/${id}/${itemId}/confirm`,
+      undefined,
+      { params: { token } }
     );
 
     return data.data;

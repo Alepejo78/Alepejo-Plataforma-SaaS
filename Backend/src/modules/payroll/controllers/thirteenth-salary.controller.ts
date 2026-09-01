@@ -11,10 +11,12 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Public } from '../../../core/decorators/public.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 import { Module } from '../../identity/license/decorators/module.decorator';
 
 import { ThirteenthSalaryService } from '../services/thirteenth-salary.service';
+import { ThirteenthConfirmationService } from '../services/thirteenth-confirmation.service';
 
 import { GenerateThirteenthSalaryDto } from '../dto/generate-thirteenth-salary.dto';
 import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
@@ -23,7 +25,35 @@ import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
 @Controller('thirteenth-salary')
 @Module('LABOR')
 export class ThirteenthSalaryController {
-  constructor(private readonly service: ThirteenthSalaryService) {}
+  constructor(
+    private readonly service: ThirteenthSalaryService,
+    private readonly confirmationService: ThirteenthConfirmationService,
+  ) {}
+
+  /**
+   * Rotas públicas (sem login) — precisam vir ANTES de `:id`, senão o
+   * Nest casa "public" com o parâmetro (rotas resolvidas na ordem em
+   * que são declaradas).
+   */
+  @Public()
+  @Get('public/:id/:itemId')
+  getPublicInfo(
+    @Param('id') thirteenthSalaryId: string,
+    @Param('itemId') itemId: string,
+    @Query('token') token: string,
+  ) {
+    return this.confirmationService.getPublicInfo(thirteenthSalaryId, itemId, token);
+  }
+
+  @Public()
+  @Post('public/:id/:itemId/confirm')
+  confirmPublic(
+    @Param('id') thirteenthSalaryId: string,
+    @Param('itemId') itemId: string,
+    @Query('token') token: string,
+  ) {
+    return this.confirmationService.confirmPublic(thirteenthSalaryId, itemId, token);
+  }
 
   @Post('generate')
   @Permissions('thirteenth-salary.generate')
@@ -137,5 +167,28 @@ export class ThirteenthSalaryController {
     @Param('id') id: string,
   ) {
     return this.service.cancel(companyId, id);
+  }
+
+  @Patch(':id/items/:itemId/confirm')
+  @Permissions('thirteenth-salary.confirm-item')
+  @ApiOperation({ summary: 'Confirmar recebimento do recibo manualmente' })
+  confirmItem(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.confirmationService.confirm(companyId, id, itemId, userId);
+  }
+
+  @Post(':id/items/:itemId/send-confirmation')
+  @Permissions('thirteenth-salary.confirm-item')
+  @ApiOperation({ summary: 'Enviar link de confirmação do recibo por e-mail/WhatsApp' })
+  sendConfirmation(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.confirmationService.sendConfirmation(companyId, id, itemId);
   }
 }

@@ -21,6 +21,8 @@
  *   por e-mail/WhatsApp — o colaborador confirma sem ter (ou precisar de)
  *   login no sistema.
  * - `/confirmar-holerite`: mesma ideia, pro recebimento do holerite.
+ * - `/confirmar-ferias`, `/confirmar-13`, `/confirmar-adiantamento`:
+ *   mesma ideia, pro recebimento de férias/13º/adiantamento salarial.
  * - `/<empresa>/login`: login com o nome da empresa fixo na URL — o
  *   link que o e-mail de "definir senha" passa a mostrar como o
  *   acesso permanente do usuário (ver `sendPasswordResetLink` no
@@ -45,6 +47,9 @@ export const PUBLIC_ROUTES = [
   "/privacidade",
   "/confirmar-epi",
   "/confirmar-holerite",
+  "/confirmar-ferias",
+  "/confirmar-13",
+  "/confirmar-adiantamento",
 ] as const;
 
 /** `/<slug>/login` — exatamente dois segmentos, o segundo literalmente "login". */

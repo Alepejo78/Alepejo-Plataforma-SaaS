@@ -8,6 +8,7 @@ import {
   FinancialDocumentType,
   FinancialEntryType,
   PayrollStatus,
+  Prisma,
 } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
@@ -216,6 +217,19 @@ export class VacationGrantService {
         where: { id: grant.id },
         data: { status: PayrollStatus.APPROVED, approvedAt: new Date(), approvedByUserId },
       });
+
+      // Reflete na aba Saúde do colaborador — é isso que bloqueia login
+      // (ver AuthService) e mostra o período na ficha. Ver `reverse()`/
+      // `cancel()` abaixo pra limpeza simétrica.
+      await tx.employee.update({
+        where: { id: grant.employeeId },
+        data: {
+          onVacation: true,
+          vacationStartDate: grant.startDate,
+          vacationDays: grant.days,
+          vacationEndDate: grant.endDate,
+        },
+      });
     });
 
     return this.findOne(companyId, id);
@@ -244,6 +258,8 @@ export class VacationGrantService {
         where: { id: grant.id },
         data: { status: PayrollStatus.DRAFT, approvedAt: null, approvedByUserId: null },
       });
+
+      await this.clearEmployeeVacationIfMatches(tx, grant);
     });
 
     return this.findOne(companyId, id);
@@ -280,6 +296,8 @@ export class VacationGrantService {
         },
       });
 
+      await this.clearEmployeeVacationIfMatches(tx, grant);
+
       return tx.vacationGrant.update({
         where: { id },
         data: { status: PayrollStatus.CANCELLED },
@@ -296,6 +314,36 @@ export class VacationGrantService {
   private assertDraft(status: PayrollStatus) {
     if (status !== PayrollStatus.DRAFT) {
       throw new BadRequestException('Somente gozos em rascunho podem ser alterados.');
+    }
+  }
+
+  /**
+   * Limpa `Employee.onVacation`/datas só se ainda apontarem pra este
+   * gozo específico — evita apagar um "em férias" marcado manualmente
+   * (ou por outro gozo) na aba Saúde por engano.
+   */
+  private async clearEmployeeVacationIfMatches(
+    tx: Prisma.TransactionClient,
+    grant: { employeeId: string; startDate: Date },
+  ) {
+    const employee = await tx.employee.findUnique({
+      where: { id: grant.employeeId },
+      select: { vacationStartDate: true },
+    });
+
+    if (
+      employee?.vacationStartDate &&
+      employee.vacationStartDate.getTime() === grant.startDate.getTime()
+    ) {
+      await tx.employee.update({
+        where: { id: grant.employeeId },
+        data: {
+          onVacation: false,
+          vacationStartDate: null,
+          vacationDays: null,
+          vacationEndDate: null,
+        },
+      });
     }
   }
 }

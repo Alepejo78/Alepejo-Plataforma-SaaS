@@ -12,11 +12,13 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PayrollStatus } from '@prisma/client';
 
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Public } from '../../../core/decorators/public.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 import { Module } from '../../identity/license/decorators/module.decorator';
 
 import { VacationGrantService } from '../services/vacation-grant.service';
 import { VacationPeriodService } from '../services/vacation-period.service';
+import { VacationConfirmationService } from '../services/vacation-confirmation.service';
 
 import { CreateVacationGrantDto } from '../dto/create-vacation-grant.dto';
 import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
@@ -28,7 +30,21 @@ export class VacationController {
   constructor(
     private readonly grantService: VacationGrantService,
     private readonly periodService: VacationPeriodService,
+    private readonly confirmationService: VacationConfirmationService,
   ) {}
+
+  /** Rotas públicas (sem login) — precisam vir antes de `grants/:id`. */
+  @Public()
+  @Get('public/:id')
+  getPublicInfo(@Param('id') id: string, @Query('token') token: string) {
+    return this.confirmationService.getPublicInfo(id, token);
+  }
+
+  @Public()
+  @Post('public/:id/confirm')
+  confirmPublic(@Param('id') id: string, @Query('token') token: string) {
+    return this.confirmationService.confirmPublic(id, token);
+  }
 
   @Get('balance')
   @Permissions('vacation.view')
@@ -125,5 +141,26 @@ export class VacationController {
     @Param('id') id: string,
   ) {
     return this.grantService.cancel(companyId, id);
+  }
+
+  @Patch('grants/:id/confirm')
+  @Permissions('vacation.confirm-item')
+  @ApiOperation({ summary: 'Confirmar recebimento do recibo manualmente' })
+  confirmItem(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.confirmationService.confirm(companyId, id, userId);
+  }
+
+  @Post('grants/:id/send-confirmation')
+  @Permissions('vacation.confirm-item')
+  @ApiOperation({ summary: 'Enviar link de confirmação do recibo por e-mail/WhatsApp' })
+  sendConfirmation(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.confirmationService.sendConfirmation(companyId, id);
   }
 }

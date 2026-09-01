@@ -29,9 +29,15 @@ import { PayslipPdfService } from './services/payslip-pdf.service';
 import { PayrollReportService } from './services/payroll-report.service';
 import { ThirteenthSalaryItemBuilderService } from './services/thirteenth-salary-item-builder.service';
 import { ThirteenthSalaryService } from './services/thirteenth-salary.service';
+import { ThirteenthConfirmationService } from './services/thirteenth-confirmation.service';
 import { VacationPeriodService } from './services/vacation-period.service';
 import { VacationGrantBuilderService } from './services/vacation-grant-builder.service';
 import { VacationGrantService } from './services/vacation-grant.service';
+import { VacationConfirmationService } from './services/vacation-confirmation.service';
+import { SalaryAdvanceController } from './controllers/salary-advance.controller';
+import { SalaryAdvanceRepository } from './repositories/salary-advance.repository';
+import { SalaryAdvanceService } from './services/salary-advance.service';
+import { SalaryAdvanceConfirmationService } from './services/salary-advance-confirmation.service';
 
 @NestModule({
   imports: [
@@ -49,6 +55,7 @@ import { VacationGrantService } from './services/vacation-grant.service';
     PayrollController,
     ThirteenthSalaryController,
     VacationController,
+    SalaryAdvanceController,
   ],
 
   providers: [
@@ -58,6 +65,7 @@ import { VacationGrantService } from './services/vacation-grant.service';
     ThirteenthSalaryRepository,
     VacationPeriodRepository,
     VacationGrantRepository,
+    SalaryAdvanceRepository,
     PayrollTaxTableService,
     PayrollSettingsService,
     PayrollCalculationService,
@@ -69,9 +77,13 @@ import { VacationGrantService } from './services/vacation-grant.service';
     PayrollReportService,
     ThirteenthSalaryItemBuilderService,
     ThirteenthSalaryService,
+    ThirteenthConfirmationService,
     VacationPeriodService,
     VacationGrantBuilderService,
     VacationGrantService,
+    VacationConfirmationService,
+    SalaryAdvanceService,
+    SalaryAdvanceConfirmationService,
   ],
 
   exports: [
@@ -80,6 +92,9 @@ import { VacationGrantService } from './services/vacation-grant.service';
     PayrollCalculationService,
     PayrollMonthSummaryService,
     PayrollConfirmationService,
+    VacationConfirmationService,
+    ThirteenthConfirmationService,
+    SalaryAdvanceConfirmationService,
   ],
 })
 export class PayrollModule {}

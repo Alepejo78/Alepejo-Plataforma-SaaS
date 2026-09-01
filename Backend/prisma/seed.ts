@@ -764,6 +764,7 @@ const permissionGroups = [
       ["thirteenth-salary.approve", "Aprovar 13º Salário"],
       ["thirteenth-salary.cancel", "Cancelar 13º Salário"],
       ["thirteenth-salary.report", "Ver Recibos do 13º Salário"],
+      ["thirteenth-salary.confirm-item", "Confirmar Recebimento de Recibo de 13º (manual ou enviar link)"],
     ],
   },
   {
@@ -776,6 +777,18 @@ const permissionGroups = [
       ["vacation.approve", "Aprovar Gozo de Férias"],
       ["vacation.cancel", "Cancelar Gozo de Férias"],
       ["vacation.report", "Ver Recibos de Férias"],
+      ["vacation.confirm-item", "Confirmar Recebimento de Recibo de Férias (manual ou enviar link)"],
+    ],
+  },
+  {
+    code: "SALARY_ADVANCE",
+    name: "Adiantamento Salarial",
+    permissions: [
+      ["salary-advance.view", "Consultar Adiantamentos Salariais"],
+      ["salary-advance.create", "Registrar Adiantamento Salarial"],
+      ["salary-advance.approve", "Aprovar Adiantamento Salarial"],
+      ["salary-advance.cancel", "Cancelar Adiantamento Salarial"],
+      ["salary-advance.confirm-item", "Confirmar Recebimento de Adiantamento (manual ou enviar link)"],
     ],
   },
 ];

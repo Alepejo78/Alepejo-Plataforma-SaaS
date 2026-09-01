@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Check,
   Eye,
+  Mail,
   MinusCircle,
   PlusCircle,
   RotateCcw,
@@ -29,7 +30,11 @@ import {
   type ThirteenthSalary,
   type ThirteenthSalaryItem,
 } from "@/services/thirteenth-salary.service";
-import type { PayrollItemStatus, PayrollStatus } from "@/services/payroll.service";
+import {
+  PAYROLL_CONFIRMATION_STATUS_LABELS,
+  type PayrollItemStatus,
+  type PayrollStatus,
+} from "@/services/payroll.service";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -156,6 +161,60 @@ export default function DecimoTerceiroDetalhePage() {
       await load();
     } catch (err) {
       setActionError(extractMessage(err, "Não foi possível alterar o item."));
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function confirmItem(item: ThirteenthSalaryItem) {
+    if (
+      !window.confirm(
+        `Confirmar que "${item.employee?.name}" recebeu este recibo de 13º? Isso registra a confirmação como assinatura digital.`
+      )
+    ) {
+      return;
+    }
+
+    setBusyId(item.id);
+    setActionError("");
+
+    try {
+      await thirteenthSalaryService.confirmItem(id, item.id);
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível confirmar o recibo.")
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function sendConfirmation(item: ThirteenthSalaryItem) {
+    setBusyId(item.id);
+    setActionError("");
+
+    try {
+      const result = await thirteenthSalaryService.sendConfirmation(
+        id,
+        item.id
+      );
+
+      const channelLabel = result.channels
+        .map((c) => (c === "email" ? "e-mail" : "WhatsApp"))
+        .join(" e ");
+
+      window.alert(
+        result.sent
+          ? `Link de confirmação enviado por ${channelLabel}.`
+          : "Não foi possível enviar por nenhum canal — confira se o e-mail/WhatsApp do colaborador está cadastrado."
+      );
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível enviar o link de confirmação.")
+      );
     } finally {
       setBusyId("");
     }
@@ -343,6 +402,7 @@ export default function DecimoTerceiroDetalhePage() {
                     Líquido
                   </th>
                   <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Confirmação</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -351,6 +411,7 @@ export default function DecimoTerceiroDetalhePage() {
                 {thirteenth?.items.map((item) => {
                   const busy = busyId === item.id;
                   const excluded = item.status === "EXCLUDED";
+                  const paid = item.financialEntry?.status === "PAID";
 
                   return (
                     <tr
@@ -395,6 +456,18 @@ export default function DecimoTerceiroDetalhePage() {
                         </span>
                       </td>
 
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            item.confirmationStatus === "CONFIRMADO"
+                              ? "bg-[var(--success-soft)] text-[var(--success)]"
+                              : "bg-[var(--warning-soft)] text-[var(--warning)]"
+                          }`}
+                        >
+                          {PAYROLL_CONFIRMATION_STATUS_LABELS[item.confirmationStatus]}
+                        </span>
+                      </td>
+
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
                           <Link
@@ -406,6 +479,32 @@ export default function DecimoTerceiroDetalhePage() {
                           >
                             <Eye size={16} />
                           </Link>
+
+                          {item.confirmationStatus === "PENDENTE" && paid && (
+                            <Can permission="thirteenth-salary.confirm-item">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void sendConfirmation(item)}
+                                title="Enviar link de confirmação por e-mail/WhatsApp"
+                                aria-label="Enviar confirmação"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                              >
+                                <Mail size={16} />
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void confirmItem(item)}
+                                title="Confirmar recebimento manualmente"
+                                aria-label="Confirmar recebimento"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                              >
+                                <Check size={16} />
+                              </button>
+                            </Can>
+                          )}
 
                           {isDraft && (
                             <>

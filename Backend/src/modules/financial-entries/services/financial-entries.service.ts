@@ -20,6 +20,9 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 import { PayrollConfirmationService } from '../../payroll/services/payroll-confirmation.service';
+import { VacationConfirmationService } from '../../payroll/services/vacation-confirmation.service';
+import { ThirteenthConfirmationService } from '../../payroll/services/thirteenth-confirmation.service';
+import { SalaryAdvanceConfirmationService } from '../../payroll/services/salary-advance-confirmation.service';
 
 import { FinancialEntriesRepository } from '../repositories/financial-entries.repository';
 
@@ -36,6 +39,12 @@ export class FinancialEntriesService {
     private readonly businessPartnersService: BusinessPartnersService,
     @Inject(forwardRef(() => PayrollConfirmationService))
     private readonly payrollConfirmationService: PayrollConfirmationService,
+    @Inject(forwardRef(() => VacationConfirmationService))
+    private readonly vacationConfirmationService: VacationConfirmationService,
+    @Inject(forwardRef(() => ThirteenthConfirmationService))
+    private readonly thirteenthConfirmationService: ThirteenthConfirmationService,
+    @Inject(forwardRef(() => SalaryAdvanceConfirmationService))
+    private readonly salaryAdvanceConfirmationService: SalaryAdvanceConfirmationService,
   ) {}
 
   async create(
@@ -226,11 +235,24 @@ export class FinancialEntriesService {
       updatedById: userId,
     });
 
-    // Título de holerite: o link de confirmação só sai quando o
-    // pagamento é efetivamente realizado, nunca na geração da folha.
+    // Confirmação digital (Folha/Férias/13º/Adiantamento): o link só
+    // sai quando o pagamento é efetivamente realizado, nunca na
+    // geração/aprovação do documento.
     if (entry.payrollItemId) {
       void this.payrollConfirmationService.sendConfirmationBestEffortByItemId(
         entry.payrollItemId,
+      );
+    } else if (entry.vacationGrantId) {
+      void this.vacationConfirmationService.sendConfirmationBestEffortByVacationGrantId(
+        entry.vacationGrantId,
+      );
+    } else if (entry.thirteenthSalaryItemId) {
+      void this.thirteenthConfirmationService.sendConfirmationBestEffortByItemId(
+        entry.thirteenthSalaryItemId,
+      );
+    } else if (entry.salaryAdvanceId) {
+      void this.salaryAdvanceConfirmationService.sendConfirmationBestEffortBySalaryAdvanceId(
+        entry.salaryAdvanceId,
       );
     }
 
@@ -279,7 +301,12 @@ export class FinancialEntriesService {
       );
     }
 
-    if (entry.payrollItemId || entry.thirteenthSalaryItemId || entry.vacationGrantId) {
+    if (
+      entry.payrollItemId ||
+      entry.thirteenthSalaryItemId ||
+      entry.vacationGrantId ||
+      entry.salaryAdvanceId
+    ) {
       throw new BadRequestException(
         'Este título nasceu de uma folha de pagamento e não pode ser excluído. Use o cancelamento.',
       );
@@ -317,6 +344,7 @@ export class FinancialEntriesService {
       payrollItemId?: string;
       thirteenthSalaryItemId?: string;
       vacationGrantId?: string;
+      salaryAdvanceId?: string;
       observation?: string;
     },
     userId: string,
@@ -367,6 +395,7 @@ export class FinancialEntriesService {
       payrollItemId?: string;
       thirteenthSalaryItemId?: string;
       vacationGrantId?: string;
+      salaryAdvanceId?: string;
       observation?: string;
     },
     userId: string,
@@ -395,6 +424,7 @@ export class FinancialEntriesService {
           payrollItemId: params.payrollItemId,
           thirteenthSalaryItemId: params.thirteenthSalaryItemId,
           vacationGrantId: params.vacationGrantId,
+          salaryAdvanceId: params.salaryAdvanceId,
           observation: params.observation,
           createdById: userId,
           updatedById: userId,

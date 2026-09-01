@@ -1,22 +1,30 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { Check, Eye, Mail, Plus, XCircle } from "lucide-react";
+import {
+  Check,
+  Mail,
+  Plus,
+  RotateCcw,
+  X,
+  XCircle,
+} from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 
-import {
-  VACATION_STATUS_LABELS,
-  formatVacationNumber,
-  vacationService,
-  type VacationGrant,
-} from "@/services/vacation.service";
-import type { PayrollStatus } from "@/services/payroll.service";
+import { employeeService, type Employee } from "@/services/hr.service";
 import { PAYROLL_CONFIRMATION_STATUS_LABELS } from "@/services/payroll.service";
+import {
+  SALARY_ADVANCE_STATUS_LABELS,
+  formatSalaryAdvanceNumber,
+  salaryAdvanceService,
+  type SalaryAdvance,
+} from "@/services/salary-advance.service";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -49,31 +57,57 @@ function extractMessage(err: unknown, fallback: string) {
   return typeof message === "string" ? message : fallback;
 }
 
-const STATUS_BADGE_CLASS: Record<PayrollStatus, string> = {
+const fieldClass = `
+  h-11 w-full rounded-xl border border-[var(--border)]
+  bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)]
+  outline-none transition-colors focus:border-[var(--primary)]
+`;
+
+const labelClass =
+  "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
+
+const STATUS_BADGE_CLASS: Record<string, string> = {
   DRAFT: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
   APPROVED: "bg-[var(--success-soft)] text-[var(--success)]",
   CANCELLED: "bg-[var(--danger-soft)] text-[var(--danger)]",
 };
 
-export default function FeriasPage() {
+function emptyForm() {
+  return {
+    employeeId: "",
+    employeeLabel: "",
+    amount: 0,
+    installments: 1,
+    observation: "",
+  };
+}
+
+export default function AdiantamentosPage() {
   const exportTableRef = useRef<HTMLTableElement>(null);
-  const [grants, setGrants] = useState<VacationGrant[]>([]);
+  const [advances, setAdvances] = useState<SalaryAdvance[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
 
   const [actionId, setActionId] = useState("");
   const [actionError, setActionError] = useState("");
 
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm());
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
   const load = useCallback(async () => {
     setLoading(true);
     setListError("");
 
     try {
-      const result = await vacationService.list();
+      const result = await salaryAdvanceService.list();
 
-      setGrants(result);
+      setAdvances(result);
     } catch (err) {
-      setListError(extractMessage(err, "Não foi possível carregar as férias."));
+      setListError(
+        extractMessage(err, "Não foi possível carregar os adiantamentos.")
+      );
     } finally {
       setLoading(false);
     }
@@ -83,46 +117,42 @@ export default function FeriasPage() {
     void load();
   }, [load]);
 
-  async function confirmItem(grant: VacationGrant) {
-    if (
-      !window.confirm(
-        `Confirmar que "${grant.employee?.name}" recebeu este recibo de férias? Isso registra a confirmação como assinatura digital.`
-      )
-    ) {
+  const searchEmployees = useCallback(async (query: string) => {
+    return employeeService.list({ search: query || undefined, limit: 20 });
+  }, []);
+
+  function openCreate() {
+    setForm(emptyForm());
+    setFormError("");
+    setFormOpen(true);
+  }
+
+  async function save() {
+    if (!form.employeeId || form.amount <= 0) {
+      setFormError("Selecione o colaborador e informe o valor.");
+
       return;
     }
 
-    await runAction(
-      grant.id,
-      vacationService.confirmItem,
-      "Não foi possível confirmar o recebimento."
-    );
-  }
-
-  async function sendConfirmation(grant: VacationGrant) {
-    setActionId(grant.id);
-    setActionError("");
+    setSaving(true);
+    setFormError("");
 
     try {
-      const result = await vacationService.sendConfirmation(grant.id);
+      await salaryAdvanceService.create({
+        employeeId: form.employeeId,
+        amount: form.amount,
+        installments: form.installments,
+        observation: form.observation || undefined,
+      });
 
-      const channelLabel = result.channels
-        .map((c) => (c === "email" ? "e-mail" : "WhatsApp"))
-        .join(" e ");
-
-      window.alert(
-        result.sent
-          ? `Link de confirmação enviado por ${channelLabel}.`
-          : "Não foi possível enviar por nenhum canal — confira se o e-mail/WhatsApp do colaborador está cadastrado."
-      );
-
+      setFormOpen(false);
       await load();
     } catch (err) {
-      setActionError(
-        extractMessage(err, "Não foi possível enviar o link de confirmação.")
+      setFormError(
+        extractMessage(err, "Não foi possível registrar o adiantamento.")
       );
     } finally {
-      setActionId("");
+      setSaving(false);
     }
   }
 
@@ -144,8 +174,51 @@ export default function FeriasPage() {
     }
   }
 
+  async function confirmItem(advance: SalaryAdvance) {
+    if (
+      !window.confirm(
+        `Confirmar que "${advance.employee?.name}" recebeu este adiantamento? Isso registra a confirmação como assinatura digital.`
+      )
+    ) {
+      return;
+    }
+
+    await runAction(
+      advance.id,
+      salaryAdvanceService.confirmItem,
+      "Não foi possível confirmar o recebimento."
+    );
+  }
+
+  async function sendConfirmation(advance: SalaryAdvance) {
+    setActionId(advance.id);
+    setActionError("");
+
+    try {
+      const result = await salaryAdvanceService.sendConfirmation(advance.id);
+
+      const channelLabel = result.channels
+        .map((c) => (c === "email" ? "e-mail" : "WhatsApp"))
+        .join(" e ");
+
+      window.alert(
+        result.sent
+          ? `Link de confirmação enviado por ${channelLabel}.`
+          : "Não foi possível enviar por nenhum canal — confira se o e-mail/WhatsApp do colaborador está cadastrado."
+      );
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível enviar o link de confirmação.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   return (
-    <AppShell workspaceLabel="Férias">
+    <AppShell workspaceLabel="Adiantamento Salarial">
       <ListPageLayout
         header={
           <>
@@ -153,33 +226,33 @@ export default function FeriasPage() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-                    Férias
+                    Adiantamento Salarial
                   </h1>
 
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    Fila de aprovação — programações feitas em
-                    &quot;Programação de Férias&quot; caem aqui aguardando
-                    aprovação. Saldo por período aquisitivo (12 meses), com
-                    abono pecuniário e 1/3 constitucional calculados
-                    automaticamente.
+                    Antecipação de parte do salário a pedido do colaborador.
+                    O desconto na folha normal é lançado manualmente (ajuste
+                    do item, &quot;Outros descontos&quot;) — este módulo só
+                    registra e paga o adiantamento em si.
                   </p>
                 </div>
 
                 <div className="flex gap-2">
                   <ExportButton
                     tableRef={exportTableRef}
-                    filename="ferias"
-                    sheetName="Férias"
+                    filename="adiantamentos-salariais"
+                    sheetName="Adiantamentos"
                   />
 
-                  <Can permission="vacation.create">
-                    <Link
-                      href="/erp/rh/ferias/programacao"
+                  <Can permission="salary-advance.create">
+                    <button
+                      type="button"
+                      onClick={openCreate}
                       className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
                     >
                       <Plus size={18} />
-                      Programar férias
-                    </Link>
+                      Novo adiantamento
+                    </button>
                   </Can>
                 </div>
               </div>
@@ -208,14 +281,14 @@ export default function FeriasPage() {
               />
             ))}
           </div>
-        ) : grants.length === 0 ? (
+        ) : advances.length === 0 ? (
           <div className="p-12 text-center">
             <p className="font-medium text-[var(--text-primary)]">
-              Nenhuma férias programada
+              Nenhum adiantamento registrado
             </p>
 
             <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Use &quot;Programar férias&quot; para começar.
+              Use &quot;Novo adiantamento&quot; para registrar o primeiro.
             </p>
           </div>
         ) : (
@@ -225,10 +298,12 @@ export default function FeriasPage() {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Número</th>
                   <th className="px-4 py-3 font-semibold">Colaborador</th>
-                  <th className="px-4 py-3 font-semibold">Período</th>
-                  <th className="px-4 py-3 text-right font-semibold">Dias</th>
+                  <th className="px-4 py-3 font-semibold">Solicitado em</th>
                   <th className="px-4 py-3 text-right font-semibold">
-                    Líquido
+                    Valor
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Parcelas
                   </th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-4 py-3 font-semibold">Confirmação</th>
@@ -237,71 +312,60 @@ export default function FeriasPage() {
               </thead>
 
               <tbody>
-                {grants.map((g) => {
-                  const paid = g.financialEntry?.status === "PAID";
-                  const busy = actionId === g.id;
+                {advances.map((a) => {
+                  const busy = actionId === a.id;
+                  const paid = a.financialEntry?.status === "PAID";
 
                   return (
-                    <tr key={g.id} className="border-t border-[var(--border)]">
+                    <tr key={a.id} className="border-t border-[var(--border)]">
                       <td className="whitespace-nowrap px-4 py-3 font-medium text-[var(--text-primary)]">
-                        {formatVacationNumber(g.number)}
+                        {formatSalaryAdvanceNumber(a.number)}
                       </td>
 
                       <td className="px-4 py-3 font-medium text-[var(--text-primary)]">
-                        {g.employee?.name}
+                        {a.employee?.name}
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
-                        {date(g.startDate)} — {date(g.endDate)}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
-                        {g.days}
-                        {g.soldDays > 0 ? ` (+${g.soldDays} vendido)` : ""}
+                        {date(a.requestDate)}
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
-                        {money(g.netAmount)}
+                        {money(a.amount)}
+                      </td>
+
+                      <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-secondary)]">
+                        {a.installments}
                       </td>
 
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASS[g.status]}`}
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASS[a.status]}`}
                         >
-                          {VACATION_STATUS_LABELS[g.status]}
+                          {SALARY_ADVANCE_STATUS_LABELS[a.status]}
                         </span>
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            g.confirmationStatus === "CONFIRMADO"
+                            a.confirmationStatus === "CONFIRMADO"
                               ? "bg-[var(--success-soft)] text-[var(--success)]"
                               : "bg-[var(--warning-soft)] text-[var(--warning)]"
                           }`}
                         >
-                          {PAYROLL_CONFIRMATION_STATUS_LABELS[g.confirmationStatus]}
+                          {PAYROLL_CONFIRMATION_STATUS_LABELS[a.confirmationStatus]}
                         </span>
                       </td>
 
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <Link
-                            href={`/erp/rh/ferias/recibo/${g.id}`}
-                            target="_blank"
-                            title="Ver recibo"
-                            aria-label="Ver recibo"
-                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                          >
-                            <Eye size={16} />
-                          </Link>
-
-                          {g.confirmationStatus === "PENDENTE" && paid && (
-                            <Can permission="vacation.confirm-item">
+                          {a.confirmationStatus === "PENDENTE" && paid && (
+                            <Can permission="salary-advance.confirm-item">
                               <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() => void sendConfirmation(g)}
+                                onClick={() => void sendConfirmation(a)}
                                 title="Enviar link de confirmação por e-mail/WhatsApp"
                                 aria-label="Enviar confirmação"
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
@@ -312,7 +376,7 @@ export default function FeriasPage() {
                               <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() => void confirmItem(g)}
+                                onClick={() => void confirmItem(a)}
                                 title="Confirmar recebimento manualmente"
                                 aria-label="Confirmar recebimento"
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
@@ -322,16 +386,16 @@ export default function FeriasPage() {
                             </Can>
                           )}
 
-                          {g.status === "DRAFT" && (
+                          {a.status === "DRAFT" && (
                             <>
-                              <Can permission="vacation.approve">
+                              <Can permission="salary-advance.approve">
                                 <button
                                   type="button"
                                   disabled={busy}
                                   onClick={() =>
                                     void runAction(
-                                      g.id,
-                                      vacationService.approve,
+                                      a.id,
+                                      salaryAdvanceService.approve,
                                       "Não foi possível aprovar."
                                     )
                                   }
@@ -343,14 +407,14 @@ export default function FeriasPage() {
                                 </button>
                               </Can>
 
-                              <Can permission="vacation.cancel">
+                              <Can permission="salary-advance.cancel">
                                 <button
                                   type="button"
                                   disabled={busy}
                                   onClick={() =>
                                     void runAction(
-                                      g.id,
-                                      vacationService.cancel,
+                                      a.id,
+                                      salaryAdvanceService.cancel,
                                       "Não foi possível cancelar."
                                     )
                                   }
@@ -364,15 +428,15 @@ export default function FeriasPage() {
                             </>
                           )}
 
-                          {g.status === "APPROVED" && (
-                            <Can permission="vacation.cancel">
+                          {a.status === "APPROVED" && (
+                            <Can permission="salary-advance.approve">
                               <button
                                 type="button"
                                 disabled={busy}
                                 onClick={() =>
                                   void runAction(
-                                    g.id,
-                                    vacationService.reverse,
+                                    a.id,
+                                    salaryAdvanceService.reverse,
                                     "Não foi possível estornar."
                                   )
                                 }
@@ -380,7 +444,7 @@ export default function FeriasPage() {
                                 aria-label="Estornar"
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
                               >
-                                <XCircle size={16} />
+                                <RotateCcw size={16} />
                               </button>
                             </Can>
                           )}
@@ -394,6 +458,117 @@ export default function FeriasPage() {
           </div>
         )}
       </ListPageLayout>
+
+      {formOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+          <div className="my-8 w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                Novo adiantamento salarial
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                aria-label="Fechar"
+                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className={labelClass}>Colaborador</label>
+
+                <SearchSelect<Employee>
+                  displayLabel={form.employeeLabel}
+                  search={searchEmployees}
+                  getId={(e) => e.id}
+                  getLabel={(e) => e.name}
+                  placeholder="Digite para buscar o colaborador..."
+                  onSelect={(e) =>
+                    setForm({
+                      ...form,
+                      employeeId: e?.id ?? "",
+                      employeeLabel: e?.name ?? "",
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Valor (R$)</label>
+
+                  <CurrencyInput
+                    className={fieldClass}
+                    value={form.amount}
+                    onChange={(value) => setForm({ ...form, amount: value })}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Parcelas previstas p/ desconto
+                  </label>
+
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    className={fieldClass}
+                    value={form.installments}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        installments: Number(e.target.value) || 1,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Observação</label>
+
+                <input
+                  className={fieldClass}
+                  value={form.observation}
+                  onChange={(e) =>
+                    setForm({ ...form, observation: e.target.value })
+                  }
+                />
+              </div>
+
+              {formError && (
+                <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                  {formError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormOpen(false)}
+                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void save()}
+                  className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
+                >
+                  {saving ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

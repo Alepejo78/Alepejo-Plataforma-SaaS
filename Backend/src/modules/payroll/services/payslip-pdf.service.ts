@@ -2,43 +2,52 @@ import { Injectable, Logger } from '@nestjs/common';
 import { existsSync } from 'fs';
 import { extname, join } from 'path';
 
-import type { Company, PayrollItemLine } from '@prisma/client';
+import type { Company } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 
 import { DATA_DIR } from '../../../core/storage/data-dir';
 
 const EMBEDDABLE_LOGO_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg']);
 
-const MONTH_NAMES = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
-];
-
 export interface PayslipPdfEmployee {
   name: string;
   employeeNumber?: number | null;
   cpf?: string | null;
-  admissionDate?: Date | null;
+  admissionDate?: Date | string | null;
   bankName?: string | null;
   bankAgency?: string | null;
   bankAccount?: string | null;
   jobFunction?: { name: string } | null;
 }
 
-export interface PayslipPdfItem {
-  baseSalary: unknown;
-  salaryType: string;
-  dependentsCount: number;
-  extraMinutes: number;
-  unjustifiedAbsenceDays: number;
-  inssBase: unknown;
-  irrfBase: unknown;
-  employerFgtsAmount: unknown;
+export interface PayslipPdfLine {
+  type: string;
+  code: string;
+  description: string;
+  referenceValue?: string | null;
+  amount: unknown;
+}
+
+export interface PayslipPdfFooterField {
+  label: string;
+  value: string;
+}
+
+/**
+ * Mesmo shape que `PayslipDocument.tsx` (frontend) recebe — Folha,
+ * 13º e Férias montam esse objeto do jeito próprio de cada um (ver
+ * `PayrollConfirmationService`/`ThirteenthConfirmationService`/
+ * `VacationConfirmationService`) e passam pro mesmo gerador aqui.
+ */
+export interface PayslipPdfInput {
+  title: string;
+  periodLabel: string;
+  paymentDateLabel?: string;
   employee: PayslipPdfEmployee;
-  lines: PayrollItemLine[];
-  paymentDate?: Date | null;
-  competenceYear: number;
-  competenceMonth: number;
+  baseSalary?: number;
+  hourlyRate?: number;
+  lines: PayslipPdfLine[];
+  footerFields: PayslipPdfFooterField[];
 }
 
 function formatDate(value: Date | string | null | undefined): string {
@@ -56,22 +65,17 @@ function formatMoney(value: unknown): string {
   }).format(Number(value ?? 0));
 }
 
-function competenceLabel(year: number, month: number): string {
-  return `${String(month).padStart(2, '0')}/${year}`;
-}
-
 /**
- * Gera o PDF do holerite anexado no e-mail de confirmação de
- * recebimento (ver PayrollConfirmationService.dispatch) — mesmo
- * layout do `PayslipDocument.tsx` (frontend), reimplementado em
- * pdfkit porque o componente React não roda no servidor. Mesmo
- * padrão de `QuotePdfService` (orçamento).
+ * Gera o PDF anexado no e-mail de confirmação de recebimento (Folha,
+ * 13º ou Férias) — mesmo layout do `PayslipDocument.tsx` (frontend),
+ * reimplementado em pdfkit porque o componente React não roda no
+ * servidor. Mesmo padrão de `QuotePdfService` (orçamento).
  */
 @Injectable()
 export class PayslipPdfService {
   private readonly logger = new Logger(PayslipPdfService.name);
 
-  async generate(item: PayslipPdfItem, company: Company | null): Promise<Buffer> {
+  async generate(input: PayslipPdfInput, company: Company | null): Promise<Buffer> {
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
 
     const chunks: Buffer[] = [];
@@ -83,14 +87,14 @@ export class PayslipPdfService {
       doc.on('error', reject);
     });
 
-    this.render(doc, item, company);
+    this.render(doc, input, company);
 
     doc.end();
 
     return done;
   }
 
-  private render(doc: PDFKit.PDFDocument, item: PayslipPdfItem, company: Company | null) {
+  private render(doc: PDFKit.PDFDocument, input: PayslipPdfInput, company: Company | null) {
     const companyName = company?.tradeName || company?.legalName || 'Empresa';
     const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const left = doc.page.margins.left;
@@ -131,7 +135,7 @@ export class PayslipPdfService {
       .fontSize(13)
       .font('Helvetica-Bold')
       .fillColor('#111827')
-      .text('DEMONSTRATIVO DE PAGAMENTO MENSAL', left, cursorY, {
+      .text(input.title.toUpperCase(), left, cursorY, {
         width: pageWidth,
         align: 'center',
         characterSpacing: 1,
@@ -147,12 +151,10 @@ export class PayslipPdfService {
       .fontSize(9)
       .font('Helvetica')
       .fillColor('#374151')
-      .text(`Período: ${competenceLabel(item.competenceYear, item.competenceMonth)}`, left, cursorY, {
-        width: pageWidth * 0.5,
-      });
+      .text(input.periodLabel, left, cursorY, { width: pageWidth * 0.5 });
 
-    if (item.paymentDate) {
-      doc.text(`Data Pagto: ${formatDate(item.paymentDate)}`, left + pageWidth * 0.5, cursorY, {
+    if (input.paymentDateLabel) {
+      doc.text(input.paymentDateLabel, left + pageWidth * 0.5, cursorY, {
         width: pageWidth * 0.5,
         align: 'right',
       });
@@ -164,7 +166,7 @@ export class PayslipPdfService {
     cursorY += 8;
 
     // ---- Dados do colaborador ----------------------------------------------
-    const employee = item.employee;
+    const employee = input.employee;
 
     this.drawRow(doc, left, cursorY, pageWidth, [
       `Matrícula: ${employee.employeeNumber ?? '—'} — Nome: ${employee.name}`,
@@ -180,14 +182,14 @@ export class PayslipPdfService {
     doc.moveTo(left, cursorY).lineTo(left + pageWidth, cursorY).strokeColor('#d1d5db').stroke();
     cursorY += 8;
 
-    const baseSalary = Number(item.baseSalary);
-    const hourlyRate = item.salaryType === 'HORISTA' ? baseSalary : baseSalary / 220;
+    if (input.baseSalary !== undefined) {
+      this.drawRow(doc, left, cursorY, pageWidth, [
+        `Salário Base: ${formatMoney(input.baseSalary)}`,
+        input.hourlyRate !== undefined ? `Salário Hora: ${formatMoney(input.hourlyRate)}` : '',
+      ]);
+      cursorY = doc.y + 4;
+    }
 
-    this.drawRow(doc, left, cursorY, pageWidth, [
-      `Salário Base: ${formatMoney(baseSalary)}`,
-      `Salário Hora: ${formatMoney(hourlyRate)}`,
-    ]);
-    cursorY = doc.y + 4;
     this.drawRow(doc, left, cursorY, pageWidth, [
       `Banco/Agência: ${employee.bankName ?? '—'} / ${employee.bankAgency ?? '—'}`,
       `C/C: ${employee.bankAccount ?? '—'}`,
@@ -195,13 +197,13 @@ export class PayslipPdfService {
     cursorY = doc.y + 10;
 
     // ---- Tabela de linhas ---------------------------------------------------
-    cursorY = this.drawLinesTable(doc, item.lines, left, cursorY, pageWidth);
+    cursorY = this.drawLinesTable(doc, input.lines, left, cursorY, pageWidth);
 
     // ---- Totais ---------------------------------------------------------------
-    const totalProventos = item.lines
+    const totalProventos = input.lines
       .filter((l) => l.type === 'PROVENTO')
       .reduce((sum, l) => sum + Number(l.amount), 0);
-    const totalDescontos = item.lines
+    const totalDescontos = input.lines
       .filter((l) => l.type === 'DESCONTO')
       .reduce((sum, l) => sum + Number(l.amount), 0);
     const netAmount = totalProventos - totalDescontos;
@@ -240,28 +242,19 @@ export class PayslipPdfService {
     doc.moveTo(left, cursorY).lineTo(left + pageWidth, cursorY).strokeColor('#d1d5db').stroke();
     cursorY += 8;
 
-    // ---- Rodapé (bases INSS/IRRF/FGTS/horas/faltas) --------------------------
-    const footerFields: [string, string][] = [
-      ['Base I.N.S.S.', formatMoney(item.inssBase)],
-      ['F.G.T.S. do Mês', formatMoney(item.employerFgtsAmount)],
-      ['Base I.R.R.F.', formatMoney(item.irrfBase)],
-      ['Dep. I.R.R.F.', String(item.dependentsCount)],
-      ['Horas Extras no Mês', (item.extraMinutes / 60).toFixed(2)],
-      ['Faltas Injustificadas', `${item.unjustifiedAbsenceDays} dia(s)`],
-    ];
-
+    // ---- Rodapé -----------------------------------------------------------------
     doc.fontSize(8).font('Helvetica').fillColor('#374151');
 
-    footerFields.forEach(([label, value], index) => {
+    input.footerFields.forEach((field, index) => {
       const col = index % 2;
       const row = Math.floor(index / 2);
       const x = left + col * (pageWidth / 2);
       const y = cursorY + row * 14;
 
-      doc.text(`${label}: ${value}`, x, y, { width: pageWidth / 2 - 6 });
+      doc.text(`${field.label}: ${field.value}`, x, y, { width: pageWidth / 2 - 6 });
     });
 
-    cursorY += Math.ceil(footerFields.length / 2) * 14 + 30;
+    cursorY += Math.ceil(input.footerFields.length / 2) * 14 + 30;
 
     // ---- Assinatura -------------------------------------------------------------
     const signatureWidth = pageWidth * 0.5;
@@ -291,7 +284,7 @@ export class PayslipPdfService {
 
   private drawLinesTable(
     doc: PDFKit.PDFDocument,
-    lines: PayrollItemLine[],
+    lines: PayslipPdfLine[],
     left: number,
     startY: number,
     pageWidth: number,

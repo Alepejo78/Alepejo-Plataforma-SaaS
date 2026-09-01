@@ -189,6 +189,7 @@ model Company {
   thirteenthSalaries            ThirteenthSalary[]
   vacationPeriods               VacationPeriod[]
   vacationGrants                VacationGrant[]
+  salaryAdvances                SalaryAdvance[]
 
   quotes            Quote[]
   salesOrders       SalesOrder[]
@@ -1727,6 +1728,10 @@ model FinancialEntry {
   vacationGrantId String?        @unique
   vacationGrant   VacationGrant? @relation(fields: [vacationGrantId], references: [id], onDelete: SetNull)
 
+  /// Preenchido quando o título nasce da aprovação de um adiantamento salarial.
+  salaryAdvanceId String?        @unique
+  salaryAdvance   SalaryAdvance? @relation(fields: [salaryAdvanceId], references: [id], onDelete: SetNull)
+
   /// Preenchido quando o título é a mensalidade do próprio AlePejo ERP
   /// Cloud: cada cobrança da assinatura vira uma conta a pagar na
   /// empresa cliente. Único pra a mesma cobrança não gerar dois títulos.
@@ -2091,6 +2096,16 @@ model ThirteenthSalaryItem {
   netAmount          Decimal @default(0) @db.Decimal(18, 2)
   employerFgtsAmount Decimal @default(0) @db.Decimal(18, 2)
 
+  /// Confirmação de recebimento do recibo — mesmo mecanismo de
+  /// PayrollItem (ver comentário lá).
+  confirmationStatus PayrollConfirmationStatus @default(PENDENTE)
+  confirmedAt        DateTime?
+  confirmedById      String?
+
+  confirmationTokenHash      String?   @db.VarChar(64)
+  confirmationTokenExpiresAt DateTime?
+  confirmationSentAt         DateTime?
+
   /// Título a pagar gerado na aprovação — relação reversa, a FK vive no FinancialEntry.
   financialEntry FinancialEntry?
 
@@ -2215,6 +2230,16 @@ model VacationGrant {
   approvedByUserId String?
   observation      String?
 
+  /// Confirmação de recebimento do recibo — mesmo mecanismo de
+  /// PayrollItem (ver comentário lá).
+  confirmationStatus PayrollConfirmationStatus @default(PENDENTE)
+  confirmedAt        DateTime?
+  confirmedById      String?
+
+  confirmationTokenHash      String?   @db.VarChar(64)
+  confirmationTokenExpiresAt DateTime?
+  confirmationSentAt         DateTime?
+
   /// Título a pagar gerado na aprovação — relação reversa, a FK vive no FinancialEntry.
   financialEntry FinancialEntry?
 
@@ -2243,6 +2268,56 @@ model VacationGrantLine {
 
   @@index([vacationGrantId])
   @@map("vacation_grant_lines")
+}
+
+/// Adiantamento salarial — antecipação de parte do salário a pedido
+/// do colaborador, descontada depois na folha normal (desconto
+/// lançado manualmente em "Outros descontos" no ajuste do item, este
+/// módulo não mexe na folha sozinho). Mesmo fluxo DRAFT → APPROVED →
+/// título a pagar dos outros módulos de RH.
+model SalaryAdvance {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  /// Numeração sequencial por empresa (DocumentSequenceService, tipo "SALARY_ADVANCE").
+  number Int
+
+  status PayrollStatus @default(DRAFT)
+
+  requestDate DateTime @default(now())
+  amount      Decimal  @db.Decimal(18, 2)
+
+  /// Informativo — em quantas parcelas o RH pretende descontar na
+  /// folha (o desconto em si é lançado manualmente).
+  installments Int @default(1)
+
+  observation String?
+
+  approvedAt       DateTime?
+  approvedByUserId String?
+
+  /// Confirmação de recebimento do valor — mesmo mecanismo de PayrollItem.
+  confirmationStatus PayrollConfirmationStatus @default(PENDENTE)
+  confirmedAt        DateTime?
+  confirmedById      String?
+
+  confirmationTokenHash      String?   @db.VarChar(64)
+  confirmationTokenExpiresAt DateTime?
+  confirmationSentAt         DateTime?
+
+  /// Título a pagar gerado na aprovação — relação reversa, a FK vive no FinancialEntry.
+  financialEntry FinancialEntry?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("salary_advances")
 }
 
 enum BudgetType {
@@ -2900,6 +2975,7 @@ model Employee {
   thirteenthSalaryItems ThirteenthSalaryItem[]
   vacationPeriods       VacationPeriod[]
   vacationGrants        VacationGrant[]
+  salaryAdvances        SalaryAdvance[]
 
   @@unique([companyId, cpf])
   @@unique([companyId, badgeCode])

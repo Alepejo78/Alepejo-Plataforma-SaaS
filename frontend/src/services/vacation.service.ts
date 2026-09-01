@@ -1,5 +1,9 @@
 import { api } from "./api";
-import type { PayrollItemLine, PayrollStatus } from "./payroll.service";
+import type {
+  PayrollConfirmationStatus,
+  PayrollItemLine,
+  PayrollStatus,
+} from "./payroll.service";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -59,6 +63,9 @@ export interface VacationGrant {
   netAmount: string | number;
   employerFgtsAmount: string | number;
   observation?: string | null;
+  confirmationStatus: PayrollConfirmationStatus;
+  confirmedAt?: string | null;
+  confirmationSentAt?: string | null;
   lines: PayrollItemLine[];
   employee?: {
     id: string;
@@ -174,6 +181,57 @@ export const vacationService = {
   async cancel(id: string): Promise<VacationGrant> {
     const { data } = await api.patch<ApiEnvelope<VacationGrant>>(
       `/vacation/grants/${id}/cancel`
+    );
+
+    return data.data;
+  },
+
+  async confirmItem(id: string): Promise<VacationGrant> {
+    const { data } = await api.patch<ApiEnvelope<VacationGrant>>(
+      `/vacation/grants/${id}/confirm`
+    );
+
+    return data.data;
+  },
+
+  async sendConfirmation(
+    id: string
+  ): Promise<{ sent: boolean; channels: string[] }> {
+    const { data } = await api.post<
+      ApiEnvelope<{ sent: boolean; channels: string[] }>
+    >(`/vacation/grants/${id}/send-confirmation`);
+
+    return data.data;
+  },
+};
+
+export interface VacationPublicInfo {
+  employeeName: string;
+  companyName: string;
+  companyLogo?: string | null;
+  startDate: string;
+  endDate: string;
+  returnDate: string;
+  days: number;
+  netAmount: number;
+  status: PayrollConfirmationStatus;
+}
+
+export const vacationConfirmationPublicService = {
+  async getInfo(id: string, token: string): Promise<VacationPublicInfo> {
+    const { data } = await api.get<ApiEnvelope<VacationPublicInfo>>(
+      `/vacation/public/${id}`,
+      { params: { token } }
+    );
+
+    return data.data;
+  },
+
+  async confirm(id: string, token: string): Promise<{ success: boolean }> {
+    const { data } = await api.post<ApiEnvelope<{ success: boolean }>>(
+      `/vacation/public/${id}/confirm`,
+      undefined,
+      { params: { token } }
     );
 
     return data.data;

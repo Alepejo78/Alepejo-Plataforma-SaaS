@@ -170,7 +170,42 @@ export class AuthService {
       });
     }
 
+    await this.assertEmployeeCanLogin(user.id);
+
     return user;
+  }
+
+  /**
+   * Colaborador de férias ou afastado não consegue entrar no sistema
+   * — mesma trava nos dois casos (pedido do usuário: "proibir do
+   * usuário fazer movimentações e bater o ponto, deixar tudo
+   * bloqueado"; a forma mais simples de garantir isso sem criar guard
+   * em toda rota é travar o próprio login). Desbloqueia sozinho
+   * quando `onVacation`/`onLeave` voltam a `false` — na aprovação de
+   * férias isso é automático (ver `VacationGrantService`); afastamento
+   * é sempre manual, editado na aba Saúde do colaborador.
+   */
+  private async assertEmployeeCanLogin(userId: string) {
+    const employee = await this.prisma.employee.findUnique({
+      where: { userId },
+      select: { onVacation: true, onLeave: true, vacationEndDate: true, leaveEndDate: true },
+    });
+
+    if (!employee) {
+      return;
+    }
+
+    if (employee.onVacation) {
+      throw new UnauthorizedException(
+        `Este usuário está de férias${employee.vacationEndDate ? ` até ${employee.vacationEndDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : ''} e não pode acessar o sistema.`,
+      );
+    }
+
+    if (employee.onLeave) {
+      throw new UnauthorizedException(
+        `Este usuário está afastado${employee.leaveEndDate ? ` até ${employee.leaveEndDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : ''} e não pode acessar o sistema.`,
+      );
+    }
   }
 
   private async issueTokens(user: any)
@@ -475,7 +510,11 @@ export class AuthService {
       );
     }
 
-    // Rotaciona o refresh token a cada uso.
+    // Rotaciona o refresh token a cada uso — checa de novo aqui (não só
+    // no login) pra cortar uma sessão já aberta assim que o
+    // colaborador entrar de férias/afastamento, sem esperar expirar.
+    await this.assertEmployeeCanLogin(user.id);
+
     return this.issueTokens(user);
   }
 

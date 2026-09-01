@@ -16,28 +16,18 @@ import { PayslipPdfService } from './payslip-pdf.service';
 
 const CONFIRMATION_TOKEN_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
-const MONTH_NAMES = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
-];
-
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-function competenceLabel(year: number, month: number): string {
-  return `${MONTH_NAMES[month - 1]}/${year}`;
-}
-
 /**
- * Confirmação digital de recebimento do holerite — mesmo mecanismo
- * de PpeDeliveriesService (manual pelo RH ou link público por
- * e-mail/WhatsApp, token só em hash, uso único). Serviço separado
- * (em vez de inchar PayrollService) porque essa parte não depende de
- * nada do cálculo da folha, só do item já pronto.
+ * Confirmação digital de recebimento do recibo de 13º salário — mesmo
+ * mecanismo de `PayrollConfirmationService`, adaptado pra
+ * `ThirteenthSalaryItem` (item dentro de um lote `ThirteenthSalary`
+ * por ano/parcela, mesma relação payroll→payrollItem).
  */
 @Injectable()
-export class PayrollConfirmationService {
+export class ThirteenthConfirmationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailNotifications: EmailNotificationsService,
@@ -47,20 +37,13 @@ export class PayrollConfirmationService {
 
   private async findItemScoped(
     companyId: string,
-    payrollId: string,
+    thirteenthSalaryId: string,
     itemId: string,
   ) {
-    const item = await this.prisma.payrollItem.findFirst({
-      where: { id: itemId, payrollId, payroll: { companyId } },
+    const item = await this.prisma.thirteenthSalaryItem.findFirst({
+      where: { id: itemId, thirteenthSalaryId, thirteenthSalary: { companyId } },
       include: {
-        payroll: {
-          select: {
-            companyId: true,
-            competenceYear: true,
-            competenceMonth: true,
-            paymentDate: true,
-          },
-        },
+        thirteenthSalary: { select: { companyId: true, year: true, installment: true } },
         employee: {
           select: {
             id: true,
@@ -82,23 +65,23 @@ export class PayrollConfirmationService {
     });
 
     if (!item) {
-      throw new NotFoundException('Item da folha não encontrado.');
+      throw new NotFoundException('Item do 13º salário não encontrado.');
     }
 
     return item;
   }
 
-  /** Confirmação manual — RH confirma na tela que o colaborador recebeu (ex.: entregue em mãos). */
+  /** Confirmação manual — RH confirma na tela que o colaborador recebeu. */
   async confirm(
     companyId: string,
-    payrollId: string,
+    thirteenthSalaryId: string,
     itemId: string,
     confirmedById: string,
   ) {
-    const item = await this.findItemScoped(companyId, payrollId, itemId);
+    const item = await this.findItemScoped(companyId, thirteenthSalaryId, itemId);
 
     if (item.confirmationStatus === PayrollConfirmationStatus.CONFIRMADO) {
-      throw new BadRequestException('Este holerite já está confirmado.');
+      throw new BadRequestException('Este recibo já está confirmado.');
     }
 
     if (item.financialEntry?.status !== 'PAID') {
@@ -107,7 +90,7 @@ export class PayrollConfirmationService {
       );
     }
 
-    return this.prisma.payrollItem.update({
+    return this.prisma.thirteenthSalaryItem.update({
       where: { id: item.id },
       data: {
         confirmationStatus: PayrollConfirmationStatus.CONFIRMADO,
@@ -117,22 +100,17 @@ export class PayrollConfirmationService {
     });
   }
 
-  /**
-   * Gera (ou renova) o link e manda por e-mail e/ou WhatsApp — mesmo
-   * padrão best-effort de PpeDeliveriesService.sendConfirmation.
-   * Usado tanto pelo botão manual do RH quanto pelo disparo
-   * automático (gerar folha / ajustar item).
-   */
-  async sendConfirmation(companyId: string, payrollId: string, itemId: string) {
-    const item = await this.findItemScoped(companyId, payrollId, itemId);
+  /** Gera (ou renova) o link e manda por e-mail e/ou WhatsApp. */
+  async sendConfirmation(companyId: string, thirteenthSalaryId: string, itemId: string) {
+    const item = await this.findItemScoped(companyId, thirteenthSalaryId, itemId);
 
     if (item.confirmationStatus === PayrollConfirmationStatus.CONFIRMADO) {
-      throw new BadRequestException('Este holerite já está confirmado.');
+      throw new BadRequestException('Este recibo já está confirmado.');
     }
 
     if (item.financialEntry?.status !== 'PAID') {
       throw new BadRequestException(
-        'O envio do holerite só é liberado depois que o pagamento for baixado no Financeiro.',
+        'O envio do recibo só é liberado depois que o pagamento for baixado no Financeiro.',
       );
     }
 
@@ -148,7 +126,7 @@ export class PayrollConfirmationService {
     const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + CONFIRMATION_TOKEN_TTL_MS);
 
-    await this.prisma.payrollItem.update({
+    await this.prisma.thirteenthSalaryItem.update({
       where: { id: item.id },
       data: {
         confirmationTokenHash: tokenHash,
@@ -160,37 +138,24 @@ export class PayrollConfirmationService {
     return this.dispatch(companyId, item, token);
   }
 
-  /**
-   * Best-effort, sem lançar — usado pelo disparo automático (baixa do
-   * título no Financeiro, ver `sendConfirmationBestEffortByItemId`
-   * abaixo). Uma falha de envio nunca pode derrubar a baixa.
-   */
+  /** Best-effort, sem lançar — usado pelo disparo automático (baixa do título). */
   async sendConfirmationBestEffort(
     companyId: string,
-    payrollId: string,
+    thirteenthSalaryId: string,
     itemId: string,
   ) {
     try {
-      await this.sendConfirmation(companyId, payrollId, itemId);
+      await this.sendConfirmation(companyId, thirteenthSalaryId, itemId);
     } catch {
-      // Sem e-mail/celular cadastrado, ou já confirmado — nada a
-      // fazer, o RH ainda pode mandar manual depois se corrigir o
-      // cadastro.
+      // Sem e-mail/celular cadastrado, ou já confirmado — nada a fazer.
     }
   }
 
-  /**
-   * Mesma coisa, mas só a partir do id do item — usado por
-   * `FinancialEntriesService.settle()`, que só enxerga o título (não
-   * sabe o id da folha) quando baixa um título de qualquer origem do
-   * ERP. O envio automático do holerite é disparado daqui: só depois
-   * que o pagamento é efetivamente realizado, nunca na geração/ajuste
-   * da folha.
-   */
+  /** Mesma coisa, mas só a partir do id do item — usado por `FinancialEntriesService.settle()`. */
   async sendConfirmationBestEffortByItemId(itemId: string) {
-    const item = await this.prisma.payrollItem.findUnique({
+    const item = await this.prisma.thirteenthSalaryItem.findUnique({
       where: { id: itemId },
-      select: { payrollId: true, payroll: { select: { companyId: true } } },
+      select: { thirteenthSalaryId: true, thirteenthSalary: { select: { companyId: true } } },
     });
 
     if (!item) {
@@ -198,8 +163,8 @@ export class PayrollConfirmationService {
     }
 
     await this.sendConfirmationBestEffort(
-      item.payroll.companyId,
-      item.payrollId,
+      item.thirteenthSalary.companyId,
+      item.thirteenthSalaryId,
       itemId,
     );
   }
@@ -214,39 +179,28 @@ export class PayrollConfirmationService {
     });
 
     const companyName = company?.tradeName || company?.legalName || '';
-    const competence = competenceLabel(
-      item.payroll.competenceYear,
-      item.payroll.competenceMonth,
-    );
+    const label = `13º salário — ${item.thirteenthSalary.installment}ª parcela/${item.thirteenthSalary.year}`;
 
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
-    const link = `${frontendUrl}/confirmar-holerite?payrollId=${item.payrollId}&itemId=${item.id}&token=${token}`;
-
-    // Best-effort — falha ao gerar o PDF não pode derrubar o envio do
-    // link de confirmação, só sai sem o anexo. Mesmo shape que
-    // `PayslipDocument.tsx` recebe na tela de holerite.
-    const baseSalary = Number(item.baseSalary);
-    const hourlyRate = item.salaryType === 'HORISTA' ? baseSalary : baseSalary / 220;
+    const link = `${frontendUrl}/confirmar-13?id=${item.thirteenthSalaryId}&itemId=${item.id}&token=${token}`;
 
     const pdf = await this.payslipPdf
       .generate(
         {
-          title: 'Demonstrativo de Pagamento Mensal',
-          periodLabel: `Período: ${competence}`,
+          title: `Demonstrativo de 13º Salário — ${item.thirteenthSalary.installment}ª Parcela`,
+          periodLabel: `Ano: ${item.thirteenthSalary.year}`,
           paymentDateLabel: item.financialEntry?.dueDate
             ? `Data Pagto: ${new Date(item.financialEntry.dueDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`
             : undefined,
           employee: item.employee,
-          baseSalary,
-          hourlyRate,
+          baseSalary: Number(item.baseSalary),
           lines: item.lines,
           footerFields: [
             { label: 'Base I.N.S.S.', value: Number(item.inssBase).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) },
-            { label: 'F.G.T.S. do Mês', value: Number(item.employerFgtsAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) },
-            { label: 'Base I.R.R.F.', value: Number(item.irrfBase).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) },
-            { label: 'Dep. I.R.R.F.', value: String(item.dependentsCount) },
-            { label: 'Horas Extras no Mês', value: (item.extraMinutes / 60).toFixed(2) },
-            { label: 'Faltas Injustificadas', value: `${item.unjustifiedAbsenceDays} dia(s)` },
+            { label: 'F.G.T.S. do Período', value: Number(item.employerFgtsAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) },
+            { label: 'Base I.R.R.F. 13º', value: Number(item.irrfBase).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) },
+            { label: 'Avos', value: `${item.monthsWorked}/12` },
+            { label: '1ª Parcela Já Paga', value: Number(item.previousInstallmentAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) },
           ],
         },
         company,
@@ -260,17 +214,17 @@ export class PayrollConfirmationService {
       const sent = await this.emailNotifications.send(
         companyId,
         employee.email,
-        `Holerite disponível — ${competence} — ${companyName}`,
+        `Recibo de 13º salário disponível — ${companyName}`,
         `<p>Olá, ${employee.name},</p>
-<p>Seu holerite de <strong>${competence}</strong> já está disponível, gerado por <strong>${companyName}</strong>. Clique no botão abaixo pra ver o resumo e confirmar que recebeu:</p>
+<p>Seu recibo de ${label} já está disponível, gerado por <strong>${companyName}</strong>. Clique no botão abaixo pra ver o resumo e confirmar que recebeu:</p>
 <p style="text-align: center; margin: 24px 0;">
-  <a href="${link}" style="background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Ver holerite e confirmar</a>
+  <a href="${link}" style="background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Ver recibo e confirmar</a>
 </p>
 <p style="font-size: 13px; color: #666;">Se o botão não funcionar, copie e cole este link no navegador:<br><a href="${link}">${link}</a></p>`,
         pdf
           ? [
               {
-                filename: `holerite-${competence.replace('/', '-')}.pdf`,
+                filename: `13-salario-${item.thirteenthSalary.year}-${item.thirteenthSalary.installment}.pdf`,
                 content: pdf,
                 contentType: 'application/pdf',
               },
@@ -287,7 +241,7 @@ export class PayrollConfirmationService {
       const sent = await this.whatsappNotifications.send(
         companyId,
         employee.mobile,
-        `Olá, ${employee.name}! Seu holerite de ${competence} (${companyName}) já está disponível. Confira e confirme neste link: ${link}`,
+        `Olá, ${employee.name}! Seu recibo de ${label} (${companyName}) já está disponível. Confira e confirme neste link: ${link}`,
       );
 
       if (sent) {
@@ -298,18 +252,11 @@ export class PayrollConfirmationService {
     return { sent: channels.length > 0, channels };
   }
 
-  private async validatePublicToken(payrollId: string, itemId: string, token: string) {
-    const item = await this.prisma.payrollItem.findFirst({
-      where: { id: itemId, payrollId },
+  private async validatePublicToken(thirteenthSalaryId: string, itemId: string, token: string) {
+    const item = await this.prisma.thirteenthSalaryItem.findFirst({
+      where: { id: itemId, thirteenthSalaryId },
       include: {
-        payroll: {
-          select: {
-            companyId: true,
-            competenceYear: true,
-            competenceMonth: true,
-            paymentDate: true,
-          },
-        },
+        thirteenthSalary: { select: { companyId: true, year: true, installment: true } },
         employee: { select: { id: true, name: true } },
       },
     });
@@ -334,12 +281,12 @@ export class PayrollConfirmationService {
     return item;
   }
 
-  /** Resumo breve do holerite pra tela pública (sem login) — não é a ficha completa, só um panorama antes de confirmar. */
-  async getPublicInfo(payrollId: string, itemId: string, token: string) {
-    const item = await this.validatePublicToken(payrollId, itemId, token);
+  /** Resumo breve pra tela pública (sem login). */
+  async getPublicInfo(thirteenthSalaryId: string, itemId: string, token: string) {
+    const item = await this.validatePublicToken(thirteenthSalaryId, itemId, token);
 
     const company = await this.prisma.company.findUnique({
-      where: { id: item.payroll.companyId },
+      where: { id: item.thirteenthSalary.companyId },
       select: {
         tradeName: true,
         legalName: true,
@@ -352,30 +299,18 @@ export class PayrollConfirmationService {
       employeeName: item.employee.name,
       companyName: company?.tradeName || company?.legalName || '',
       companyLogo: company?.brandingLogoLightEnabled ? company.logo : null,
-      competence: competenceLabel(
-        item.payroll.competenceYear,
-        item.payroll.competenceMonth,
-      ),
-      grossAmount: Number(item.grossAmount),
-      totalDeductions: round2(
-        Number(item.inssAmount) +
-          Number(item.irrfAmount) +
-          Number(item.absenceDeductionAmount) +
-          Number(item.transportVoucherDeduction) +
-          Number(item.benefitDeductions) +
-          Number(item.otherDeductions),
-      ),
+      year: item.thirteenthSalary.year,
+      installment: item.thirteenthSalary.installment,
       netAmount: Number(item.netAmount),
-      paymentDate: item.payroll.paymentDate,
       status: item.confirmationStatus,
     };
   }
 
   /** Consumo público do link — o colaborador confirma sem sessão. */
-  async confirmPublic(payrollId: string, itemId: string, token: string) {
-    await this.validatePublicToken(payrollId, itemId, token);
+  async confirmPublic(thirteenthSalaryId: string, itemId: string, token: string) {
+    await this.validatePublicToken(thirteenthSalaryId, itemId, token);
 
-    await this.prisma.payrollItem.update({
+    await this.prisma.thirteenthSalaryItem.update({
       where: { id: itemId },
       data: {
         confirmationStatus: PayrollConfirmationStatus.CONFIRMADO,
@@ -388,8 +323,4 @@ export class PayrollConfirmationService {
 
     return { success: true };
   }
-}
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
 }
