@@ -1206,7 +1206,7 @@ function MaxOpenTabsSection() {
 
 export default function PersonalizacaoPage() {
   const { hasModule, can } = useAuth();
-  // Quem só tem `profile.manage` (sem `company-branding.view`) vê só
+  // Quem só tem `profile.personal` (sem `company-branding.view`) vê só
   // "Minha conta" — "Geral"/"Da empresa" são configuração da empresa
   // inteira, ficam pra quem administra personalização de verdade.
   const canManageCompanyBranding = can("company-branding.view");

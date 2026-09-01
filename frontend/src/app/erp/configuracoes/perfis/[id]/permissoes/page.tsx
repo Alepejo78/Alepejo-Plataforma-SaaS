@@ -71,6 +71,7 @@ const BUSINESS_COLUMNS: {
   { key: "userBlock", label: "Bloquear Usuários", codes: ["user.block"] },
   { key: "userUnblock", label: "Desbloquear Usuários", codes: ["user.unblock"] },
   { key: "userResetPassword", label: "Redefinir Senha", codes: ["user.reset-password"] },
+  { key: "profilePersonal", label: "Minha Conta (Foto, Cor, Layout, Guias)", codes: ["profile.personal"] },
   { key: "reverse", label: "Estornar documentos", codes: [] }, // resolvido por sufixo, ver abaixo
 ];
 

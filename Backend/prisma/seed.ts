@@ -490,7 +490,7 @@ const permissionGroups = [
       // Libera só a aba "Minha conta" (foto/cor/layout/guias, todas
       // por usuário) sem dar acesso às abas "Da empresa"/"Geral" —
       // pra quem só devia mexer na própria personalização.
-      ["profile.manage", "Minha Conta (foto, cor, layout, guias)"],
+      ["profile.personal", "Minha Conta (foto, cor, layout, guias)"],
     ],
   },
   {

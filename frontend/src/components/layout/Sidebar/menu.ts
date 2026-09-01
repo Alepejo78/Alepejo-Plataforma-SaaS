@@ -616,10 +616,10 @@ export const systemMenuItems: MenuItem[] = [
     iconAnim: "monitor",
     href: "/erp/configuracoes/personalizacao",
     // company-branding.view libera a tela inteira (inclusive "Da
-    // empresa"); profile.manage libera só a entrada — "Minha conta"
+    // empresa"); profile.personal libera só a entrada — "Minha conta"
     // é autoatendimento, "Da empresa"/"Geral" ficam escondidas dentro
-    // da página pra quem só tem profile.manage (ver page.tsx).
-    permission: ["company-branding.view", "profile.manage"],
+    // da página pra quem só tem profile.personal (ver page.tsx).
+    permission: ["company-branding.view", "profile.personal"],
   },
   {
     id: "ponto-manual",
