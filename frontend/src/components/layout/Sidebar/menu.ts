@@ -651,4 +651,13 @@ export const systemMenuItems: MenuItem[] = [
     module: "LABOR",
     permission: "time-entry.view",
   },
+  {
+    id: "meu-epi",
+    title: "Minha Ficha de EPI",
+    icon: HardHat,
+    iconAnim: "hardhat",
+    href: "/erp/rh/epi",
+    module: "HR",
+    permission: "ppe-delivery.view",
+  },
 ];
