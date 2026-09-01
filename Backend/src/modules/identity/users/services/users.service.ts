@@ -91,6 +91,12 @@ export class UsersService {
       );
     }
 
+    // Best-effort — usuário nasce com `mustChangePassword: true`, mas
+    // sem esse e-mail ele não tem como saber nem a senha nem o link
+    // fixo de login da empresa. Antes só saía se alguém clicasse
+    // manualmente em "Alterar Senha"/"Esqueci minha senha" depois.
+    void this.sendPasswordResetLink(user);
+
     return user;
   }
 
