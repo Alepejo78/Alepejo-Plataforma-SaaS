@@ -97,7 +97,10 @@ export class EmployeesService {
    * - Dias de aviso preenchido força Afastado.
    * - Fim do afastamento/férias = início + dias, sempre recalculado
    *   aqui (mesmo padrão da experiência). Início preenchido força
-   *   Afastado/Em férias.
+   *   Afastado/Em férias — MAS nunca sobrescreve um `false` explícito:
+   *   Afastado/Em férias bloqueia o login (ver AuthService), então RH
+   *   precisa poder desmarcar pra liberar acesso numa emergência sem
+   *   as datas (que ficam de registro) forçarem a caixa de volta.
    */
   private applyBusinessRules(
     dto: CreateEmployeeDto | UpdateEmployeeDto,
@@ -126,7 +129,7 @@ export class EmployeesService {
       dto.status = 'DEMITIDO';
     }
 
-    if (dto.noticeDays && dto.noticeDays > 0) {
+    if (dto.noticeDays && dto.noticeDays > 0 && dto.onLeave !== false) {
       dto.onLeave = true;
     }
 
@@ -145,7 +148,7 @@ export class EmployeesService {
       dto.leaveEndDate = end.toISOString();
     }
 
-    if (leaveStartDate) {
+    if (leaveStartDate && dto.onLeave !== false) {
       dto.onLeave = true;
     }
 
@@ -165,7 +168,7 @@ export class EmployeesService {
       dto.vacationEndDate = end.toISOString();
     }
 
-    if (vacationStartDate) {
+    if (vacationStartDate && dto.onVacation !== false) {
       dto.onVacation = true;
     }
 
