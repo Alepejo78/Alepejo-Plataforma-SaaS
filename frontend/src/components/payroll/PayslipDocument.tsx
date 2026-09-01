@@ -186,7 +186,9 @@ export function PayslipDocument({
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-[var(--border)] print:border-black">
-              <th className="px-2 py-1.5 font-semibold">Cod.</th>
+              <th className="whitespace-nowrap px-2 py-1.5 font-semibold">
+                Cod.
+              </th>
               <th className="px-2 py-1.5 font-semibold">Descrição</th>
               <th className="px-2 py-1.5 text-right font-semibold">
                 Unidade
@@ -203,7 +205,7 @@ export function PayslipDocument({
           <tbody>
             {lines.map((line) => (
               <tr key={line.id}>
-                <td className="px-2 py-1">{line.code}</td>
+                <td className="whitespace-nowrap px-2 py-1">{line.code}</td>
                 <td className="px-2 py-1">{line.description}</td>
                 <td className="px-2 py-1 text-right">
                   {line.referenceValue ?? ""}

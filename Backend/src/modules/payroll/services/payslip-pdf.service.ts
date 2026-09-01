@@ -297,8 +297,8 @@ export class PayslipPdfService {
     pageWidth: number,
   ): number {
     const columns = [
-      { title: 'Cód.', width: pageWidth * 0.14, align: 'left' as const },
-      { title: 'Descrição', width: pageWidth * 0.36, align: 'left' as const },
+      { title: 'Cód.', width: pageWidth * 0.22, align: 'left' as const },
+      { title: 'Descrição', width: pageWidth * 0.28, align: 'left' as const },
       { title: 'Unidade', width: pageWidth * 0.16, align: 'right' as const },
       { title: 'Proventos', width: pageWidth * 0.17, align: 'right' as const },
       { title: 'Descontos', width: pageWidth * 0.17, align: 'right' as const },
