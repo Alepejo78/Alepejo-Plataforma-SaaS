@@ -141,7 +141,7 @@ export function PayslipDocument({
 
             <div>
               <p className="font-bold">{companyName}</p>
-              <p>Sede</p>
+              <p>Matriz</p>
             </div>
           </div>
 

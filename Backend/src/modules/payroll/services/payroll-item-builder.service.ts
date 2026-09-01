@@ -217,7 +217,7 @@ export class PayrollItemBuilderService {
 
       lines.push({
         type: PayrollLineType.DESCONTO,
-        code: `BENEFICIO_${eb.benefitId}`,
+        code: 'BENEFICIO',
         description: eb.benefit.name,
         referenceValue:
           eb.benefit.calculationType === BenefitCalculationType.PERCENTAGE
@@ -255,9 +255,9 @@ export class PayrollItemBuilderService {
         code: 'INSS',
         description: 'INSS',
         referenceValue:
-          (inssRate !== null
-            ? `${inssRate.toFixed(2).replace('.', ',')}% `
-            : '') + `sobre ${inssBase.toFixed(2)}`,
+          inssRate !== null
+            ? `${inssRate.toFixed(2).replace('.', ',')}%`
+            : undefined,
         amount: inssAmount,
         sortOrder: sortOrder++,
       });
@@ -269,9 +269,9 @@ export class PayrollItemBuilderService {
         code: 'IRRF',
         description: 'IRRF',
         referenceValue:
-          (irrfRate !== null
-            ? `${irrfRate.toFixed(2).replace('.', ',')}% `
-            : '') + `sobre ${irrfBase.toFixed(2)}`,
+          irrfRate !== null
+            ? `${irrfRate.toFixed(2).replace('.', ',')}%`
+            : undefined,
         amount: irrfAmount,
         sortOrder: sortOrder++,
       });
