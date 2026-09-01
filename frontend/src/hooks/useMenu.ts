@@ -39,8 +39,11 @@ export function useMenu(): MenuEntry[] {
       return [];
     }
 
-    const hasPermission = (entry: { permission?: string }) =>
-      !entry.permission || can(entry.permission);
+    const hasPermission = (entry: { permission?: string | string[] }) =>
+      !entry.permission ||
+      (Array.isArray(entry.permission)
+        ? entry.permission.some((p) => can(p))
+        : can(entry.permission));
 
     const isLocked = (entry: { module?: string }) =>
       Boolean(entry.module && !hasModule(entry.module));

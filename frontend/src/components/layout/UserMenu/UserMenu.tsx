@@ -59,7 +59,11 @@ export function UserMenu() {
       : null;
 
   const visibleItems = systemMenuItems.filter(
-    (item) => !item.permission || can(item.permission)
+    (item) =>
+      !item.permission ||
+      (Array.isArray(item.permission)
+        ? item.permission.some((p) => can(p))
+        : can(item.permission))
   );
 
   return (

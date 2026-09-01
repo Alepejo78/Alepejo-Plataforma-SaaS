@@ -26,8 +26,11 @@ export interface MenuItem {
 
   /**
    * Permissão exigida (RBAC). Ausente = não exige permissão específica.
+   * Array = basta ter QUALQUER uma delas (OR) — usado quando a mesma
+   * tela serve tanto pra quem administra quanto pra quem só mexe na
+   * própria conta (ex.: Personalização, ver `menu.ts`).
    */
-  permission?: string;
+  permission?: string | string[];
 
   /**
    * Item ainda não implementado: aparece desabilitado em vez de
@@ -64,7 +67,7 @@ export interface MenuGroup {
 
   /** Mesmas regras de licença/permissão dos itens. */
   module?: string;
-  permission?: string;
+  permission?: string | string[];
 
   /** Ver MenuItem.section — mesma regra, ausente = "empresa". */
   section?: "interprise" | "empresa";

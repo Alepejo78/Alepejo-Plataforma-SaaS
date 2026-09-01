@@ -487,6 +487,10 @@ const permissionGroups = [
     permissions: [
       ["company-branding.view", "Consultar Personalização de Marca"],
       ["company-branding.update", "Alterar Personalização de Marca"],
+      // Libera só a aba "Minha conta" (foto/cor/layout/guias, todas
+      // por usuário) sem dar acesso às abas "Da empresa"/"Geral" —
+      // pra quem só devia mexer na própria personalização.
+      ["profile.manage", "Minha Conta (foto, cor, layout, guias)"],
     ],
   },
   {

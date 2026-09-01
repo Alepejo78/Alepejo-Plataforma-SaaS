@@ -1205,7 +1205,11 @@ function MaxOpenTabsSection() {
 }
 
 export default function PersonalizacaoPage() {
-  const { hasModule } = useAuth();
+  const { hasModule, can } = useAuth();
+  // Quem só tem `profile.manage` (sem `company-branding.view`) vê só
+  // "Minha conta" — "Geral"/"Da empresa" são configuração da empresa
+  // inteira, ficam pra quem administra personalização de verdade.
+  const canManageCompanyBranding = can("company-branding.view");
 
   return (
     <OsShell workspaceLabel="Personalização">
@@ -1245,37 +1249,41 @@ export default function PersonalizacaoPage() {
           <MyPreferencesSection />
         </section>
 
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <PanelsTopLeft
-              size={18}
-              className="text-[var(--text-secondary)]"
-            />
+        {canManageCompanyBranding && (
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <PanelsTopLeft
+                size={18}
+                className="text-[var(--text-secondary)]"
+              />
 
-            <h2 className="font-semibold text-[var(--text-primary)]">
-              Geral
+              <h2 className="font-semibold text-[var(--text-primary)]">
+                Geral
+              </h2>
+            </div>
+
+            <p className="mb-4 text-xs text-[var(--text-muted)]">
+              Da empresa — vale para todo mundo que usa o sistema aqui,
+              não depende de módulo contratado.
+            </p>
+
+            <MaxOpenTabsSection />
+          </section>
+        )}
+
+        {canManageCompanyBranding && (
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <h2 className="mb-4 font-semibold text-[var(--text-primary)]">
+              Da empresa
             </h2>
-          </div>
 
-          <p className="mb-4 text-xs text-[var(--text-muted)]">
-            Da empresa — vale para todo mundo que usa o sistema aqui,
-            não depende de módulo contratado.
-          </p>
-
-          <MaxOpenTabsSection />
-        </section>
-
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-          <h2 className="mb-4 font-semibold text-[var(--text-primary)]">
-            Da empresa
-          </h2>
-
-          {hasModule("BRANDING") ? (
-            <BrandingSection />
-          ) : (
-            <BrandingLocked />
-          )}
-        </section>
+            {hasModule("BRANDING") ? (
+              <BrandingSection />
+            ) : (
+              <BrandingLocked />
+            )}
+          </section>
+        )}
       </div>
     </OsShell>
   );
