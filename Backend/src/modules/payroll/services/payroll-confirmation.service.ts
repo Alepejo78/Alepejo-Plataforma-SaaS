@@ -12,6 +12,8 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 
+import { PayslipPdfService } from './payslip-pdf.service';
+
 const CONFIRMATION_TOKEN_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 const MONTH_NAMES = [
@@ -40,6 +42,7 @@ export class PayrollConfirmationService {
     private readonly prisma: PrismaService,
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
+    private readonly payslipPdf: PayslipPdfService,
   ) {}
 
   private async findItemScoped(
@@ -59,9 +62,22 @@ export class PayrollConfirmationService {
           },
         },
         employee: {
-          select: { id: true, name: true, email: true, mobile: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            mobile: true,
+            employeeNumber: true,
+            cpf: true,
+            admissionDate: true,
+            bankName: true,
+            bankAgency: true,
+            bankAccount: true,
+            jobFunction: { select: { name: true } },
+          },
         },
-        financialEntry: { select: { status: true } },
+        lines: { orderBy: { sortOrder: 'asc' } },
+        financialEntry: { select: { status: true, dueDate: true } },
       },
     });
 
@@ -195,7 +211,6 @@ export class PayrollConfirmationService {
   ) {
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
-      select: { tradeName: true, legalName: true },
     });
 
     const companyName = company?.tradeName || company?.legalName || '';
@@ -206,6 +221,20 @@ export class PayrollConfirmationService {
 
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
     const link = `${frontendUrl}/confirmar-holerite?payrollId=${item.payrollId}&itemId=${item.id}&token=${token}`;
+
+    // Best-effort — falha ao gerar o PDF não pode derrubar o envio do
+    // link de confirmação, só sai sem o anexo.
+    const pdf = await this.payslipPdf
+      .generate(
+        {
+          ...item,
+          paymentDate: item.financialEntry?.dueDate ?? null,
+          competenceYear: item.payroll.competenceYear,
+          competenceMonth: item.payroll.competenceMonth,
+        },
+        company,
+      )
+      .catch(() => null);
 
     const channels: string[] = [];
     const employee = item.employee;
@@ -221,6 +250,15 @@ export class PayrollConfirmationService {
   <a href="${link}" style="background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Ver holerite e confirmar</a>
 </p>
 <p style="font-size: 13px; color: #666;">Se o botão não funcionar, copie e cole este link no navegador:<br><a href="${link}">${link}</a></p>`,
+        pdf
+          ? [
+              {
+                filename: `holerite-${competence.replace('/', '-')}.pdf`,
+                content: pdf,
+                contentType: 'application/pdf',
+              },
+            ]
+          : undefined,
       );
 
       if (sent) {

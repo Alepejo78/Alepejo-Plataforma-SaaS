@@ -25,6 +25,7 @@ import { PayrollMonthSummaryService } from './services/payroll-month-summary.ser
 import { PayrollItemBuilderService } from './services/payroll-item-builder.service';
 import { PayrollService } from './services/payroll.service';
 import { PayrollConfirmationService } from './services/payroll-confirmation.service';
+import { PayslipPdfService } from './services/payslip-pdf.service';
 import { PayrollReportService } from './services/payroll-report.service';
 import { ThirteenthSalaryItemBuilderService } from './services/thirteenth-salary-item-builder.service';
 import { ThirteenthSalaryService } from './services/thirteenth-salary.service';
@@ -64,6 +65,7 @@ import { VacationGrantService } from './services/vacation-grant.service';
     PayrollItemBuilderService,
     PayrollService,
     PayrollConfirmationService,
+    PayslipPdfService,
     PayrollReportService,
     ThirteenthSalaryItemBuilderService,
     ThirteenthSalaryService,
