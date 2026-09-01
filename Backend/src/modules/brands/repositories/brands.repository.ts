@@ -122,10 +122,10 @@ export class BrandsRepository {
     });
   }
 
-  /** Quantos produtos usam esta marca. */
+  /** Quantos produtos ativos usam esta marca — produto excluído (soft delete) não conta. */
   async countProducts(brandId: string): Promise<number> {
     return this.prisma.product.count({
-      where: { brandId },
+      where: { brandId, deletedAt: null },
     });
   }
 

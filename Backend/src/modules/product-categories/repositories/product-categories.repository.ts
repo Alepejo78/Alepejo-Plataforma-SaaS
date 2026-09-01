@@ -123,10 +123,10 @@ export class ProductCategoriesRepository {
     });
   }
 
-  /** Quantos produtos usam esta categoria. */
+  /** Quantos produtos ativos usam esta categoria — produto excluído (soft delete) não conta. */
   async countProducts(categoryId: string): Promise<number> {
     return this.prisma.product.count({
-      where: { categoryId },
+      where: { categoryId, deletedAt: null },
     });
   }
 

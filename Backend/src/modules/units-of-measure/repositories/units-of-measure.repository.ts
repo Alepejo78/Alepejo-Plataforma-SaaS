@@ -164,10 +164,10 @@ export class UnitsOfMeasureRepository {
     });
   }
 
-  /** Quantos produtos usam esta unidade de medida. */
+  /** Quantos produtos ativos usam esta unidade de medida — produto excluído (soft delete) não conta. */
   async countProducts(unitId: string): Promise<number> {
     return this.prisma.product.count({
-      where: { unitId },
+      where: { unitId, deletedAt: null },
     });
   }
 
