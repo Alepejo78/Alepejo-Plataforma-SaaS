@@ -204,6 +204,9 @@ export class PpeDeliveriesService {
       employeeName: delivery.employee.name,
       companyName:
         delivery.company.tradeName || delivery.company.legalName,
+      companyLogo: delivery.company.brandingLogoLightEnabled
+        ? delivery.company.logo
+        : null,
       ppeTypeName: delivery.ppeType?.name ?? 'EPI',
       quantity: delivery.quantity,
       deliveryDate: delivery.deliveryDate,

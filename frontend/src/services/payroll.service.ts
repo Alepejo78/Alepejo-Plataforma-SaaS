@@ -137,6 +137,7 @@ export interface ChargesBucket {
   totalIrrf: number;
   totalFgts: number;
   totalVt: number;
+  totalBenefits: number;
   totalNet: number;
 }
 
@@ -278,6 +279,7 @@ export const payrollService = {
 export interface PayrollPublicInfo {
   employeeName: string;
   companyName: string;
+  companyLogo?: string | null;
   competence: string;
   grossAmount: number;
   totalDeductions: number;

@@ -113,7 +113,10 @@ function ConfirmarHoleriteContent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-8">
       <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
-        <AuthBrandHeader />
+        <AuthBrandHeader
+          companyLogo={info?.companyLogo}
+          companyName={info?.companyName}
+        />
 
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">
           Confirmação de recebimento de holerite

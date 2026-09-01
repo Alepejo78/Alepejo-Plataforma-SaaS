@@ -9,6 +9,7 @@ export interface ChargesBucket {
   totalIrrf: number;
   totalFgts: number;
   totalVt: number;
+  totalBenefits: number;
   totalNet: number;
 }
 
@@ -20,6 +21,7 @@ function emptyBucket(): ChargesBucket {
     totalIrrf: 0,
     totalFgts: 0,
     totalVt: 0,
+    totalBenefits: 0,
     totalNet: 0,
   };
 }
@@ -76,6 +78,7 @@ export class PayrollReportService {
         acc.totalIrrf += Number(item.irrfAmount);
         acc.totalFgts += Number(item.employerFgtsAmount);
         acc.totalVt += Number(item.transportVoucherDeduction);
+        acc.totalBenefits += Number(item.benefitDeductions);
         acc.totalNet += Number(item.netAmount);
 
         return acc;
@@ -110,6 +113,7 @@ export class PayrollReportService {
       totalIrrf: round2(bucket.totalIrrf),
       totalFgts: round2(bucket.totalFgts),
       totalVt: round2(bucket.totalVt),
+      totalBenefits: round2(bucket.totalBenefits),
       totalNet: round2(bucket.totalNet),
     });
 
@@ -120,6 +124,7 @@ export class PayrollReportService {
       totalIrrf: payroll.totalIrrf + thirteenthSalary.totalIrrf + vacation.totalIrrf,
       totalFgts: payroll.totalFgts + thirteenthSalary.totalFgts + vacation.totalFgts,
       totalVt: payroll.totalVt,
+      totalBenefits: payroll.totalBenefits,
       totalNet: payroll.totalNet + thirteenthSalary.totalNet + vacation.totalNet,
     });
 

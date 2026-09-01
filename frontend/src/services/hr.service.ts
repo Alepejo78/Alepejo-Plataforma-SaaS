@@ -924,6 +924,7 @@ export const ppeDeliveryService = {
 export interface PpeDeliveryPublicInfo {
   employeeName: string;
   companyName: string;
+  companyLogo?: string | null;
   ppeTypeName: string;
   quantity: string | number;
   deliveryDate: string;

@@ -9,7 +9,13 @@ import { PpeDeliveryFilterDto } from '../dto/ppe-delivery-filter.dto';
 const includeRelations = {
   ppeType: true,
   company: {
-    select: { id: true, tradeName: true, legalName: true },
+    select: {
+      id: true,
+      tradeName: true,
+      legalName: true,
+      logo: true,
+      brandingLogoLightEnabled: true,
+    },
   },
   employee: {
     select: {

@@ -323,12 +323,18 @@ export class PayrollConfirmationService {
 
     const company = await this.prisma.company.findUnique({
       where: { id: item.payroll.companyId },
-      select: { tradeName: true, legalName: true },
+      select: {
+        tradeName: true,
+        legalName: true,
+        logo: true,
+        brandingLogoLightEnabled: true,
+      },
     });
 
     return {
       employeeName: item.employee.name,
       companyName: company?.tradeName || company?.legalName || '',
+      companyLogo: company?.brandingLogoLightEnabled ? company.logo : null,
       competence: competenceLabel(
         item.payroll.competenceYear,
         item.payroll.competenceMonth,

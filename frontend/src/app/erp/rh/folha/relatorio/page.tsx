@@ -68,6 +68,9 @@ function BucketRow({ label, bucket }: { label: string; bucket: ChargesBucket }) 
       <td className="px-3 py-2 text-right text-[var(--text-secondary)] print:text-black">
         {money(bucket.totalVt)}
       </td>
+      <td className="px-3 py-2 text-right text-[var(--text-secondary)] print:text-black">
+        {money(bucket.totalBenefits)}
+      </td>
       <td className="px-3 py-2 text-right font-semibold text-[var(--text-primary)] print:text-black">
         {money(bucket.totalNet)}
       </td>
@@ -238,6 +241,9 @@ function RelatorioEncargosContent() {
                   Vale Transporte
                 </th>
                 <th className="px-3 py-2 text-right font-semibold print:border print:border-black">
+                  Benefícios
+                </th>
+                <th className="px-3 py-2 text-right font-semibold print:border print:border-black">
                   Líquido pago
                 </th>
               </tr>
@@ -269,6 +275,9 @@ function RelatorioEncargosContent() {
                 </td>
                 <td className="px-3 py-2 text-right font-bold text-[var(--text-primary)] print:text-black">
                   {money(data.consolidated.totalVt)}
+                </td>
+                <td className="px-3 py-2 text-right font-bold text-[var(--text-primary)] print:text-black">
+                  {money(data.consolidated.totalBenefits)}
                 </td>
                 <td className="px-3 py-2 text-right font-bold text-[var(--text-primary)] print:text-black">
                   {money(data.consolidated.totalNet)}
