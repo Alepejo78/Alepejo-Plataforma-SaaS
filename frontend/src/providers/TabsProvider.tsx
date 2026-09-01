@@ -198,9 +198,10 @@ export function TabsProvider({
   const pathname = stripCompanySlug(usePathname() ?? "/");
   const router = useRouter();
   const { user } = useAuth();
-  // Configurável por empresa (Personalização) — default 6 enquanto a
-  // sessão ainda não carregou ou pra empresa sem valor salvo.
-  const maxTabs = user?.company.maxOpenTabs ?? 6;
+  // Configurável por usuário (Personalização → Minha conta), caindo
+  // pro padrão da empresa sem preferência própria — default 6 enquanto
+  // a sessão ainda não carregou ou sem valor salvo em lugar nenhum.
+  const maxTabs = user?.maxOpenTabs ?? user?.company.maxOpenTabs ?? 6;
 
   // Sempre inicializa com o default (nunca lê sessionStorage aqui) —
   // no servidor `window` não existe, então o SSR sempre geraria esse

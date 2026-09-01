@@ -196,6 +196,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       status: user.status,
       avatar: user.avatar,
       avatarEnabled: user.avatarEnabled,
+      brandColor: user.brandColor,
+      sidebarLayout: user.sidebarLayout,
+      maxOpenTabs: user.maxOpenTabs,
       permissions,
       modules: [...licensedModules.values()],
       company: {

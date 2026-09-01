@@ -396,6 +396,14 @@ model User {
   /// Desligada, mostra as iniciais no lugar da foto mesmo com uma já enviada.
   avatarEnabled Boolean @default(false)
 
+  /// Personalização pessoal (autoatendimento) — nulo = sem preferência
+  /// própria, usa o padrão da empresa (`Company.brandColor`/
+  /// `sidebarLayout`/`maxOpenTabs`). Diferente de logo/nome do sistema,
+  /// que continuam só da empresa.
+  brandColor    String? @db.VarChar(9)
+  sidebarLayout String? @db.VarChar(10)
+  maxOpenTabs   Int?
+
   roles UserRole[]
 
   /// Colaborador (RH) vinculado a este login — usado por telas de

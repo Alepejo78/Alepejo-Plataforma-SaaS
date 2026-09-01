@@ -12,6 +12,12 @@ const avatarSelect = {
   avatarEnabled: true,
 } as const;
 
+const preferencesSelect = {
+  brandColor: true,
+  sidebarLayout: true,
+  maxOpenTabs: true,
+} as const;
+
 @Injectable()
 export class ProfileService {
   constructor(private readonly prisma: PrismaService) {}
@@ -20,6 +26,30 @@ export class ProfileService {
     return this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: avatarSelect,
+    });
+  }
+
+  /**
+   * Personalização pessoal (cor, layout do menu, limite de guias) —
+   * nulo = "sem preferência própria, usa o padrão da empresa" (ver
+   * jwt.strategy.ts, que devolve os dois níveis pro frontend decidir
+   * o fallback).
+   */
+  async getPreferences(userId: string) {
+    return this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: preferencesSelect,
+    });
+  }
+
+  async updatePreferences(
+    userId: string,
+    data: { brandColor?: string | null; sidebarLayout?: string | null; maxOpenTabs?: number | null },
+  ) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: preferencesSelect,
     });
   }
 

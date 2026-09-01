@@ -11,6 +11,14 @@ export interface ProfileAvatar {
   avatarEnabled: boolean;
 }
 
+export interface ProfilePreferences {
+  brandColor: string | null;
+  sidebarLayout: "vertical" | "horizontal" | null;
+  maxOpenTabs: number | null;
+}
+
+export type UpdateProfilePreferencesPayload = Partial<ProfilePreferences>;
+
 export const profileService = {
   async get(): Promise<ProfileAvatar> {
     const { data } = await api.get<ApiEnvelope<ProfileAvatar>>(
@@ -38,6 +46,25 @@ export const profileService = {
       "/users/me/avatar/photo",
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
+    return data.data;
+  },
+
+  async getPreferences(): Promise<ProfilePreferences> {
+    const { data } = await api.get<ApiEnvelope<ProfilePreferences>>(
+      "/users/me/preferences"
+    );
+
+    return data.data;
+  },
+
+  async updatePreferences(
+    payload: UpdateProfilePreferencesPayload
+  ): Promise<ProfilePreferences> {
+    const { data } = await api.patch<ApiEnvelope<ProfilePreferences>>(
+      "/users/me/preferences",
+      payload
     );
 
     return data.data;

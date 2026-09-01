@@ -51,6 +51,14 @@ export interface AuthenticatedUser {
 
   avatarEnabled: boolean;
 
+  /**
+   * Personalização pessoal — nulo = sem preferência própria, usa o
+   * padrão de `company` abaixo (ver ProfileService.getPreferences).
+   */
+  brandColor: string | null;
+  sidebarLayout: string | null;
+  maxOpenTabs: number | null;
+
   permissions: AuthenticatedPermission[];
 
   modules: AuthenticatedModule[];

@@ -24,9 +24,10 @@ export function AppShell({ children }: AppShellProps) {
 
   // Layout horizontal só vale com o módulo BRANDING licenciado —
   // senão a empresa fica sempre na sidebar vertical (padrão).
+  // Preferência pessoal do usuário vence; sem uma, cai pro padrão da empresa.
   const horizontal =
     hasModule("BRANDING") &&
-    user?.company.sidebarLayout === "horizontal";
+    (user?.sidebarLayout ?? user?.company.sidebarLayout) === "horizontal";
 
   if (horizontal) {
     return (

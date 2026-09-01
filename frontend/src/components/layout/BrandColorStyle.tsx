@@ -20,16 +20,19 @@ export function BrandColorStyle() {
 
   const company = user?.company;
 
-  const ativo =
-    hasModule("BRANDING") &&
-    Boolean(company?.brandingColorEnabled) &&
-    Boolean(company?.brandColor);
+  // Preferência pessoal do usuário sempre vale (é opt-in dele); sem
+  // uma, cai pro padrão da empresa — esse sim só se ela tiver ligado.
+  const effectiveColor =
+    user?.brandColor ??
+    (company?.brandingColorEnabled ? company?.brandColor : null);
 
-  if (!ativo || !company?.brandColor) {
+  const ativo = hasModule("BRANDING") && Boolean(effectiveColor);
+
+  if (!ativo || !effectiveColor) {
     return null;
   }
 
-  const css = brandPaletteCss(company.brandColor);
+  const css = brandPaletteCss(effectiveColor);
 
   if (!css) {
     return null;

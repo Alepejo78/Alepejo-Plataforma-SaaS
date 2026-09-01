@@ -22,7 +22,11 @@ import {
   type UpdateCompanyBrandingPayload,
 } from "@/services/company-branding.service";
 import { companyService } from "@/services/company.service";
-import { profileService } from "@/services/profile.service";
+import {
+  profileService,
+  type ProfilePreferences,
+  type UpdateProfilePreferencesPayload,
+} from "@/services/profile.service";
 import { brandPalette, parseHex } from "@/lib/brandColor";
 import type { SidebarLayout } from "@/types/auth";
 
@@ -448,6 +452,273 @@ const SIDEBAR_LAYOUT_OPTIONS: {
     description: "Menu em barra no topo, estilo ribbon.",
   },
 ];
+
+/**
+ * Preferência pessoal (cor/layout/limite de guias) — vale só pro
+ * login de quem está editando, sem depender de módulo licenciado.
+ * Null = "sem preferência própria", cai pro padrão que a empresa
+ * configurou em "Da empresa"/"Geral" abaixo (ver AppShell.tsx,
+ * BrandColorStyle.tsx, TabsProvider.tsx — todos fazem
+ * `user.X ?? user.company.X`).
+ */
+function MyPreferencesSection() {
+  const { user, refreshUser } = useAuth();
+
+  const [prefs, setPrefs] = useState<ProfilePreferences | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState("");
+
+  const [color, setColor] = useState("");
+  const [maxTabs, setMaxTabs] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+
+    try {
+      const result = await profileService.getPreferences();
+
+      setPrefs(result);
+      setColor(result.brandColor || "");
+      setMaxTabs(result.maxOpenTabs ? String(result.maxOpenTabs) : "");
+    } catch (err) {
+      setLoadError(
+        extractMessage(err, "Não foi possível carregar sua personalização.")
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function save(payload: UpdateProfilePreferencesPayload) {
+    setSaving(true);
+    setActionError("");
+
+    try {
+      const updated = await profileService.updatePreferences(payload);
+
+      setPrefs(updated);
+      void refreshUser();
+    } catch (err) {
+      setActionError(extractMessage(err, "Não foi possível salvar."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveColor() {
+    if (!parseHex(color)) {
+      setActionError("Informe uma cor em hexadecimal, como #2563eb.");
+
+      return;
+    }
+
+    await save({ brandColor: color });
+  }
+
+  async function saveMaxTabs() {
+    const parsed = Number(maxTabs);
+
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 20) {
+      setActionError("Informe um número entre 1 e 20.");
+
+      return;
+    }
+
+    await save({ maxOpenTabs: parsed });
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <div className="h-20 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+        <div className="h-20 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+      </div>
+    );
+  }
+
+  if (loadError || !prefs) {
+    return (
+      <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+        {loadError}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-[var(--border)] p-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            Minha cor
+          </p>
+
+          {prefs.brandColor && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void save({ brandColor: null })}
+              className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+            >
+              Usar padrão da empresa
+            </button>
+          )}
+        </div>
+
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          Sem uma cor própria, usa a da empresa (se ela tiver
+          configurado uma).
+        </p>
+
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={parseHex(color) ? color : DEFAULT_BRAND_COLOR}
+              onChange={(e) => setColor(e.target.value)}
+              className="h-11 w-14 cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1"
+            />
+
+            <input
+              type="text"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              placeholder="#2563eb"
+              className="h-11 w-32 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
+            />
+          </div>
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void saveColor()}
+            className="h-11 shrink-0 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+          >
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
+
+          {color && <BrandColorPreview hex={color} />}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-[var(--border)] p-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            Meu layout de menu
+          </p>
+
+          {prefs.sidebarLayout && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void save({ sidebarLayout: null })}
+              className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+            >
+              Usar padrão da empresa
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {SIDEBAR_LAYOUT_OPTIONS.map((option) => {
+            const Icon = option.value === "vertical" ? Layout : LayoutGrid;
+            const selected = prefs.sidebarLayout === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                disabled={saving}
+                onClick={() => void save({ sidebarLayout: option.value })}
+                className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors disabled:opacity-60 ${
+                  selected
+                    ? "border-[var(--primary)] bg-[var(--primary-soft)]"
+                    : "border-[var(--border)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                <Icon
+                  size={18}
+                  className={
+                    selected
+                      ? "mt-0.5 shrink-0 text-[var(--primary-text)]"
+                      : "mt-0.5 shrink-0 text-[var(--text-secondary)]"
+                  }
+                />
+
+                <div>
+                  <p
+                    className={`text-sm font-medium ${
+                      selected
+                        ? "text-[var(--primary-text)]"
+                        : "text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {option.label}
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                    {option.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-[var(--border)] p-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            Meu limite de guias abertas
+          </p>
+
+          {prefs.maxOpenTabs && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void save({ maxOpenTabs: null })}
+              className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+            >
+              Usar padrão da empresa
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <input
+            type="number"
+            min={1}
+            max={20}
+            className={`${fieldClass} w-28`}
+            value={maxTabs}
+            onChange={(e) => setMaxTabs(e.target.value)}
+          />
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void saveMaxTabs()}
+            className="h-11 shrink-0 rounded-xl bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+          >
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </div>
+
+      {actionError && (
+        <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+          {actionError}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function BrandingSection() {
   const { user, refreshUser } = useAuth();
@@ -968,6 +1239,10 @@ export default function PersonalizacaoPage() {
           </p>
 
           <ProfilePhotoSection />
+
+          <div className="my-4 border-t border-[var(--border)]" />
+
+          <MyPreferencesSection />
         </section>
 
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">

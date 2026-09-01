@@ -48,6 +48,10 @@ export interface AuthUser {
   /** Foto de perfil (autoatendimento) — null quando não enviada. */
   avatar: string | null;
   avatarEnabled: boolean;
+  /** Personalização pessoal — null = sem preferência própria, usa o padrão de `company` abaixo. */
+  brandColor: string | null;
+  sidebarLayout: SidebarLayout | null;
+  maxOpenTabs: number | null;
   permissions: AuthPermission[];
   modules: AuthModule[];
   company: AuthCompany;

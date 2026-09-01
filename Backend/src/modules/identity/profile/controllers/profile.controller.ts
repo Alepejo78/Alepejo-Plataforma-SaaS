@@ -25,6 +25,7 @@ import {
 } from '../services/profile.service';
 
 import { UpdateAvatarEnabledDto } from '../dto/update-avatar-enabled.dto';
+import { UpdatePreferencesDto } from '../dto/update-preferences.dto';
 
 /**
  * Foto de perfil: autoatendimento (cada usuário só mexe na própria),
@@ -51,6 +52,23 @@ export class ProfileController {
     @Body() dto: UpdateAvatarEnabledDto,
   ) {
     return this.service.setEnabled(userId, dto.enabled);
+  }
+
+  @Get('preferences')
+  @ApiOperation({ summary: 'Minha personalização (cor/layout/limite de guias)' })
+  getPreferences(@CurrentUser('id') userId: string) {
+    return this.service.getPreferences(userId);
+  }
+
+  @Patch('preferences')
+  @ApiOperation({
+    summary: 'Salvar minha personalização — null limpa e volta a usar o padrão da empresa',
+  })
+  updatePreferences(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdatePreferencesDto,
+  ) {
+    return this.service.updatePreferences(userId, dto);
   }
 
   @Post('avatar/photo')
