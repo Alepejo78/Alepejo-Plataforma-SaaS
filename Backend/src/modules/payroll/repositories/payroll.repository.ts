@@ -72,6 +72,20 @@ export class PayrollRepository {
     });
   }
 
+  /** Meu Holerite (autoatendimento) — histórico do colaborador, só folhas já aprovadas. */
+  async findMineItems(companyId: string, employeeId: string) {
+    return this.prisma.payrollItem.findMany({
+      where: { employeeId, payroll: { companyId, status: 'APPROVED' } },
+      include: {
+        ...itemInclude,
+        payroll: {
+          select: { id: true, competenceYear: true, competenceMonth: true, paymentDate: true },
+        },
+      },
+      orderBy: [{ payroll: { competenceYear: 'desc' } }, { payroll: { competenceMonth: 'desc' } }],
+    });
+  }
+
   async updateItem(itemId: string, data: Prisma.PayrollItemUncheckedUpdateInput) {
     return this.prisma.payrollItem.update({
       where: { id: itemId },

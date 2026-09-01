@@ -184,24 +184,40 @@ export class AuthService {
    * quando `onVacation`/`onLeave` voltam a `false` — na aprovação de
    * férias isso é automático (ver `VacationGrantService`); afastamento
    * é sempre manual, editado na aba Saúde do colaborador.
+   *
+   * Só bloqueia se a data de início já chegou (ou não tiver data —
+   * bloqueio imediato, ex.: RH marca "afastado" hoje sem programar
+   * nada). Sem essa checagem, aprovar férias com semanas de
+   * antecedência já bloquearia o colaborador na hora, antes de elas
+   * sequer começarem — `onVacation`/`onLeave` viram `true` já na
+   * aprovação/cadastro, não só quando o período realmente começa.
    */
   private async assertEmployeeCanLogin(userId: string) {
     const employee = await this.prisma.employee.findUnique({
       where: { userId },
-      select: { onVacation: true, onLeave: true, vacationEndDate: true, leaveEndDate: true },
+      select: {
+        onVacation: true,
+        onLeave: true,
+        vacationStartDate: true,
+        vacationEndDate: true,
+        leaveStartDate: true,
+        leaveEndDate: true,
+      },
     });
 
     if (!employee) {
       return;
     }
 
-    if (employee.onVacation) {
+    const todayUtc = Date.now();
+
+    if (employee.onVacation && (!employee.vacationStartDate || employee.vacationStartDate.getTime() <= todayUtc)) {
       throw new UnauthorizedException(
         `Este usuário está de férias${employee.vacationEndDate ? ` até ${employee.vacationEndDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : ''} e não pode acessar o sistema.`,
       );
     }
 
-    if (employee.onLeave) {
+    if (employee.onLeave && (!employee.leaveStartDate || employee.leaveStartDate.getTime() <= todayUtc)) {
       throw new UnauthorizedException(
         `Este usuário está afastado${employee.leaveEndDate ? ` até ${employee.leaveEndDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}` : ''} e não pode acessar o sistema.`,
       );

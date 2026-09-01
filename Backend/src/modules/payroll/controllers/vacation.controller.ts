@@ -19,8 +19,10 @@ import { Module } from '../../identity/license/decorators/module.decorator';
 import { VacationGrantService } from '../services/vacation-grant.service';
 import { VacationPeriodService } from '../services/vacation-period.service';
 import { VacationConfirmationService } from '../services/vacation-confirmation.service';
+import { EmployeesService } from '../../employees/services/employees.service';
 
 import { CreateVacationGrantDto } from '../dto/create-vacation-grant.dto';
+import { CreateMyVacationGrantDto } from '../dto/create-my-vacation-grant.dto';
 import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
 
 @ApiTags('Vacation')
@@ -31,6 +33,7 @@ export class VacationController {
     private readonly grantService: VacationGrantService,
     private readonly periodService: VacationPeriodService,
     private readonly confirmationService: VacationConfirmationService,
+    private readonly employeesService: EmployeesService,
   ) {}
 
   /** Rotas públicas (sem login) — precisam vir antes de `grants/:id`. */
@@ -44,6 +47,37 @@ export class VacationController {
   @Post('public/:id/confirm')
   confirmPublic(@Param('id') id: string, @Query('token') token: string) {
     return this.confirmationService.confirmPublic(id, token);
+  }
+
+  /**
+   * Autoatendimento — sem permissão nenhuma (mesmo padrão de
+   * `EmployeesController.findMine`). Precisam vir antes de
+   * `grants/:id` pelo mesmo motivo das rotas públicas acima.
+   */
+  @Get('me/periods')
+  @ApiOperation({ summary: 'Meu saldo/histórico de períodos aquisitivos (autoatendimento)' })
+  async findMinePeriods(@CurrentUser('companyId') companyId: string, @CurrentUser('id') userId: string) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.periodService.findAllByEmployee(companyId, employee.id);
+  }
+
+  @Get('me/grants')
+  @ApiOperation({ summary: 'Meus pedidos de férias (autoatendimento)' })
+  async findMineGrants(@CurrentUser('companyId') companyId: string, @CurrentUser('id') userId: string) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.grantService.findAll(companyId, { employeeId: employee.id });
+  }
+
+  @Post('me/grants')
+  @ApiOperation({ summary: 'Pedir férias (autoatendimento — nasce aguardando aprovação do RH)' })
+  async createMineGrant(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('rootCompanyId') rootCompanyId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateMyVacationGrantDto,
+  ) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.grantService.create(companyId, rootCompanyId, { ...dto, employeeId: employee.id });
   }
 
   @Get('balance')

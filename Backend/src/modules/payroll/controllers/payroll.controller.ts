@@ -19,6 +19,7 @@ import { Module } from '../../identity/license/decorators/module.decorator';
 import { PayrollService } from '../services/payroll.service';
 import { PayrollReportService } from '../services/payroll-report.service';
 import { PayrollConfirmationService } from '../services/payroll-confirmation.service';
+import { EmployeesService } from '../../employees/services/employees.service';
 
 import { GeneratePayrollDto } from '../dto/generate-payroll.dto';
 import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
@@ -32,7 +33,20 @@ export class PayrollController {
     private readonly service: PayrollService,
     private readonly reportService: PayrollReportService,
     private readonly confirmationService: PayrollConfirmationService,
+    private readonly employeesService: EmployeesService,
   ) {}
+
+  /**
+   * Autoatendimento — meu histórico de holerites, sem permissão
+   * nenhuma (mesmo padrão de `EmployeesController.findMine`). Precisa
+   * vir antes de `GET /:id` pelo mesmo motivo de "reports" acima.
+   */
+  @Get('me/items')
+  @ApiOperation({ summary: 'Meu histórico de holerites (autoatendimento)' })
+  async findMineItems(@CurrentUser('companyId') companyId: string, @CurrentUser('id') userId: string) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.service.findMineItems(companyId, employee.id);
+  }
 
   /**
    * Rotas públicas (sem login) — o colaborador confirma o recebimento

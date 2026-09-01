@@ -89,6 +89,16 @@ export interface PayrollItem {
   } | null;
 }
 
+/** Item retornado por `GET /payroll/me/items` (Meu Holerite — autoatendimento). */
+export interface MinePayrollItem extends PayrollItem {
+  payroll: {
+    id: string;
+    competenceYear: number;
+    competenceMonth: number;
+    paymentDate?: string | null;
+  };
+}
+
 export interface Payroll {
   id: string;
   companyId: string;
@@ -171,6 +181,15 @@ export const payrollService = {
     );
 
     return data.data;
+  },
+
+  /** Meu Holerite (autoatendimento) — histórico do colaborador logado. */
+  async getMineItems(): Promise<MinePayrollItem[]> {
+    const { data } = await api.get<ApiEnvelope<MinePayrollItem[]>>(
+      "/payroll/me/items"
+    );
+
+    return data.data ?? [];
   },
 
   async generate(payload: GeneratePayrollPayload): Promise<Payroll> {

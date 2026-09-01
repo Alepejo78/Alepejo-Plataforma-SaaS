@@ -207,6 +207,11 @@ export class PayrollService {
     return item;
   }
 
+  /** Meu Holerite (autoatendimento). */
+  async findMineItems(companyId: string, employeeId: string) {
+    return this.repository.findMineItems(companyId, employeeId);
+  }
+
   /** Recalcula um item a partir do ponto/faltas atuais — mantém os ajustes manuais já lançados. */
   async recalculateItem(companyId: string, rootCompanyId: string, payrollId: string, itemId: string) {
     const payroll = await this.findOne(companyId, payrollId);

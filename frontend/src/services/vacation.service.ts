@@ -94,6 +94,12 @@ export interface CreateVacationGrantPayload {
   observation?: string;
 }
 
+/** Igual a `CreateVacationGrantPayload`, sem `employeeId` — sempre o do usuário logado. */
+export type CreateMyVacationGrantPayload = Omit<
+  CreateVacationGrantPayload,
+  "employeeId"
+>;
+
 export interface AdjustVacationGrantPayload {
   otherEarnings?: number;
   otherDeductions?: number;
@@ -200,6 +206,34 @@ export const vacationService = {
     const { data } = await api.post<
       ApiEnvelope<{ sent: boolean; channels: string[] }>
     >(`/vacation/grants/${id}/send-confirmation`);
+
+    return data.data;
+  },
+
+  /** Minhas Férias (autoatendimento) — saldo/histórico do colaborador logado. */
+  async getMinePeriods(): Promise<VacationPeriod[]> {
+    const { data } = await api.get<ApiEnvelope<VacationPeriod[]>>(
+      "/vacation/me/periods"
+    );
+
+    return data.data ?? [];
+  },
+
+  async getMineGrants(): Promise<VacationGrant[]> {
+    const { data } = await api.get<ApiEnvelope<VacationGrant[]>>(
+      "/vacation/me/grants"
+    );
+
+    return data.data ?? [];
+  },
+
+  async createMine(
+    payload: CreateMyVacationGrantPayload
+  ): Promise<VacationGrant> {
+    const { data } = await api.post<ApiEnvelope<VacationGrant>>(
+      "/vacation/me/grants",
+      payload
+    );
 
     return data.data;
   },

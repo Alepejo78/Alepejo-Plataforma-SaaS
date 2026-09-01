@@ -4,6 +4,7 @@ import { PrismaModule } from '../../core/prisma/prisma.module';
 import { LicenseModule } from '../identity/license/license.module';
 import { TimeTrackingModule } from '../time-tracking/time-tracking.module';
 import { FinancialEntriesModule } from '../financial-entries/financial-entries.module';
+import { EmployeesModule } from '../employees/employees.module';
 import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -47,6 +48,7 @@ import { SalaryAdvanceConfirmationService } from './services/salary-advance-conf
     forwardRef(() => FinancialEntriesModule),
     DocumentSequenceModule,
     NotificationsModule,
+    EmployeesModule,
   ],
 
   controllers: [
