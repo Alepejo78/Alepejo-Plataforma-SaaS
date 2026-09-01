@@ -332,6 +332,16 @@ const permissionGroups = [
     ],
   },
   {
+    code: "BANK_ACCOUNT",
+    name: "Contas Bancárias",
+    permissions: [
+      ["bank-account.view", "Consultar Contas Bancárias"],
+      ["bank-account.create", "Cadastrar Contas Bancárias"],
+      ["bank-account.update", "Alterar Contas Bancárias"],
+      ["bank-account.delete", "Excluir Contas Bancárias"],
+    ],
+  },
+  {
     code: "BUDGET",
     name: "Orçamento",
     permissions: [

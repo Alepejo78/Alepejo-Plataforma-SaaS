@@ -221,6 +221,7 @@ export class FinancialEntriesService {
         ? new Date(dto.paymentDate)
         : new Date(),
       paymentMethod: dto.paymentMethod,
+      ...(dto.bankAccountId && { bankAccountId: dto.bankAccountId }),
       ...(dto.observation && { observation: dto.observation }),
       updatedById: userId,
     });

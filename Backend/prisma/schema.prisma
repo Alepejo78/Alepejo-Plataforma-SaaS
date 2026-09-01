@@ -181,6 +181,7 @@ model Company {
   chartOfAccounts               ChartOfAccount[]
   chartOfAccountClassifications ChartOfAccountClassification[]
   financialEntries              FinancialEntry[]
+  bankAccounts                  BankAccount[]
   budgets                       Budget[]
   payrollTaxTables              PayrollTaxTable[]
   payrollSettings               PayrollSettings?
@@ -1597,8 +1598,8 @@ model ChartOfAccount {
   purchaseOrders   PurchaseOrder[]
   salesOrders      SalesOrder[]
   quotes           Quote[]
-  products         Product[]            @relation("ProductPurchaseChartOfAccount")
-  productsForSale  Product[]            @relation("ProductSaleChartOfAccount")
+  products         Product[]                    @relation("ProductPurchaseChartOfAccount")
+  productsForSale  Product[]                    @relation("ProductSaleChartOfAccount")
   active           Boolean                      @default(true)
   createdById      String?
   updatedById      String?
@@ -1698,6 +1699,13 @@ model FinancialEntry {
   paymentDate   DateTime?
   paymentMethod PaymentMethod?
 
+  /// De qual conta bancária da empresa saiu (a pagar) ou entrou (a
+  /// receber) o dinheiro — só organização/registro, não movimenta
+  /// nada de verdade no banco. Opcional: nem toda empresa cadastra
+  /// conta bancária.
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
+
   observation String?
 
   /// Preenchidos quando o título nasce automaticamente de uma
@@ -1736,7 +1744,38 @@ model FinancialEntry {
   @@index([employeeId])
   @@index([type, status])
   @@index([dueDate])
+  @@index([bankAccountId])
   @@map("financial_entries")
+}
+
+/// Conta bancária da empresa (de onde o dinheiro sai/entra) — só
+/// cadastro/organização. Não tem nenhuma integração real com banco:
+/// o pagamento continua sendo feito por fora, isso aqui só deixa
+/// registrado qual conta foi usada em cada baixa.
+model BankAccount {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Apelido pra identificar rápido na lista/seletor (ex.: "Conta Corrente Itaú").
+  description   String           @db.VarChar(100)
+  bankName      String           @db.VarChar(100)
+  agency        String?          @db.VarChar(20)
+  accountNumber String?          @db.VarChar(20)
+  accountType   BankAccountType?
+  pixKeyType    PixKeyType?
+  pixKey        String?          @db.VarChar(150)
+
+  active      Boolean  @default(true)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  financialEntries FinancialEntry[]
+
+  @@index([companyId])
+  @@map("bank_accounts")
 }
 
 enum PayrollTaxType {
@@ -1911,7 +1950,7 @@ model PayrollItem {
   /// que tem campo próprio acima). Uma linha por benefício em
   /// PayrollItemLine; aqui só o total, pra recalcular os totais do
   /// cabeçalho sem precisar reler as linhas.
-  benefitDeductions Decimal @default(0) @db.Decimal(18, 2)
+  benefitDeductions         Decimal @default(0) @db.Decimal(18, 2)
 
   otherEarnings   Decimal @default(0) @db.Decimal(18, 2)
   otherDeductions Decimal @default(0) @db.Decimal(18, 2)
@@ -3340,7 +3379,7 @@ model Notification {
   actorUserId String?
   actor       User?   @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
-  occurredAt DateTime @default(now())
+  occurredAt DateTime  @default(now())
   readAt     DateTime?
 
   createdAt DateTime @default(now())

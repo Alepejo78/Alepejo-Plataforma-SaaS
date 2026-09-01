@@ -14,6 +14,7 @@ const includeRelations = {
   partner: true,
   employee: true,
   product: true,
+  bankAccount: true,
   chartOfAccount: {
     include: { classification: true },
   },

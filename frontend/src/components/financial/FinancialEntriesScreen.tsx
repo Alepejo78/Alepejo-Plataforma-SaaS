@@ -49,6 +49,11 @@ import {
 
 import { productService, type Product } from "@/services/product.service";
 
+import {
+  bankAccountService,
+  type BankAccount,
+} from "@/services/bank-account.service";
+
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
@@ -202,9 +207,11 @@ export function FinancialEntriesScreen({
     paymentDate: todayIso(),
     paymentMethod: "" as PaymentMethod | "",
     paidAmount: 0,
+    bankAccountId: "",
   });
   const [settling, setSettling] = useState(false);
   const [settleError, setSettleError] = useState("");
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
 
   const [actionId, setActionId] = useState("");
   const [actionError, setActionError] = useState("");
@@ -243,6 +250,13 @@ export function FinancialEntriesScreen({
 
     return () => clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    bankAccountService
+      .list()
+      .then(setBankAccounts)
+      .catch(() => {});
+  }, []);
 
   const searchPartners = useCallback(
     async (query: string) => {
@@ -532,6 +546,7 @@ export function FinancialEntriesScreen({
       // confira/corrija pra forma usada de verdade nesta baixa.
       paymentMethod: entry.paymentMethod ?? "",
       paidAmount: num(entry.amount) - num(entry.paidAmount),
+      bankAccountId: entry.bankAccountId ?? "",
     });
     setSettleError("");
   }
@@ -557,6 +572,7 @@ export function FinancialEntriesScreen({
         paymentDate: settleForm.paymentDate || undefined,
         paymentMethod: settleForm.paymentMethod || undefined,
         paidAmount: settleForm.paidAmount || undefined,
+        bankAccountId: settleForm.bankAccountId || undefined,
       });
 
       setSettleTarget(null);
@@ -1490,6 +1506,33 @@ export function FinancialEntriesScreen({
                   ))}
                 </select>
               </div>
+
+              {bankAccounts.length > 0 && (
+                <div>
+                  <label className={labelClass}>
+                    Conta bancária (opcional)
+                  </label>
+
+                  <select
+                    className={fieldClass}
+                    value={settleForm.bankAccountId}
+                    onChange={(e) =>
+                      setSettleForm({
+                        ...settleForm,
+                        bankAccountId: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Não informar</option>
+
+                    {bankAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.description} — {account.bankName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {settleError && (
                 <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">

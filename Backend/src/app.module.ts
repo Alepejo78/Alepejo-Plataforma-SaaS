@@ -35,6 +35,7 @@ import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.
 import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-accounts.module';
 import { ChartOfAccountClassificationsModule } from './modules/chart-of-account-classifications/chart-of-account-classifications.module';
 import { FinancialEntriesModule } from './modules/financial-entries/financial-entries.module';
+import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 
@@ -86,6 +87,7 @@ import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-
     ChartOfAccountsModule,
     ChartOfAccountClassificationsModule,
     FinancialEntriesModule,
+    BankAccountsModule,
     BudgetsModule,
     NotificationsModule,
 

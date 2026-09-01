@@ -33,6 +33,11 @@ export class SettleFinancialEntryDto {
   @IsPositive()
   paidAmount?: number;
 
+  /** De qual conta bancária da empresa saiu/entrou o dinheiro — opcional. */
+  @IsOptional()
+  @IsString()
+  bankAccountId?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(500)

@@ -116,6 +116,12 @@ export interface FinancialEntry {
     code: string;
     description: string;
   } | null;
+  bankAccountId?: string | null;
+  bankAccount?: {
+    id: string;
+    description: string;
+    bankName: string;
+  } | null;
   issueDate: string;
   termDays?: number | null;
   dueDate: string;
@@ -171,6 +177,7 @@ export interface SettlePayload {
   paymentDate?: string;
   paymentMethod: PaymentMethod;
   paidAmount?: number;
+  bankAccountId?: string;
   observation?: string;
 }
 
