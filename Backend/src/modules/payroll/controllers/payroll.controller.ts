@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -11,11 +12,13 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Public } from '../../../core/decorators/public.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 import { Module } from '../../identity/license/decorators/module.decorator';
 
 import { PayrollService } from '../services/payroll.service';
 import { PayrollReportService } from '../services/payroll-report.service';
+import { PayrollConfirmationService } from '../services/payroll-confirmation.service';
 
 import { GeneratePayrollDto } from '../dto/generate-payroll.dto';
 import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
@@ -28,7 +31,35 @@ export class PayrollController {
   constructor(
     private readonly service: PayrollService,
     private readonly reportService: PayrollReportService,
+    private readonly confirmationService: PayrollConfirmationService,
   ) {}
+
+  /**
+   * Rotas públicas (sem login) — o colaborador confirma o recebimento
+   * do holerite pelo link enviado por e-mail/WhatsApp. Precisam vir
+   * ANTES de `:id` — senão o Nest casa "public" com o parâmetro,
+   * já que rotas são resolvidas na ordem em que são declaradas (mesmo
+   * motivo do comentário abaixo em "reports/monthly-charges").
+   */
+  @Public()
+  @Get('public/:id/:itemId')
+  getPublicInfo(
+    @Param('id') payrollId: string,
+    @Param('itemId') itemId: string,
+    @Query('token') token: string,
+  ) {
+    return this.confirmationService.getPublicInfo(payrollId, itemId, token);
+  }
+
+  @Public()
+  @Post('public/:id/:itemId/confirm')
+  confirmPublic(
+    @Param('id') payrollId: string,
+    @Param('itemId') itemId: string,
+    @Query('token') token: string,
+  ) {
+    return this.confirmationService.confirmPublic(payrollId, itemId, token);
+  }
 
   /**
    * Precisa vir antes de `GET /:id` — senão o Nest casa "reports" com
@@ -137,6 +168,29 @@ export class PayrollController {
     return this.service.includeItem(companyId, id, itemId);
   }
 
+  @Patch(':id/items/:itemId/confirm')
+  @Permissions('payroll.confirm-item')
+  @ApiOperation({ summary: 'Confirmar recebimento do holerite manualmente' })
+  confirmItem(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.confirmationService.confirm(companyId, id, itemId, userId);
+  }
+
+  @Post(':id/items/:itemId/send-confirmation')
+  @Permissions('payroll.confirm-item')
+  @ApiOperation({ summary: 'Enviar link de confirmação do holerite por e-mail/WhatsApp' })
+  sendConfirmation(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.confirmationService.sendConfirmation(companyId, id, itemId);
+  }
+
   @Patch(':id/approve')
   @Permissions('payroll.approve')
   @ApiOperation({
@@ -171,5 +225,15 @@ export class PayrollController {
     @Param('id') id: string,
   ) {
     return this.service.cancel(companyId, id);
+  }
+
+  @Delete(':id')
+  @Permissions('payroll.delete')
+  @ApiOperation({ summary: 'Excluir folha cancelada (libera a competência para gerar outra)' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(companyId, id);
   }
 }

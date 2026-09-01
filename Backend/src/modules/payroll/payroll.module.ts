@@ -1,10 +1,11 @@
-import { Module as NestModule } from '@nestjs/common';
+import { forwardRef, Module as NestModule } from '@nestjs/common';
 
 import { PrismaModule } from '../../core/prisma/prisma.module';
 import { LicenseModule } from '../identity/license/license.module';
 import { TimeTrackingModule } from '../time-tracking/time-tracking.module';
 import { FinancialEntriesModule } from '../financial-entries/financial-entries.module';
 import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { PayrollTaxTableController } from './controllers/payroll-tax-table.controller';
 import { PayrollSettingsController } from './controllers/payroll-settings.controller';
@@ -23,6 +24,7 @@ import { PayrollCalculationService } from './services/payroll-calculation.servic
 import { PayrollMonthSummaryService } from './services/payroll-month-summary.service';
 import { PayrollItemBuilderService } from './services/payroll-item-builder.service';
 import { PayrollService } from './services/payroll.service';
+import { PayrollConfirmationService } from './services/payroll-confirmation.service';
 import { PayrollReportService } from './services/payroll-report.service';
 import { ThirteenthSalaryItemBuilderService } from './services/thirteenth-salary-item-builder.service';
 import { ThirteenthSalaryService } from './services/thirteenth-salary.service';
@@ -35,8 +37,9 @@ import { VacationGrantService } from './services/vacation-grant.service';
     PrismaModule,
     LicenseModule,
     TimeTrackingModule,
-    FinancialEntriesModule,
+    forwardRef(() => FinancialEntriesModule),
     DocumentSequenceModule,
+    NotificationsModule,
   ],
 
   controllers: [
@@ -60,6 +63,7 @@ import { VacationGrantService } from './services/vacation-grant.service';
     PayrollMonthSummaryService,
     PayrollItemBuilderService,
     PayrollService,
+    PayrollConfirmationService,
     PayrollReportService,
     ThirteenthSalaryItemBuilderService,
     ThirteenthSalaryService,
@@ -73,6 +77,7 @@ import { VacationGrantService } from './services/vacation-grant.service';
     PayrollSettingsService,
     PayrollCalculationService,
     PayrollMonthSummaryService,
+    PayrollConfirmationService,
   ],
 })
 export class PayrollModule {}

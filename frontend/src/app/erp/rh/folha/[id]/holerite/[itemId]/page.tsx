@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { ReportAccessGuard } from "@/components/reports/ReportAccessGuard";
 import { PayslipDocument } from "@/components/payroll/PayslipDocument";
 import { companyService } from "@/services/company.service";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   payrollService,
   type Payroll,
@@ -24,6 +25,7 @@ function date(value: string | null | undefined) {
 
 function HoleriteContent() {
   const params = useParams<{ id: string; itemId: string }>();
+  const { user } = useAuth();
 
   const [companyName, setCompanyName] = useState("");
   const [companyDocument, setCompanyDocument] = useState("");
@@ -102,6 +104,15 @@ function HoleriteContent() {
       <PayslipDocument
         companyName={companyName}
         companyDocument={companyDocument}
+        logoUrl={
+          user?.company?.brandingLogoLightEnabled
+            ? user.company.logo
+            : undefined
+        }
+        confirmation={{
+          status: item.confirmationStatus,
+          confirmedAt: item.confirmedAt,
+        }}
         title="Demonstrativo de Pagamento Mensal"
         periodLabel={`Período: ${String(payroll.competenceMonth).padStart(2, "0")}/${payroll.competenceYear}`}
         paymentDateLabel={

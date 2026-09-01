@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,6 +19,7 @@ import {
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+import { PayrollConfirmationService } from '../../payroll/services/payroll-confirmation.service';
 
 import { FinancialEntriesRepository } from '../repositories/financial-entries.repository';
 
@@ -31,6 +34,8 @@ export class FinancialEntriesService {
     private readonly repository: FinancialEntriesRepository,
     private readonly prisma: PrismaService,
     private readonly businessPartnersService: BusinessPartnersService,
+    @Inject(forwardRef(() => PayrollConfirmationService))
+    private readonly payrollConfirmationService: PayrollConfirmationService,
   ) {}
 
   async create(
@@ -209,7 +214,7 @@ export class FinancialEntriesService {
 
     const paidAmount = dto.paidAmount ?? Number(entry.amount);
 
-    return this.repository.update(id, {
+    const updated = await this.repository.update(id, {
       status: FinancialEntryStatus.PAID,
       paidAmount,
       paymentDate: dto.paymentDate
@@ -219,6 +224,16 @@ export class FinancialEntriesService {
       ...(dto.observation && { observation: dto.observation }),
       updatedById: userId,
     });
+
+    // Título de holerite: o link de confirmação só sai quando o
+    // pagamento é efetivamente realizado, nunca na geração da folha.
+    if (entry.payrollItemId) {
+      void this.payrollConfirmationService.sendConfirmationBestEffortByItemId(
+        entry.payrollItemId,
+      );
+    }
+
+    return updated;
   }
 
   /** Estorna a baixa: volta o título para "em aberto". */

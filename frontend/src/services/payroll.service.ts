@@ -9,6 +9,15 @@ interface ApiEnvelope<T> {
 export type PayrollStatus = "DRAFT" | "APPROVED" | "CANCELLED";
 export type PayrollItemStatus = "PENDING" | "INCLUDED" | "EXCLUDED";
 export type PayrollLineType = "PROVENTO" | "DESCONTO";
+export type PayrollConfirmationStatus = "PENDENTE" | "CONFIRMADO";
+
+export const PAYROLL_CONFIRMATION_STATUS_LABELS: Record<
+  PayrollConfirmationStatus,
+  string
+> = {
+  PENDENTE: "Aguardando confirmação",
+  CONFIRMADO: "Recebimento confirmado",
+};
 
 export const PAYROLL_STATUS_LABELS: Record<PayrollStatus, string> = {
   DRAFT: "Rascunho",
@@ -56,12 +65,17 @@ export interface PayrollItem {
   irrfAmount: string | number;
   netAmount: string | number;
   employerFgtsAmount: string | number;
+  confirmationStatus: PayrollConfirmationStatus;
+  confirmedAt?: string | null;
+  confirmationSentAt?: string | null;
   lines: PayrollItemLine[];
   employee?: {
     id: string;
     name: string;
     employeeNumber?: number | null;
     cpf?: string | null;
+    email?: string | null;
+    mobile?: string | null;
     admissionDate?: string | null;
     bankName?: string | null;
     bankAgency?: string | null;
@@ -228,6 +242,29 @@ export const payrollService = {
     return data.data;
   },
 
+  async remove(id: string): Promise<void> {
+    await api.delete(`/payroll/${id}`);
+  },
+
+  async confirmItem(payrollId: string, itemId: string): Promise<PayrollItem> {
+    const { data } = await api.patch<ApiEnvelope<PayrollItem>>(
+      `/payroll/${payrollId}/items/${itemId}/confirm`
+    );
+
+    return data.data;
+  },
+
+  async sendConfirmation(
+    payrollId: string,
+    itemId: string
+  ): Promise<{ sent: boolean; channels: string[] }> {
+    const { data } = await api.post<
+      ApiEnvelope<{ sent: boolean; channels: string[] }>
+    >(`/payroll/${payrollId}/items/${itemId}/send-confirmation`);
+
+    return data.data;
+  },
+
   async getMonthlyCharges(year: number, month: number): Promise<MonthlyCharges> {
     const { data } = await api.get<ApiEnvelope<MonthlyCharges>>(
       "/payroll/reports/monthly-charges",
@@ -235,5 +272,44 @@ export const payrollService = {
     );
 
     return data.data;
+  },
+};
+
+export interface PayrollPublicInfo {
+  employeeName: string;
+  companyName: string;
+  competence: string;
+  grossAmount: number;
+  totalDeductions: number;
+  netAmount: number;
+  paymentDate?: string | null;
+  status: PayrollConfirmationStatus;
+}
+
+/** Rotas públicas (sem login) do link de confirmação enviado por e-mail/WhatsApp. */
+export const payrollConfirmationPublicService = {
+  async getInfo(
+    payrollId: string,
+    itemId: string,
+    token: string
+  ): Promise<PayrollPublicInfo> {
+    const { data } = await api.get<ApiEnvelope<PayrollPublicInfo>>(
+      `/payroll/public/${payrollId}/${itemId}`,
+      { params: { token } }
+    );
+
+    return data.data;
+  },
+
+  async confirm(
+    payrollId: string,
+    itemId: string,
+    token: string
+  ): Promise<void> {
+    await api.post(
+      `/payroll/public/${payrollId}/${itemId}/confirm`,
+      undefined,
+      { params: { token } }
+    );
   },
 };

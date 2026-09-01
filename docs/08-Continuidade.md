@@ -3,6 +3,82 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Holerite: % de INSS/IRRF, desconto de benefícios, confirmação digital e logo (01-09-2026)
+
+**Cálculo do holerite** (`PayrollItemBuilderService`):
+- INSS e IRRF passam a mostrar a alíquota da faixa no "Unidade" (ex.:
+  "7,50% sobre 1.500,00", antes só "sobre 1.500,00") — novo
+  `PayrollCalculationService.findBracketRate`, só pra exibição, não
+  mexe no valor calculado (`calculateInss`/`calculateIrrf`
+  continuam do jeito que eram, usados também por 13º e Férias).
+- Benefícios cadastrados pro colaborador (Plano de Saúde, Vale
+  Refeição etc. — tudo que não for o Vale Transporte, que já tinha
+  regra própria) agora entram como linha de desconto no holerite.
+  Campo novo `PayrollItem.benefitDeductions` (soma, pra recalcular
+  totais do cabeçalho sem reler as linhas — mesmo padrão de
+  `transportVoucherDeduction`).
+
+**Confirmação digital do holerite** — mesmo mecanismo do EPI (ver
+entrada abaixo), aplicado em `PayrollItem`: botão "Confirmar
+recebimento" manual na tela da folha, ou link por e-mail/WhatsApp.
+**O envio (automático ou manual) só é liberado depois que o título do
+colaborador é efetivamente baixado no Financeiro** — não na geração
+nem na aprovação da folha, que só criam o título em aberto. O disparo
+automático mora em `FinancialEntriesService.settle()`
+(`Backend/src/modules/financial-entries/services/
+financial-entries.service.ts`): quando o título baixado tem
+`payrollItemId` preenchido, chama best-effort
+`PayrollConfirmationService.sendConfirmationBestEffortByItemId`. Isso
+criou uma dependência circular de módulo (`PayrollModule` já importa
+`FinancialEntriesModule` pra gerar o título; agora
+`FinancialEntriesModule` precisa voltar pra `PayrollModule` pra mandar
+a confirmação) — resolvida com `forwardRef()` dos dois lados
+(`payroll.module.ts` e `financial-entries.module.ts`) mais
+`@Inject(forwardRef(...))` no construtor de `FinancialEntriesService`;
+`PayrollConfirmationService` precisou entrar em `exports` de
+`PayrollModule`. `sendConfirmation()`/`confirm()` (manual, na tela da
+folha) e o disparo automático todos passam pela mesma checagem
+(`item.financialEntry?.status !== 'PAID'` → 400) — não existe mais
+envio "ao gerar/ajustar", já que ajustar só é possível em folha DRAFT
+(antes de aprovar, portanto antes de qualquer título existir).
+Serviço `PayrollConfirmationService` (`Backend/src/modules/payroll/
+services/payroll-confirmation.service.ts`) — token só em hash, rotas
+públicas em `PayrollController` (`GET/POST
+/payroll/public/:id/:itemId[/confirm]`), tela pública em
+`/confirmar-holerite` com um resumo breve (competência, proventos,
+descontos, líquido) antes do clique. Permissão `payroll.confirm-item`
+— **não usa sufixo genérico** (não existe ".confirm" na matriz), por
+isso ganhou entrada própria em `BUSINESS_COLUMNS` do
+`perfis/[id]/permissoes/page.tsx`, igual `payroll.generate`/"Gerar
+Folha" — sem isso a permissão fica invisível na matriz mesmo existindo
+no catálogo (mesmo tipo de bug já visto e corrigido no EPI, ver
+entrada abaixo). Na ficha impressa, holerite confirmado mostra
+"Assinado digitalmente" + data/hora no lugar da linha em branco de
+assinatura.
+
+**Excluir folha cancelada**: folha `CANCELLED` ganha botão excluir
+(`payroll.delete`, sufixo genérico — não precisou de
+`BUSINESS_COLUMNS`) na listagem, pra liberar a competência e gerar
+outra no lugar. `PayrollService.remove()` só aceita `status ===
+CANCELLED`; a cascata do Prisma apaga `PayrollItem`/`PayrollItemLine`,
+e o título que já existia (agora `CANCELLED`, ver `cancel()`) só perde
+o vínculo (`FinancialEntry.payrollItemId` vira `null`, `onDelete:
+SetNull`) — continua no Financeiro como histórico.
+
+**Logo no holerite**: cabeçalho do `PayslipDocument` mostra a logo da
+empresa antes do nome, só se a empresa tiver logo cadastrada E o
+toggle "Personalização" (`brandingLogoLightEnabled`) estiver ligado —
+lido de `useAuth().user.company` (não de `companyService.getMine()`,
+que não carrega esse campo).
+
+**Pegadinha de ambiente encontrada rodando o seed**: `npx prisma db
+seed` executado com o diretório atual fora de `Backend/` (ex.: logo
+depois de um `cd frontend` pra rodar `tsc`) não dá erro visível — o
+`npx` só busca e roda uma versão genérica do pacote `prisma` (v8, sem
+o subcomando `seed` desta versão do projeto) e sai com código 0,
+como se tivesse funcionado. Sempre conferir a saída de verdade
+("Seed executado com sucesso") antes de confiar, não só o exit code.
+
 ## 🟢 Confirmação digital de entrega de EPI — manual e por link e-mail/WhatsApp (31-08-2026)
 
 `PpeDelivery` ganha `status` (`PENDENTE`/`CONFIRMADO`), `confirmedAt`,

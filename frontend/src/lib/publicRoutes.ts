@@ -20,6 +20,7 @@
  * - `/confirmar-epi`: link de confirmação de recebimento de EPI, enviado
  *   por e-mail/WhatsApp — o colaborador confirma sem ter (ou precisar de)
  *   login no sistema.
+ * - `/confirmar-holerite`: mesma ideia, pro recebimento do holerite.
  * - `/<empresa>/login`: login com o nome da empresa fixo na URL — o
  *   link que o e-mail de "definir senha" passa a mostrar como o
  *   acesso permanente do usuário (ver `sendPasswordResetLink` no
@@ -43,6 +44,7 @@ export const PUBLIC_ROUTES = [
   "/institucional",
   "/privacidade",
   "/confirmar-epi",
+  "/confirmar-holerite",
 ] as const;
 
 /** `/<slug>/login` — exatamente dois segmentos, o segundo literalmente "login". */

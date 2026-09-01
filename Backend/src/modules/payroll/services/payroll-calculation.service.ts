@@ -112,6 +112,32 @@ export class PayrollCalculationService {
   calculateFgts(grossAmount: number, taxTable: PayrollTaxTable): number {
     return round2(grossAmount * (Number(taxTable.fgtsPercentage) / 100));
   }
+
+  /**
+   * Alíquota da faixa que bateu pra uma base — só pra exibir no
+   * holerite (coluna "Unidade": "9,00% sobre 2.547,01"), não entra no
+   * cálculo do desconto em si (que já vem pronto de
+   * `calculateInss`/`calculateIrrf`, fórmula base×alíquota−parcela).
+   * Mesma lógica de busca de faixa de `calculateProgressiveTax`,
+   * separada aqui só pra não mudar a assinatura dos dois métodos já
+   * usados por Folha, 13º e Férias.
+   */
+  findBracketRate(base: number, brackets: PayrollTaxBracket[]): number | null {
+    if (base <= 0 || brackets.length === 0) {
+      return null;
+    }
+
+    const sorted = [...brackets].sort((a, b) => a.order - b.order);
+
+    const bracket =
+      sorted.find(
+        (b) =>
+          base >= Number(b.minBase) &&
+          (b.maxBase === null || base <= Number(b.maxBase)),
+      ) ?? sorted[sorted.length - 1];
+
+    return Number(bracket.rate);
+  }
 }
 
 function round2(value: number): number {

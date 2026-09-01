@@ -58,6 +58,7 @@ const BUSINESS_COLUMNS: {
   { key: "purchaseReceive", label: "Receber Compras", codes: ["purchase.receive"] },
   { key: "quotationDecide", label: "Escolher Vencedor da Cotação", codes: ["quotation.decide"] },
   { key: "payrollGenerate", label: "Gerar Folha", codes: ["payroll.generate"] },
+  { key: "payrollConfirmItem", label: "Confirmar Recebimento de Holerite", codes: ["payroll.confirm-item"] },
   { key: "thirteenthSalaryGenerate", label: "Gerar 13º Salário", codes: ["thirteenth-salary.generate"] },
   { key: "timeClockApiKey", label: "Chave API Ponto", codes: ["time-clock.manage-api-key"] },
   { key: "licenseTrial", label: "Iniciar Teste Grátis", codes: ["license.trial"] },

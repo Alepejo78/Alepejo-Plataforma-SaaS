@@ -12,6 +12,8 @@ const itemInclude = {
       name: true,
       employeeNumber: true,
       cpf: true,
+      email: true,
+      mobile: true,
       admissionDate: true,
       bankName: true,
       bankAgency: true,
@@ -91,6 +93,7 @@ export class PayrollRepository {
           Number(item.irrfAmount) +
           Number(item.absenceDeductionAmount) +
           Number(item.transportVoucherDeduction) +
+          Number(item.benefitDeductions) +
           Number(item.otherDeductions),
         totalNet: acc.totalNet + Number(item.netAmount),
         totalEmployerFgts: acc.totalEmployerFgts + Number(item.employerFgtsAmount),

@@ -45,6 +45,14 @@ function date(value: string | null | undefined) {
   return new Date(value).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
+function datetime(value: string | null | undefined) {
+  if (!value) {
+    return "";
+  }
+
+  return new Date(value).toLocaleString("pt-BR");
+}
+
 /**
  * Layout clássico de "demonstrativo de pagamento" (monoespaçado,
  * caixa com bordas, colunas Cod./Descrição/Unidade/Proventos/
@@ -57,6 +65,7 @@ function date(value: string | null | undefined) {
 export function PayslipDocument({
   companyName,
   companyDocument,
+  logoUrl,
   title,
   periodLabel,
   paymentDateLabel,
@@ -65,9 +74,12 @@ export function PayslipDocument({
   hourlyRate,
   lines,
   footerFields,
+  confirmation,
 }: {
   companyName: string;
   companyDocument?: string;
+  /** Logo da empresa (módulo Personalização) — só mostra se configurada e habilitada; sem isso, cabeçalho fica só com o nome, como já era. */
+  logoUrl?: string | null;
   title: string;
   periodLabel: string;
   paymentDateLabel?: string;
@@ -76,6 +88,11 @@ export function PayslipDocument({
   hourlyRate?: number;
   lines: PayslipLine[];
   footerFields: PayslipFooterField[];
+  /** Confirmação digital de recebimento — quando confirmado, substitui a linha em branco de assinatura por "Assinado digitalmente" + data/hora. */
+  confirmation?: {
+    status: "PENDENTE" | "CONFIRMADO";
+    confirmedAt?: string | null;
+  };
 }) {
   const totalProventos = lines
     .filter((l) => l.type === "PROVENTO")
@@ -112,9 +129,20 @@ export function PayslipDocument({
 
       <div className="border border-[var(--border)] font-mono text-xs text-[var(--text-primary)] print:border-black print:text-black">
         <div className="flex items-start justify-between border-b border-[var(--border)] p-3 print:border-black">
-          <div>
-            <p className="font-bold">{companyName}</p>
-            <p>Sede</p>
+          <div className="flex items-center gap-2">
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt=""
+                className="h-10 w-10 object-contain"
+              />
+            )}
+
+            <div>
+              <p className="font-bold">{companyName}</p>
+              <p>Sede</p>
+            </div>
           </div>
 
           {companyDocument && <p>{companyDocument}</p>}
@@ -216,7 +244,19 @@ export function PayslipDocument({
 
         <div className="mt-8 px-3 pb-6 text-center">
           <div className="mx-auto w-2/3 border-t border-[var(--border)] pt-1 print:border-black">
-            Assinatura do colaborador
+            {confirmation?.status === "CONFIRMADO" ? (
+              <>
+                <span className="italic">Assinado digitalmente</span>
+                {confirmation.confirmedAt && (
+                  <>
+                    <br />
+                    {datetime(confirmation.confirmedAt)}
+                  </>
+                )}
+              </>
+            ) : (
+              "Assinatura do colaborador"
+            )}
           </div>
         </div>
       </div>

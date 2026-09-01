@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  BenefitCalculationType,
   Employee,
   EmployeeBenefit,
   EmployeeDependent,
@@ -24,7 +25,11 @@ const STANDARD_MONTHLY_HOURS = 220;
 export type EmployeeForPayroll = Employee & {
   dependents: EmployeeDependent[];
   employeeBenefits: (EmployeeBenefit & {
-    benefit: { isTransportVoucher: boolean };
+    benefit: {
+      name: string;
+      calculationType: BenefitCalculationType;
+      isTransportVoucher: boolean;
+    };
   })[];
 };
 
@@ -48,6 +53,7 @@ export interface ComputedPayrollItem {
   unjustifiedAbsenceDays: number;
   absenceDeductionAmount: number;
   transportVoucherDeduction: number;
+  benefitDeductions: number;
   otherEarnings: number;
   otherDeductions: number;
   grossAmount: number;
@@ -186,10 +192,50 @@ export class PayrollItemBuilderService {
       });
     }
 
+    // Demais benefícios cadastrados pro colaborador (Plano de Saúde,
+    // Vale Refeição etc.) — o Vale Transporte já foi tratado acima
+    // (regra própria de teto), aqui é só o resto.
+    let benefitDeductions = 0;
+
+    for (const eb of employee.employeeBenefits) {
+      if (eb.benefit.isTransportVoucher) {
+        continue;
+      }
+
+      const amount =
+        eb.value !== null
+          ? Number(eb.value)
+          : eb.percentage !== null
+            ? round2(baseSalary * (Number(eb.percentage) / 100))
+            : 0;
+
+      if (amount <= 0) {
+        continue;
+      }
+
+      benefitDeductions = round2(benefitDeductions + amount);
+
+      lines.push({
+        type: PayrollLineType.DESCONTO,
+        code: `BENEFICIO_${eb.benefitId}`,
+        description: eb.benefit.name,
+        referenceValue:
+          eb.benefit.calculationType === BenefitCalculationType.PERCENTAGE
+            ? `${Number(eb.percentage).toFixed(2).replace('.', ',')}%`
+            : undefined,
+        amount,
+        sortOrder: sortOrder++,
+      });
+    }
+
     const grossAmount = round2(grossBase + extraAmount + otherEarnings);
 
     const inssBase = grossAmount;
     const inssAmount = this.calc.calculateInss(inssBase, taxTable);
+    const inssRate = this.calc.findBracketRate(
+      inssBase,
+      taxTable.brackets.filter((b) => b.taxType === 'INSS'),
+    );
 
     const eligibleDependents = employee.dependents.filter((d) => d.irrfEligible).length;
     const { base: irrfBase, amount: irrfAmount } = this.calc.calculateIrrf(
@@ -198,13 +244,20 @@ export class PayrollItemBuilderService {
       eligibleDependents,
       taxTable,
     );
+    const irrfRate = this.calc.findBracketRate(
+      irrfBase,
+      taxTable.brackets.filter((b) => b.taxType === 'IRRF'),
+    );
 
     if (inssAmount > 0) {
       lines.push({
         type: PayrollLineType.DESCONTO,
         code: 'INSS',
         description: 'INSS',
-        referenceValue: `sobre ${inssBase.toFixed(2)}`,
+        referenceValue:
+          (inssRate !== null
+            ? `${inssRate.toFixed(2).replace('.', ',')}% `
+            : '') + `sobre ${inssBase.toFixed(2)}`,
         amount: inssAmount,
         sortOrder: sortOrder++,
       });
@@ -215,7 +268,10 @@ export class PayrollItemBuilderService {
         type: PayrollLineType.DESCONTO,
         code: 'IRRF',
         description: 'IRRF',
-        referenceValue: `sobre ${irrfBase.toFixed(2)}`,
+        referenceValue:
+          (irrfRate !== null
+            ? `${irrfRate.toFixed(2).replace('.', ',')}% `
+            : '') + `sobre ${irrfBase.toFixed(2)}`,
         amount: irrfAmount,
         sortOrder: sortOrder++,
       });
@@ -232,7 +288,12 @@ export class PayrollItemBuilderService {
     }
 
     const netAmount = round2(
-      grossAmount - inssAmount - irrfAmount - transportVoucherDeduction - otherDeductions,
+      grossAmount -
+        inssAmount -
+        irrfAmount -
+        transportVoucherDeduction -
+        benefitDeductions -
+        otherDeductions,
     );
 
     const employerFgtsAmount = this.calc.calculateFgts(grossAmount, taxTable);
@@ -248,6 +309,7 @@ export class PayrollItemBuilderService {
       unjustifiedAbsenceDays: summary.unjustifiedAbsenceDays,
       absenceDeductionAmount,
       transportVoucherDeduction,
+      benefitDeductions,
       otherEarnings,
       otherDeductions,
       grossAmount,

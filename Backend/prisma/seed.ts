@@ -739,7 +739,9 @@ const permissionGroups = [
       ["payroll.update", "Alterar Itens da Folha (recalcular/ajustar/excluir)"],
       ["payroll.approve", "Aprovar Folha de Pagamento"],
       ["payroll.cancel", "Cancelar Folha de Pagamento"],
+      ["payroll.delete", "Excluir Folha de Pagamento Cancelada"],
       ["payroll.report", "Ver Relatórios/Holerites da Folha"],
+      ["payroll.confirm-item", "Confirmar Recebimento de Holerite (manual ou enviar link)"],
     ],
   },
   {

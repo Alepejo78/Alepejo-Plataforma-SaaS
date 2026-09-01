@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, FileText, Plus, X } from "lucide-react";
+import { Eye, FileText, Plus, Trash2, X } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
@@ -106,6 +106,25 @@ export default function FolhaPagamentoPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function remove(payroll: Payroll) {
+    if (
+      !window.confirm(
+        `Excluir a folha ${formatPayrollNumber(payroll.number)}? Esta ação não pode ser desfeita.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await payrollService.remove(payroll.id);
+      await load();
+    } catch (err) {
+      window.alert(
+        extractMessage(err, "Não foi possível excluir a folha de pagamento.")
+      );
+    }
+  }
 
   function openGenerate() {
     setYear(now.getFullYear());
@@ -270,6 +289,20 @@ export default function FolhaPagamentoPage() {
                         >
                           <Eye size={16} />
                         </Link>
+
+                        {p.status === "CANCELLED" && (
+                          <Can permission="payroll.delete">
+                            <button
+                              type="button"
+                              onClick={() => void remove(p)}
+                              title="Excluir folha (libera a competência para gerar outra)"
+                              aria-label="Excluir folha"
+                              className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </Can>
+                        )}
                       </div>
                     </td>
                   </tr>

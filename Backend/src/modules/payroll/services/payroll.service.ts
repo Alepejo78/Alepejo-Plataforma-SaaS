@@ -7,6 +7,7 @@ import {
 import {
   EmployeeStatus,
   FinancialEntryType,
+  PayrollConfirmationStatus,
   PayrollItemStatus,
   PayrollStatus,
 } from '@prisma/client';
@@ -35,7 +36,11 @@ type PayrollItemDetail = NonNullable<Awaited<ReturnType<PayrollRepository['findI
 const employeeInclude = {
   dependents: true,
   employeeBenefits: {
-    include: { benefit: { select: { isTransportVoucher: true } } },
+    include: {
+      benefit: {
+        select: { name: true, calculationType: true, isTransportVoucher: true },
+      },
+    },
   },
 };
 
@@ -108,7 +113,7 @@ export class PayrollService {
       }),
     );
 
-    return this.prisma.$transaction(async (tx) => {
+    const payroll = await this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(tx, companyId, SEQUENCE_TYPE);
 
       const totals = computed.reduce(
@@ -120,6 +125,7 @@ export class PayrollService {
             item.irrfAmount +
             item.absenceDeductionAmount +
             item.transportVoucherDeduction +
+            item.benefitDeductions +
             item.otherDeductions,
           totalNet: acc.totalNet + item.netAmount,
           totalEmployerFgts: acc.totalEmployerFgts + item.employerFgtsAmount,
@@ -150,6 +156,7 @@ export class PayrollService {
               unjustifiedAbsenceDays: item.unjustifiedAbsenceDays,
               absenceDeductionAmount: item.absenceDeductionAmount,
               transportVoucherDeduction: item.transportVoucherDeduction,
+              benefitDeductions: item.benefitDeductions,
               otherEarnings: item.otherEarnings,
               otherDeductions: item.otherDeductions,
               grossAmount: item.grossAmount,
@@ -168,6 +175,11 @@ export class PayrollService {
 
       return payroll;
     });
+
+    // O link de confirmação só é enviado quando o título do
+    // colaborador é baixado no Financeiro (ver `FinancialEntriesService.
+    // settle()`) — gerar a folha (rascunho) ainda não é pagamento.
+    return payroll;
   }
 
   async findAll(companyId: string, filter: PayrollFilterDto) {
@@ -225,6 +237,14 @@ export class PayrollService {
     });
   }
 
+  /**
+   * Recalcula/ajusta um item — só roda em folha DRAFT (`assertDraft`
+   * nos dois chamadores), ou seja, antes de aprovar e, portanto, antes
+   * de qualquer título existir. Por isso não há envio de confirmação
+   * aqui: o link só sai quando o título é baixado (ver `approve()` +
+   * `FinancialEntriesService.settle()`); aqui só invalida uma
+   * confirmação anterior, se existisse.
+   */
   private async rebuildItem(
     rootCompanyId: string,
     payroll: PayrollDetail,
@@ -255,7 +275,7 @@ export class PayrollService {
 
     const computed = this.itemBuilder.build(employee, summary, taxTable, settings, adjustments);
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.payrollItemLine.deleteMany({ where: { payrollItemId: item.id } });
 
       const updated = await tx.payrollItem.update({
@@ -271,6 +291,7 @@ export class PayrollService {
           unjustifiedAbsenceDays: computed.unjustifiedAbsenceDays,
           absenceDeductionAmount: computed.absenceDeductionAmount,
           transportVoucherDeduction: computed.transportVoucherDeduction,
+          benefitDeductions: computed.benefitDeductions,
           otherEarnings: computed.otherEarnings,
           otherDeductions: computed.otherDeductions,
           grossAmount: computed.grossAmount,
@@ -281,6 +302,13 @@ export class PayrollService {
           netAmount: computed.netAmount,
           employerFgtsAmount: computed.employerFgtsAmount,
           lines: { create: computed.lines },
+          // Conteúdo mudou — uma confirmação anterior deixou de valer
+          // pro que está sendo mostrado agora.
+          confirmationStatus: PayrollConfirmationStatus.PENDENTE,
+          confirmedAt: null,
+          confirmedById: null,
+          confirmationTokenHash: null,
+          confirmationTokenExpiresAt: null,
         },
         include: { lines: true },
       });
@@ -289,6 +317,8 @@ export class PayrollService {
 
       return updated;
     });
+
+    return updated;
   }
 
   async excludeItem(companyId: string, payrollId: string, itemId: string) {
@@ -484,6 +514,25 @@ export class PayrollService {
     }
 
     return this.repository.cancel(id);
+  }
+
+  /**
+   * Só folha cancelada pode ser excluída — libera a competência pra
+   * gerar uma folha nova no lugar. Cascata apaga PayrollItem/
+   * PayrollItemLine; os títulos que já tinham sido criados (agora
+   * CANCELLED, ver `cancel()` acima) ficam no Financeiro como
+   * histórico, só perdem o vínculo (`payrollItemId` vira null).
+   */
+  async remove(companyId: string, id: string) {
+    const payroll = await this.findOne(companyId, id);
+
+    if (payroll.status !== PayrollStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Somente folhas canceladas podem ser excluídas.',
+      );
+    }
+
+    await this.prisma.payroll.delete({ where: { id: payroll.id } });
   }
 
   private assertDraft(status: PayrollStatus) {

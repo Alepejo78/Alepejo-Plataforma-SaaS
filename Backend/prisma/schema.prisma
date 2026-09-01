@@ -1906,6 +1906,12 @@ model PayrollItem {
   absenceDeductionAmount Decimal @default(0) @db.Decimal(18, 2)
 
   transportVoucherDeduction Decimal @default(0) @db.Decimal(18, 2)
+  /// Soma dos demais benefícios cadastrados pro colaborador (Plano de
+  /// Saúde, Vale Refeição etc. — tudo que não for o Vale Transporte,
+  /// que tem campo próprio acima). Uma linha por benefício em
+  /// PayrollItemLine; aqui só o total, pra recalcular os totais do
+  /// cabeçalho sem precisar reler as linhas.
+  benefitDeductions Decimal @default(0) @db.Decimal(18, 2)
 
   otherEarnings   Decimal @default(0) @db.Decimal(18, 2)
   otherDeductions Decimal @default(0) @db.Decimal(18, 2)
@@ -1920,6 +1926,19 @@ model PayrollItem {
   netAmount          Decimal @default(0) @db.Decimal(18, 2)
   employerFgtsAmount Decimal @default(0) @db.Decimal(18, 2)
 
+  /// Confirmação de recebimento do holerite — mesmo mecanismo de
+  /// PpeDelivery (manual pelo RH ou link público por e-mail/WhatsApp,
+  /// token só em hash SHA-256, uso único). Volta pra PENDENTE (e
+  /// zera confirmedAt/confirmedById) sempre que o item é recalculado
+  /// ou ajustado, já que o conteúdo confirmado deixou de valer.
+  confirmationStatus PayrollConfirmationStatus @default(PENDENTE)
+  confirmedAt        DateTime?
+  confirmedById      String?
+
+  confirmationTokenHash      String?   @db.VarChar(64)
+  confirmationTokenExpiresAt DateTime?
+  confirmationSentAt         DateTime?
+
   /// Título a pagar gerado na aprovação — relação reversa, a FK vive
   /// no FinancialEntry (mesmo padrão de Sale.quoteId/salesOrderId).
   financialEntry FinancialEntry?
@@ -1932,6 +1951,11 @@ model PayrollItem {
   @@unique([payrollId, employeeId])
   @@index([employeeId])
   @@map("payroll_items")
+}
+
+enum PayrollConfirmationStatus {
+  PENDENTE
+  CONFIRMADO
 }
 
 /// Linha do holerite (o que é impresso) — rastreabilidade rubrica a
