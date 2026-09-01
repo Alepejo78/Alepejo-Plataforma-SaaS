@@ -18,6 +18,7 @@ const itemInclude = {
       bankName: true,
       bankAgency: true,
       bankAccount: true,
+      paymentMethod: true,
       jobFunction: { select: { id: true, name: true } },
     },
   },

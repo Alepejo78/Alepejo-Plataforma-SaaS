@@ -6,6 +6,7 @@ import {
 
 import {
   EmployeeStatus,
+  FinancialDocumentType,
   FinancialEntryType,
   PayrollItemStatus,
   PayrollStatus,
@@ -27,7 +28,7 @@ import { GenerateThirteenthSalaryDto } from '../dto/generate-thirteenth-salary.d
 import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
 
 const SEQUENCE_TYPE = 'THIRTEENTH_SALARY';
-const THIRTEENTH_CHART_ACCOUNT_CODE = '04.01.08';
+const THIRTEENTH_CHART_ACCOUNT_CODE = '02.01.07';
 
 const employeeInclude = { dependents: true };
 
@@ -280,7 +281,7 @@ export class ThirteenthSalaryService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const item of includedItems) {
-        const entry = await this.financialEntriesService.createFromDocument(
+        await this.financialEntriesService.createFromDocument(
           tx,
           {
             companyId,
@@ -290,18 +291,14 @@ export class ThirteenthSalaryService {
             issueDate,
             dueDate,
             documentNumber: label,
+            documentType: FinancialDocumentType.OUTRO,
+            paymentMethod: item.employee.paymentMethod,
+            chartOfAccountId: thirteenthAccount?.id,
             thirteenthSalaryItemId: item.id,
             observation: `13º salário (${thirteenth.installment}ª parcela) ${label} — ano ${thirteenth.year}.`,
           },
           approvedByUserId,
         );
-
-        if (thirteenthAccount) {
-          await tx.financialEntry.update({
-            where: { id: entry.id },
-            data: { chartOfAccountId: thirteenthAccount.id },
-          });
-        }
       }
 
       await tx.thirteenthSalary.update({

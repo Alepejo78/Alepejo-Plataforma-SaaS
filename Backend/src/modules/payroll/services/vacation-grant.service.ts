@@ -4,7 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { FinancialEntryType, PayrollStatus } from '@prisma/client';
+import {
+  FinancialDocumentType,
+  FinancialEntryType,
+  PayrollStatus,
+} from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
@@ -20,7 +24,7 @@ import { CreateVacationGrantDto } from '../dto/create-vacation-grant.dto';
 import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
 
 const SEQUENCE_TYPE = 'VACATION';
-const VACATION_CHART_ACCOUNT_CODE = '04.01.13';
+const VACATION_CHART_ACCOUNT_CODE = '02.01.11';
 
 function addDaysUTC(date: Date, days: number): Date {
   const result = new Date(date);
@@ -189,7 +193,7 @@ export class VacationGrantService {
     const label = `FER-${String(grant.number).padStart(6, '0')}`;
 
     await this.prisma.$transaction(async (tx) => {
-      const entry = await this.financialEntriesService.createFromDocument(
+      await this.financialEntriesService.createFromDocument(
         tx,
         {
           companyId,
@@ -199,18 +203,14 @@ export class VacationGrantService {
           issueDate: new Date(),
           dueDate: grant.startDate,
           documentNumber: label,
+          documentType: FinancialDocumentType.OUTRO,
+          paymentMethod: grant.employee.paymentMethod,
+          chartOfAccountId: vacationAccount?.id,
           vacationGrantId: grant.id,
           observation: `Férias ${label} — ${grant.days} dia(s) a partir de ${grant.startDate.toISOString().slice(0, 10)}.`,
         },
         approvedByUserId,
       );
-
-      if (vacationAccount) {
-        await tx.financialEntry.update({
-          where: { id: entry.id },
-          data: { chartOfAccountId: vacationAccount.id },
-        });
-      }
 
       await tx.vacationGrant.update({
         where: { id: grant.id },

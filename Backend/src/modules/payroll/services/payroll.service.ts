@@ -6,6 +6,7 @@ import {
 
 import {
   EmployeeStatus,
+  FinancialDocumentType,
   FinancialEntryType,
   PayrollConfirmationStatus,
   PayrollItemStatus,
@@ -28,7 +29,7 @@ import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
 import { PayrollFilterDto } from '../dto/payroll-filter.dto';
 
 const SEQUENCE_TYPE = 'PAYROLL';
-const SALARY_CHART_ACCOUNT_CODE = '04.01.18';
+const SALARY_CHART_ACCOUNT_CODE = '02.01.16';
 
 type PayrollDetail = NonNullable<Awaited<ReturnType<PayrollRepository['findById']>>>;
 type PayrollItemDetail = NonNullable<Awaited<ReturnType<PayrollRepository['findItem']>>>;
@@ -409,7 +410,7 @@ export class PayrollService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const item of includedItems) {
-        const entry = await this.financialEntriesService.createFromDocument(
+        await this.financialEntriesService.createFromDocument(
           tx,
           {
             companyId,
@@ -419,18 +420,14 @@ export class PayrollService {
             issueDate,
             dueDate,
             documentNumber: payrollNumber,
+            documentType: FinancialDocumentType.OUTRO,
+            paymentMethod: item.employee.paymentMethod,
+            chartOfAccountId: salaryAccount?.id,
             payrollItemId: item.id,
             observation: `Folha de pagamento ${payrollNumber} — competência ${String(payroll.competenceMonth).padStart(2, '0')}/${payroll.competenceYear}.`,
           },
           approvedByUserId,
         );
-
-        if (salaryAccount) {
-          await tx.financialEntry.update({
-            where: { id: entry.id },
-            data: { chartOfAccountId: salaryAccount.id },
-          });
-        }
       }
 
       await tx.payroll.update({
