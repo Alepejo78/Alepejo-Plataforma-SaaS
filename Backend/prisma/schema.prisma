@@ -190,6 +190,7 @@ model Company {
   vacationPeriods               VacationPeriod[]
   vacationGrants                VacationGrant[]
   salaryAdvances                SalaryAdvance[]
+  timeEntryMonthlyConfirmations TimeEntryMonthlyConfirmation[]
 
   quotes            Quote[]
   salesOrders       SalesOrder[]
@@ -2278,6 +2279,38 @@ model VacationGrantLine {
   @@map("vacation_grant_lines")
 }
 
+/// Confirmação digital mensal do ponto — mesmo mecanismo de
+/// Payroll/VacationGrant/ThirteenthSalaryItem, mas sem título
+/// financeiro atrelado (ponto não gera título): confere o extrato do
+/// mês e confirma que bate com o que trabalhou.
+model TimeEntryMonthlyConfirmation {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  year  Int
+  month Int
+
+  confirmationStatus PayrollConfirmationStatus @default(PENDENTE)
+  confirmedAt        DateTime?
+  confirmedById      String?
+
+  confirmationTokenHash      String?   @db.VarChar(64)
+  confirmationTokenExpiresAt DateTime?
+  confirmationSentAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, employeeId, year, month])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("time_entry_monthly_confirmations")
+}
+
 /// Adiantamento salarial — antecipação de parte do salário a pedido
 /// do colaborador, descontada depois na folha normal (desconto
 /// lançado manualmente em "Outros descontos" no ajuste do item, este
@@ -2984,6 +3017,7 @@ model Employee {
   vacationPeriods       VacationPeriod[]
   vacationGrants        VacationGrant[]
   salaryAdvances        SalaryAdvance[]
+  timeEntryMonthlyConfirmations TimeEntryMonthlyConfirmation[]
 
   @@unique([companyId, cpf])
   @@unique([companyId, badgeCode])

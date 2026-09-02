@@ -553,6 +553,7 @@ const permissionGroups = [
       ["time-entry.create", "Registrar Ponto"],
       ["time-entry.update", "Alterar/Excluir Batida de Ponto"],
       ["time-entry.approve", "Aprovar/Reabrir Dia de Ponto"],
+      ["time-entry.confirm-item", "Confirmar Recebimento de Ponto (manual, enviar link ou em massa)"],
       [
         "time-clock.manage-api-key",
         "Gerenciar Chave de API do Relógio de Ponto",

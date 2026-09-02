@@ -23,6 +23,7 @@
  * - `/confirmar-holerite`: mesma ideia, pro recebimento do holerite.
  * - `/confirmar-ferias`, `/confirmar-13`, `/confirmar-adiantamento`:
  *   mesma ideia, pro recebimento de férias/13º/adiantamento salarial.
+ * - `/confirmar-ponto`: mesma ideia, pra confirmação mensal do ponto.
  * - `/<empresa>/login`: login com o nome da empresa fixo na URL — o
  *   link que o e-mail de "definir senha" passa a mostrar como o
  *   acesso permanente do usuário (ver `sendPasswordResetLink` no
@@ -50,6 +51,7 @@ export const PUBLIC_ROUTES = [
   "/confirmar-ferias",
   "/confirmar-13",
   "/confirmar-adiantamento",
+  "/confirmar-ponto",
 ] as const;
 
 /** `/<slug>/login` — exatamente dois segmentos, o segundo literalmente "login". */

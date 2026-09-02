@@ -1,4 +1,5 @@
 import { api } from "./api";
+import type { PayrollConfirmationStatus } from "./payroll.service";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -331,3 +332,105 @@ export const timeClockApiKeyService = {
 };
 
 export { minutesToLabel };
+
+export interface TimeEntryMonthlyConfirmation {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  year: number;
+  month: number;
+  confirmationStatus: PayrollConfirmationStatus;
+  confirmedAt?: string | null;
+  confirmationSentAt?: string | null;
+  employee?: { id: string; name: string; employeeNumber?: number | null };
+}
+
+export interface SendConfirmationBulkResult {
+  total: number;
+  sent: number;
+  failed: { employeeId: string; employeeName: string; reason: string }[];
+}
+
+export const timeEntryConfirmationService = {
+  async list(filter: { year?: number; month?: number } = {}): Promise<TimeEntryMonthlyConfirmation[]> {
+    const { data } = await api.get<ApiEnvelope<TimeEntryMonthlyConfirmation[]>>(
+      "/time-entries/confirmations",
+      { params: filter }
+    );
+
+    return data.data ?? [];
+  },
+
+  async send(employeeId: string, year: number, month: number): Promise<{ sent: boolean; channels: string[] }> {
+    const { data } = await api.post<ApiEnvelope<{ sent: boolean; channels: string[] }>>(
+      `/time-entries/confirmations/send/${employeeId}/${year}/${month}`
+    );
+
+    return data.data;
+  },
+
+  async sendBulk(year: number, month: number): Promise<SendConfirmationBulkResult> {
+    const { data } = await api.post<ApiEnvelope<SendConfirmationBulkResult>>(
+      `/time-entries/confirmations/send-bulk/${year}/${month}`
+    );
+
+    return data.data;
+  },
+
+  async confirmItem(id: string): Promise<TimeEntryMonthlyConfirmation> {
+    const { data } = await api.patch<ApiEnvelope<TimeEntryMonthlyConfirmation>>(
+      `/time-entries/confirmations/${id}/confirm`
+    );
+
+    return data.data;
+  },
+
+  async confirmMine(year: number, month: number): Promise<TimeEntryMonthlyConfirmation> {
+    const { data } = await api.post<ApiEnvelope<TimeEntryMonthlyConfirmation>>(
+      `/time-entries/confirmations/me/${year}/${month}/confirm`
+    );
+
+    return data.data;
+  },
+};
+
+export interface TimeReportDay {
+  dateLabel: string;
+  start: string;
+  breakStart: string;
+  breakEnd: string;
+  end: string;
+  workedLabel: string;
+  extraLabel: string;
+}
+
+export interface TimeEntryConfirmationPublicInfo {
+  employeeName: string;
+  companyName: string;
+  companyLogo?: string | null;
+  year: number;
+  month: number;
+  days: TimeReportDay[];
+  status: PayrollConfirmationStatus;
+}
+
+export const timeEntryConfirmationPublicService = {
+  async getInfo(id: string, token: string): Promise<TimeEntryConfirmationPublicInfo> {
+    const { data } = await api.get<ApiEnvelope<TimeEntryConfirmationPublicInfo>>(
+      `/time-entries/confirmations/public/${id}`,
+      { params: { token } }
+    );
+
+    return data.data;
+  },
+
+  async confirm(id: string, token: string): Promise<{ success: boolean }> {
+    const { data } = await api.post<ApiEnvelope<{ success: boolean }>>(
+      `/time-entries/confirmations/public/${id}/confirm`,
+      undefined,
+      { params: { token } }
+    );
+
+    return data.data;
+  },
+};

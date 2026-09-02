@@ -63,6 +63,7 @@ const BUSINESS_COLUMNS: {
   { key: "thirteenthSalaryConfirmItem", label: "Confirmar Recebimento de 13º", codes: ["thirteenth-salary.confirm-item"] },
   { key: "vacationConfirmItem", label: "Confirmar Recebimento de Férias", codes: ["vacation.confirm-item"] },
   { key: "salaryAdvanceConfirmItem", label: "Confirmar Recebimento de Adiantamento", codes: ["salary-advance.confirm-item"] },
+  { key: "timeEntryConfirmItem", label: "Confirmar Recebimento de Ponto", codes: ["time-entry.confirm-item"] },
   { key: "timeClockApiKey", label: "Chave API Ponto", codes: ["time-clock.manage-api-key"] },
   { key: "licenseTrial", label: "Iniciar Teste Grátis", codes: ["license.trial"] },
   { key: "licenseCatalog", label: "Ver Catálogo de Planos", codes: ["license.catalog.view"] },

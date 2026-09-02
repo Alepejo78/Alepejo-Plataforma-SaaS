@@ -50,6 +50,25 @@ export interface PayslipPdfInput {
   footerFields: PayslipPdfFooterField[];
 }
 
+export interface TimeReportDay {
+  dateLabel: string;
+  start: string;
+  breakStart: string;
+  breakEnd: string;
+  end: string;
+  workedLabel: string;
+  extraLabel: string;
+}
+
+/** Confirmação mensal de ponto — mesmo cabeçalho/rodapé/assinatura do holerite, tabela dia a dia em vez de proventos/descontos. */
+export interface TimeReportInput {
+  title: string;
+  periodLabel: string;
+  employee: PayslipPdfEmployee;
+  days: TimeReportDay[];
+  footerFields: PayslipPdfFooterField[];
+}
+
 function formatDate(value: Date | string | null | undefined): string {
   if (!value) {
     return '—';
@@ -92,6 +111,199 @@ export class PayslipPdfService {
     doc.end();
 
     return done;
+  }
+
+  async generateTimeReport(input: TimeReportInput, company: Company | null): Promise<Buffer> {
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+
+    const chunks: Buffer[] = [];
+
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+    const done = new Promise<Buffer>((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+    });
+
+    this.renderTimeReport(doc, input, company);
+
+    doc.end();
+
+    return done;
+  }
+
+  private renderTimeReport(doc: PDFKit.PDFDocument, input: TimeReportInput, company: Company | null) {
+    const companyName = company?.tradeName || company?.legalName || 'Empresa';
+    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const left = doc.page.margins.left;
+
+    let cursorY = doc.page.margins.top;
+
+    const logoWidth = this.drawLogo(doc, company, left, cursorY);
+
+    doc
+      .fontSize(13)
+      .font('Helvetica-Bold')
+      .fillColor('#111827')
+      .text(companyName, left + logoWidth, cursorY, { width: pageWidth * 0.6 - logoWidth });
+
+    doc
+      .fontSize(9)
+      .font('Helvetica')
+      .fillColor('#4b5563')
+      .text('Matriz', left + logoWidth, doc.y + 2, { width: pageWidth * 0.6 - logoWidth });
+
+    cursorY = Math.max(doc.y, cursorY + (logoWidth > 0 ? 60 : 30)) + 10;
+
+    doc.moveTo(left, cursorY).lineTo(left + pageWidth, cursorY).strokeColor('#d1d5db').lineWidth(1).stroke();
+    cursorY += 12;
+
+    doc
+      .fontSize(13)
+      .font('Helvetica-Bold')
+      .fillColor('#111827')
+      .text(input.title.toUpperCase(), left, cursorY, {
+        width: pageWidth,
+        align: 'center',
+        characterSpacing: 1,
+      });
+
+    cursorY = doc.y + 10;
+
+    doc.moveTo(left, cursorY).lineTo(left + pageWidth, cursorY).strokeColor('#d1d5db').stroke();
+    cursorY += 8;
+
+    doc
+      .fontSize(9)
+      .font('Helvetica')
+      .fillColor('#374151')
+      .text(input.periodLabel, left, cursorY, { width: pageWidth });
+
+    cursorY = doc.y + 10;
+
+    doc.moveTo(left, cursorY).lineTo(left + pageWidth, cursorY).strokeColor('#d1d5db').stroke();
+    cursorY += 8;
+
+    const employee = input.employee;
+
+    cursorY =
+      this.drawRow(doc, left, cursorY, pageWidth, [
+        `Matrícula: ${employee.employeeNumber ?? '—'} — Nome: ${employee.name}`,
+        `CPF: ${employee.cpf ?? '—'}`,
+      ]) + 4;
+    cursorY =
+      this.drawRow(doc, left, cursorY, pageWidth, [
+        `Cargo: ${employee.jobFunction?.name ?? '—'}`,
+        '',
+      ]) + 10;
+
+    doc.moveTo(left, cursorY).lineTo(left + pageWidth, cursorY).strokeColor('#d1d5db').stroke();
+    cursorY += 8;
+
+    cursorY = this.drawTimeReportTable(doc, input.days, left, cursorY, pageWidth);
+
+    doc.moveTo(left, cursorY).lineTo(left + pageWidth, cursorY).strokeColor('#d1d5db').stroke();
+    cursorY += 8;
+
+    doc.fontSize(8).font('Helvetica').fillColor('#374151');
+
+    input.footerFields.forEach((field, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = left + col * (pageWidth / 2);
+      const y = cursorY + row * 14;
+
+      doc.text(`${field.label}: ${field.value}`, x, y, { width: pageWidth / 2 - 6 });
+    });
+
+    cursorY += Math.ceil(input.footerFields.length / 2) * 14 + 30;
+
+    const signatureWidth = pageWidth * 0.5;
+    const signatureX = left + (pageWidth - signatureWidth) / 2;
+
+    doc.moveTo(signatureX, cursorY).lineTo(signatureX + signatureWidth, cursorY).strokeColor('#9ca3af').stroke();
+
+    doc
+      .fontSize(8)
+      .font('Helvetica')
+      .fillColor('#6b7280')
+      .text('Assinatura do colaborador', signatureX, cursorY + 4, {
+        width: signatureWidth,
+        align: 'center',
+      });
+  }
+
+  private drawTimeReportTable(
+    doc: PDFKit.PDFDocument,
+    days: TimeReportDay[],
+    left: number,
+    startY: number,
+    pageWidth: number,
+  ): number {
+    const columns = [
+      { title: 'Data', width: pageWidth * 0.16, align: 'left' as const },
+      { title: 'Entrada', width: pageWidth * 0.14, align: 'right' as const },
+      { title: 'Int. início', width: pageWidth * 0.14, align: 'right' as const },
+      { title: 'Int. fim', width: pageWidth * 0.14, align: 'right' as const },
+      { title: 'Saída', width: pageWidth * 0.14, align: 'right' as const },
+      { title: 'Trabalhadas', width: pageWidth * 0.14, align: 'right' as const },
+      { title: 'Extras', width: pageWidth * 0.14, align: 'right' as const },
+    ];
+
+    let y = startY;
+    const rowHeight = 16;
+
+    const drawHeader = () => {
+      doc.rect(left, y, pageWidth, rowHeight).fill('#111827');
+
+      let x = left;
+
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#ffffff');
+
+      for (const col of columns) {
+        doc.text(col.title, x + 4, y + 4, { width: col.width - 8, align: col.align });
+        x += col.width;
+      }
+
+      y += rowHeight;
+    };
+
+    drawHeader();
+
+    for (const day of days) {
+      if (y + rowHeight > doc.page.height - doc.page.margins.bottom - 140) {
+        doc.addPage();
+        y = doc.page.margins.top;
+        drawHeader();
+      }
+
+      doc.rect(left, y, pageWidth, rowHeight).fillAndStroke('#f9fafb', '#e5e7eb');
+
+      const values = [
+        day.dateLabel,
+        day.start,
+        day.breakStart,
+        day.breakEnd,
+        day.end,
+        day.workedLabel,
+        day.extraLabel,
+      ];
+
+      doc.fontSize(7).font('Helvetica').fillColor('#111827');
+
+      let x = left;
+
+      values.forEach((text, index) => {
+        const col = columns[index];
+
+        doc.text(text, x + 4, y + 4, { width: col.width - 8, align: col.align });
+        x += col.width;
+      });
+
+      y += rowHeight;
+    }
+
+    return y + 8;
   }
 
   private render(doc: PDFKit.PDFDocument, input: PayslipPdfInput, company: Company | null) {

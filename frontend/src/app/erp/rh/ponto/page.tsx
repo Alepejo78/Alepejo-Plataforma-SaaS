@@ -7,8 +7,10 @@ import {
   CheckCircle2,
   Clock,
   KeyRound,
+  Mail,
   Pencil,
   ScanBarcode,
+  Send,
   Trash2,
   Undo2,
   X,
@@ -29,6 +31,7 @@ import {
 import {
   minutesToLabel,
   timeEntryService,
+  timeEntryConfirmationService,
   TIME_ENTRY_SOURCE_LABELS,
   type DaySummary,
   type TimeEntryAdjustment,
@@ -161,6 +164,72 @@ export default function ControleDePontoPage() {
     TimeEntryAdjustment[]
   >([]);
   const [consultLoading, setConsultLoading] = useState(false);
+
+  const now = new Date();
+  const [confirmYear, setConfirmYear] = useState(String(now.getUTCFullYear()));
+  const [confirmMonth, setConfirmMonth] = useState(
+    String(now.getUTCMonth() + 1).padStart(2, "0")
+  );
+  const [confirmSending, setConfirmSending] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState("");
+  const [confirmError, setConfirmError] = useState("");
+
+  async function sendConfirmationIndividual() {
+    if (!employeeFilterId) {
+      setConfirmError(
+        "Selecione um colaborador no filtro acima pra enviar a confirmação individual."
+      );
+      return;
+    }
+
+    setConfirmSending(true);
+    setConfirmError("");
+    setConfirmMessage("");
+
+    try {
+      await timeEntryConfirmationService.send(
+        employeeFilterId,
+        Number(confirmYear),
+        Number(confirmMonth)
+      );
+
+      setConfirmMessage(
+        `Confirmação enviada pra ${employeeFilterLabel || "o colaborador"}.`
+      );
+    } catch (err) {
+      setConfirmError(
+        extractMessage(err, "Não foi possível enviar a confirmação.")
+      );
+    } finally {
+      setConfirmSending(false);
+    }
+  }
+
+  async function sendConfirmationBulk() {
+    setConfirmSending(true);
+    setConfirmError("");
+    setConfirmMessage("");
+
+    try {
+      const result = await timeEntryConfirmationService.sendBulk(
+        Number(confirmYear),
+        Number(confirmMonth)
+      );
+
+      setConfirmMessage(
+        `Enviado pra ${result.sent} de ${result.total} colaborador(es)` +
+          (result.failed.length > 0
+            ? ` — falhou pra: ${result.failed.map((f) => f.employeeName).join(", ")}.`
+            : ".")
+      );
+    } catch (err) {
+      setConfirmError(
+        extractMessage(err, "Não foi possível enviar as confirmações.")
+      );
+    } finally {
+      setConfirmSending(false);
+    }
+  }
 
   useEffect(() => {
     if (!isSelfService) {
@@ -490,6 +559,78 @@ export default function ControleDePontoPage() {
             </Can>
           </div>
         </div>
+
+        <Can permission="time-entry.confirm-item">
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <h2 className="mb-3 font-semibold text-[var(--text-primary)]">
+              Confirmação mensal do ponto
+            </h2>
+
+            <p className="mb-3 text-xs text-[var(--text-muted)]">
+              Manda o extrato do mês (PDF em anexo) pro colaborador
+              conferir e confirmar — igual o holerite. Individual usa
+              o colaborador selecionado no filtro da folha de ponto
+              abaixo; em massa manda pra todo colaborador com pelo
+              menos uma batida no mês.
+            </p>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className={labelClass}>Ano</label>
+                <input
+                  type="number"
+                  className={`${fieldClass} w-24`}
+                  value={confirmYear}
+                  onChange={(e) => setConfirmYear(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>Mês</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  className={`${fieldClass} w-20`}
+                  value={confirmMonth}
+                  onChange={(e) => setConfirmMonth(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={confirmSending}
+                onClick={() => void sendConfirmationIndividual()}
+                className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+              >
+                <Mail size={16} />
+                Enviar confirmação (individual)
+              </button>
+
+              <button
+                type="button"
+                disabled={confirmSending}
+                onClick={() => void sendConfirmationBulk()}
+                className="flex h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+              >
+                <Send size={16} />
+                {confirmSending ? "Enviando..." : "Enviar confirmação em massa"}
+              </button>
+            </div>
+
+            {confirmMessage && (
+              <p className="mt-3 text-sm text-[var(--success)]">
+                {confirmMessage}
+              </p>
+            )}
+
+            {confirmError && (
+              <p className="mt-3 text-sm text-[var(--danger)]">
+                {confirmError}
+              </p>
+            )}
+          </section>
+        </Can>
 
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">

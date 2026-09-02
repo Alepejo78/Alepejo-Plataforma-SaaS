@@ -44,7 +44,7 @@ import { SalaryAdvanceConfirmationService } from './services/salary-advance-conf
   imports: [
     PrismaModule,
     LicenseModule,
-    TimeTrackingModule,
+    forwardRef(() => TimeTrackingModule),
     forwardRef(() => FinancialEntriesModule),
     DocumentSequenceModule,
     NotificationsModule,
@@ -97,6 +97,7 @@ import { SalaryAdvanceConfirmationService } from './services/salary-advance-conf
     VacationConfirmationService,
     ThirteenthConfirmationService,
     SalaryAdvanceConfirmationService,
+    PayslipPdfService,
   ],
 })
 export class PayrollModule {}
