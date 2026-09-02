@@ -31,4 +31,22 @@ export class UpdatePayrollSettingsDto {
   @Min(1)
   @Max(2)
   thirteenthDefaultInstallments?: number;
+
+  @ApiPropertyOptional({
+    description: 'Dias de antecedência do aviso de fechamento do banco de horas.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  hourBankClosingReminderDays?: number;
+
+  @ApiPropertyOptional({
+    description: 'Dias de antecedência do aviso de fechamento do mês do ponto.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  pointClosingReminderDays?: number;
 }

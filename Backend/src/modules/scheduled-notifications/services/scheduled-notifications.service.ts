@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
-import { EmployeeStatus } from '@prisma/client';
+import { EmployeeStatus, NotificationType } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
+import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const FIXED_EXAM_REMINDER_DAYS = 3;
@@ -38,6 +39,7 @@ export class ScheduledNotificationsService {
     private readonly prisma: PrismaService,
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
+    private readonly inAppNotifications: InAppNotificationsService,
   ) {}
 
   @Cron('0 8 * * *', { timeZone: 'America/Sao_Paulo' })
@@ -47,6 +49,8 @@ export class ScheduledNotificationsService {
     await this.notifyExamReminders();
     await this.notifyBirthdays();
     await this.reconcileVacationAndLeave();
+    await this.notifyHourBankClosing();
+    await this.notifyPointClosing();
   }
 
   /**
@@ -192,6 +196,198 @@ export class ScheduledNotificationsService {
           employee.mobile,
           message,
         );
+      }
+    }
+  }
+
+  /**
+   * Aviso de fechamento do banco de horas — todo dia, a partir de
+   * `hourBankClosingReminderDays` antes de `hourBankClosingDate`
+   * (config por empresa, `PayrollSettings`). Some sozinho quando a
+   * data passa (o `dedupeKey` de hoje simplesmente para de ser
+   * gerado) — não precisa `clearIfUnread`.
+   */
+  private async notifyHourBankClosing() {
+    const employees = await this.prisma.employee.findMany({
+      where: {
+        active: true,
+        status: { not: EmployeeStatus.DEMITIDO },
+        hourBankEnabled: true,
+        hourBankClosingDate: { not: null },
+      },
+      include: { company: true },
+    });
+
+    if (employees.length === 0) {
+      return;
+    }
+
+    const companyIds = [...new Set(employees.map((e) => e.companyId))];
+    const settingsList = await this.prisma.payrollSettings.findMany({
+      where: { companyId: { in: companyIds } },
+    });
+    const settingsByCompany = new Map(
+      settingsList.map((s) => [s.companyId, s]),
+    );
+
+    const todayUtc = utcMidnight(new Date());
+    const todayStr = new Date(todayUtc).toISOString().slice(0, 10);
+
+    for (const employee of employees) {
+      if (!employee.userId && !employee.email && !employee.mobile) {
+        continue;
+      }
+
+      const reminderDays =
+        settingsByCompany.get(employee.companyId)
+          ?.hourBankClosingReminderDays ?? 7;
+
+      const closingUtc = utcMidnight(employee.hourBankClosingDate!);
+      const daysUntil = Math.round(
+        (closingUtc - todayUtc) / MS_PER_DAY,
+      );
+
+      if (daysUntil < 0 || daysUntil > reminderDays) {
+        continue;
+      }
+
+      const companyName =
+        employee.company.tradeName || employee.company.legalName;
+      const closingLabel = employee.hourBankClosingDate!.toLocaleDateString(
+        'pt-BR',
+        { timeZone: 'UTC' },
+      );
+
+      const message =
+        daysUntil === 0
+          ? `Olá, ${employee.name}! Hoje (${closingLabel}) fecha o seu banco de horas.`
+          : `Olá, ${employee.name}! Seu banco de horas fecha em ${closingLabel} (em ${daysUntil} dia${daysUntil === 1 ? '' : 's'}).`;
+
+      if (employee.email) {
+        void this.emailNotifications.send(
+          employee.companyId,
+          employee.email,
+          `Fechamento do banco de horas — ${companyName}`,
+          `<p>${message}</p>`,
+        );
+      }
+
+      if (employee.mobile) {
+        void this.whatsappNotifications.send(
+          employee.companyId,
+          employee.mobile,
+          message,
+        );
+      }
+
+      if (employee.userId) {
+        void this.inAppNotifications.emit({
+          companyId: employee.companyId,
+          type: NotificationType.HOUR_BANK_CLOSING,
+          dedupeKey: `hour-bank-closing-${employee.id}-${todayStr}`,
+          title: 'Fechamento do banco de horas',
+          message,
+          permissionCode: 'self',
+          linkUrl: '/erp/rh/ponto/acompanhamento',
+          userId: employee.userId,
+        });
+      }
+    }
+  }
+
+  /**
+   * Aviso de fechamento do mês do ponto ("regularize seu ponto") —
+   * todo colaborador ativo, nos últimos `pointClosingReminderDays`
+   * dias do mês, todo dia até o fim do mês OU até a folha daquela
+   * competência já existir (o que vier primeiro).
+   */
+  private async notifyPointClosing() {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth() + 1;
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const daysUntilMonthEnd = lastDay - now.getUTCDate();
+
+    const employees = await this.prisma.employee.findMany({
+      where: { active: true, status: { not: EmployeeStatus.DEMITIDO } },
+      include: { company: true },
+    });
+
+    if (employees.length === 0) {
+      return;
+    }
+
+    const companyIds = [...new Set(employees.map((e) => e.companyId))];
+    const [settingsList, payrolls] = await Promise.all([
+      this.prisma.payrollSettings.findMany({
+        where: { companyId: { in: companyIds } },
+      }),
+      this.prisma.payroll.findMany({
+        where: {
+          companyId: { in: companyIds },
+          competenceYear: year,
+          competenceMonth: month,
+        },
+      }),
+    ]);
+    const settingsByCompany = new Map(
+      settingsList.map((s) => [s.companyId, s]),
+    );
+    const companiesWithPayroll = new Set(
+      payrolls.map((p) => p.companyId),
+    );
+
+    const todayStr = new Date(utcMidnight(now)).toISOString().slice(0, 10);
+
+    for (const employee of employees) {
+      if (companiesWithPayroll.has(employee.companyId)) {
+        continue;
+      }
+
+      if (!employee.userId && !employee.email && !employee.mobile) {
+        continue;
+      }
+
+      const reminderDays =
+        settingsByCompany.get(employee.companyId)
+          ?.pointClosingReminderDays ?? 5;
+
+      if (daysUntilMonthEnd > reminderDays) {
+        continue;
+      }
+
+      const companyName =
+        employee.company.tradeName || employee.company.legalName;
+      const message = `Olá, ${employee.name}! O mês de ponto está fechando — regularize suas batidas antes do fechamento.`;
+
+      if (employee.email) {
+        void this.emailNotifications.send(
+          employee.companyId,
+          employee.email,
+          `Regularize seu ponto — ${companyName}`,
+          `<p>${message}</p>`,
+        );
+      }
+
+      if (employee.mobile) {
+        void this.whatsappNotifications.send(
+          employee.companyId,
+          employee.mobile,
+          message,
+        );
+      }
+
+      if (employee.userId) {
+        void this.inAppNotifications.emit({
+          companyId: employee.companyId,
+          type: NotificationType.POINT_MONTH_CLOSING,
+          dedupeKey: `point-month-closing-${employee.id}-${todayStr}`,
+          title: 'Regularize seu ponto',
+          message,
+          permissionCode: 'self',
+          linkUrl: '/erp/rh/ponto/acompanhamento',
+          userId: employee.userId,
+        });
       }
     }
   }

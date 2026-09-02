@@ -19,6 +19,8 @@ export interface EmitNotificationParams {
   documentRef?: string;
   actorUserId?: string;
   occurredAt?: Date;
+  /** Aviso pessoal (ex.: fechamento do banco de horas) — só esse login enxerga, ignora `permissionCode`. */
+  userId?: string;
 }
 
 @Injectable()
@@ -42,6 +44,7 @@ export class InAppNotificationsService {
         OR: [
           { companyId: user.companyId },
           { rootCompanyId: user.rootCompanyId },
+          { userId: user.id },
         ],
       },
       include: {
@@ -52,7 +55,7 @@ export class InAppNotificationsService {
     });
 
     return notifications
-      .filter((n) => hasPermission(user, n.permissionCode))
+      .filter((n) => n.userId === user.id || hasPermission(user, n.permissionCode))
       .map((n) => ({
         id: n.id,
         type: n.type,
@@ -75,6 +78,7 @@ export class InAppNotificationsService {
         OR: [
           { companyId: user.companyId },
           { rootCompanyId: user.rootCompanyId },
+          { userId: user.id },
         ],
       },
     });
@@ -120,6 +124,7 @@ export class InAppNotificationsService {
           linkUrl: params.linkUrl,
           documentRef: params.documentRef,
           actorUserId: params.actorUserId,
+          userId: params.userId,
           occurredAt: params.occurredAt ?? new Date(),
         },
       });

@@ -210,6 +210,8 @@ export default function ParametrosFiscaisPage() {
         extraHourSurchargePercentage: num(settings.extraHourSurchargePercentage),
         transportVoucherPercentage: num(settings.transportVoucherPercentage),
         thirteenthDefaultInstallments: settings.thirteenthDefaultInstallments,
+        hourBankClosingReminderDays: settings.hourBankClosingReminderDays,
+        pointClosingReminderDays: settings.pointClosingReminderDays,
       });
 
       setSettings(updated);
@@ -436,7 +438,7 @@ export default function ParametrosFiscaisPage() {
                 Configurações da folha
               </h2>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
                 <div>
                   <label className={labelClass}>
                     Adicional de hora extra (%)
@@ -489,6 +491,42 @@ export default function ParametrosFiscaisPage() {
                     <option value={1}>1 parcela</option>
                     <option value={2}>2 parcelas</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Aviso fechamento banco de horas (dias)
+                  </label>
+
+                  <input
+                    inputMode="numeric"
+                    className={fieldClass}
+                    value={settings.hourBankClosingReminderDays}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        hourBankClosingReminderDays: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Aviso fechamento do ponto (dias)
+                  </label>
+
+                  <input
+                    inputMode="numeric"
+                    className={fieldClass}
+                    value={settings.pointClosingReminderDays}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        pointClosingReminderDays: Number(e.target.value),
+                      })
+                    }
+                  />
                 </div>
 
                 <div className="flex items-end">

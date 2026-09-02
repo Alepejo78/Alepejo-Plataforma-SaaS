@@ -422,6 +422,10 @@ model User {
   /// (só eventos em tempo real, ex.: novo cadastro).
   notificationsAsActor Notification[] @relation("NotificationActor")
 
+  /// Notificações pessoais deste login (ex.: aviso de fechamento do
+  /// banco de horas) — só ele enxerga, sem depender de permissão.
+  notificationsAsTarget Notification[] @relation("NotificationTarget")
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
@@ -1870,6 +1874,13 @@ model PayrollSettings {
   transportVoucherPercentage    Decimal @default(6.00) @db.Decimal(5, 2)
   /// 1 = parcela única de 13º; 2 = duas parcelas (padrão CLT).
   thirteenthDefaultInstallments Int     @default(2)
+
+  /// Dias de antecedência do aviso de fechamento do banco de horas
+  /// (e-mail + sino, repetido todo dia até fechar).
+  hourBankClosingReminderDays Int @default(7)
+  /// Dias de antecedência do aviso de fechamento do mês do ponto
+  /// ("regularize seu ponto"), nos últimos dias do mês.
+  pointClosingReminderDays Int @default(5)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3464,6 +3475,8 @@ enum NotificationType {
   APPROVAL_PENDING
   LICENSE_EXPIRING
   LOW_STOCK
+  HOUR_BANK_CLOSING
+  POINT_MONTH_CLOSING
 }
 
 /// Notificação do sino (bell) da barra superior. Dois jeitos de
@@ -3492,8 +3505,15 @@ model Notification {
   message String @db.Text
 
   /// Código de permissão que decide quem enxerga (DENY sempre vence,
-  /// mesma regra de PermissionsGuard/hasPermission).
+  /// mesma regra de PermissionsGuard/hasPermission) — ignorado quando
+  /// `userId` está preenchido (notificação pessoal, ver abaixo).
   permissionCode String @db.VarChar(60)
+
+  /// Preenchido só em avisos pessoais (ex.: fechamento do banco de
+  /// horas do próprio colaborador) — quando presente, só esse login
+  /// enxerga, sem passar pelo filtro de permissão.
+  userId String?
+  user   User?   @relation("NotificationTarget", fields: [userId], references: [id], onDelete: Cascade)
 
   /// "Onde ir para verificar" — rota do frontend.
   linkUrl String? @db.VarChar(300)
@@ -3515,5 +3535,6 @@ model Notification {
   @@unique([dedupeKey, companyId, rootCompanyId])
   @@index([companyId, readAt])
   @@index([rootCompanyId, readAt])
+  @@index([userId, readAt])
   @@map("notifications")
 }

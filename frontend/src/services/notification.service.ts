@@ -16,7 +16,9 @@ export type NotificationType =
   | "NEW_EMPLOYEE"
   | "APPROVAL_PENDING"
   | "LICENSE_EXPIRING"
-  | "LOW_STOCK";
+  | "LOW_STOCK"
+  | "HOUR_BANK_CLOSING"
+  | "POINT_MONTH_CLOSING";
 
 export interface NotificationItem {
   id: string;

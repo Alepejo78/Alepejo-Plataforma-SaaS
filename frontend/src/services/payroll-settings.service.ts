@@ -57,12 +57,16 @@ export interface PayrollSettings {
   extraHourSurchargePercentage: string | number;
   transportVoucherPercentage: string | number;
   thirteenthDefaultInstallments: number;
+  hourBankClosingReminderDays: number;
+  pointClosingReminderDays: number;
 }
 
 export interface UpdatePayrollSettingsPayload {
   extraHourSurchargePercentage?: number;
   transportVoucherPercentage?: number;
   thirteenthDefaultInstallments?: number;
+  hourBankClosingReminderDays?: number;
+  pointClosingReminderDays?: number;
 }
 
 export const payrollTaxTableService = {
