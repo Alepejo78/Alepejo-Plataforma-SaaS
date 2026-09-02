@@ -256,12 +256,12 @@
 
   /* ---------- planos ---------- */
 
-  .plans { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .plans { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
 
   .plan {
     border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 18px 15px;
+    border-radius: 14px;
+    padding: 15px 12px;
     background: #fff;
     display: flex;
     flex-direction: column;
@@ -272,37 +272,38 @@
     background: linear-gradient(180deg, #fffdf7, #fff);
   }
 
-  .plan .name { font-size: 13pt; font-weight: 700; }
+  .plan .name { font-size: 11.5pt; font-weight: 700; }
 
   .plan .badge {
     display: inline-block;
-    font-size: 8.5pt;
+    font-size: 7.5pt;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #8a6318;
     background: #fbf0d8;
     border-radius: 999px;
-    padding: 3px 10px;
-    margin-bottom: 8px;
+    padding: 3px 8px;
+    margin-bottom: 7px;
   }
 
   .plan .kicker {
-    margin-top: 7px;
-    padding-bottom: 10px;
+    margin-top: 6px;
+    padding-bottom: 9px;
     border-bottom: 1px solid var(--line);
-    font-size: 9.5pt;
+    font-size: 8.5pt;
     font-weight: 600;
     color: var(--gold);
+    line-height: 1.35;
   }
 
-  .plan ul { margin-top: 12px; list-style: none; }
+  .plan ul { margin-top: 10px; list-style: none; }
 
   .plan li {
-    font-size: 9.5pt;
-    line-height: 1.6;
+    font-size: 8.5pt;
+    line-height: 1.55;
     color: var(--ink-soft);
-    padding-left: 15px;
+    padding-left: 13px;
     position: relative;
   }
 
@@ -310,9 +311,9 @@
     content: "";
     position: absolute;
     left: 0;
-    top: 7px;
-    width: 6px;
-    height: 6px;
+    top: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 2px;
     background: var(--gold);
   }
@@ -339,7 +340,6 @@
   }
 
   td.name { color: var(--ink); font-weight: 600; }
-  tr.free td { color: var(--gold); font-weight: 600; }
 
   /* Links de verdade: o Chrome transforma <a href> em link clicável
      dentro do PDF, então o e-mail que a empresa recebe já leva pro site. */
@@ -418,6 +418,7 @@
     <span class="chip">Usuários ilimitados</span>
     <span class="chip">Filiais sem custo extra</span>
     <span class="chip">Sua marca no sistema</span>
+    <span class="chip">Confirmação digital</span>
   </div>
 
   <p class="site"><a href="https://alepejo.com.br">alepejo.com.br</a></p>
@@ -583,6 +584,7 @@
           <li>Pedidos</li>
           <li>Compras</li>
           <li>Recebimento</li>
+          <li>Importação de nota fiscal (XML)</li>
         </ul>
       </div>
       <div class="card tight">
@@ -617,6 +619,7 @@
         <ul>
           <li>Contas a receber</li>
           <li>Contas a pagar</li>
+          <li>Contas bancárias da empresa</li>
           <li>Fluxo de caixa</li>
           <li>Orçamento mês a mês</li>
         </ul>
@@ -672,6 +675,7 @@
         <ul>
           <li>Marcação de ponto</li>
           <li>Horas positivas e negativas</li>
+          <li>Confirmação mensal pelo colaborador</li>
           <li>Faltas e abonos</li>
         </ul>
       </div>
@@ -679,16 +683,16 @@
         <h3>Folha</h3>
         <ul>
           <li>Folha de pagamento</li>
-          <li>13º salário</li>
-          <li>Holerites</li>
+          <li>13º salário e adiantamento salarial</li>
+          <li>Holerites com confirmação digital</li>
           <li>Programação de férias</li>
         </ul>
       </div>
     </div>
 
     <div class="card" style="margin-top:20px;background:#0e1726;border-color:#0e1726;">
-      <h3 style="color:#fff;font-size:14pt;">Banco de horas do jeito que a pequena empresa precisa</h3>
-      <p style="color:#c9d4e6;font-size:11pt;">O acompanhamento mostra horas positivas e negativas ao longo do mês. O que não for compensado até o cálculo da folha entra automaticamente como pagamento de horas extras.</p>
+      <h3 style="color:#fff;font-size:14pt;">Banco de horas de verdade, e recebimento sem papel</h3>
+      <p style="color:#c9d4e6;font-size:11pt;">O RH escolhe a data de fechamento do banco de horas: a hora extra acumula até lá — fechou com saldo positivo, é pago; negativo, não desconta nada. Holerite, férias, 13º, adiantamento e ponto mensal são confirmados pelo próprio colaborador, direto no celular.</p>
     </div>
   </div>
 
@@ -729,7 +733,7 @@
       <div class="card">
         <h3>Integrações</h3>
         <ul>
-          <li>Avisos automáticos por WhatsApp (opcional)</li>
+          <li>Avisos automáticos por WhatsApp e e-mail (opcional)</li>
         </ul>
       </div>
       <div class="card">
@@ -760,46 +764,54 @@
   <div class="body">
     <div class="plans">
       <div class="plan">
-        <span class="name">Básico</span>
+        <span class="name">Essencial</span>
         <div class="kicker">Para sair da planilha</div>
         <ul>
           <li>Cadastros</li>
           <li>Produtos</li>
+          <li>Estoque</li>
           <li>Compras</li>
           <li>Vendas</li>
-          <li>Estoque</li>
-        </ul>
-      </div>
-
-      <div class="plan">
-        <span class="name">Essencial</span>
-        <div class="kicker">Com o dinheiro sob controle</div>
-        <ul>
-          <li>Tudo do Básico</li>
-          <li>Financeiro completo</li>
-          <li>Contas a pagar e a receber</li>
-          <li>Fluxo de caixa</li>
+          <li>Financeiro</li>
         </ul>
       </div>
 
       <div class="plan featured">
         <span class="badge">Mais escolhido</span>
         <span class="name">Profissional</span>
-        <div class="kicker">Com o RH no sistema</div>
+        <div class="kicker">Com inventário e sua marca</div>
         <ul>
           <li>Tudo do Essencial</li>
-          <li>Recursos Humanos</li>
-          <li>Colaboradores e cargos</li>
-          <li>Exames, EPI e férias</li>
+          <li>Inventário</li>
+          <li>Personalização (marca própria)</li>
         </ul>
       </div>
 
       <div class="plan">
-        <span class="name">Completo</span>
+        <span class="name">Enterprise</span>
         <div class="kicker">A empresa inteira</div>
         <ul>
           <li>Tudo do Profissional</li>
+          <li>Recursos Humanos</li>
           <li>Produção</li>
+          <li>Ponto e Folha de Pagamento</li>
+        </ul>
+      </div>
+
+      <div class="plan">
+        <span class="name">RH</span>
+        <div class="kicker">Só o RH, se for só isso que falta</div>
+        <ul>
+          <li>Recursos Humanos</li>
+          <li>Personalização (marca própria)</li>
+        </ul>
+      </div>
+
+      <div class="plan">
+        <span class="name">RH + Folha</span>
+        <div class="kicker">RH completo com folha de pagamento</div>
+        <ul>
+          <li>Recursos Humanos</li>
           <li>Ponto e Folha de Pagamento</li>
           <li>Personalização (marca própria)</li>
         </ul>
@@ -809,7 +821,6 @@
         <span class="name">Customizado</span>
         <div class="kicker">Você monta do seu jeito</div>
         <ul>
-          <li>Parte da base do Básico</li>
           <li>Escolha módulo a módulo</li>
           <li>Pague só pelo que usar</li>
           <li>Acrescente mais depois</li>
@@ -831,7 +842,7 @@
 <section class="slide">
   <span class="eyebrow">Plano customizado</span>
   <h2>Use só o que a sua empresa precisa</h2>
-  <p class="lead">O Customizado parte do plano Básico, que já traz o que todo negócio usa. A partir dele, você acrescenta módulo por módulo — e monta o preço no site, na hora.</p>
+  <p class="lead">O Customizado não parte de nenhuma base fixa: você escolhe módulo por módulo, e o preço é somado no site, na hora.</p>
   <div class="rule"></div>
 
   <div class="body">
@@ -843,11 +854,11 @@
         </tr>
       </thead>
       <tbody>
-        <tr class="free"><td class="name">Cadastros, Produtos, Estoque, Vendas e Compras</td><td>Base do plano Básico — o fluxo do pedido ao recebimento</td></tr>
+        <tr><td class="name">Cadastros, Produtos, Estoque, Compras e Vendas</td><td>O fluxo básico de qualquer negócio: do pedido ao recebimento</td></tr>
+        <tr><td class="name">Financeiro</td><td>Contas a pagar e a receber, contas bancárias, fluxo de caixa e orçamento</td></tr>
         <tr><td class="name">Inventário</td><td>Contagem de inventário com recontagem em rodadas, acompanhamento e dashboard</td></tr>
-        <tr><td class="name">Financeiro</td><td>Contas a pagar e a receber, fluxo de caixa e orçamento</td></tr>
-        <tr><td class="name">Recursos Humanos</td><td>Colaboradores, cargos, exames, EPI e férias</td></tr>
-        <tr><td class="name">Ponto e Folha de Pagamento</td><td>Marcações, banco de horas, folha, 13º e holerite</td></tr>
+        <tr><td class="name">Recursos Humanos</td><td>Colaboradores, cargos, exames, EPI (com confirmação digital) e férias</td></tr>
+        <tr><td class="name">Ponto e Folha de Pagamento</td><td>Marcações, banco de horas com fechamento flexível, folha, 13º, adiantamento e holerite com confirmação digital</td></tr>
         <tr><td class="name">Produção</td><td>Ordem de produção e acompanhamento da fábrica</td></tr>
         <tr><td class="name">Personalização (marca própria)</td><td>Sua logo, o nome da sua empresa e o tema do sistema</td></tr>
       </tbody>
@@ -950,8 +961,9 @@
       <div class="qa"><p class="q">E controle de estoque?</p><p class="a">Sim, estoque online: comprou e recebeu, o produto entra; confirmou a venda, o material sai — com possibilidade de ajustes.</p></div>
       <div class="qa"><p class="q">O sistema tem controle de RH?</p><p class="a">Sim, bem completo: função, salários, horas, exames médicos e muito mais.</p></div>
       <div class="qa"><p class="q">Tem marcação de horas?</p><p class="a">Sim. Além da gestão de RH, o sistema tem controle de marcação de ponto.</p></div>
-      <div class="qa"><p class="q">Possui banco de horas?</p><p class="a">Sim. O acompanhamento controla horas positivas e negativas; o que não for compensado até o cálculo da folha entra como pagamento de horas extras.</p></div>
+      <div class="qa"><p class="q">Possui banco de horas?</p><p class="a">Sim, com fechamento flexível: o RH escolhe a data, a hora extra acumula até lá e só é paga integralmente no fechamento — saldo negativo nunca é descontado.</p></div>
       <div class="qa"><p class="q">Gera holerites?</p><p class="a">Sim — esse módulo é mais um diferencial do sistema AlePejo.</p></div>
+      <div class="qa"><p class="q">O colaborador confirma o recebimento pelo celular?</p><p class="a">Sim. Holerite, férias, 13º, adiantamento salarial e o extrato mensal do ponto têm confirmação digital — o colaborador recebe o link, confirma e pronto, sem papel.</p></div>
       <div class="qa"><p class="q">E se eu não souber qual plano escolher?</p><p class="a">É só entrar em contato: avaliamos a sua necessidade e indicamos quais módulos são mais adequados para a sua empresa.</p></div>
     </div>
   </div>

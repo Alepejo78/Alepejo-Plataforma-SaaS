@@ -336,7 +336,7 @@ export default function PlanosPage() {
   }, [plans, loading, atualizarSetas]);
 
   const sortedPlans = [...plans]
-    .filter((p) => p.code !== "ENTERPRISE" && p.code !== "CUSTOM")
+    .filter((p) => p.code !== "CUSTOM")
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   const customPlan = plans.find((p) => p.code === "CUSTOM");
