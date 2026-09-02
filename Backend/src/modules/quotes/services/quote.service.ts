@@ -395,6 +395,18 @@ ${summaryHtml}
     return this.repository.cancel(id, userId);
   }
 
+  async remove(companyId: string, id: string) {
+    const quote = await this.findOne(companyId, id);
+
+    if (quote.status !== QuoteStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Somente orçamentos cancelados podem ser excluídos.',
+      );
+    }
+
+    await this.prisma.quote.delete({ where: { id: quote.id } });
+  }
+
   /**
    * Aprova o orçamento e gera o Pedido de Venda sozinho (mesmos
    * itens/valores/cliente/depósito), reaproveitando

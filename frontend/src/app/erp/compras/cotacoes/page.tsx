@@ -368,6 +368,31 @@ export default function CotacoesPage() {
     }
   }
 
+  async function removeQuotation(id: string) {
+    if (!window.confirm("Excluir esta cotação? Não pode ser desfeito.")) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await quotationService.remove(id);
+
+      await load();
+
+      if (detail?.id === id) {
+        setDetail(null);
+      }
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível excluir a cotação.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   function openOfferForm() {
     if (!detail) {
       return;
@@ -734,6 +759,23 @@ export default function CotacoesPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
                               >
                                 <XCircle size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {q.status === "CANCELLED" && (
+                            <Can permission="quotation.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void removeQuotation(q.id)
+                                }
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </Can>
                           )}

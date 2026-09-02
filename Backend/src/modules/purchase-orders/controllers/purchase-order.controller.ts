@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -82,6 +83,16 @@ export class PurchaseOrderController {
     @Param('id') id: string,
   ) {
     return this.service.cancel(companyId, id, userId);
+  }
+
+  @Delete(':id')
+  @Permissions('purchase-order.delete')
+  @ApiOperation({ summary: 'Excluir pedido de compra cancelado' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(companyId, id);
   }
 
   @Patch(':id/reopen')

@@ -172,6 +172,18 @@ export class QuotationService {
     return this.repository.cancel(id, userId);
   }
 
+  async remove(companyId: string, id: string) {
+    const quotation = await this.findOne(companyId, id);
+
+    if (quotation.status !== QuotationStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Somente cotações canceladas podem ser excluídas.',
+      );
+    }
+
+    await this.prisma.quotation.delete({ where: { id: quotation.id } });
+  }
+
   async addOffer(
     companyId: string,
     rootCompanyId: string,

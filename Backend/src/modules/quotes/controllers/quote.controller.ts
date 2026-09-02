@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -80,6 +81,16 @@ export class QuoteController {
     @Param('id') id: string,
   ) {
     return this.service.cancel(companyId, id, userId);
+  }
+
+  @Delete(':id')
+  @Permissions('quote.delete')
+  @ApiOperation({ summary: 'Excluir orçamento cancelado' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(companyId, id);
   }
 
   @Patch(':id/approve')

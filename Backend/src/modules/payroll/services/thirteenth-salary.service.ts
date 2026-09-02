@@ -381,6 +381,16 @@ export class ThirteenthSalaryService {
     return this.repository.cancel(id);
   }
 
+  async remove(companyId: string, id: string) {
+    const thirteenth = await this.findOne(companyId, id);
+
+    if (thirteenth.status !== PayrollStatus.CANCELLED) {
+      throw new BadRequestException('Somente 13º cancelados podem ser excluídos.');
+    }
+
+    await this.prisma.thirteenthSalary.delete({ where: { id: thirteenth.id } });
+  }
+
   private assertDraft(status: PayrollStatus) {
     if (status !== PayrollStatus.DRAFT) {
       throw new BadRequestException('Somente 13º em rascunho pode ser alterado.');

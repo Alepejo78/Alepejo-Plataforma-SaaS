@@ -311,6 +311,16 @@ export class VacationGrantService {
     });
   }
 
+  async remove(companyId: string, id: string) {
+    const grant = await this.findOne(companyId, id);
+
+    if (grant.status !== PayrollStatus.CANCELLED) {
+      throw new BadRequestException('Somente gozos cancelados podem ser excluídos.');
+    }
+
+    await this.prisma.vacationGrant.delete({ where: { id: grant.id } });
+  }
+
   private assertDraft(status: PayrollStatus) {
     if (status !== PayrollStatus.DRAFT) {
       throw new BadRequestException('Somente gozos em rascunho podem ser alterados.');

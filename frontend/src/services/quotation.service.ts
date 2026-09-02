@@ -167,6 +167,10 @@ export const quotationService = {
     return data.data;
   },
 
+  async remove(id: string): Promise<void> {
+    await api.delete(`/quotations/${id}`);
+  },
+
   async addOffer(
     quotationId: string,
     payload: QuotationOfferPayload

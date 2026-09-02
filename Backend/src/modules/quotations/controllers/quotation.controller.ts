@@ -84,6 +84,16 @@ export class QuotationController {
     return this.service.cancel(companyId, id, userId);
   }
 
+  @Delete(':id')
+  @Permissions('quotation.delete')
+  @ApiOperation({ summary: 'Excluir cotação cancelada' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(companyId, id);
+  }
+
   @Post(':id/offers')
   @Permissions('quotation.update')
   @ApiOperation({

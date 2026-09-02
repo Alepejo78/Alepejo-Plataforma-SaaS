@@ -183,6 +183,10 @@ export const thirteenthSalaryService = {
     return data.data;
   },
 
+  async remove(id: string): Promise<void> {
+    await api.delete(`/thirteenth-salary/${id}`);
+  },
+
   async confirmItem(id: string, itemId: string): Promise<ThirteenthSalaryItem> {
     const { data } = await api.patch<ApiEnvelope<ThirteenthSalaryItem>>(
       `/thirteenth-salary/${id}/items/${itemId}/confirm`

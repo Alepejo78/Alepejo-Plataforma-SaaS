@@ -453,6 +453,56 @@ export class TimeTrackingService {
   }
 
   /**
+   * Desfaz um ajuste manual: restaura as batidas do dia pros valores
+   * `before*` gravados na auditoria (mesma mecânica de `adjustDay` —
+   * apaga as batidas atuais e recria a partir do snapshot) e remove o
+   * registro de ajuste. Só o registro de auditoria some, não é uma
+   * "delete lógico" — não sobra rastro de um ajuste que foi desfeito
+   * na mesma hora.
+   */
+  async reverseAdjustment(companyId: string, adjustmentId: string) {
+    const adjustment = await this.adjustmentRepository.findOne(
+      companyId,
+      adjustmentId,
+    );
+
+    if (!adjustment) {
+      throw new NotFoundException('Ajuste não encontrado.');
+    }
+
+    const { start, end } = dayRange(adjustment.date);
+
+    await this.entryRepository.deleteForDay(
+      companyId,
+      adjustment.employeeId,
+      start,
+      end,
+    );
+
+    const restoredEntries = (
+      [
+        adjustment.beforeStart,
+        adjustment.beforeBreakStart,
+        adjustment.beforeBreakEnd,
+        adjustment.beforeEnd,
+      ] as (Date | null)[]
+    ).filter((value): value is Date => value !== null);
+
+    if (restoredEntries.length > 0) {
+      await this.entryRepository.createMany(
+        companyId,
+        adjustment.employeeId,
+        restoredEntries.map((timestamp) => ({
+          timestamp,
+          source: TimeEntrySource.AJUSTE,
+        })),
+      );
+    }
+
+    await this.adjustmentRepository.delete(adjustmentId);
+  }
+
+  /**
    * Autolançamento (tela "Ponto - Manual", menu do avatar) — o
    * próprio colaborador lança o dia inteiro (4 horários, todos
    * obrigatórios) quando esqueceu de bater ponto. Sempre lança em

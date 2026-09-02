@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -175,6 +176,16 @@ export class VacationController {
     @Param('id') id: string,
   ) {
     return this.grantService.cancel(companyId, id);
+  }
+
+  @Delete('grants/:id')
+  @Permissions('vacation.delete')
+  @ApiOperation({ summary: 'Excluir gozo cancelado' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.grantService.remove(companyId, id);
   }
 
   @Patch('grants/:id/confirm')

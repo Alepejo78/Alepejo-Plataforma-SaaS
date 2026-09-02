@@ -106,6 +106,10 @@ export const salaryAdvanceService = {
     return data.data;
   },
 
+  async remove(id: string): Promise<void> {
+    await api.delete(`/salary-advances/${id}`);
+  },
+
   async confirmItem(id: string): Promise<SalaryAdvance> {
     const { data } = await api.patch<ApiEnvelope<SalaryAdvance>>(
       `/salary-advances/${id}/confirm`

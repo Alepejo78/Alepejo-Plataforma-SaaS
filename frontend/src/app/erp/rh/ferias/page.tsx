@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Eye, Mail, Plus, XCircle } from "lucide-react";
+import { Check, Eye, Mail, Plus, Trash2, XCircle } from "lucide-react";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
@@ -381,6 +381,35 @@ export default function FeriasPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
                               >
                                 <XCircle size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {g.status === "CANCELLED" && (
+                            <Can permission="vacation.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  if (
+                                    !window.confirm(
+                                      "Excluir este gozo de férias? Não pode ser desfeito."
+                                    )
+                                  ) {
+                                    return;
+                                  }
+
+                                  void runAction(
+                                    g.id,
+                                    vacationService.remove,
+                                    "Não foi possível excluir."
+                                  );
+                                }}
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </Can>
                           )}

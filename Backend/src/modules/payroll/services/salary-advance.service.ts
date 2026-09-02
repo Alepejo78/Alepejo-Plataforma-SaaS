@@ -185,6 +185,16 @@ export class SalaryAdvanceService {
     });
   }
 
+  async remove(companyId: string, id: string) {
+    const advance = await this.findOne(companyId, id);
+
+    if (advance.status !== PayrollStatus.CANCELLED) {
+      throw new BadRequestException('Somente adiantamentos cancelados podem ser excluídos.');
+    }
+
+    await this.prisma.salaryAdvance.delete({ where: { id: advance.id } });
+  }
+
   private assertDraft(status: PayrollStatus) {
     if (status !== PayrollStatus.DRAFT) {
       throw new BadRequestException('Somente adiantamentos em rascunho podem ser alterados.');

@@ -6,6 +6,7 @@ import {
   Mail,
   Plus,
   RotateCcw,
+  Trash2,
   X,
   XCircle,
 } from "lucide-react";
@@ -445,6 +446,35 @@ export default function AdiantamentosPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
                               >
                                 <RotateCcw size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {a.status === "CANCELLED" && (
+                            <Can permission="salary-advance.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  if (
+                                    !window.confirm(
+                                      "Excluir este adiantamento? Não pode ser desfeito."
+                                    )
+                                  ) {
+                                    return;
+                                  }
+
+                                  void runAction(
+                                    a.id,
+                                    salaryAdvanceService.remove,
+                                    "Não foi possível excluir."
+                                  );
+                                }}
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </Can>
                           )}

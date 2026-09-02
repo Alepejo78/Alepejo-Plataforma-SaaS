@@ -192,6 +192,10 @@ export const vacationService = {
     return data.data;
   },
 
+  async remove(id: string): Promise<void> {
+    await api.delete(`/vacation/grants/${id}`);
+  },
+
   async confirmItem(id: string): Promise<VacationGrant> {
     const { data } = await api.patch<ApiEnvelope<VacationGrant>>(
       `/vacation/grants/${id}/confirm`

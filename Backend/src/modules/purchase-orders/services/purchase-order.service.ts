@@ -345,6 +345,18 @@ ${summaryHtml}
     return this.repository.cancel(id, userId);
   }
 
+  async remove(companyId: string, id: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (order.status !== PurchaseOrderStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Somente pedidos cancelados podem ser excluídos.',
+      );
+    }
+
+    await this.prisma.purchaseOrder.delete({ where: { id: order.id } });
+  }
+
   /**
    * Volta um pedido convertido para rascunho — só quando a compra que
    * o converteu não existe mais (foi cancelada e excluída). O vínculo

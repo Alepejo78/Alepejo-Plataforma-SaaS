@@ -170,6 +170,10 @@ export const quoteService = {
     return data.data;
   },
 
+  async remove(id: string): Promise<void> {
+    await api.delete(`/quotes/${id}`);
+  },
+
   async approve(id: string): Promise<Quote> {
     const { data } = await api.patch<ApiEnvelope<Quote>>(
       `/quotes/${id}/approve`

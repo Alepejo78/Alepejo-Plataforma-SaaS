@@ -206,6 +206,7 @@ const permissionGroups = [
       ["quote.update", "Alterar Orçamentos"],
       ["quote.approve", "Aprovar Orçamentos"],
       ["quote.cancel", "Cancelar Orçamentos"],
+      ["quote.delete", "Excluir Orçamentos"],
     ],
   },
   {
@@ -295,6 +296,7 @@ const permissionGroups = [
       ["quotation.update", "Alterar Cotações"],
       ["quotation.decide", "Escolher Fornecedor Vencedor da Cotação"],
       ["quotation.cancel", "Cancelar Cotações"],
+      ["quotation.delete", "Excluir Cotações"],
     ],
   },
   {
@@ -305,6 +307,7 @@ const permissionGroups = [
       ["purchase-order.create", "Criar Pedidos de Compra"],
       ["purchase-order.update", "Alterar Pedidos de Compra"],
       ["purchase-order.cancel", "Cancelar Pedidos de Compra"],
+      ["purchase-order.delete", "Excluir Pedidos de Compra"],
     ],
   },
   {
@@ -527,6 +530,7 @@ const permissionGroups = [
       ["production-order.create", "Cadastrar Ordem de Produção"],
       ["production-order.update", "Alterar Ordem de Produção"],
       ["production-order.cancel", "Cancelar Ordem de Produção"],
+      ["production-order.delete", "Excluir Ordem de Produção"],
       [
         "production-order.complete",
         "Concluir/Estornar Ordem de Produção",
@@ -689,6 +693,7 @@ const permissionGroups = [
       ["thirteenth-salary.update", "Alterar Itens do 13º (ajustar/excluir)"],
       ["thirteenth-salary.approve", "Aprovar 13º Salário"],
       ["thirteenth-salary.cancel", "Cancelar 13º Salário"],
+      ["thirteenth-salary.delete", "Excluir 13º Salário"],
       ["thirteenth-salary.report", "Ver Recibos do 13º Salário"],
       ["thirteenth-salary.confirm-item", "Confirmar Recebimento de Recibo de 13º (manual ou enviar link)"],
     ],
@@ -702,6 +707,7 @@ const permissionGroups = [
       ["vacation.update", "Ajustar Gozo de Férias"],
       ["vacation.approve", "Aprovar Gozo de Férias"],
       ["vacation.cancel", "Cancelar Gozo de Férias"],
+      ["vacation.delete", "Excluir Gozo de Férias"],
       ["vacation.report", "Ver Recibos de Férias"],
       ["vacation.confirm-item", "Confirmar Recebimento de Recibo de Férias (manual ou enviar link)"],
     ],
@@ -714,6 +720,7 @@ const permissionGroups = [
       ["salary-advance.create", "Registrar Adiantamento Salarial"],
       ["salary-advance.approve", "Aprovar Adiantamento Salarial"],
       ["salary-advance.cancel", "Cancelar Adiantamento Salarial"],
+      ["salary-advance.delete", "Excluir Adiantamento Salarial"],
       ["salary-advance.confirm-item", "Confirmar Recebimento de Adiantamento (manual ou enviar link)"],
     ],
   },

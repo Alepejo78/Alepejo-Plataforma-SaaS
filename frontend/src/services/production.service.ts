@@ -169,6 +169,10 @@ export const productionOrderService = {
     return data.data;
   },
 
+  async remove(id: string): Promise<void> {
+    await api.delete(`/production-orders/${id}`);
+  },
+
   async complete(
     id: string,
     payload: CompleteProductionOrderPayload

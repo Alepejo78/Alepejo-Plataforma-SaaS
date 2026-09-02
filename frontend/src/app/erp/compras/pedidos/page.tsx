@@ -570,6 +570,27 @@ export default function PedidosDeCompraPage() {
     }
   }
 
+  async function removeOrder(id: string) {
+    if (!window.confirm("Excluir este pedido de compra? Não pode ser desfeito.")) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await purchaseOrderService.remove(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível excluir o pedido de compra.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   async function reopenOrder(id: string) {
     setActionId(id);
     setActionError("");
@@ -877,6 +898,21 @@ export default function PedidosDeCompraPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
                               >
                                 <Undo2 size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {o.status === "CANCELLED" && (
+                            <Can permission="purchase-order.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void removeOrder(o.id)}
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
                               </button>
                             </Can>
                           )}

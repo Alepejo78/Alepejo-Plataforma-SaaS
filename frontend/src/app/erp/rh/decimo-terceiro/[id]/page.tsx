@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   PlusCircle,
   RotateCcw,
   Settings2,
+  Trash2,
   X,
   XCircle,
 } from "lucide-react";
@@ -83,6 +84,7 @@ const ITEM_STATUS_BADGE_CLASS: Record<PayrollItemStatus, string> = {
 export default function DecimoTerceiroDetalhePage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
+  const router = useRouter();
   const exportTableRef = useRef<HTMLTableElement>(null);
 
   const [thirteenth, setThirteenth] = useState<ThirteenthSalary | null>(null);
@@ -248,6 +250,23 @@ export default function DecimoTerceiroDetalhePage() {
     }
   }
 
+  async function remove() {
+    if (!window.confirm("Excluir este 13º? Não pode ser desfeito.")) {
+      return;
+    }
+
+    setBusyId("remove");
+    setActionError("");
+
+    try {
+      await thirteenthSalaryService.remove(id);
+      router.push("/erp/rh/decimo-terceiro");
+    } catch (err) {
+      setActionError(extractMessage(err, "Não foi possível excluir."));
+      setBusyId("");
+    }
+  }
+
   async function reverse() {
     setBusyId("reverse");
     setActionError("");
@@ -266,6 +285,7 @@ export default function DecimoTerceiroDetalhePage() {
 
   const isDraft = thirteenth?.status === "DRAFT";
   const isApproved = thirteenth?.status === "APPROVED";
+  const isCancelled = thirteenth?.status === "CANCELLED";
 
   return (
     <AppShell workspaceLabel="13º Salário">
@@ -352,6 +372,20 @@ export default function DecimoTerceiroDetalhePage() {
                       >
                         <RotateCcw size={18} />
                         {busyId === "reverse" ? "Estornando..." : "Estornar aprovação"}
+                      </button>
+                    </Can>
+                  )}
+
+                  {isCancelled && (
+                    <Can permission="thirteenth-salary.delete">
+                      <button
+                        type="button"
+                        disabled={busyId === "remove"}
+                        onClick={() => void remove()}
+                        className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                      >
+                        <Trash2 size={18} />
+                        {busyId === "remove" ? "Excluindo..." : "Excluir"}
                       </button>
                     </Can>
                   )}

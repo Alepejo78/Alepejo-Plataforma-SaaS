@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -92,6 +93,16 @@ export class ProductionOrderController {
     @Param('id') id: string,
   ) {
     return this.service.cancel(companyId, id);
+  }
+
+  @Delete(':id')
+  @Permissions('production-order.delete')
+  @ApiOperation({ summary: 'Excluir ordem de produção cancelada' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(companyId, id);
   }
 
   @Patch(':id/complete')

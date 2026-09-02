@@ -10,6 +10,7 @@ import {
   Play,
   Plus,
   Settings,
+  Trash2,
   Undo2,
   X,
   XCircle,
@@ -758,6 +759,36 @@ export default function OrdensDeProducaoPage() {
                               >
                                 <Undo2 size={16} />
                                 Estornar
+                              </button>
+                            </Can>
+                          )}
+
+                          {o.status === "CANCELADA" && (
+                            <Can permission="production-order.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  if (
+                                    !window.confirm(
+                                      "Excluir esta ordem de produção? Não pode ser desfeito."
+                                    )
+                                  ) {
+                                    return;
+                                  }
+
+                                  void runAction(
+                                    o.id,
+                                    (id) => productionOrderService.remove(id),
+                                    "Não foi possível excluir."
+                                  );
+                                }}
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
+                                Excluir
                               </button>
                             </Can>
                           )}

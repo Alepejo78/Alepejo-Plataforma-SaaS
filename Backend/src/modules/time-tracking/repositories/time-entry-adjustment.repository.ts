@@ -42,6 +42,16 @@ export class TimeEntryAdjustmentRepository {
     });
   }
 
+  async findOne(companyId: string, id: string) {
+    return this.prisma.timeEntryAdjustment.findFirst({
+      where: { id, companyId },
+    });
+  }
+
+  async delete(id: string) {
+    await this.prisma.timeEntryAdjustment.delete({ where: { id } });
+  }
+
   async findAll(
     companyId: string,
     filter: { employeeId?: string; from?: Date; to?: Date },

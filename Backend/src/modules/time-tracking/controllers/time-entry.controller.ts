@@ -86,6 +86,16 @@ export class TimeEntryController {
     return this.service.deleteEntry(companyId, id);
   }
 
+  @Delete('adjustments/:id')
+  @Permissions('time-entry.update')
+  @ApiOperation({ summary: 'Desfazer um ajuste manual (restaura as batidas de antes)' })
+  reverseAdjustment(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.reverseAdjustment(companyId, id);
+  }
+
   @Post('approve')
   @Permissions('time-entry.approve')
   @ApiOperation({ summary: 'Aprovar o dia trabalhado de um colaborador' })

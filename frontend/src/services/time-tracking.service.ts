@@ -195,6 +195,10 @@ export const timeEntryService = {
     await api.delete(`/time-entries/${id}`);
   },
 
+  async reverseAdjustment(id: string) {
+    await api.delete(`/time-entries/adjustments/${id}`);
+  },
+
   async approve(employeeId: string, date: string) {
     const { data } = await api.post<ApiEnvelope<unknown>>(
       "/time-entries/approve",

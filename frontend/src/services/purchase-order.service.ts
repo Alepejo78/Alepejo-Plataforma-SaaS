@@ -159,6 +159,10 @@ export const purchaseOrderService = {
     return data.data;
   },
 
+  async remove(id: string): Promise<void> {
+    await api.delete(`/purchase-orders/${id}`);
+  },
+
   async reopen(id: string): Promise<PurchaseOrder> {
     const { data } = await api.patch<
       ApiEnvelope<PurchaseOrder>

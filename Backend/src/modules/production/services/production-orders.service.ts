@@ -187,6 +187,18 @@ export class ProductionOrdersService {
     return this.repository.cancel(id);
   }
 
+  async remove(companyId: string, id: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (order.status !== 'CANCELADA') {
+      throw new BadRequestException(
+        'Somente ordens canceladas podem ser excluídas.',
+      );
+    }
+
+    await this.prisma.productionOrder.delete({ where: { id: order.id } });
+  }
+
   /**
    * Conclui a ordem e gera a entrada de estoque da quantidade
    * produzida (custo médio ponderado, mesmo cálculo do recebimento

@@ -596,6 +596,27 @@ export default function OrcamentosPage() {
     }
   }
 
+  async function removeQuote(id: string) {
+    if (!window.confirm("Excluir este orçamento? Não pode ser desfeito.")) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await quoteService.remove(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível excluir o orçamento.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   async function approveQuote(id: string) {
     setActionId(id);
     setActionError("");
@@ -923,6 +944,21 @@ export default function OrcamentosPage() {
                                 </button>
                               </Can>
                             )}
+
+                          {q.status === "CANCELLED" && (
+                            <Can permission="quote.delete">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void removeQuote(q.id)}
+                                title="Excluir"
+                                aria-label="Excluir"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </Can>
+                          )}
                         </div>
                       </td>
                     </tr>

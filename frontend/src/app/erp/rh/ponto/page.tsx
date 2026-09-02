@@ -9,6 +9,7 @@ import {
   KeyRound,
   Pencil,
   ScanBarcode,
+  Trash2,
   Undo2,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import {
 import {
   minutesToLabel,
   timeEntryService,
+  TIME_ENTRY_SOURCE_LABELS,
   type DaySummary,
   type TimeEntryAdjustment,
 } from "@/services/time-tracking.service";
@@ -336,6 +338,33 @@ export default function ControleDePontoPage() {
     setAdjustError("");
   }
 
+  async function removeEntry(entryId: string) {
+    if (!window.confirm("Excluir esta batida? Não pode ser desfeito.")) {
+      return;
+    }
+
+    setAdjustError("");
+
+    try {
+      await timeEntryService.remove(entryId);
+
+      setAdjustSummary((current) =>
+        current
+          ? {
+              ...current,
+              entries: current.entries.filter((e) => e.id !== entryId),
+            }
+          : current
+      );
+
+      void load();
+    } catch (err) {
+      setAdjustError(
+        extractMessage(err, "Não foi possível excluir a batida.")
+      );
+    }
+  }
+
   async function confirmAdjust() {
     if (!adjustSummary) {
       return;
@@ -393,6 +422,35 @@ export default function ControleDePontoPage() {
       setConsultList([]);
     } finally {
       setConsultLoading(false);
+    }
+  }
+
+  async function reverseAdjustment(id: string) {
+    if (
+      !window.confirm(
+        "Desfazer este ajuste? As batidas do dia voltam pro que eram antes."
+      )
+    ) {
+      return;
+    }
+
+    setActionKey(`reverse-adj-${id}`);
+    setActionError("");
+
+    try {
+      await timeEntryService.reverseAdjustment(id);
+
+      if (consultSummary) {
+        await openConsult(consultSummary);
+      }
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível desfazer o ajuste.")
+      );
+    } finally {
+      setActionKey("");
     }
   }
 
@@ -826,6 +884,40 @@ export default function ControleDePontoPage() {
               vazio pra remover aquele horário do dia.
             </p>
 
+            {adjustSummary.entries.length > 0 && (
+              <div className="mb-4 rounded-xl border border-[var(--border)] p-3">
+                <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">
+                  Batidas registradas
+                </p>
+
+                <div className="space-y-1">
+                  {adjustSummary.entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between gap-2 text-sm"
+                    >
+                      <span className="text-[var(--text-primary)]">
+                        {timeLabel(entry.timestamp)}{" "}
+                        <span className="text-xs text-[var(--text-muted)]">
+                          ({TIME_ENTRY_SOURCE_LABELS[entry.source]})
+                        </span>
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => void removeEntry(entry.id)}
+                        title="Excluir batida"
+                        aria-label="Excluir batida"
+                        className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:text-[var(--danger)]"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Início</label>
@@ -1029,6 +1121,20 @@ export default function ControleDePontoPage() {
                       </span>{" "}
                       {adj.justification}
                     </p>
+
+                    <div className="mt-3 flex justify-end">
+                      <Can permission="time-entry.update">
+                        <button
+                          type="button"
+                          onClick={() => void reverseAdjustment(adj.id)}
+                          disabled={actionKey === `reverse-adj-${adj.id}`}
+                          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                        >
+                          <Undo2 size={14} />
+                          Desfazer ajuste
+                        </button>
+                      </Can>
+                    </div>
                   </div>
                 ))}
               </div>

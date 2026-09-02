@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -167,6 +168,16 @@ export class ThirteenthSalaryController {
     @Param('id') id: string,
   ) {
     return this.service.cancel(companyId, id);
+  }
+
+  @Delete(':id')
+  @Permissions('thirteenth-salary.delete')
+  @ApiOperation({ summary: 'Excluir 13º cancelado' })
+  remove(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.remove(companyId, id);
   }
 
   @Patch(':id/items/:itemId/confirm')
