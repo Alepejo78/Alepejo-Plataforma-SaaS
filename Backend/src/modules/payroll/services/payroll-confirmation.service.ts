@@ -97,6 +97,34 @@ export class PayrollConfirmationService {
   ) {
     const item = await this.findItemScoped(companyId, payrollId, itemId);
 
+    return this.applyConfirm(item, confirmedById);
+  }
+
+  /** Autoatendimento (Meu Holerite) — o próprio colaborador confirma o recebimento. */
+  async confirmMine(
+    companyId: string,
+    employeeId: string,
+    itemId: string,
+    confirmedByUserId: string,
+  ) {
+    const item = await this.prisma.payrollItem.findFirst({
+      where: { id: itemId, employeeId, payroll: { companyId } },
+      include: {
+        financialEntry: { select: { status: true, dueDate: true } },
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Holerite não encontrado.');
+    }
+
+    return this.applyConfirm(item, confirmedByUserId);
+  }
+
+  private async applyConfirm(
+    item: { id: string; confirmationStatus: PayrollConfirmationStatus; financialEntry: { status: string } | null },
+    confirmedById: string,
+  ) {
     if (item.confirmationStatus === PayrollConfirmationStatus.CONFIRMADO) {
       throw new BadRequestException('Este holerite já está confirmado.');
     }

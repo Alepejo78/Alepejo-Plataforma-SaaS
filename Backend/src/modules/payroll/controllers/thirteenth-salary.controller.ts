@@ -18,6 +18,7 @@ import { Module } from '../../identity/license/decorators/module.decorator';
 
 import { ThirteenthSalaryService } from '../services/thirteenth-salary.service';
 import { ThirteenthConfirmationService } from '../services/thirteenth-confirmation.service';
+import { EmployeesService } from '../../employees/services/employees.service';
 
 import { GenerateThirteenthSalaryDto } from '../dto/generate-thirteenth-salary.dto';
 import { AdjustPayrollItemDto } from '../dto/adjust-payroll-item.dto';
@@ -29,7 +30,31 @@ export class ThirteenthSalaryController {
   constructor(
     private readonly service: ThirteenthSalaryService,
     private readonly confirmationService: ThirteenthConfirmationService,
+    private readonly employeesService: EmployeesService,
   ) {}
+
+  /**
+   * Autoatendimento — sem permissão nenhuma (mesmo padrão de
+   * `EmployeesController.findMine`). Precisam vir antes de `:id` pelo
+   * mesmo motivo das rotas públicas abaixo.
+   */
+  @Get('me/items')
+  @ApiOperation({ summary: 'Meu histórico de recibos de 13º (autoatendimento)' })
+  async findMineItems(@CurrentUser('companyId') companyId: string, @CurrentUser('id') userId: string) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.service.findMineItems(companyId, employee.id);
+  }
+
+  @Post('me/:id/items/:itemId/confirm')
+  @ApiOperation({ summary: 'Confirmar recebimento do meu recibo de 13º (autoatendimento)' })
+  async confirmMine(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('itemId') itemId: string,
+  ) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.confirmationService.confirmMine(companyId, employee.id, itemId, userId);
+  }
 
   /**
    * Rotas públicas (sem login) — precisam vir ANTES de `:id`, senão o

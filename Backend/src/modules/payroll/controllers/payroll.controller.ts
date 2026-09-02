@@ -48,6 +48,17 @@ export class PayrollController {
     return this.service.findMineItems(companyId, employee.id);
   }
 
+  @Post('me/items/:itemId/confirm')
+  @ApiOperation({ summary: 'Confirmar recebimento do meu holerite (autoatendimento)' })
+  async confirmMine(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('itemId') itemId: string,
+  ) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.confirmationService.confirmMine(companyId, employee.id, itemId, userId);
+  }
+
   /**
    * Rotas públicas (sem login) — o colaborador confirma o recebimento
    * do holerite pelo link enviado por e-mail/WhatsApp. Precisam vir

@@ -80,6 +80,34 @@ export class ThirteenthConfirmationService {
   ) {
     const item = await this.findItemScoped(companyId, thirteenthSalaryId, itemId);
 
+    return this.applyConfirm(item, confirmedById);
+  }
+
+  /** Autoatendimento (Meu Holerite) — o próprio colaborador confirma o recebimento. */
+  async confirmMine(
+    companyId: string,
+    employeeId: string,
+    itemId: string,
+    confirmedByUserId: string,
+  ) {
+    const item = await this.prisma.thirteenthSalaryItem.findFirst({
+      where: { id: itemId, employeeId, thirteenthSalary: { companyId } },
+      include: {
+        financialEntry: { select: { status: true, dueDate: true } },
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Recibo de 13º não encontrado.');
+    }
+
+    return this.applyConfirm(item, confirmedByUserId);
+  }
+
+  private async applyConfirm(
+    item: { id: string; confirmationStatus: PayrollConfirmationStatus; financialEntry: { status: string } | null },
+    confirmedById: string,
+  ) {
     if (item.confirmationStatus === PayrollConfirmationStatus.CONFIRMADO) {
       throw new BadRequestException('Este recibo já está confirmado.');
     }

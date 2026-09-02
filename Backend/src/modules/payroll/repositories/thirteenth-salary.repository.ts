@@ -78,6 +78,23 @@ export class ThirteenthSalaryRepository {
     });
   }
 
+  /** Meu histórico de recibos de 13º (autoatendimento) — só parcelas já aprovadas. */
+  async findMineItems(companyId: string, employeeId: string) {
+    return this.prisma.thirteenthSalaryItem.findMany({
+      where: { employeeId, thirteenthSalary: { companyId, status: 'APPROVED' } },
+      include: {
+        ...itemInclude,
+        thirteenthSalary: {
+          select: { id: true, year: true, installment: true, paymentDate: true },
+        },
+      },
+      orderBy: [
+        { thirteenthSalary: { year: 'desc' } },
+        { thirteenthSalary: { installment: 'desc' } },
+      ],
+    });
+  }
+
   async recalculateHeaderTotals(tx: Prisma.TransactionClient, thirteenthSalaryId: string) {
     const items = await tx.thirteenthSalaryItem.findMany({
       where: { thirteenthSalaryId, status: { not: 'EXCLUDED' } },

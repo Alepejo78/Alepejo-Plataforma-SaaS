@@ -69,6 +69,17 @@ export class VacationController {
     return this.grantService.findAll(companyId, { employeeId: employee.id });
   }
 
+  @Post('me/grants/:id/confirm')
+  @ApiOperation({ summary: 'Confirmar recebimento do meu recibo de férias (autoatendimento)' })
+  async confirmMineGrant(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.confirmationService.confirmMine(companyId, employee.id, id, userId);
+  }
+
   @Post('me/grants')
   @ApiOperation({ summary: 'Pedir férias (autoatendimento — nasce aguardando aprovação do RH)' })
   async createMineGrant(

@@ -192,6 +192,15 @@ export const payrollService = {
     return data.data ?? [];
   },
 
+  /** Meu Holerite (autoatendimento) — confirmar recebimento. */
+  async confirmMine(itemId: string): Promise<PayrollItem> {
+    const { data } = await api.post<ApiEnvelope<PayrollItem>>(
+      `/payroll/me/items/${itemId}/confirm`
+    );
+
+    return data.data;
+  },
+
   async generate(payload: GeneratePayrollPayload): Promise<Payroll> {
     const { data } = await api.post<ApiEnvelope<Payroll>>(
       "/payroll/generate",

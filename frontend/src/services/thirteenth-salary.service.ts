@@ -94,6 +94,16 @@ export interface AdjustThirteenthSalaryItemPayload {
   observation?: string;
 }
 
+/** Item retornado por `GET /thirteenth-salary/me/items` (Meu Holerite — autoatendimento). */
+export interface MineThirteenthItem extends ThirteenthSalaryItem {
+  thirteenthSalary: {
+    id: string;
+    year: number;
+    installment: number;
+    paymentDate?: string | null;
+  };
+}
+
 export function formatThirteenthNumber(n: number) {
   return `13S-${String(n).padStart(6, "0")}`;
 }
@@ -202,6 +212,27 @@ export const thirteenthSalaryService = {
     const { data } = await api.post<
       ApiEnvelope<{ sent: boolean; channels: string[] }>
     >(`/thirteenth-salary/${id}/items/${itemId}/send-confirmation`);
+
+    return data.data;
+  },
+
+  /** Meu Holerite (autoatendimento) — histórico de recibos de 13º. */
+  async getMineItems(): Promise<MineThirteenthItem[]> {
+    const { data } = await api.get<ApiEnvelope<MineThirteenthItem[]>>(
+      "/thirteenth-salary/me/items"
+    );
+
+    return data.data ?? [];
+  },
+
+  /** Meu Holerite (autoatendimento) — confirmar recebimento do recibo de 13º. */
+  async confirmMine(
+    thirteenthSalaryId: string,
+    itemId: string
+  ): Promise<ThirteenthSalaryItem> {
+    const { data } = await api.post<ApiEnvelope<ThirteenthSalaryItem>>(
+      `/thirteenth-salary/me/${thirteenthSalaryId}/items/${itemId}/confirm`
+    );
 
     return data.data;
   },

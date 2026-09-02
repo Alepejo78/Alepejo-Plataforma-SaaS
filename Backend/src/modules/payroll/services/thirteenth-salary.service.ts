@@ -169,6 +169,11 @@ export class ThirteenthSalaryService {
     return thirteenth;
   }
 
+  /** Meu histórico de recibos de 13º (autoatendimento). */
+  async findMineItems(companyId: string, employeeId: string) {
+    return this.repository.findMineItems(companyId, employeeId);
+  }
+
   async findItem(companyId: string, thirteenthSalaryId: string, itemId: string) {
     const item = await this.repository.findItem(companyId, thirteenthSalaryId, itemId);
 

@@ -78,6 +78,34 @@ export class VacationConfirmationService {
   async confirm(companyId: string, id: string, confirmedById: string) {
     const grant = await this.findScoped(companyId, id);
 
+    return this.applyConfirm(grant, confirmedById);
+  }
+
+  /** Autoatendimento (Meu Holerite) — o próprio colaborador confirma o recebimento. */
+  async confirmMine(
+    companyId: string,
+    employeeId: string,
+    id: string,
+    confirmedByUserId: string,
+  ) {
+    const grant = await this.prisma.vacationGrant.findFirst({
+      where: { id, employeeId, companyId },
+      include: {
+        financialEntry: { select: { status: true, dueDate: true } },
+      },
+    });
+
+    if (!grant) {
+      throw new NotFoundException('Gozo de férias não encontrado.');
+    }
+
+    return this.applyConfirm(grant, confirmedByUserId);
+  }
+
+  private async applyConfirm(
+    grant: { id: string; confirmationStatus: PayrollConfirmationStatus; financialEntry: { status: string } | null },
+    confirmedById: string,
+  ) {
     if (grant.confirmationStatus === PayrollConfirmationStatus.CONFIRMADO) {
       throw new BadRequestException('Este recibo já está confirmado.');
     }

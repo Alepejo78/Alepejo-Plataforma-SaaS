@@ -96,6 +96,23 @@ export class PpeDeliveriesService {
     return this.repository.confirm(id, userId);
   }
 
+  /** Autoatendimento (Minha Ficha de EPI) — o próprio colaborador confirma o recebimento. */
+  async confirmMine(companyId: string, employeeId: string, id: string, userId: string) {
+    const delivery = await this.findOne(companyId, id);
+
+    if (delivery.employeeId !== employeeId) {
+      throw new NotFoundException('Entrega de EPI não encontrada.');
+    }
+
+    if (delivery.status === 'CONFIRMADO') {
+      throw new BadRequestException(
+        'Esta entrega já está confirmada.',
+      );
+    }
+
+    return this.repository.confirm(id, userId);
+  }
+
   /**
    * Gera (ou renova) o link de confirmação e manda pro colaborador por
    * e-mail e/ou WhatsApp — mesmo padrão best-effort de

@@ -274,6 +274,36 @@ export default function FichaEpiPage() {
     }
   }
 
+  async function confirmMine(delivery: PpeDelivery) {
+    if (
+      !window.confirm(
+        `Confirmar recebimento do EPI "${delivery.ppeType?.name}"? Isso registra a data/hora e vale como assinatura digital.`
+      )
+    ) {
+      return;
+    }
+
+    setActionId(delivery.id);
+    setListError("");
+
+    try {
+      await ppeDeliveryService.confirmMine(delivery.id);
+
+      if (employee) {
+        await load(employee.id);
+      }
+    } catch (err) {
+      setListError(
+        extractMessage(
+          err,
+          "Não foi possível confirmar o recebimento."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   async function sendConfirmation(delivery: PpeDelivery) {
     setActionId(delivery.id);
     setListError("");
@@ -490,6 +520,18 @@ export default function FichaEpiPage() {
 
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
+                            {isSelfService && d.status === "PENDENTE" && (
+                              <button
+                                type="button"
+                                disabled={actionId === d.id}
+                                onClick={() => void confirmMine(d)}
+                                className="flex items-center gap-1.5 rounded-lg border border-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-soft)] disabled:opacity-40"
+                              >
+                                <Check size={14} />
+                                Confirmar recebimento
+                              </button>
+                            )}
+
                             {d.status === "PENDENTE" && (
                               <Can permission="ppe-delivery.approve">
                                 <button

@@ -926,6 +926,15 @@ export const ppeDeliveryService = {
 
     return data.data;
   },
+
+  /** Minha Ficha de EPI (autoatendimento) — confirmar recebimento. */
+  async confirmMine(id: string): Promise<PpeDelivery> {
+    const { data } = await api.post<ApiEnvelope<PpeDelivery>>(
+      `/ppe-deliveries/me/${id}/confirm`
+    );
+
+    return data.data;
+  },
 };
 
 export interface PpeDeliveryPublicInfo {

@@ -241,6 +241,15 @@ export const vacationService = {
 
     return data.data;
   },
+
+  /** Meu Holerite (autoatendimento) — confirmar recebimento do recibo de férias. */
+  async confirmMineGrant(id: string): Promise<VacationGrant> {
+    const { data } = await api.post<ApiEnvelope<VacationGrant>>(
+      `/vacation/me/grants/${id}/confirm`
+    );
+
+    return data.data;
+  },
 };
 
 export interface VacationPublicInfo {

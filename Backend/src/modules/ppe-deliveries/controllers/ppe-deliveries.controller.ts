@@ -51,6 +51,17 @@ export class PpeDeliveriesController {
     return this.service.findAll(user.companyId, filter);
   }
 
+  /** Autoatendimento (Minha Ficha de EPI) — sem permissão, precisa vir antes de `:id`. */
+  @Post('me/:id/confirm')
+  async confirmMine(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    const employee = await this.employeesService.findMine(companyId, userId);
+    return this.service.confirmMine(companyId, employee.id, id, userId);
+  }
+
   /**
    * Rotas públicas (sem login) — o colaborador confirma o recebimento
    * pelo link enviado por e-mail/WhatsApp. Precisam vir ANTES de
