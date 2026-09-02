@@ -220,6 +220,9 @@ interface FormState {
   vacationEndDate: string;
   onVacation: boolean;
 
+  hourBankEnabled: boolean;
+  hourBankClosingDate: string;
+
   benefitValues: Record<
     string,
     { checked: boolean; value: number; percentage: number }
@@ -300,6 +303,9 @@ function emptyForm(companyId = ""): FormState {
     vacationDays: "",
     vacationEndDate: "",
     onVacation: false,
+
+    hourBankEnabled: false,
+    hourBankClosingDate: "",
 
     benefitValues: {},
     lockerKey: "",
@@ -528,6 +534,9 @@ export default function ColaboradoresPage() {
       vacationEndDate: toDateInput(item.vacationEndDate),
       onVacation: item.onVacation,
 
+      hourBankEnabled: item.hourBankEnabled,
+      hourBankClosingDate: toDateInput(item.hourBankClosingDate),
+
       benefitValues: Object.fromEntries(
         item.employeeBenefits.map((eb) => [
           eb.benefitId,
@@ -732,6 +741,9 @@ export default function ColaboradoresPage() {
         : undefined,
       vacationEndDate: form.vacationEndDate || undefined,
       onVacation: form.onVacation,
+
+      hourBankEnabled: form.hourBankEnabled,
+      hourBankClosingDate: form.hourBankClosingDate || undefined,
 
       benefits: Object.entries(form.benefitValues)
         .filter(([, v]) => v.checked)
@@ -2413,6 +2425,53 @@ export default function ColaboradoresPage() {
                           />
                           Em férias
                         </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[var(--border)] pt-6">
+                    <p className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+                      Banco de horas
+                    </p>
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="flex items-center justify-center">
+                        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                          <input
+                            type="checkbox"
+                            checked={form.hourBankEnabled}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                hourBankEnabled: e.target.checked,
+                              })
+                            }
+                          />
+                          Banco de horas
+                        </label>
+                      </div>
+
+                      <div className="mx-auto w-40">
+                        <label className={labelClass}>
+                          Fechamento do banco
+                        </label>
+
+                        <input
+                          type="date"
+                          className={fieldClass}
+                          value={form.hourBankClosingDate}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              hourBankClosingDate: e.target.value,
+                            })
+                          }
+                        />
+
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Hora extra não é paga todo mês — acumula
+                          até esta data.
+                        </p>
                       </div>
                     </div>
                   </div>

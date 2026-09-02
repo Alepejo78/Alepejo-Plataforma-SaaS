@@ -107,6 +107,9 @@ export class EmployeesRepository {
         ),
         onVacation: dto.onVacation ?? false,
 
+        hourBankEnabled: dto.hourBankEnabled ?? false,
+        hourBankClosingDate: toDateOrUndefined(dto.hourBankClosingDate),
+
         lockerKey: dto.lockerKey,
         lockerNumber: dto.lockerNumber,
         shoeSize: dto.shoeSize,
@@ -344,6 +347,9 @@ export class EmployeesRepository {
           dto.vacationEndDate,
         ),
         onVacation: dto.onVacation,
+
+        hourBankEnabled: dto.hourBankEnabled,
+        hourBankClosingDate: toDateOrUndefined(dto.hourBankClosingDate),
 
         lockerKey: dto.lockerKey,
         lockerNumber: dto.lockerNumber,

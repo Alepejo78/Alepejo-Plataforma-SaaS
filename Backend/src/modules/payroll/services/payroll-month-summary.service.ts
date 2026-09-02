@@ -73,4 +73,31 @@ export class PayrollMonthSummaryService {
       unjustifiedAbsenceDays: distinctAbsenceDates.size,
     };
   }
+
+  /**
+   * Saldo líquido (`extraMinutes` - `compensatedMinutes`) num período
+   * arbitrário (não necessariamente um mês de competência) — usado
+   * pelo banco de horas, tanto pra pagar o acumulado no fechamento
+   * (`PayrollService`) quanto pro acompanhamento de horas mostrar o
+   * saldo corrente. Pode dar negativo (dias com déficit pesando mais
+   * que os de hora extra) — quem chama decide o que fazer com isso
+   * (a folha não desconta saldo negativo, só não paga nada).
+   */
+  async getExtraMinutesInRange(
+    companyId: string,
+    employeeId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number> {
+    const days = await this.timeTrackingService.getDaySummaries(companyId, {
+      employeeId,
+      from: from.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10),
+    });
+
+    return days.reduce(
+      (sum, day) => sum + day.extraMinutes - day.compensatedMinutes,
+      0,
+    );
+  }
 }

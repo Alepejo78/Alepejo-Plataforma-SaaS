@@ -19,6 +19,8 @@ const itemInclude = {
       bankAgency: true,
       bankAccount: true,
       paymentMethod: true,
+      hourBankEnabled: true,
+      hourBankClosingDate: true,
       jobFunction: { select: { id: true, name: true } },
     },
   },

@@ -387,6 +387,21 @@ export class CreateEmployeeDto {
   @IsBoolean()
   onVacation?: boolean;
 
+  @ApiPropertyOptional({
+    description:
+      'Banco de horas: quando ativo, hora extra não é paga todo mês — acumula até hourBankClosingDate.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  hourBankEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Próxima data de fechamento do banco de horas — o RH define manualmente.',
+  })
+  @IsOptional()
+  @IsDateString()
+  hourBankClosingDate?: string;
+
   // --- Benefícios (catálogo dinâmico) ---
   @ApiPropertyOptional({ type: [EmployeeBenefitDto] })
   @IsOptional()

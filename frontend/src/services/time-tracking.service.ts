@@ -246,7 +246,25 @@ export const timeEntryService = {
 
     return data.data ?? [];
   },
+
+  async getHourBankSummary(
+    employeeId: string
+  ): Promise<HourBankSummary> {
+    const { data } = await api.get<ApiEnvelope<HourBankSummary>>(
+      "/time-entries/hour-bank-summary",
+      { params: { employeeId } }
+    );
+
+    return data.data;
+  },
 };
+
+export interface HourBankSummary {
+  hourBankEnabled: boolean;
+  hourBankClosingDate: string | null;
+  hourBankSettledUntil: string | null;
+  accumulatedMinutes: number;
+}
 
 export const absenceRecordService = {
   async list(

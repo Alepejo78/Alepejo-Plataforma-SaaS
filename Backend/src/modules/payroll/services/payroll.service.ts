@@ -21,7 +21,7 @@ import { PayrollRepository } from '../repositories/payroll.repository';
 
 import { PayrollTaxTableService } from './payroll-tax-table.service';
 import { PayrollSettingsService } from './payroll-settings.service';
-import { PayrollMonthSummaryService } from './payroll-month-summary.service';
+import { PayrollMonthSummaryService, PayrollMonthSummary } from './payroll-month-summary.service';
 import { PayrollItemBuilderService, EmployeeForPayroll } from './payroll-item-builder.service';
 
 import { GeneratePayrollDto } from '../dto/generate-payroll.dto';
@@ -96,11 +96,17 @@ export class PayrollService {
 
     const computed = await Promise.all(
       employees.map(async (employee) => {
-        const summary = await this.monthSummaryService.getSummary(
+        const summary = await this.applyHourBank(
           companyId,
-          employee.id,
+          employee,
           dto.competenceYear,
           dto.competenceMonth,
+          await this.monthSummaryService.getSummary(
+            companyId,
+            employee.id,
+            dto.competenceYear,
+            dto.competenceMonth,
+          ),
         );
 
         return {
@@ -272,11 +278,17 @@ export class PayrollService {
     );
     const settings = await this.settingsService.find(rootCompanyId);
 
-    const summary = await this.monthSummaryService.getSummary(
+    const summary = await this.applyHourBank(
       payroll.companyId,
-      employee.id,
+      employee,
       payroll.competenceYear,
       payroll.competenceMonth,
+      await this.monthSummaryService.getSummary(
+        payroll.companyId,
+        employee.id,
+        payroll.competenceYear,
+        payroll.competenceMonth,
+      ),
     );
 
     const computed = this.itemBuilder.build(employee, summary, taxTable, settings, adjustments);
@@ -325,6 +337,55 @@ export class PayrollService {
     });
 
     return updated;
+  }
+
+  private isHourBankClosingMonth(
+    closingDate: Date | null,
+    year: number,
+    month: number,
+  ): boolean {
+    return (
+      !!closingDate &&
+      closingDate.getUTCFullYear() === year &&
+      closingDate.getUTCMonth() + 1 === month
+    );
+  }
+
+  /**
+   * Banco de horas: fora do mês de fechamento não gera linha de hora
+   * extra nenhuma (fica só acumulando no ponto, sem afetar a folha).
+   * No mês do fechamento, paga o acumulado desde o último fechamento
+   * (ou a admissão, se nunca fechou) — se negativo, zero (nunca
+   * desconta, regra explícita do RH).
+   */
+  private async applyHourBank(
+    companyId: string,
+    employee: EmployeeForPayroll,
+    year: number,
+    month: number,
+    summary: PayrollMonthSummary,
+  ): Promise<PayrollMonthSummary> {
+    if (!employee.hourBankEnabled) {
+      return summary;
+    }
+
+    if (!this.isHourBankClosingMonth(employee.hourBankClosingDate, year, month)) {
+      return { ...summary, extraMinutes: 0 };
+    }
+
+    const from =
+      employee.hourBankSettledUntil ??
+      employee.admissionDate ??
+      employee.hourBankClosingDate!;
+
+    const cumulativeExtraMinutes = await this.monthSummaryService.getExtraMinutesInRange(
+      companyId,
+      employee.id,
+      from,
+      employee.hourBankClosingDate!,
+    );
+
+    return { ...summary, extraMinutes: Math.max(cumulativeExtraMinutes, 0) };
   }
 
   async excludeItem(companyId: string, payrollId: string, itemId: string) {
@@ -443,6 +504,26 @@ export class PayrollService {
           approvedByUserId,
         },
       });
+
+      // Banco de horas: fechou nesta competência (o acumulado já foi
+      // pago acima, via item.extraAmount calculado em `applyHourBank`)
+      // — zera o acumulado marcando até onde já foi pago. A próxima
+      // data de fechamento o RH define manualmente depois.
+      for (const item of includedItems) {
+        if (
+          item.employee.hourBankEnabled &&
+          this.isHourBankClosingMonth(
+            item.employee.hourBankClosingDate,
+            payroll.competenceYear,
+            payroll.competenceMonth,
+          )
+        ) {
+          await tx.employee.update({
+            where: { id: item.employeeId },
+            data: { hourBankSettledUntil: item.employee.hourBankClosingDate },
+          });
+        }
+      }
     });
 
     return this.findOne(companyId, id);

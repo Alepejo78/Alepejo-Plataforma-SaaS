@@ -2980,6 +2980,15 @@ model Employee {
   vacationEndDate   DateTime?
   onVacation        Boolean   @default(false)
 
+  /// Banco de horas: quando ativo, hora extra não é paga todo mês —
+  /// acumula até `hourBankClosingDate` (data que o RH define
+  /// manualmente). No mês do fechamento a folha paga o acumulado
+  /// (se positivo) e zera `hourBankSettledUntil` pra essa mesma data.
+  /// Saldo negativo nunca desconta.
+  hourBankEnabled      Boolean   @default(false)
+  hourBankClosingDate  DateTime?
+  hourBankSettledUntil DateTime?
+
   // --- Dados bancários (pagamento de salário) ---
   bankName        String?          @db.VarChar(100)
   bankAgency      String?          @db.VarChar(20)

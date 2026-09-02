@@ -136,6 +136,16 @@ export class TimeEntryController {
     return this.service.getDaySummaries(user.companyId, filter);
   }
 
+  @Get('hour-bank-summary')
+  @Permissions('time-entry.view')
+  @ApiOperation({ summary: 'Acumulado do banco de horas (desde o último fechamento até hoje)' })
+  getHourBankSummary(
+    @CurrentUser('companyId') companyId: string,
+    @Query('employeeId') employeeId: string,
+  ) {
+    return this.service.getHourBankSummary(companyId, employeeId);
+  }
+
   @Get('adjustments')
   @Permissions('time-entry.view')
   @ApiOperation({

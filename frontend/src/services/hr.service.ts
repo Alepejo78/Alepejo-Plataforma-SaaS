@@ -545,6 +545,10 @@ export interface Employee {
   vacationEndDate?: string | null;
   onVacation: boolean;
 
+  hourBankEnabled: boolean;
+  hourBankClosingDate?: string | null;
+  hourBankSettledUntil?: string | null;
+
   lockerKey?: string | null;
   lockerNumber?: string | null;
   shoeSize?: string | null;
@@ -642,6 +646,9 @@ export interface EmployeePayload {
   vacationDays?: number;
   vacationEndDate?: string;
   onVacation?: boolean;
+
+  hourBankEnabled?: boolean;
+  hourBankClosingDate?: string;
 
   lockerKey?: string;
   lockerNumber?: string;

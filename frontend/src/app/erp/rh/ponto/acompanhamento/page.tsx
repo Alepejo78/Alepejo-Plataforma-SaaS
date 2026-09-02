@@ -21,6 +21,7 @@ import {
   timeEntryService,
   type AbsenceType,
   type DaySlots,
+  type HourBankSummary,
 } from "@/services/time-tracking.service";
 
 type RowType = "WORKED" | AbsenceType;
@@ -142,6 +143,9 @@ export default function AcompanhamentoDeHorasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [hourBankSummary, setHourBankSummary] =
+    useState<HourBankSummary | null>(null);
+
   useEffect(() => {
     companyService
       .getMine()
@@ -256,6 +260,20 @@ export default function AcompanhamentoDeHorasPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!employeeId) {
+      setHourBankSummary(null);
+      return;
+    }
+
+    timeEntryService
+      .getHourBankSummary(employeeId)
+      .then((summary) =>
+        setHourBankSummary(summary.hourBankEnabled ? summary : null)
+      )
+      .catch(() => setHourBankSummary(null));
+  }, [employeeId]);
 
   const totalPositive = rows.reduce(
     (sum, r) => sum + r.extraMinutes,
@@ -417,22 +435,39 @@ export default function AcompanhamentoDeHorasPage() {
         </div>
       )}
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div
+        className={`mt-4 grid gap-3 sm:grid-cols-3 ${hourBankSummary ? "lg:grid-cols-4" : ""}`}
+      >
         <IndicatorCard
-          title="Total de horas positivas"
+          title="Total de horas positivas (mês)"
           value={minutesToLabel(totalPositive)}
           tone="success"
         />
         <IndicatorCard
-          title="Total de horas compensadas"
+          title="Total de horas compensadas (mês)"
           value={minutesToLabel(totalCompensated)}
           tone="danger"
         />
         <IndicatorCard
-          title="Saldo geral"
+          title="Saldo do mês"
           value={`${saldo >= 0 ? "+" : "-"}${minutesToLabel(Math.abs(saldo))}`}
           tone={saldo >= 0 ? "success" : "danger"}
         />
+        {hourBankSummary && (
+          <IndicatorCard
+            title={`Banco de horas acumulado${
+              hourBankSummary.hourBankClosingDate
+                ? ` (fecha em ${dateLabel(hourBankSummary.hourBankClosingDate.slice(0, 10))})`
+                : ""
+            }`}
+            value={`${hourBankSummary.accumulatedMinutes >= 0 ? "+" : "-"}${minutesToLabel(Math.abs(hourBankSummary.accumulatedMinutes))}`}
+            tone={
+              hourBankSummary.accumulatedMinutes >= 0
+                ? "success"
+                : "neutral"
+            }
+          />
+        )}
       </div>
 
       <div className="mt-4 overflow-x-auto rounded-2xl border border-[var(--border)] print:rounded-none print:border-black">

@@ -503,6 +503,50 @@ export class TimeTrackingService {
   }
 
   /**
+   * Banco de horas: acumulado de hora extra desde o último fechamento
+   * (`hourBankSettledUntil`, ou a admissão se nunca fechou) até hoje —
+   * mesmo cálculo usado na folha pra pagar o fechamento
+   * (`PayrollService.applyHourBank`), só que projetado até a data
+   * atual em vez do próximo fechamento.
+   */
+  async getHourBankSummary(companyId: string, employeeId: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: { id: employeeId, companyId },
+      select: {
+        hourBankEnabled: true,
+        hourBankClosingDate: true,
+        hourBankSettledUntil: true,
+        admissionDate: true,
+      },
+    });
+
+    if (!employee) {
+      throw new NotFoundException('Colaborador não encontrado.');
+    }
+
+    const today = new Date();
+    const from = employee.hourBankSettledUntil ?? employee.admissionDate ?? today;
+
+    const days = await this.getDaySummaries(companyId, {
+      employeeId,
+      from: from.toISOString().slice(0, 10),
+      to: today.toISOString().slice(0, 10),
+    });
+
+    const accumulatedMinutes = days.reduce(
+      (sum, day) => sum + day.extraMinutes - day.compensatedMinutes,
+      0,
+    );
+
+    return {
+      hourBankEnabled: employee.hourBankEnabled,
+      hourBankClosingDate: employee.hourBankClosingDate,
+      hourBankSettledUntil: employee.hourBankSettledUntil,
+      accumulatedMinutes,
+    };
+  }
+
+  /**
    * Autolançamento (tela "Ponto - Manual", menu do avatar) — o
    * próprio colaborador lança o dia inteiro (4 horários, todos
    * obrigatórios) quando esqueceu de bater ponto. Sempre lança em
