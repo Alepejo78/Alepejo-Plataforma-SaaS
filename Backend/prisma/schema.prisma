@@ -210,6 +210,7 @@ model Company {
 
   productionOrders   ProductionOrder[]
   productionSettings ProductionSettings?
+  salesSettings      SalesSettings?
 
   timeEntries          TimeEntry[]
   timeSheetApprovals   TimeSheetApproval[]
@@ -1369,6 +1370,11 @@ model DocumentSequence {
 
 enum QuoteStatus {
   DRAFT
+  /// Link de aprovação enviado ao cliente, aguardando decisão dele.
+  SENT
+  /// Cliente pediu ajuste pelo link (ver Quote.customerRevisionNote)
+  /// — volta a poder ser editado, precisa reenviar pra SENT de novo.
+  REVISION_REQUESTED
   APPROVED
   CONVERTED
   CANCELLED
@@ -1407,6 +1413,27 @@ model Quote {
   totalAmount   Decimal @default(0) @db.Decimal(18, 2)
   netAmount     Decimal @default(0) @db.Decimal(18, 2)
 
+  /// Juros de parcelamento escolhido pelo cliente na aprovação
+  /// digital (ver QuoteConfirmationService.approvePublic) — já somado
+  /// dentro de `otherExpenses`/`netAmount` acima; guardado à parte só
+  /// pra mostrar quanto disso é juros.
+  installmentInterestAmount Decimal @default(0) @db.Decimal(18, 2)
+
+  /// Aprovação digital pelo cliente (mesmo esquema de
+  /// VacationGrant/PayrollItem — token público, sem login). O próprio
+  /// `status` acima é a fonte da verdade do fluxo (SENT/
+  /// REVISION_REQUESTED/APPROVED/CANCELLED), esses campos só
+  /// controlam o link em si.
+  confirmationTokenHash      String?   @db.VarChar(64)
+  confirmationTokenExpiresAt DateTime?
+  confirmationSentAt         DateTime?
+
+  customerApprovedAt   DateTime?
+  customerRevisionNote String?   @db.Text
+  customerRevisionAt   DateTime?
+  customerCancelReason String?   @db.Text
+  customerCancelledAt  DateTime?
+
   /// Prazo/forma de pagamento/parcelas — digitados direto no
   /// orçamento, repassados pro Pedido de Venda e pra Venda na
   /// aprovação (mesmo papel dos campos equivalentes em PurchaseOrder/
@@ -1441,6 +1468,31 @@ model Quote {
   @@unique([companyId, number])
   @@index([companyId])
   @@map("quotes")
+}
+
+/// Configurações de vendas por empresa — limite de parcelas e regra
+/// de juros oferecidos ao cliente na aprovação digital do orçamento
+/// (ver QuoteConfirmationService.approvePublic). Mesmo padrão de
+/// PayrollSettings/ProductionSettings: único por empresa, getOrCreate.
+model SalesSettings {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Máximo de parcelas que o cliente pode escolher ao aprovar "a prazo".
+  maxInstallments Int @default(12)
+
+  /// Até quantas parcelas não tem juros nenhum (1 = só à vista sem juros).
+  interestFreeInstallments Int @default(3)
+
+  /// Juros somado ao total pra cada parcela acima do limite sem juros
+  /// (ex.: 2.00 = 2% por parcela extra, cumulativo).
+  interestRatePerInstallment Decimal @default(0) @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sales_settings")
 }
 
 model QuoteItem {
@@ -1880,7 +1932,7 @@ model PayrollSettings {
   hourBankClosingReminderDays Int @default(7)
   /// Dias de antecedência do aviso de fechamento do mês do ponto
   /// ("regularize seu ponto"), nos últimos dias do mês.
-  pointClosingReminderDays Int @default(5)
+  pointClosingReminderDays    Int @default(5)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3023,20 +3075,20 @@ model Employee {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  dependents            EmployeeDependent[]
-  ppeDeliveries         PpeDelivery[]
-  employeeBenefits      EmployeeBenefit[]
-  exams                 EmployeeExam[]
-  timeEntries           TimeEntry[]
-  timeSheetApprovals    TimeSheetApproval[]
-  timeEntryAdjustments  TimeEntryAdjustment[]
-  absenceRecords        AbsenceRecord[]
-  financialEntries      FinancialEntry[]
-  payrollItems          PayrollItem[]
-  thirteenthSalaryItems ThirteenthSalaryItem[]
-  vacationPeriods       VacationPeriod[]
-  vacationGrants        VacationGrant[]
-  salaryAdvances        SalaryAdvance[]
+  dependents                    EmployeeDependent[]
+  ppeDeliveries                 PpeDelivery[]
+  employeeBenefits              EmployeeBenefit[]
+  exams                         EmployeeExam[]
+  timeEntries                   TimeEntry[]
+  timeSheetApprovals            TimeSheetApproval[]
+  timeEntryAdjustments          TimeEntryAdjustment[]
+  absenceRecords                AbsenceRecord[]
+  financialEntries              FinancialEntry[]
+  payrollItems                  PayrollItem[]
+  thirteenthSalaryItems         ThirteenthSalaryItem[]
+  vacationPeriods               VacationPeriod[]
+  vacationGrants                VacationGrant[]
+  salaryAdvances                SalaryAdvance[]
   timeEntryMonthlyConfirmations TimeEntryMonthlyConfirmation[]
 
   @@unique([companyId, cpf])
@@ -3477,6 +3529,9 @@ enum NotificationType {
   LOW_STOCK
   HOUR_BANK_CLOSING
   POINT_MONTH_CLOSING
+  QUOTE_REVISION_REQUESTED
+  QUOTE_CANCELLED_BY_CUSTOMER
+  QUOTE_APPROVED_BY_CUSTOMER
 }
 
 /// Notificação do sino (bell) da barra superior. Dois jeitos de

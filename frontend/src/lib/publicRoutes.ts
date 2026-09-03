@@ -24,6 +24,9 @@
  * - `/confirmar-ferias`, `/confirmar-13`, `/confirmar-adiantamento`:
  *   mesma ideia, pro recebimento de férias/13º/adiantamento salarial.
  * - `/confirmar-ponto`: mesma ideia, pra confirmação mensal do ponto.
+ * - `/confirmar-orcamento`: link de aprovação digital de orçamento,
+ *   enviado por e-mail/WhatsApp — o cliente aprova, pede revisão ou
+ *   cancela sem precisar (nem poder) logar no sistema.
  * - `/<empresa>/login`: login com o nome da empresa fixo na URL — o
  *   link que o e-mail de "definir senha" passa a mostrar como o
  *   acesso permanente do usuário (ver `sendPasswordResetLink` no
@@ -52,6 +55,7 @@ export const PUBLIC_ROUTES = [
   "/confirmar-13",
   "/confirmar-adiantamento",
   "/confirmar-ponto",
+  "/confirmar-orcamento",
 ] as const;
 
 /** `/<slug>/login` — exatamente dois segmentos, o segundo literalmente "login". */

@@ -205,8 +205,17 @@ const permissionGroups = [
       ["quote.create", "Criar Orçamentos"],
       ["quote.update", "Alterar Orçamentos"],
       ["quote.approve", "Aprovar Orçamentos"],
+      ["quote.send-confirmation", "Enviar Orçamento para Aprovação do Cliente"],
       ["quote.cancel", "Cancelar Orçamentos"],
       ["quote.delete", "Excluir Orçamentos"],
+    ],
+  },
+  {
+    code: "SALES_SETTINGS",
+    name: "Configurações de Vendas",
+    permissions: [
+      ["sales-settings.view", "Consultar Configurações de Vendas"],
+      ["sales-settings.manage", "Alterar Configurações de Vendas"],
     ],
   },
   {

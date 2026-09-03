@@ -1,9 +1,13 @@
 /**
  * Resumo do documento (itens + totais) embutido no corpo dos e-mails
  * automáticos — Cotação, Pedido de Compra, Orçamento, Pedido de
- * Venda. De propósito NÃO recebe depósito/forma de pagamento/tipo de
- * despesa-receita: são dados internos, sem relevância pra quem
- * recebe o e-mail (fornecedor ou cliente).
+ * Venda. De propósito NÃO recebe depósito/tipo de despesa-receita:
+ * são dados internos, sem relevância pra quem recebe o e-mail
+ * (fornecedor ou cliente). `paymentTerms` é a exceção — forma de
+ * pagamento e parcelas SÃO relevantes quando é o cliente confirmando
+ * o que ficou combinado (ver Pedido de Venda gerado na aprovação
+ * digital do orçamento), então é opcional, só passado por quem
+ * precisa mostrar isso.
  */
 
 export interface EmailSummaryItem {
@@ -24,6 +28,17 @@ export interface EmailSummaryTotals {
 export interface EmailSummaryMeta {
   label: string;
   value: string;
+}
+
+export interface EmailSummaryInstallment {
+  dueDate: string;
+  amount: number;
+}
+
+export interface EmailSummaryPaymentTerms {
+  methodLabel?: string;
+  /** Uma linha = pagamento único; mais de uma = parcelado. */
+  installments: EmailSummaryInstallment[];
 }
 
 function escapeHtml(value: string): string {
@@ -52,6 +67,8 @@ export function buildEmailDocumentSummaryHtml(opts: {
   totals: EmailSummaryTotals;
   /** Linhas curtas acima da tabela — ex.: "Validade" no Orçamento. */
   meta?: EmailSummaryMeta[];
+  /** Forma de pagamento e parcelas — ver comentário do arquivo. */
+  paymentTerms?: EmailSummaryPaymentTerms;
 }): string {
   const cell =
     'padding:6px 8px;border-bottom:1px solid #e5e7eb;';
@@ -103,6 +120,8 @@ export function buildEmailDocumentSummaryHtml(opts: {
     );
   }
 
+  const paymentTermsHtml = buildPaymentTermsHtml(opts.paymentTerms);
+
   return `${metaHtml}
 <table style="width:auto;max-width:520px;border-collapse:collapse;margin:12px 0;font-size:13px;">
   <thead>
@@ -117,5 +136,53 @@ export function buildEmailDocumentSummaryHtml(opts: {
 </table>
 <table style="width:280px;font-size:13px;">
   <tbody>${totalsRows.join('')}</tbody>
+</table>
+${paymentTermsHtml}`;
+}
+
+function buildPaymentTermsHtml(
+  paymentTerms: EmailSummaryPaymentTerms | undefined,
+): string {
+  if (!paymentTerms || paymentTerms.installments.length === 0) {
+    return '';
+  }
+
+  const { methodLabel, installments } = paymentTerms;
+
+  if (installments.length === 1) {
+    const line = [
+      methodLabel && `<strong>Forma de pagamento:</strong> ${escapeHtml(methodLabel)}`,
+      `<strong>Vencimento:</strong> ${escapeHtml(installments[0].dueDate)}`,
+    ]
+      .filter(Boolean)
+      .join(' &nbsp;·&nbsp; ');
+
+    return `<p style="margin:8px 0 4px;font-size:13px;">${line}</p>`;
+  }
+
+  const rows = installments
+    .map(
+      (installment, index) => `<tr>
+  <td style="padding:2px 8px;color:#4b5563;">${index + 1}/${installments.length}</td>
+  <td style="padding:2px 8px;">${escapeHtml(installment.dueDate)}</td>
+  <td style="padding:2px 8px;text-align:right;">${money(installment.amount)}</td>
+</tr>`,
+    )
+    .join('');
+
+  return `<p style="margin:8px 0 4px;font-size:13px;">${
+    methodLabel
+      ? `<strong>Forma de pagamento:</strong> ${escapeHtml(methodLabel)} — parcelado em ${installments.length}x`
+      : `Parcelado em ${installments.length}x`
+  }</p>
+<table style="width:280px;font-size:13px;border-collapse:collapse;">
+  <thead>
+    <tr style="background:#f3f4f6;">
+      <th style="text-align:left;padding:4px 8px;">Parcela</th>
+      <th style="text-align:left;padding:4px 8px;">Vencimento</th>
+      <th style="text-align:right;padding:4px 8px;">Valor</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
 </table>`;
 }

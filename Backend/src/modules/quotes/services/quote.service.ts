@@ -251,9 +251,12 @@ ${summaryHtml}
   ) {
     const quote = await this.findOne(companyId, id);
 
-    if (quote.status !== QuoteStatus.DRAFT) {
+    if (
+      quote.status !== QuoteStatus.DRAFT &&
+      quote.status !== QuoteStatus.REVISION_REQUESTED
+    ) {
       throw new BadRequestException(
-        'Somente orçamentos em rascunho podem ser alterados.',
+        'Somente orçamentos em rascunho ou com revisão solicitada pelo cliente podem ser alterados.',
       );
     }
 
@@ -386,9 +389,14 @@ ${summaryHtml}
     const orphanedConverted =
       quote.status === QuoteStatus.CONVERTED && !quote.salesOrder;
 
-    if (quote.status !== QuoteStatus.DRAFT && !orphanedConverted) {
+    const cancellable =
+      quote.status === QuoteStatus.DRAFT ||
+      quote.status === QuoteStatus.SENT ||
+      quote.status === QuoteStatus.REVISION_REQUESTED;
+
+    if (!cancellable && !orphanedConverted) {
       throw new BadRequestException(
-        'Somente orçamentos em rascunho podem ser cancelados.',
+        'Somente orçamentos em rascunho, aguardando aprovação do cliente ou com revisão solicitada podem ser cancelados.',
       );
     }
 
@@ -408,14 +416,11 @@ ${summaryHtml}
   }
 
   /**
-   * Aprova o orçamento e gera o Pedido de Venda sozinho (mesmos
-   * itens/valores/cliente/depósito), reaproveitando
-   * `SalesOrderService.create` — mesma lógica de negócio de um pedido
-   * criado manualmente (numeração, notificação ao cliente, geração de
-   * ordem de produção quando falta saldo). O pedido gerado fica
-   * vinculado ao orçamento (SalesOrder.quoteId) só como referência; a
-   * venda em si continua nascendo do Pedido (ou direto), nunca direto
-   * do Orçamento aprovado.
+   * Aprovação manual — vendedor confirma na tela que o cliente aceitou
+   * (ex.: por telefone/WhatsApp), sem passar pelo link de aprovação
+   * digital. Continua disponível mesmo depois que o link foi enviado
+   * (SENT) ou depois de um pedido de revisão (REVISION_REQUESTED),
+   * como alternativa pro vendedor.
    */
   async approve(
     companyId: string,
@@ -425,12 +430,36 @@ ${summaryHtml}
   ) {
     const quote = await this.findOne(companyId, id);
 
-    if (quote.status !== QuoteStatus.DRAFT) {
+    if (!this.isApprovable(quote.status)) {
       throw new BadRequestException(
-        'Somente orçamentos em rascunho podem ser aprovados.',
+        'Somente orçamentos em rascunho, aguardando aprovação do cliente ou com revisão solicitada podem ser aprovados.',
       );
     }
 
+    return this.performApproval(companyId, rootCompanyId, quote, userId);
+  }
+
+  isApprovable(status: QuoteStatus) {
+    return (
+      status === QuoteStatus.DRAFT ||
+      status === QuoteStatus.SENT ||
+      status === QuoteStatus.REVISION_REQUESTED
+    );
+  }
+
+  /**
+   * Miolo da aprovação — gera o Pedido de Venda sozinho e marca
+   * APPROVED. Compartilhado entre `approve()` (aprovação manual, pelo
+   * vendedor) e `QuoteConfirmationService.approvePublic()` (aprovação
+   * digital, pelo próprio cliente via link — `userId` nesse caso é
+   * quem criou o orçamento, já que não há usuário logado).
+   */
+  async performApproval(
+    companyId: string,
+    rootCompanyId: string,
+    quote: Awaited<ReturnType<QuoteService['findOne']>>,
+    userId: string,
+  ) {
     const quoteNumber = `ORC-${String(quote.number).padStart(6, '0')}`;
     const generatedNote = `Gerado automaticamente a partir do Orçamento ${quoteNumber}.`;
 
@@ -451,6 +480,16 @@ ${summaryHtml}
         termDays: quote.termDays ?? undefined,
         paymentMethod: quote.paymentMethod ?? undefined,
         installmentsCount: quote.installmentsCount ?? undefined,
+        // Parcelas planejadas na mão no orçamento (raro — a maioria só
+        // define quantidade/prazo) — repassadas aqui, na própria
+        // criação, pra já saírem certas no e-mail do Pedido de Venda
+        // que o cliente recebe (SalesOrderService.notifyPartner).
+        installments: quote.plannedInstallments
+          ? (quote.plannedInstallments as unknown as {
+              dueDate: string;
+              amount: number;
+            }[])
+          : undefined,
         items: quote.items.map((item) => ({
           productId: item.productId,
           quantity: Number(item.quantity),
@@ -463,19 +502,15 @@ ${summaryHtml}
       true,
     );
 
-    // `plannedInstallments` não faz parte do DTO de criação do pedido
-    // (evita trafegar esse JSON por dentro de todo o fluxo de
-    // validação/produção de SalesOrderService.create) — repassado
-    // aqui, no mesmo update que já linka o pedido ao orçamento.
+    // Vínculo com o orçamento de origem — só referência, não faz parte
+    // do DTO de criação do pedido (evita trafegar esse id por dentro
+    // de todo o fluxo de validação/produção de SalesOrderService.create).
     await this.prisma.salesOrder.update({
       where: { id: salesOrder.id },
-      data: {
-        quoteId: quote.id,
-        plannedInstallments: quote.plannedInstallments ?? undefined,
-      },
+      data: { quoteId: quote.id },
     });
 
-    return this.repository.approve(id, userId);
+    return this.repository.approve(quote.id, userId);
   }
 
   /**

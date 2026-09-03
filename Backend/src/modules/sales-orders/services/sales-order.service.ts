@@ -18,7 +18,12 @@ import { ProductionOrdersService } from '../../production/services/production-or
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
-import { buildEmailDocumentSummaryHtml } from '../../../core/utils/email-document-summary.util';
+import {
+  buildEmailDocumentSummaryHtml,
+  type EmailSummaryPaymentTerms,
+} from '../../../core/utils/email-document-summary.util';
+import { buildAutoInstallments } from '../../../core/utils/installment.util';
+import { calculateDueDate } from '../../../core/utils/business-day.util';
 
 import { SalesOrderRepository } from '../repositories/sales-order.repository';
 
@@ -27,6 +32,23 @@ import { UpdateSalesOrderDto } from '../dto/update-sales-order.dto';
 import { SalesOrderFilterDto } from '../dto/sales-order-filter.dto';
 
 const SEQUENCE_TYPE = 'SALES_ORDER';
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  DINHEIRO: 'Dinheiro',
+  PIX: 'Pix',
+  BOLETO: 'Boleto',
+  TRANSFERENCIA: 'Transferência',
+  DEPOSITO: 'Depósito',
+  DEBITO: 'Débito',
+  CREDITO: 'Crédito',
+  CHEQUE: 'Cheque',
+  DESCONTO_NF: 'Desconto NF',
+  OUTRO: 'Outro',
+};
+
+function formatDueDate(value: Date | string): string {
+  return new Date(value).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+}
 
 @Injectable()
 export class SalesOrderService {
@@ -136,6 +158,74 @@ export class SalesOrderService {
   }
 
   /**
+   * Forma de pagamento e parcelas que ficaram combinadas no pedido —
+   * pro cliente ver, no e-mail, exatamente o que ele aprovou. Usa as
+   * parcelas planejadas na mão quando existirem (raro); senão, calcula
+   * uma prévia com a mesma regra que a Venda vai usar de verdade na
+   * aprovação (ver `buildAutoInstallments`) — só pra exibição, nada é
+   * gravado aqui.
+   */
+  private buildPaymentTerms(
+    order: Awaited<ReturnType<SalesOrderRepository['create']>>,
+  ): EmailSummaryPaymentTerms | undefined {
+    if (!order.paymentMethod && !order.termDays) {
+      return undefined;
+    }
+
+    const methodLabel = order.paymentMethod
+      ? PAYMENT_METHOD_LABELS[order.paymentMethod]
+      : undefined;
+
+    const planned = Array.isArray(order.plannedInstallments)
+      ? (order.plannedInstallments as unknown as {
+          dueDate: string;
+          amount: number;
+        }[])
+      : null;
+
+    if (planned && planned.length > 0) {
+      return {
+        methodLabel,
+        installments: planned.map((row) => ({
+          dueDate: formatDueDate(row.dueDate),
+          amount: Number(row.amount),
+        })),
+      };
+    }
+
+    const issueDate = order.orderDate ?? new Date();
+    const termDays = order.termDays ?? 0;
+    const count = order.installmentsCount ?? 1;
+
+    if (count > 1) {
+      const preview = buildAutoInstallments(
+        issueDate,
+        termDays,
+        count,
+        Number(order.netAmount),
+      );
+
+      return {
+        methodLabel,
+        installments: preview.map((row) => ({
+          dueDate: formatDueDate(row.dueDate),
+          amount: row.amount,
+        })),
+      };
+    }
+
+    return {
+      methodLabel,
+      installments: [
+        {
+          dueDate: formatDueDate(calculateDueDate(issueDate, termDays)),
+          amount: Number(order.netAmount),
+        },
+      ],
+    };
+  }
+
+  /**
    * Best-effort: envia o pedido de venda gerado ao cliente por
    * e-mail/WhatsApp. Nunca lança — ver EmailNotificationsService.send/
    * WhatsappNotificationsService.send.
@@ -187,6 +277,7 @@ export class SalesOrderService {
             },
           ]
         : undefined,
+      paymentTerms: this.buildPaymentTerms(order),
     });
 
     if (partner.email) {

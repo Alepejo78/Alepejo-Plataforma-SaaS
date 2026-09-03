@@ -34,3 +34,36 @@ export function buildAutoInstallments(
 
   return installments;
 }
+
+/**
+ * Juros de parcelamento escolhido pelo cliente na aprovação digital do
+ * orçamento (ver QuoteConfirmationService.approvePublic) — % fixo por
+ * parcela acima do limite sem juros, cumulativo (ex.: limite 3x, taxa
+ * 2%, cliente escolhe 5x = 2 parcelas "extras" = +4% sobre o total).
+ * Retorna só o valor do JUROS (a somar em cima do total), não o total
+ * com juros já embutido.
+ */
+export function applyInstallmentInterest(
+  totalAmount: number,
+  installmentsCount: number,
+  interestFreeInstallments: number,
+  interestRatePerInstallment: number,
+): number {
+  const chargeableInstallments = Math.max(
+    0,
+    installmentsCount - interestFreeInstallments,
+  );
+
+  if (chargeableInstallments === 0 || interestRatePerInstallment <= 0) {
+    return 0;
+  }
+
+  return (
+    Math.round(
+      totalAmount *
+        (interestRatePerInstallment / 100) *
+        chargeableInstallments *
+        100,
+    ) / 100
+  );
+}

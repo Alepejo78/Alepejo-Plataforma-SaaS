@@ -57,6 +57,7 @@ const BUSINESS_COLUMNS: {
   { key: "timeEntryAdjust", label: "Ajuste Horas", codes: ["time-entry.update"] },
   { key: "purchaseReceive", label: "Receber Compras", codes: ["purchase.receive"] },
   { key: "quotationDecide", label: "Escolher Vencedor da Cotação", codes: ["quotation.decide"] },
+  { key: "quoteSendConfirmation", label: "Enviar Orçamento para Aprovação do Cliente", codes: ["quote.send-confirmation"] },
   { key: "payrollGenerate", label: "Gerar Folha", codes: ["payroll.generate"] },
   { key: "payrollConfirmItem", label: "Confirmar Recebimento de Holerite", codes: ["payroll.confirm-item"] },
   { key: "thirteenthSalaryGenerate", label: "Gerar 13º Salário", codes: ["thirteenth-salary.generate"] },

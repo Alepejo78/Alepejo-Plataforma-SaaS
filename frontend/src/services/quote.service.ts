@@ -9,6 +9,8 @@ interface ApiEnvelope<T> {
 
 export type QuoteStatus =
   | "DRAFT"
+  | "SENT"
+  | "REVISION_REQUESTED"
   | "APPROVED"
   | "CONVERTED"
   | "CANCELLED";
@@ -18,6 +20,8 @@ export const QUOTE_STATUS_LABELS: Record<
   string
 > = {
   DRAFT: "Rascunho",
+  SENT: "Aguardando cliente",
+  REVISION_REQUESTED: "Revisão solicitada",
   APPROVED: "Aprovado",
   CONVERTED: "Convertido em venda",
   CANCELLED: "Cancelado",
@@ -69,6 +73,17 @@ export interface Quote {
     code: string;
     description: string;
   } | null;
+  /** Juros de parcelamento aprovado pelo cliente — já somado em otherExpenses/netAmount. */
+  installmentInterestAmount?: string | number;
+
+  /** Aprovação digital pelo cliente (link público). */
+  confirmationSentAt?: string | null;
+  customerApprovedAt?: string | null;
+  customerRevisionNote?: string | null;
+  customerRevisionAt?: string | null;
+  customerCancelReason?: string | null;
+  customerCancelledAt?: string | null;
+
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;
@@ -178,6 +193,17 @@ export const quoteService = {
     const { data } = await api.patch<ApiEnvelope<Quote>>(
       `/quotes/${id}/approve`
     );
+
+    return data.data;
+  },
+
+  /** Envia (ou reenvia) o link de aprovação digital ao cliente. */
+  async sendConfirmation(
+    id: string
+  ): Promise<{ sent: boolean; channels: string[] }> {
+    const { data } = await api.post<
+      ApiEnvelope<{ sent: boolean; channels: string[] }>
+    >(`/quotes/${id}/send-confirmation`);
 
     return data.data;
   },

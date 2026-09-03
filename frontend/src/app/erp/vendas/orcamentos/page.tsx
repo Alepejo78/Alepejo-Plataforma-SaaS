@@ -9,6 +9,7 @@ import {
   Eye,
   FileText,
   Plus,
+  Send,
   Trash2,
   Undo2,
   X,
@@ -113,6 +114,8 @@ const labelClass =
 
 const STATUS_BADGE_CLASS: Record<QuoteStatus, string> = {
   DRAFT: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  SENT: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  REVISION_REQUESTED: "bg-[var(--warning-soft)] text-[var(--warning)]",
   APPROVED: "bg-[var(--primary-soft)] text-[var(--primary)]",
   CONVERTED: "bg-[var(--success-soft)] text-[var(--success)]",
   CANCELLED: "bg-[var(--danger-soft)] text-[var(--danger)]",
@@ -617,6 +620,26 @@ export default function OrcamentosPage() {
     }
   }
 
+  async function sendConfirmation(id: string) {
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await quoteService.sendConfirmation(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(
+          err,
+          "Não foi possível enviar o link de aprovação ao cliente."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   async function approveQuote(id: string) {
     setActionId(id);
     setActionError("");
@@ -879,7 +902,8 @@ export default function OrcamentosPage() {
                             </Can>
                           )}
 
-                          {q.status === "DRAFT" && (
+                          {(q.status === "DRAFT" ||
+                            q.status === "REVISION_REQUESTED") && (
                             <>
                               <Can permission="quote.update">
                                 <button
@@ -895,6 +919,25 @@ export default function OrcamentosPage() {
                                 </button>
                               </Can>
 
+                              <Can permission="quote.send-confirmation">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void sendConfirmation(q.id)
+                                  }
+                                  title={
+                                    q.status === "REVISION_REQUESTED"
+                                      ? "Reenviar link de aprovação ao cliente"
+                                      : "Enviar link de aprovação ao cliente"
+                                  }
+                                  aria-label="Enviar para aprovação do cliente"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                >
+                                  <Send size={16} />
+                                </button>
+                              </Can>
+
                               <Can permission="quote.approve">
                                 <button
                                   type="button"
@@ -902,8 +945,42 @@ export default function OrcamentosPage() {
                                   onClick={() =>
                                     void approveQuote(q.id)
                                   }
-                                  title="Aprovar (gera Pedido de Venda)"
-                                  aria-label="Aprovar"
+                                  title="Aprovar manualmente (ex.: cliente confirmou por telefone) — gera Pedido de Venda"
+                                  aria-label="Aprovar manualmente"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                >
+                                  <Check size={16} />
+                                </button>
+                              </Can>
+
+                              <Can permission="quote.cancel">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void cancelQuote(q.id)
+                                  }
+                                  title="Cancelar"
+                                  aria-label="Cancelar"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                >
+                                  <XCircle size={16} />
+                                </button>
+                              </Can>
+                            </>
+                          )}
+
+                          {q.status === "SENT" && (
+                            <>
+                              <Can permission="quote.approve">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void approveQuote(q.id)
+                                  }
+                                  title="Aprovar manualmente (ex.: cliente confirmou por telefone) — gera Pedido de Venda"
+                                  aria-label="Aprovar manualmente"
                                   className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
                                 >
                                   <Check size={16} />
@@ -991,6 +1068,24 @@ export default function OrcamentosPage() {
                       ` · Pedido de venda gerado: ${formatOrderNumber(detail.salesOrder.number)}`}
                   </p>
                 )}
+
+                {viewOnly &&
+                  detail?.status === "REVISION_REQUESTED" &&
+                  detail.customerRevisionNote && (
+                    <p className="mt-2 rounded-lg border border-[var(--warning)] bg-[var(--warning-soft)] p-2 text-sm text-[var(--warning)]">
+                      Cliente pediu revisão: &quot;
+                      {detail.customerRevisionNote}&quot;
+                    </p>
+                  )}
+
+                {viewOnly &&
+                  detail?.status === "CANCELLED" &&
+                  detail.customerCancelReason && (
+                    <p className="mt-2 rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] p-2 text-sm text-[var(--danger)]">
+                      Cliente cancelou: &quot;{detail.customerCancelReason}
+                      &quot;
+                    </p>
+                  )}
 
                 {viewOnly &&
                   detail &&

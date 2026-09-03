@@ -175,7 +175,12 @@ export class SaleService {
         item.quantity * item.unitPrice;
     }
 
-    const netAmount =
+    // Recalculado logo abaixo, depois que `sourceOrder` é resolvido —
+    // desconto/frete/outras despesas (que carregam o juros de
+    // parcelamento aprovado pelo cliente no Orçamento, ver
+    // QuoteConfirmationService.approvePublic) herdam do Pedido de
+    // Venda de origem quando a Venda não informar os seus.
+    let netAmount =
       totalAmount -
       (dto.discountValue ?? 0) +
       (dto.freightValue ?? 0) +
@@ -188,6 +193,9 @@ export class SaleService {
       paymentMethod: PaymentMethod | null;
       installmentsCount: number | null;
       plannedInstallments: unknown;
+      discountValue: Prisma.Decimal;
+      freightValue: Prisma.Decimal;
+      otherExpenses: Prisma.Decimal;
       items: { id: string; productId: string }[];
     } | null = null;
 
@@ -280,7 +288,27 @@ export class SaleService {
             sourceOrder.plannedInstallments.length > 0
           ? sourceOrder.plannedInstallments
           : undefined,
+      discountValue:
+        dto.discountValue ??
+        (sourceOrder ? Number(sourceOrder.discountValue) : undefined),
+      freightValue:
+        dto.freightValue ??
+        (sourceOrder ? Number(sourceOrder.freightValue) : undefined),
+      otherExpenses:
+        dto.otherExpenses ??
+        (sourceOrder ? Number(sourceOrder.otherExpenses) : undefined),
     };
+
+    // `totalAmount` já foi somado só a partir dos itens da própria
+    // Venda (iguais aos do Pedido quando ela nasce de um) — o que
+    // falta é recompor `netAmount` com desconto/frete/outras despesas
+    // JÁ COM o fallback do pedido de origem aplicado acima (sem isso,
+    // um juros de parcelamento gravado no Pedido se perderia aqui).
+    netAmount =
+      totalAmount -
+      (effectiveDto.discountValue ?? 0) +
+      (effectiveDto.freightValue ?? 0) +
+      (effectiveDto.otherExpenses ?? 0);
 
     // Venda não passa mais por uma etapa de aprovação separada — ao
     // ser lançada, já é porque o faturamento aconteceu de verdade, e
