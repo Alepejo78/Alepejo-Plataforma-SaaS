@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { XMLParser } from 'fast-xml-parser';
 
+import { FinancialDocumentType } from '@prisma/client';
+
 export interface ParsedInvoiceItem {
   code: string | null;
   description: string;
@@ -33,7 +35,8 @@ export interface ParsedInvoiceParty {
 }
 
 export interface ParsedInvoice {
-  kind: 'NFE' | 'NFSE';
+  /** `DOCUMENT` = PDF/imagem (boleto, fatura, conta, cupom fiscal) — ver `DocumentFieldExtractorService`. */
+  kind: 'NFE' | 'NFSE' | 'DOCUMENT';
   /** Fornecedor (compra) ou cliente (venda) — quem está "do outro lado". */
   party: ParsedInvoiceParty | null;
   invoiceNumber: string | null;
@@ -53,6 +56,11 @@ export interface ParsedInvoice {
    * `null` quando a nota não referencia nenhum pedido.
    */
   referencedOrderNumber: number | null;
+  /**
+   * Tipo de documento sugerido (só `kind === 'DOCUMENT'`) — a tela
+   * pré-marca esse valor no formulário, o usuário pode trocar.
+   */
+  suggestedDocumentType?: FinancialDocumentType | null;
   /** Campos que o layout não trouxe — a tela pede pra completar. */
   warnings: string[];
 }

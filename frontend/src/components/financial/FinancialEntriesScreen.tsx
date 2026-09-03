@@ -662,7 +662,7 @@ export function FinancialEntriesScreen({
                     className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                   >
                     <Upload size={18} />
-                    Importar nota fiscal
+                    Importar documento
                   </button>
                 </Can>
 

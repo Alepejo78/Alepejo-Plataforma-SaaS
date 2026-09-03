@@ -520,7 +520,11 @@ export function InvoiceImportModal({
     setInvoiceNumber(parsed.invoiceNumber ?? "");
     setInvoiceKey(parsed.invoiceKey ?? "");
     setInvoiceIssueDate(toDateInput(parsed.invoiceIssueDate));
-    if (parsed.invoiceKey) setDocumentType("NOTA_FISCAL");
+    if (parsed.kind !== "DOCUMENT" && parsed.invoiceKey) {
+      setDocumentType("NOTA_FISCAL");
+    } else if (parsed.suggestedDocumentType) {
+      setDocumentType(parsed.suggestedDocumentType);
+    }
 
     if (parsed.party) {
       const document = parsed.party.document.replace(/\D/g, "");
@@ -678,7 +682,7 @@ export function InvoiceImportModal({
     setParseWarnings([]);
 
     try {
-      const parsed = await invoiceImportService.parseXml(
+      const parsed = await invoiceImportService.parseFile(
         file,
         direction
       );
@@ -1044,7 +1048,9 @@ export function InvoiceImportModal({
       <div className="my-8 w-full max-w-5xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[var(--text-primary)]">
-            Importar nota fiscal ({isPurchase ? "compra" : "venda"})
+            {expenseOnly
+              ? `Importar documento (${isPurchase ? "a pagar" : "a receber"})`
+              : `Importar nota fiscal (${isPurchase ? "compra" : "venda"})`}
           </h2>
 
           <button
@@ -1062,11 +1068,12 @@ export function InvoiceImportModal({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Arquivo XML da nota (opcional)
+                  {expenseOnly ? "Documento (opcional)" : "Arquivo XML da nota (opcional)"}
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  NF-e lê certinho. NF-e de serviço (NFS-e) é melhor
-                  esforço — confira os campos antes de confirmar.
+                  {expenseOnly
+                    ? "XML de nota, PDF ou foto de boleto, fatura, conta ou cupom fiscal — leitura automática por texto/OCR, sempre confira os dados antes de confirmar."
+                    : "NF-e lê certinho. NF-e de serviço (NFS-e) é melhor esforço — confira os campos antes de confirmar."}
                 </p>
               </div>
 
@@ -1081,13 +1088,21 @@ export function InvoiceImportModal({
                 ) : (
                   <Upload size={16} />
                 )}
-                {parsing ? "Lendo..." : "Escolher XML"}
+                {parsing
+                  ? "Lendo..."
+                  : expenseOnly
+                    ? "Escolher arquivo"
+                    : "Escolher XML"}
               </button>
 
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xml,text/xml"
+                accept={
+                  expenseOnly
+                    ? ".xml,text/xml,.pdf,application/pdf,.jpg,.jpeg,.png,image/jpeg,image/png"
+                    : ".xml,text/xml"
+                }
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];

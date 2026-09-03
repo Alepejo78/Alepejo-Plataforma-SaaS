@@ -11,6 +11,8 @@ import { SalesModule } from '../sales/sales.module';
 import { InvoiceImportController } from './controllers/invoice-import.controller';
 import { InvoiceImportService } from './services/invoice-import.service';
 import { InvoiceXmlParserService } from './services/invoice-xml-parser.service';
+import { DocumentTextExtractorService } from './services/document-text-extractor.service';
+import { DocumentFieldExtractorService } from './services/document-field-extractor.service';
 
 @Module({
   imports: [
@@ -24,6 +26,11 @@ import { InvoiceXmlParserService } from './services/invoice-xml-parser.service';
 
   controllers: [InvoiceImportController],
 
-  providers: [InvoiceImportService, InvoiceXmlParserService],
+  providers: [
+    InvoiceImportService,
+    InvoiceXmlParserService,
+    DocumentTextExtractorService,
+    DocumentFieldExtractorService,
+  ],
 })
 export class InvoiceImportModule {}

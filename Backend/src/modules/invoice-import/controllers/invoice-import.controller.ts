@@ -47,17 +47,24 @@ export class InvoiceImportController {
     private readonly service: InvoiceImportService,
   ) {}
 
+  /**
+   * Sem `@Module`/`@Permissions` de propósito — essa rota só lê e
+   * devolve dados pra revisão, não grava nada; a autorização de
+   * verdade acontece nas rotas de confirmação abaixo, cada uma com
+   * sua permissão própria. Travar `/parse` também numa permissão fixa
+   * (ex.: `purchase.create`) impediria uma empresa só com o módulo
+   * Financeiro licenciado de sequer pré-visualizar o arquivo antes de
+   * importar em Contas a Pagar/Receber.
+   */
   @Post('parse')
-  @Module('PURCHASE')
-  @Permissions('purchase.create')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Lê um XML de NF-e/NFS-e sem gravar nada',
+    summary: 'Lê um XML de NF-e/NFS-e, PDF ou imagem sem gravar nada',
   })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 10 * 1024 * 1024 },
     }),
   )
   parse(
@@ -67,12 +74,14 @@ export class InvoiceImportController {
   ) {
     if (!file) {
       throw new BadRequestException(
-        'Envie o arquivo XML da nota.',
+        'Envie o arquivo (XML, PDF ou foto).',
       );
     }
 
-    return this.service.parseXml(
+    return this.service.parseFile(
       file.buffer,
+      file.originalname,
+      file.mimetype,
       rootCompanyId,
       direction === 'SALE' ? 'SALE' : 'PURCHASE',
     );

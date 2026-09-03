@@ -14,6 +14,8 @@ import { PurchaseService } from '../../purchase/services/purchase.service';
 import { SaleService } from '../../sales/services/sale.service';
 
 import { InvoiceXmlParserService } from './invoice-xml-parser.service';
+import { DocumentTextExtractorService } from './document-text-extractor.service';
+import { DocumentFieldExtractorService } from './document-field-extractor.service';
 import { InvoicePartnerDto } from '../dto/invoice-partner.dto';
 import { ConfirmPurchaseImportDto } from '../dto/confirm-purchase-import.dto';
 import { ConfirmSaleImportDto } from '../dto/confirm-sale-import.dto';
@@ -24,6 +26,8 @@ export class InvoiceImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly xmlParser: InvoiceXmlParserService,
+    private readonly documentTextExtractor: DocumentTextExtractorService,
+    private readonly documentFieldExtractor: DocumentFieldExtractorService,
     private readonly businessPartnersRepository: BusinessPartnersRepository,
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly financialEntriesService: FinancialEntriesService,
@@ -31,30 +35,59 @@ export class InvoiceImportService {
     private readonly saleService: SaleService,
   ) {}
 
-  async parseXml(
+  /**
+   * Lê o arquivo enviado e devolve os dados extraídos pra revisão —
+   * XML de NF-e/NFS-e usa o parser estruturado de sempre; PDF/imagem
+   * (boleto, fatura, conta, cupom fiscal) passa pelo pipeline de
+   * texto livre (`DocumentTextExtractorService` +
+   * `DocumentFieldExtractorService`), sem a checagem de CNPJ da
+   * empresa (esses formatos não garantem achar o CNPJ certo — ver
+   * comentário mais abaixo).
+   */
+  async parseFile(
     buffer: Buffer,
+    filename: string | undefined,
+    mimetype: string | undefined,
     rootCompanyId: string,
     direction: 'PURCHASE' | 'SALE' = 'PURCHASE',
   ) {
-    // Empresa + todo o grupo (Interprise) — a nota pode ser de
-    // qualquer uma delas, não só da empresa ativa no momento.
-    const companies = await this.prisma.company.findMany({
-      where: {
-        OR: [{ id: rootCompanyId }, { rootCompanyId }],
-        deletedAt: null,
-      },
-      select: { document: true },
-    });
+    const isXml =
+      mimetype === 'text/xml' ||
+      mimetype === 'application/xml' ||
+      (filename?.toLowerCase().endsWith('.xml') ?? false);
 
-    const companyDocuments = new Set(
-      companies.map((c) => c.document),
+    if (isXml) {
+      // Empresa + todo o grupo (Interprise) — a nota pode ser de
+      // qualquer uma delas, não só da empresa ativa no momento.
+      const companies = await this.prisma.company.findMany({
+        where: {
+          OR: [{ id: rootCompanyId }, { rootCompanyId }],
+          deletedAt: null,
+        },
+        select: { document: true },
+      });
+
+      const companyDocuments = new Set(
+        companies.map((c) => c.document),
+      );
+
+      return this.xmlParser.parse(
+        buffer.toString('utf-8'),
+        companyDocuments,
+        direction,
+      );
+    }
+
+    // PDF/imagem: sem `assertBelongsToCompany` — o CNPJ vem de texto
+    // livre (OCR ou PDF), baixa confiança, travar por causa dele
+    // geraria falso negativo. Fica só pra revisão manual na tela.
+    const rawText = await this.documentTextExtractor.extractRawText(
+      buffer,
+      mimetype,
+      filename,
     );
 
-    return this.xmlParser.parse(
-      buffer.toString('utf-8'),
-      companyDocuments,
-      direction,
-    );
+    return this.documentFieldExtractor.extractFields(rawText);
   }
 
   /**

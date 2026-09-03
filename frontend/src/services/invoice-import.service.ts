@@ -42,7 +42,8 @@ export interface ParsedInvoiceParty {
 }
 
 export interface ParsedInvoice {
-  kind: "NFE" | "NFSE";
+  /** `DOCUMENT` = PDF/imagem (boleto, fatura, conta, cupom fiscal) lido por texto/OCR. */
+  kind: "NFE" | "NFSE" | "DOCUMENT";
   party: ParsedInvoiceParty | null;
   invoiceNumber: string | null;
   invoiceKey: string | null;
@@ -54,6 +55,8 @@ export interface ParsedInvoice {
   netWeightKg: number | null;
   /** Número do Pedido de Compra/Venda referenciado na nota (ex.: "PC-000123" nas informações complementares) — null quando não referencia nenhum. */
   referencedOrderNumber: number | null;
+  /** Tipo de documento sugerido (só quando `kind === "DOCUMENT"`) — pré-marca o campo, o usuário pode trocar. */
+  suggestedDocumentType?: FinancialDocumentType | null;
   warnings: string[];
 }
 
@@ -111,7 +114,8 @@ export interface ConfirmExpenseImportPayload {
 }
 
 export const invoiceImportService = {
-  async parseXml(
+  /** Lê XML de nota, PDF ou foto (boleto/fatura/conta/cupom fiscal) — mesma rota, o backend decide pelo tipo do arquivo. */
+  async parseFile(
     file: File,
     direction: "PURCHASE" | "SALE" = "PURCHASE"
   ): Promise<ParsedInvoice> {
