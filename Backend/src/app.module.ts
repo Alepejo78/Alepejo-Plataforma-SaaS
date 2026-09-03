@@ -56,6 +56,7 @@ import { MarketingModule } from './modules/marketing/marketing.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { InvoiceImportModule } from './modules/invoice-import/invoice-import.module';
+import { SiteVisitsModule } from './modules/site-visits/site-visits.module';
 import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-notifications.module';
 
 @Module({
@@ -108,6 +109,7 @@ import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-
     MarketingModule,
     BillingModule,
     InvoiceImportModule,
+    SiteVisitsModule,
     InAppNotificationsModule,
   ],
   controllers: [AppController],

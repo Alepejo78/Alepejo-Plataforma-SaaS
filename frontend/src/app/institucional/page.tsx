@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Bar,
@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   Clock,
   Cloud,
+  Eye,
   Factory,
   GraduationCap,
   KeyRound,
@@ -61,6 +62,7 @@ import {
 import { systemConfig } from "@/config/system";
 import { contactService } from "@/services/contact.service";
 import { companyOnboardingService } from "@/services/company-onboarding.service";
+import { siteVisitService } from "@/services/site-visit.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
 import { Faq } from "@/components/marketing/Faq";
 import {
@@ -81,6 +83,32 @@ function useTrialDays() {
   }, []);
 
   return trialDays;
+}
+
+/**
+ * Contador de visitas do rodapé — soma 1 no carregamento da página e
+ * mostra o total (vindo do backend). Guarda com `useRef` pra não
+ * contar duas vezes no StrictMode do React em desenvolvimento (o
+ * efeito roda duas vezes só em dev, nunca em produção).
+ */
+function useVisitCounter() {
+  const [count, setCount] = useState<number | null>(null);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    if (fired.current) {
+      return;
+    }
+
+    fired.current = true;
+
+    siteVisitService
+      .increment("institucional")
+      .then(setCount)
+      .catch(() => {});
+  }, []);
+
+  return count;
 }
 
 const financeiroChartData = [
@@ -2015,6 +2043,8 @@ function FinalCta() {
 }
 
 function Footer() {
+  const visits = useVisitCounter();
+
   return (
     <footer className="border-t border-[var(--border)] py-8">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-[var(--text-muted)]">
@@ -2023,12 +2053,21 @@ function Footer() {
           Serviço Ltda.
         </p>
 
-        <Link
-          href="/privacidade"
-          className="font-medium hover:text-[var(--text-primary)] hover:underline"
-        >
-          Política de Privacidade
-        </Link>
+        <div className="flex flex-wrap items-center gap-4">
+          {visits != null && (
+            <span className="flex items-center gap-1.5">
+              <Eye size={13} />
+              {visits.toLocaleString("pt-BR")} visitas
+            </span>
+          )}
+
+          <Link
+            href="/privacidade"
+            className="font-medium hover:text-[var(--text-primary)] hover:underline"
+          >
+            Política de Privacidade
+          </Link>
+        </div>
       </div>
     </footer>
   );

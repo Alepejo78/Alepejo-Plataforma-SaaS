@@ -2506,6 +2506,18 @@ model Plan {
  * teste grátis (editável em Administrar planos), mas é o lugar certo
  * pra outras configurações globais que apareçam depois.
  */
+/// Contador de visitas das páginas públicas do site institucional —
+/// número de vaidade pro rodapé, não é analytics de verdade: sem
+/// dedupe por visitante, cada carregamento de página soma 1.
+model SiteVisitCounter {
+  id        String   @id @default(cuid())
+  page      String   @unique @db.VarChar(60)
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("site_visit_counters")
+}
+
 model PlatformSettings {
   id        String   @id @default(cuid())
   /// Dias de teste grátis pra quem se cadastra escolhendo um plano comercial.
