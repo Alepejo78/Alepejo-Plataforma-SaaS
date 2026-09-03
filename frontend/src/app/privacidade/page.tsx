@@ -677,10 +677,10 @@ export default function PrivacidadePage() {
               <br />
               E-mail:{" "}
               <a
-                href="mailto:alessandro.lourenco@alepejo.com.br"
+                href="mailto:suporte@alepejo.com.br"
                 className="font-medium text-[var(--primary)] hover:underline"
               >
-                alessandro.lourenco@alepejo.com.br
+                suporte@alepejo.com.br
               </a>
               <br />
               CNPJ: 68.275.303/0001-50
