@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Save, Trash2, X } from "lucide-react";
+import { ExternalLink, Plus, Save, Trash2, X } from "lucide-react";
 
 import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
@@ -46,6 +46,27 @@ function extractMessage(err: unknown, fallback: string) {
 
   return typeof message === "string" ? message : fallback;
 }
+
+/**
+ * Fontes oficiais pra conferir a vigência atual antes de cadastrar —
+ * o sistema não busca sozinho (decisão consciente: nenhuma tabela é
+ * varrida/interpretada automaticamente, só o link pra fonte
+ * primária), então quem preenche precisa checar lá antes de salvar.
+ */
+const OFFICIAL_SOURCES = [
+  {
+    label: "INSS (gov.br)",
+    href: "https://www.gov.br/inss/pt-br/direitos-e-deveres/inscricao-e-contribuicao/tabela-de-contribuicao-mensal",
+  },
+  {
+    label: "IRRF (Receita Federal)",
+    href: "https://www.gov.br/receitafederal/pt-br/assuntos/meu-imposto-de-renda/tabelas",
+  },
+  {
+    label: "FGTS (Caixa)",
+    href: "https://www.caixa.gov.br/beneficios-trabalhador/fgts/perguntas-frequentes/paginas/default.aspx",
+  },
+];
 
 const fieldClass = `
   h-11 w-full rounded-xl border border-[var(--border)]
@@ -682,6 +703,35 @@ export default function ParametrosFiscaisPage() {
             </div>
 
             <div className="space-y-4 p-6 pt-4">
+              <div className="rounded-xl border border-[var(--warning)] bg-[var(--warning-soft)] p-3">
+                <p className="text-sm font-medium text-[var(--warning)]">
+                  Confira os valores vigentes nas fontes oficiais antes de
+                  preencher
+                </p>
+
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  O sistema não busca nem confere isso sozinho — os links
+                  abaixo só abrem as páginas oficiais. Sempre confira os
+                  números lá antes de salvar; uma tabela errada afeta o
+                  cálculo da folha de todo mundo.
+                </p>
+
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+                  {OFFICIAL_SOURCES.map((source) => (
+                    <a
+                      key={source.href}
+                      href={source.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs font-semibold text-[var(--warning)] hover:underline"
+                    >
+                      {source.label}
+                      <ExternalLink size={11} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className={labelClass}>Vigente a partir de</label>
