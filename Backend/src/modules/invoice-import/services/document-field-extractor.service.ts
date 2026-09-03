@@ -38,45 +38,85 @@ function parseBrDate(raw: string): string | null {
   return `${year}-${m}-${d}`;
 }
 
-const VALUE_LABELS = [
-  /valor\s+a\s+pagar[:\s]*r?\$?\s*([\d.,]+)/i,
-  /valor\s+do\s+documento[:\s]*r?\$?\s*([\d.,]+)/i,
-  /total\s+a\s+pagar[:\s]*r?\$?\s*([\d.,]+)/i,
-  /valor\s+total[:\s]*r?\$?\s*([\d.,]+)/i,
-  /valor\s+cobrado[:\s]*r?\$?\s*([\d.,]+)/i,
-  /\btotal\b[:\s]*r?\$?\s*([\d.,]+)/i,
+/** Número em formato BR: "91,37", "1.234,56" — a casa decimal com vírgula é o que distingue de um CNPJ/CPF/nº de documento perdido por perto. */
+const BRL_NUMBER_PATTERN = /\d{1,3}(?:\.\d{3})*,\d{2}/;
+const DATE_BR_PATTERN = /\d{1,2}\/\d{1,2}\/\d{4}/;
+
+/**
+ * Rótulos de cada campo, do mais específico pro mais genérico —
+ * tentados nessa ordem, o primeiro que achar alguma coisa por perto
+ * (ver `findNear`) vence. Layout de documento real não é fiel: o
+ * valor quase nunca vem colado no rótulo (às vezes cabeçalho de
+ * tabela numa linha, valor de verdade só aparece linhas depois, ou o
+ * rótulo tem palavra extra no meio — "Valor **Total do** Documento",
+ * por exemplo) — por isso a busca é "ache o rótulo, depois procure o
+ * primeiro número/data com essa forma dentro de uma janela de texto
+ * depois dele", não um regex único colado.
+ */
+const VALUE_LABEL_PATTERNS = [
+  /valor\s+total\s+do\s+documento/i,
+  /valor\s+a\s+pagar/i,
+  /valor\s+do\s+documento/i,
+  /total\s+a\s+pagar/i,
+  /valor\s+cobrado/i,
+  /valor\s+total/i,
+  /\bvalor\b\s*:/i,
+  /\btotal\b\s*:/i,
 ];
 
-const DUE_DATE_LABELS = [
-  /data\s+de\s+vencimento[:\s]*(\d{1,2}\/\d{1,2}\/\d{4})/i,
-  /vencimento[:\s]*(\d{1,2}\/\d{1,2}\/\d{4})/i,
-  /vence\s+em[:\s]*(\d{1,2}\/\d{1,2}\/\d{4})/i,
+const DUE_DATE_LABEL_PATTERNS = [
+  /data\s+de\s+vencimento/i,
+  /pagar\s+(este\s+documento\s+)?at[ée]/i,
+  /vence\s+em/i,
+  /\bvencimento\b/i,
 ];
 
-const ISSUE_DATE_LABELS = [
-  /data\s+de\s+emiss[aã]o[:\s]*(\d{1,2}\/\d{1,2}\/\d{4})/i,
-  /emiss[aã]o[:\s]*(\d{1,2}\/\d{1,2}\/\d{4})/i,
+const ISSUE_DATE_LABEL_PATTERNS = [
+  /data\s+de\s+emiss[aã]o/i,
+  /\bemiss[aã]o\b/i,
 ];
 
-const DOCUMENT_NUMBER_LABELS = [
-  /nosso\s+n[uú]mero[:\s]*([\d./-]+)/i,
-  /n[uú]mero\s+da\s+fatura[:\s]*([\w./-]+)/i,
-  /fatura\s+n[ºo°]?[:\s]*([\w./-]+)/i,
-  /n[ºo°]\s+do\s+documento[:\s]*([\w./-]+)/i,
+const DOCUMENT_NUMBER_LABEL_PATTERNS = [
+  /nosso\s+n[uú]mero/i,
+  /n[uú]mero\s+da\s+fatura/i,
+  /fatura\s+n[ºo°]?/i,
+  /n[ºo°]\s+do\s+documento/i,
+  /n[uú]mero\s+do\s+documento/i,
 ];
+const DOCUMENT_NUMBER_VALUE_PATTERN = /[\d][\d./-]{4,}/;
 
 const CNPJ_PATTERN = /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/;
 const CPF_PATTERN = /\d{3}\.\d{3}\.\d{3}-\d{2}/;
 
-/** Linha digitável de boleto: 5 blocos de dígitos (com ou sem os pontos/espaços de exibição). */
+/** Linha digitável de boleto bancário: 5 blocos de dígitos (com ou sem os pontos/espaços de exibição). Não cobre código de barras de convênio/arrecadação (DAS, tributos, contas de consumo com "código de barras" de 44 dígitos em 4 blocos) — layout diferente, fica pra uma próxima. */
 const DIGITABLE_LINE_PATTERN =
   /\d{5}[.\s]?\d{5}[.\s]?\d{5}[.\s]?\d{6}[.\s]?\d{5}[.\s]?\d{6}[.\s]?\d{1}[.\s]?\d{14}/;
 
-function matchFirst(text: string, patterns: RegExp[]): string | null {
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
+/**
+ * Acha a primeira ocorrência de qualquer um dos rótulos e, dentro de
+ * uma janela de texto logo depois dele, procura o primeiro trecho no
+ * formato esperado (`valuePattern`) — tolera rótulo com palavra extra
+ * no meio, quebra de linha entre rótulo e valor, cabeçalho de tabela
+ * antes do valor de verdade etc. `windowChars` pequeno de propósito:
+ * evita pegar um número de uma seção totalmente diferente do
+ * documento só porque o rótulo apareceu antes em algum lugar.
+ */
+function findNear(
+  text: string,
+  labelPatterns: RegExp[],
+  valuePattern: RegExp,
+  windowChars = 60,
+): string | null {
+  for (const labelPattern of labelPatterns) {
+    const labelMatch = text.match(labelPattern);
 
-    if (match) return match[1].trim();
+    if (!labelMatch || labelMatch.index == null) continue;
+
+    const start = labelMatch.index + labelMatch[0].length;
+    const window = text.slice(start, start + windowChars);
+    const valueMatch = window.match(valuePattern);
+
+    if (valueMatch) return valueMatch[0];
   }
 
   return null;
@@ -147,24 +187,41 @@ export class DocumentFieldExtractorService {
   extractFields(rawText: string): ParsedInvoice {
     const warnings: string[] = [];
 
-    const totalAmountRaw = matchFirst(rawText, VALUE_LABELS);
+    const totalAmountRaw = findNear(
+      rawText,
+      VALUE_LABEL_PATTERNS,
+      BRL_NUMBER_PATTERN,
+    );
     const totalAmount = totalAmountRaw ? parseMoney(totalAmountRaw) : null;
 
     if (totalAmount == null) {
       warnings.push('Não encontrei o valor — confira e preencha na mão.');
     }
 
-    const dueDateRaw = matchFirst(rawText, DUE_DATE_LABELS);
+    const dueDateRaw = findNear(
+      rawText,
+      DUE_DATE_LABEL_PATTERNS,
+      DATE_BR_PATTERN,
+    );
     const dueDate = dueDateRaw ? parseBrDate(dueDateRaw) : null;
 
     if (!dueDate) {
       warnings.push('Não encontrei o vencimento — confira e preencha na mão.');
     }
 
-    const issueDateRaw = matchFirst(rawText, ISSUE_DATE_LABELS);
+    const issueDateRaw = findNear(
+      rawText,
+      ISSUE_DATE_LABEL_PATTERNS,
+      DATE_BR_PATTERN,
+    );
     const issueDate = issueDateRaw ? parseBrDate(issueDateRaw) : null;
 
-    const documentNumber = matchFirst(rawText, DOCUMENT_NUMBER_LABELS);
+    const documentNumber = findNear(
+      rawText,
+      DOCUMENT_NUMBER_LABEL_PATTERNS,
+      DOCUMENT_NUMBER_VALUE_PATTERN,
+      30,
+    );
 
     const digitableLineMatch = rawText.match(DIGITABLE_LINE_PATTERN);
     const digitableLine = digitableLineMatch
