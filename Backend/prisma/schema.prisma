@@ -2507,8 +2507,8 @@ model Plan {
  * pra outras configurações globais que apareçam depois.
  */
 /// Contador de visitas das páginas públicas do site institucional —
-/// número de vaidade pro rodapé, não é analytics de verdade: sem
-/// dedupe por visitante, cada carregamento de página soma 1.
+/// número de vaidade pro rodapé. Soma 1 por IP por dia (ver
+/// SiteVisitLog) — atualizar a página não conta de novo.
 model SiteVisitCounter {
   id        String   @id @default(cuid())
   page      String   @unique @db.VarChar(60)
@@ -2516,6 +2516,21 @@ model SiteVisitCounter {
   updatedAt DateTime @updatedAt
 
   @@map("site_visit_counters")
+}
+
+/// Um registro por (página, IP, dia) — existência = já contou hoje.
+/// `day` é uma string "AAAA-MM-DD" (fuso America/Sao_Paulo) calculada
+/// em código, não uma coluna de data — mais simples de comparar numa
+/// chave única do que truncar timestamp na query.
+model SiteVisitLog {
+  id        String   @id @default(cuid())
+  page      String   @db.VarChar(60)
+  ip        String   @db.VarChar(45)
+  day       String   @db.VarChar(10)
+  visitedAt DateTime @default(now())
+
+  @@unique([page, ip, day])
+  @@map("site_visit_logs")
 }
 
 model PlatformSettings {

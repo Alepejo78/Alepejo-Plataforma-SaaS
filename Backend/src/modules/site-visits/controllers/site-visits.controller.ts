@@ -1,7 +1,9 @@
-import { BadRequestException, Controller, Param, Post } from '@nestjs/common';
+import { BadRequestException, Controller, Param, Post, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
 
 import { Public } from '../../../core/decorators/public.decorator';
+import { getClientIp } from '../../../core/utils/client-ip.util';
 
 import { SiteVisitsService } from '../services/site-visits.service';
 
@@ -15,13 +17,13 @@ export class SiteVisitsController {
 
   @Public()
   @Post(':page/increment')
-  @ApiOperation({ summary: 'Soma uma visita na página pública (contador do rodapé)' })
-  async increment(@Param('page') page: string) {
+  @ApiOperation({ summary: 'Soma uma visita na página pública (contador do rodapé), 1 por IP por dia' })
+  async increment(@Param('page') page: string, @Req() req: Request) {
     if (!TRACKED_PAGES.includes(page)) {
       throw new BadRequestException('Página sem contador de visitas.');
     }
 
-    const count = await this.service.increment(page);
+    const count = await this.service.increment(page, getClientIp(req));
 
     return { count };
   }
