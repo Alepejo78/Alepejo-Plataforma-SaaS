@@ -474,6 +474,23 @@ ${summaryHtml}
     });
   }
 
+  /**
+   * Mesmo raciocínio de `revertLinkedQuote` acima, pro Pedido nascido
+   * da confirmação digital de uma Ordem de Serviço (ver
+   * ServiceOrderConfirmationService.confirmPublic) — volta a Ordem de
+   * Serviço pra IN_PROGRESS, pra poder enviar a confirmação de novo.
+   */
+  private async revertLinkedServiceOrder(
+    tx: Prisma.TransactionClient,
+    serviceOrderId: string,
+    userId: string,
+  ) {
+    await tx.serviceOrder.update({
+      where: { id: serviceOrderId },
+      data: { status: 'IN_PROGRESS', updatedById: userId },
+    });
+  }
+
   async cancel(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 
@@ -491,6 +508,10 @@ ${summaryHtml}
 
       if (order.quoteId) {
         await this.revertLinkedQuote(tx, order.quoteId, userId);
+      }
+
+      if (order.serviceOrderId) {
+        await this.revertLinkedServiceOrder(tx, order.serviceOrderId, userId);
       }
 
       return cancelled;
@@ -543,6 +564,10 @@ ${summaryHtml}
 
       if (order.quoteId) {
         await this.revertLinkedQuote(tx, order.quoteId, userId);
+      }
+
+      if (order.serviceOrderId) {
+        await this.revertLinkedServiceOrder(tx, order.serviceOrderId, userId);
       }
 
       return reverted;

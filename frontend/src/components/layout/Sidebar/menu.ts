@@ -180,6 +180,15 @@ export const menu: MenuEntry[] = [
         permission: "sales-order.view",
       },
       {
+        id: "ordens-servico",
+        title: "Ordens de Serviço",
+        icon: FileText,
+        iconAnim: "filetext",
+        href: "/erp/vendas/ordens-servico",
+        module: "SALES",
+        permission: "service-order.view",
+      },
+      {
         id: "vendas-configuracoes",
         title: "Configurações",
         icon: Settings,

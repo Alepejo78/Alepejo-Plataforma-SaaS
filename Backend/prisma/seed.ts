@@ -231,6 +231,18 @@ const permissionGroups = [
     ],
   },
   {
+    code: "SERVICE_ORDER",
+    name: "Ordens de Serviço",
+    permissions: [
+      ["service-order.view", "Consultar Ordens de Serviço"],
+      ["service-order.create", "Criar Ordens de Serviço"],
+      ["service-order.update", "Alterar Ordens de Serviço"],
+      ["service-order.send-confirmation", "Enviar Ordem de Serviço para Confirmação do Cliente"],
+      ["service-order.cancel", "Cancelar Ordens de Serviço"],
+      ["service-order.delete", "Excluir Ordens de Serviço"],
+    ],
+  },
+  {
     code: "CHART_OF_ACCOUNT",
     name: "Plano de Contas",
     permissions: [

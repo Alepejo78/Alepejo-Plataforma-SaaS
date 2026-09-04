@@ -27,6 +27,8 @@
  * - `/confirmar-orcamento`: link de aprovação digital de orçamento,
  *   enviado por e-mail/WhatsApp — o cliente aprova, pede revisão ou
  *   cancela sem precisar (nem poder) logar no sistema.
+ * - `/confirmar-ordem-servico`: mesma ideia, pra confirmação digital
+ *   de execução de serviço (Ordem de Serviço).
  * - `/<empresa>/login`: login com o nome da empresa fixo na URL — o
  *   link que o e-mail de "definir senha" passa a mostrar como o
  *   acesso permanente do usuário (ver `sendPasswordResetLink` no
@@ -56,6 +58,7 @@ export const PUBLIC_ROUTES = [
   "/confirmar-adiantamento",
   "/confirmar-ponto",
   "/confirmar-orcamento",
+  "/confirmar-ordem-servico",
 ] as const;
 
 /** `/<slug>/login` — exatamente dois segmentos, o segundo literalmente "login". */

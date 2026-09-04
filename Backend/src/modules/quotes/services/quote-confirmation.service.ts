@@ -6,6 +6,7 @@ import { NotificationType, QuoteStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { applyInstallmentInterest } from '../../../core/utils/installment.util';
+import { findUsersWithPermission } from '../../../core/utils/permission-users.util';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
@@ -235,54 +236,6 @@ export class QuoteConfirmationService {
     };
   }
 
-  /**
-   * Todos os usuários ativos da empresa com uma permissão liberada
-   * (ALLOW em algum perfil ativo, sem DENY em nenhum) — mesma regra de
-   * precedência de `hasPermission` (ver `core/utils/permission.util`),
-   * só que consultada direto no banco (aqui não há usuário logado/JWT
-   * pra reaproveitar a lista já resolvida).
-   */
-  private async findUsersWithPermission(
-    companyId: string,
-    permissionCode: string,
-  ) {
-    return this.prisma.user.findMany({
-      where: {
-        companyId,
-        active: true,
-        roles: {
-          some: {
-            role: {
-              active: true,
-              permissions: {
-                some: {
-                  permission: { code: permissionCode },
-                  effect: 'ALLOW',
-                },
-              },
-            },
-          },
-        },
-        NOT: {
-          roles: {
-            some: {
-              role: {
-                active: true,
-                permissions: {
-                  some: {
-                    permission: { code: permissionCode },
-                    effect: 'DENY',
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      select: { id: true, name: true, email: true },
-    });
-  }
-
   /** Best-effort: avisa todos com `quote.approve` por e-mail. */
   private async notifyResponsibles(
     companyId: string,
@@ -290,7 +243,8 @@ export class QuoteConfirmationService {
     subject: string,
     html: string,
   ) {
-    const users = await this.findUsersWithPermission(
+    const users = await findUsersWithPermission(
+      this.prisma,
       companyId,
       'quote.approve',
     );

@@ -194,6 +194,7 @@ model Company {
 
   quotes            Quote[]
   salesOrders       SalesOrder[]
+  serviceOrders     ServiceOrder[]
   quotations        Quotation[]
   purchaseOrders    PurchaseOrder[]
   inventoryCounts   InventoryCount[]
@@ -318,6 +319,7 @@ model BusinessPartner {
 
   quotes          Quote[]          @relation("QuotePartner")
   salesOrders     SalesOrder[]     @relation("SalesOrderPartner")
+  serviceOrders   ServiceOrder[]   @relation("ServiceOrderPartner")
   quotationOffers QuotationOffer[] @relation("QuotationOfferPartner")
   purchaseOrders  PurchaseOrder[]  @relation("PurchaseOrderPartner")
 
@@ -680,6 +682,8 @@ model Product {
   saleItems                SaleItem[]
   quoteItems               QuoteItem[]
   salesOrderItems          SalesOrderItem[]
+  serviceOrderServiceItems ServiceOrderServiceItem[] @relation("ServiceOrderServiceItemProduct")
+  serviceOrderProductItems ServiceOrderProductItem[] @relation("ServiceOrderProductItemProduct")
   quotationItems           QuotationItem[]
   quotationOfferItems      QuotationOfferItem[]
   purchaseOrderItems       PurchaseOrderItem[]
@@ -707,6 +711,7 @@ model Warehouse {
   purchases        Purchase[]
   quotes           Quote[]
   salesOrders      SalesOrder[]
+  serviceOrders    ServiceOrder[]
   quotations       Quotation[]
   purchaseOrders   PurchaseOrder[]
   sales            Sale[]
@@ -1459,6 +1464,10 @@ model Quote {
   /// SalesOrder.quoteId) — relação reversa, a FK vive no SalesOrder.
   salesOrder SalesOrder?
 
+  /// Ordem de Serviço criada a partir deste orçamento (ver
+  /// ServiceOrder.quoteId) — relação reversa, puramente informativa.
+  serviceOrder ServiceOrder?
+
   createdById String?
   updatedById String?
 
@@ -1580,6 +1589,12 @@ model SalesOrder {
   quoteId String? @unique
   quote   Quote?  @relation(fields: [quoteId], references: [id])
 
+  /// Preenchido quando o pedido nasceu da confirmação digital de uma
+  /// Ordem de Serviço (ver ServiceOrder.salesOrder) — mesmo papel de
+  /// quoteId acima, não editável, só referência.
+  serviceOrderId String?       @unique
+  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id])
+
   /// Preenchido quando o pedido pode virar Venda — automático (na hora
   /// de nascer) quando veio da aprovação de um Orçamento, manual via
   /// approve() quando criado direto. SaleService.create() exige isso
@@ -1624,6 +1639,145 @@ model SalesOrderItem {
   @@map("sales_order_items")
 }
 
+enum ServiceOrderStatus {
+  /// Aberta.
+  DRAFT
+  /// Em execução.
+  IN_PROGRESS
+  /// Enviada, esperando o cliente confirmar pelo link público.
+  AWAITING_CONFIRMATION
+  /// Cliente pediu ajuste — volta pra IN_PROGRESS depois de revisada.
+  REVISION_REQUESTED
+  /// Cliente confirmou — Pedido de Venda já gerado (ver ServiceOrder.salesOrder).
+  CONFIRMED
+  /// O Pedido de Venda gerado virou Venda de verdade.
+  CONVERTED
+  CANCELLED
+}
+
+/// Ordem de serviço: prestação de serviço (ao contrário do Pedido de
+/// Venda, que é mercadoria), com dois grupos de item separados —
+/// serviços realizados (serviceItems) e produtos/materiais usados
+/// (productItems) — mostrados sempre separados (tela, e-mail, PDF).
+/// Só vira Venda de verdade depois que o cliente confirma
+/// digitalmente que o serviço foi executado (ver
+/// ServiceOrderConfirmationService, mesmo esquema de
+/// QuoteConfirmationService) — a confirmação gera um Pedido de Venda
+/// (SalesOrder) combinando os dois grupos num só, e a partir daí
+/// segue o fluxo comum de Pedido de Venda → Venda sem alteração.
+model ServiceOrder {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Numeração sequencial por empresa, nunca repete (DocumentSequence).
+  number Int
+
+  partnerId String
+  partner   BusinessPartner @relation("ServiceOrderPartner", fields: [partnerId], references: [id])
+
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  status ServiceOrderStatus @default(DRAFT)
+
+  /// Escopo/descrição do serviço a ser executado.
+  description String @db.Text
+
+  scheduledStart DateTime?
+  scheduledEnd   DateTime?
+  /// Marcado ao concluir a execução — antes de enviar a confirmação ao cliente.
+  completedAt    DateTime?
+
+  observation String?
+
+  discountValue Decimal @default(0) @db.Decimal(18, 2)
+  freightValue  Decimal @default(0) @db.Decimal(18, 2)
+  otherExpenses Decimal @default(0) @db.Decimal(18, 2)
+  totalAmount   Decimal @default(0) @db.Decimal(18, 2)
+  netAmount     Decimal @default(0) @db.Decimal(18, 2)
+
+  termDays            Int?
+  paymentMethod       PaymentMethod?
+  installmentsCount   Int?           @default(1)
+  plannedInstallments Json?
+
+  chartOfAccountId String?
+  chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
+  /// Preenchido só quando o usuário escolheu "gerar a partir de
+  /// Orçamento aprovado" na criação — puramente informativo/rastreio,
+  /// não altera o fluxo automático de aprovação do Orçamento.
+  quoteId String? @unique
+  quote   Quote?  @relation(fields: [quoteId], references: [id])
+
+  serviceItems ServiceOrderServiceItem[]
+  productItems ServiceOrderProductItem[]
+
+  /// Pedido de Venda gerado quando o cliente confirma (ver
+  /// SalesOrder.serviceOrderId) — a partir daqui segue o fluxo comum
+  /// de Pedido de Venda → Venda, sem alteração nenhuma.
+  salesOrder SalesOrder?
+
+  /// Confirmação digital pelo cliente (mesmo esquema de
+  /// Quote.confirmationTokenHash) — token público, sem login.
+  confirmationTokenHash      String?   @db.VarChar(64)
+  confirmationTokenExpiresAt DateTime?
+  confirmationSentAt         DateTime?
+
+  customerConfirmedAt  DateTime?
+  customerRevisionNote String?   @db.Text
+  customerRevisionAt   DateTime?
+  customerCancelReason String?   @db.Text
+  customerCancelledAt  DateTime?
+
+  createdById String?
+  updatedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@map("service_orders")
+}
+
+/// Serviço executado — referencia um Produto do tipo serviço
+/// (inventoryControl NONE), sem cadastro novo.
+model ServiceOrderServiceItem {
+  id             String       @id @default(cuid())
+  serviceOrderId String
+  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation("ServiceOrderServiceItemProduct", fields: [productId], references: [id])
+  /// Detalhe do que foi executado — opcional, complementa a descrição do produto/serviço.
+  description    String?      @db.Text
+  quantity       Decimal      @db.Decimal(18, 3)
+  unitPrice      Decimal      @db.Decimal(18, 2)
+  totalPrice     Decimal      @db.Decimal(18, 2)
+
+  @@index([serviceOrderId])
+  @@map("service_order_service_items")
+}
+
+/// Produto/material consumido na execução — produto normal, controla
+/// estoque como sempre (a baixa só acontece quando virar Venda,
+/// igual já funciona hoje no Pedido de Venda).
+model ServiceOrderProductItem {
+  id             String       @id @default(cuid())
+  serviceOrderId String
+  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product      @relation("ServiceOrderProductItemProduct", fields: [productId], references: [id])
+  quantity       Decimal      @db.Decimal(18, 3)
+  unitPrice      Decimal      @db.Decimal(18, 2)
+  totalPrice     Decimal      @db.Decimal(18, 2)
+
+  @@index([serviceOrderId])
+  @@map("service_order_product_items")
+}
+
 enum ChartOfAccountType {
   RECEITA
   DESPESA
@@ -1663,6 +1817,7 @@ model ChartOfAccount {
   sales            Sale[]
   purchaseOrders   PurchaseOrder[]
   salesOrders      SalesOrder[]
+  serviceOrders    ServiceOrder[]
   quotes           Quote[]
   products         Product[]                    @relation("ProductPurchaseChartOfAccount")
   productsForSale  Product[]                    @relation("ProductSaleChartOfAccount")
@@ -3559,6 +3714,9 @@ enum NotificationType {
   QUOTE_REVISION_REQUESTED
   QUOTE_CANCELLED_BY_CUSTOMER
   QUOTE_APPROVED_BY_CUSTOMER
+  SERVICE_ORDER_REVISION_REQUESTED
+  SERVICE_ORDER_CANCELLED_BY_CUSTOMER
+  SERVICE_ORDER_CONFIRMED_BY_CUSTOMER
 }
 
 /// Notificação do sino (bell) da barra superior. Dois jeitos de

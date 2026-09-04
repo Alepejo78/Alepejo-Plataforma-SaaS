@@ -188,6 +188,7 @@ export class SaleService {
 
     let sourceOrder: {
       quoteId: string | null;
+      serviceOrderId: string | null;
       chartOfAccountId: string | null;
       termDays: number | null;
       paymentMethod: PaymentMethod | null;
@@ -357,6 +358,17 @@ export class SaleService {
         await tx.quote.update({
           where: { id: sourceOrder.quoteId },
           data: { status: QuoteStatus.CONVERTED },
+        });
+      }
+
+      // Pedido nascido da confirmação digital de uma Ordem de Serviço
+      // (ver ServiceOrderConfirmationService.confirmPublic) — fecha o
+      // status da Ordem de Serviço junto, mesmo raciocínio do Orçamento
+      // acima.
+      if (sourceOrder?.serviceOrderId) {
+        await tx.serviceOrder.update({
+          where: { id: sourceOrder.serviceOrderId },
+          data: { status: 'CONVERTED' },
         });
       }
 

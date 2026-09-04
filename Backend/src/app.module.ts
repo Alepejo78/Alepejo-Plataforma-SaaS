@@ -29,6 +29,7 @@ import { PurchaseModule } from './modules/purchase/purchase.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
 import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
+import { ServiceOrdersModule } from './modules/service-orders/service-orders.module';
 import { SalesSettingsModule } from './modules/sales-settings/sales-settings.module';
 import { QuotationsModule } from './modules/quotations/quotations.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
@@ -83,6 +84,7 @@ import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-
     SalesModule,
     QuotesModule,
     SalesOrdersModule,
+    ServiceOrdersModule,
     SalesSettingsModule,
     QuotationsModule,
     PayrollModule,
