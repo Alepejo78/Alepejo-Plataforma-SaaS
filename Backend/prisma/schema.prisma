@@ -1671,11 +1671,11 @@ enum ServiceOrderStatus {
   DRAFT
   /// Em execução.
   IN_PROGRESS
-  /// Enviada, esperando o cliente confirmar pelo link público.
+  /// Enviada, esperando o cliente aprovar o escopo pelo link público.
   AWAITING_CONFIRMATION
-  /// Cliente pediu ajuste — volta pra IN_PROGRESS depois de revisada.
+  /// Cliente pediu ajuste no escopo antes da execução começar.
   REVISION_REQUESTED
-  /// Cliente confirmou — Pedido de Venda já gerado (ver ServiceOrder.salesOrder).
+  /// Serviço finalizado pela empresa — Pedido de Venda já gerado (ver ServiceOrder.salesOrder).
   CONFIRMED
   /// O Pedido de Venda gerado virou Venda de verdade.
   CONVERTED
@@ -1686,12 +1686,15 @@ enum ServiceOrderStatus {
 /// Venda, que é mercadoria), com dois grupos de item separados —
 /// serviços realizados (serviceItems) e produtos/materiais usados
 /// (productItems) — mostrados sempre separados (tela, e-mail, PDF).
-/// Só vira Venda de verdade depois que o cliente confirma
-/// digitalmente que o serviço foi executado (ver
-/// ServiceOrderConfirmationService, mesmo esquema de
-/// QuoteConfirmationService) — a confirmação gera um Pedido de Venda
-/// (SalesOrder) combinando os dois grupos num só, e a partir daí
-/// segue o fluxo comum de Pedido de Venda → Venda sem alteração.
+/// Cliente pode aprovar o escopo digitalmente antes da execução
+/// começar (opcional, ver ServiceOrderConfirmationService.
+/// sendConfirmation/confirmPublic, mesmo esquema de
+/// QuoteConfirmationService) — aprovando, a OS só entra em execução
+/// (IN_PROGRESS), sem gerar Pedido nenhum. O Pedido de Venda só nasce
+/// quando a empresa finaliza o serviço (ver
+/// ServiceOrderConfirmationService.complete), combinando os dois
+/// grupos de item num só — a partir daí segue o fluxo comum de
+/// Pedido de Venda → Venda sem alteração.
 model ServiceOrder {
   id String @id @default(cuid())
 
@@ -1714,7 +1717,9 @@ model ServiceOrder {
 
   scheduledStart DateTime?
   scheduledEnd   DateTime?
-  /// Marcado ao concluir a execução — antes de enviar a confirmação ao cliente.
+  /// Marcado quando a empresa finaliza o serviço (ver
+  /// ServiceOrderConfirmationService.complete) — junto disso o Pedido
+  /// de Venda é gerado e o cliente é avisado que pode retirar.
   completedAt    DateTime?
 
   observation String?

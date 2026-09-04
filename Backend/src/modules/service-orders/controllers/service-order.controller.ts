@@ -162,13 +162,16 @@ export class ServiceOrderController {
 
   @Patch(':id/complete')
   @Permissions('service-order.update')
-  @ApiOperation({ summary: 'Concluir execução da ordem de serviço' })
+  @ApiOperation({
+    summary:
+      'Finalizar serviço — gera o Pedido de Venda e avisa o cliente (e-mail/WhatsApp) que pode retirar',
+  })
   complete(
     @CurrentUser('companyId') companyId: string,
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    return this.service.complete(companyId, id, userId);
+    return this.confirmationService.complete(companyId, id, userId);
   }
 
   @Post(':id/send-confirmation')

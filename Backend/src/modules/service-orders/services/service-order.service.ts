@@ -441,23 +441,6 @@ export class ServiceOrderService {
     );
   }
 
-  async complete(companyId: string, id: string, userId: string) {
-    const order = await this.findOne(companyId, id);
-
-    if (order.status !== ServiceOrderStatus.IN_PROGRESS) {
-      throw new BadRequestException(
-        'Somente ordens de serviço em execução podem ser concluídas.',
-      );
-    }
-
-    return this.repository.updateStatus(
-      id,
-      ServiceOrderStatus.IN_PROGRESS,
-      userId,
-      { completedAt: new Date() },
-    );
-  }
-
   async cancel(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 

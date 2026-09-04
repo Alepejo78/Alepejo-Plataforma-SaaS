@@ -654,6 +654,14 @@ export default function OrdensDeServicoPage() {
   }
 
   async function completeOrder(id: string) {
+    if (
+      !window.confirm(
+        "Finalizar o serviço? Isso gera o Pedido de Venda e avisa o cliente por e-mail/WhatsApp que já pode retirar."
+      )
+    ) {
+      return;
+    }
+
     setActionId(id);
     setActionError("");
 
@@ -663,7 +671,7 @@ export default function OrdensDeServicoPage() {
       await load();
     } catch (err) {
       setActionError(
-        extractMessage(err, "Não foi possível concluir a ordem de serviço.")
+        extractMessage(err, "Não foi possível finalizar o serviço.")
       );
     } finally {
       setActionId("");
@@ -894,9 +902,10 @@ export default function OrdensDeServicoPage() {
 
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
                     Prestação de serviço — separada em serviços
-                    realizados e produtos/materiais usados. Ao concluir,
-                    o cliente confirma digitalmente antes de virar
-                    Pedido de Venda.
+                    realizados e produtos/materiais usados. O cliente
+                    pode aprovar o escopo antes da execução começar;
+                    ao finalizar o serviço, vira Pedido de Venda e o
+                    cliente é avisado que pode retirar.
                   </p>
                 </div>
 
@@ -1092,14 +1101,14 @@ export default function OrdensDeServicoPage() {
                             </Can>
                           )}
 
-                          {o.status === "IN_PROGRESS" && !o.completedAt && (
+                          {o.status === "IN_PROGRESS" && (
                             <Can permission="service-order.update">
                               <button
                                 type="button"
                                 disabled={busy}
                                 onClick={() => void completeOrder(o.id)}
-                                title="Concluir"
-                                aria-label="Concluir"
+                                title="Finalizar serviço (gera o Pedido e avisa o cliente)"
+                                aria-label="Finalizar serviço"
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
                               >
                                 <FileText size={16} />
@@ -1108,7 +1117,6 @@ export default function OrdensDeServicoPage() {
                           )}
 
                           {(o.status === "DRAFT" ||
-                            o.status === "IN_PROGRESS" ||
                             o.status === "REVISION_REQUESTED") && (
                             <Can permission="service-order.send-confirmation">
                               <button

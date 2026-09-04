@@ -116,7 +116,7 @@ function ConfirmarOrdemServicoContent() {
     try {
       await serviceOrderPublicService.confirm(id, token);
 
-      setFinalStatus("CONFIRMED");
+      setFinalStatus("IN_PROGRESS");
       setDone(true);
     } catch (err) {
       setError(
@@ -182,8 +182,12 @@ function ConfirmarOrdemServicoContent() {
       return "Obrigado. Já pode fechar esta página.";
     }
 
+    if (status === "IN_PROGRESS") {
+      return "Serviço aprovado — a execução já pode começar. Você será avisado por e-mail/WhatsApp assim que estiver pronto.";
+    }
+
     if (status === "CONFIRMED" || status === "CONVERTED") {
-      return "Serviço confirmado. Você vai receber o pedido por e-mail.";
+      return "Serviço finalizado. Você vai receber o pedido por e-mail.";
     }
 
     if (status === "REVISION_REQUESTED") {
@@ -206,7 +210,7 @@ function ConfirmarOrdemServicoContent() {
         />
 
         <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Confirmação de serviço
+          Aprovação de serviço
         </h1>
 
         {loading ? (
@@ -242,8 +246,10 @@ function ConfirmarOrdemServicoContent() {
           info && (
             <div className="mt-4 space-y-4">
               <p className="text-sm text-[var(--text-muted)]">
-                Confira a ordem de serviço <strong>{info.orderNumber}</strong>{" "}
-                de <strong>{info.companyName}</strong> e decida abaixo:
+                Confira o serviço a ser executado na ordem{" "}
+                <strong>{info.orderNumber}</strong> de{" "}
+                <strong>{info.companyName}</strong> e decida abaixo — aprovando,
+                a execução já começa:
               </p>
 
               <div className="space-y-3 rounded-xl border border-[var(--border)] p-4 text-sm">

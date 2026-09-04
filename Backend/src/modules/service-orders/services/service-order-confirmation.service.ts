@@ -30,12 +30,14 @@ function hashToken(token: string): string {
 /**
  * Confirmação digital da Ordem de Serviço pelo cliente — mesmo
  * mecanismo de `QuoteConfirmationService` (token público, sem login,
- * link por e-mail/WhatsApp). Diferente do Orçamento, aqui o cliente
- * só confirma que o serviço foi executado como descrito (a forma de
- * pagamento já foi definida na criação da OS, não é escolhida agora)
- * — ao confirmar, gera um Pedido de Venda combinando os itens de
- * serviço e produto num só, que segue o fluxo comum de Pedido de
- * Venda → Venda sem alteração nenhuma.
+ * link por e-mail/WhatsApp), mesmo esquema do Orçamento (Confirmar/
+ * Revisar/Cancelar). Diferente do Orçamento, aqui o cliente aprova o
+ * ESCOPO antes do serviço ser executado — ao confirmar, a OS só entra
+ * em execução (IN_PROGRESS), sem gerar Pedido nenhum ainda. O Pedido
+ * de Venda só nasce quando a própria empresa marca o serviço como
+ * finalizado (ver `complete`), depois de executar o trabalho — nesse
+ * momento o cliente é avisado por e-mail/WhatsApp que já pode retirar,
+ * sem precisar confirmar nada de novo.
  */
 @Injectable()
 export class ServiceOrderConfirmationService {
@@ -55,19 +57,19 @@ export class ServiceOrderConfirmationService {
   async sendConfirmation(companyId: string, id: string) {
     const order = await this.serviceOrderService.findOne(companyId, id);
 
-    // Iniciar execução/Concluir continuam existindo como passos
-    // manuais próprios, mas não travam mais o envio — fica a
-    // critério de quem está usando decidir quando mandar pro
-    // cliente confirmar (ex.: OS nascida de um orçamento já
-    // aprovado pode ser enviada assim que criada, sem esperar o
-    // serviço ser executado).
+    // Envio pro cliente aprovar o escopo, antes da execução começar
+    // (mesmo esquema do Orçamento) — fica a critério de quem está
+    // usando decidir quando mandar (ex.: OS nascida de um orçamento
+    // já aprovado pode ser enviada assim que criada). Uma vez em
+    // execução, esse aviso não faz mais sentido — quem confirma que
+    // o serviço acabou é a própria empresa, clicando em "Finalizar
+    // serviço" (ver `complete`), não um novo link pro cliente.
     if (
       order.status !== ServiceOrderStatus.DRAFT &&
-      order.status !== ServiceOrderStatus.IN_PROGRESS &&
       order.status !== ServiceOrderStatus.REVISION_REQUESTED
     ) {
       throw new BadRequestException(
-        'Esta ordem de serviço não pode ser enviada para o cliente confirmar neste status.',
+        'Esta ordem de serviço não pode ser enviada para o cliente aprovar neste status.',
       );
     }
 
@@ -127,19 +129,6 @@ export class ServiceOrderConfirmationService {
 
     const summaryHtml = this.serviceOrderService.buildSummaryHtml(order);
 
-    // Enviado depois de concluído (ver ServiceOrderService.complete) —
-    // avisa que o serviço acabou e já pode buscar o veículo. Enviado
-    // antes disso (ex.: OS nascida de um orçamento já aprovado,
-    // enviada assim que criada), mensagem neutra — o serviço ainda
-    // não foi executado.
-    const introText = order.completedAt
-      ? `O serviço da Ordem de Serviço <strong>${orderNumber}</strong> de <strong>${companyName}</strong> foi concluído e o veículo já pode ser retirado. Confira os detalhes abaixo e clique no botão para confirmar:`
-      : `A Ordem de Serviço <strong>${orderNumber}</strong> de <strong>${companyName}</strong> está pronta para sua confirmação. Confira os detalhes abaixo e clique no botão para confirmar:`;
-
-    const introTextWhatsapp = order.completedAt
-      ? `O serviço da Ordem de Serviço ${orderNumber} (${companyName}) foi concluído e o veículo já pode ser retirado.`
-      : `A Ordem de Serviço ${orderNumber} (${companyName}) está pronta pra você confirmar.`;
-
     const channels: string[] = [];
 
     if (partner.email) {
@@ -148,7 +137,7 @@ export class ServiceOrderConfirmationService {
         partner.email,
         `Ordem de Serviço ${orderNumber} pronta para sua confirmação — ${companyName}`,
         `<p>Olá, ${partnerName},</p>
-<p>${introText}</p>
+<p>A Ordem de Serviço <strong>${orderNumber}</strong> de <strong>${companyName}</strong> está pronta para sua confirmação. Confira os detalhes abaixo e clique no botão para confirmar:</p>
 ${summaryHtml}
 <p style="text-align: center; margin: 24px 0;">
   <a href="${link}" style="background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Ver e confirmar</a>
@@ -174,7 +163,7 @@ ${summaryHtml}
       const sent = await this.whatsappNotifications.send(
         companyId,
         partner.mobile,
-        `Olá, ${partnerName}! ${introTextWhatsapp} Confira aqui: ${link}`,
+        `Olá, ${partnerName}! A Ordem de Serviço ${orderNumber} (${companyName}) está pronta pra você confirmar. Confira aqui: ${link}`,
       );
 
       if (sent) {
@@ -273,7 +262,11 @@ ${summaryHtml}
     }
   }
 
-  /** Consumo público — cliente confirma que o serviço foi executado como descrito. */
+  /**
+   * Consumo público — cliente aprova o escopo descrito e a OS entra
+   * em execução. Não gera Pedido nenhum ainda (isso só acontece
+   * quando a empresa finaliza o serviço, ver `complete`).
+   */
   async confirmPublic(id: string, token: string) {
     const order = await this.validatePublicToken(id, token);
 
@@ -286,7 +279,7 @@ ${summaryHtml}
     await this.prisma.serviceOrder.update({
       where: { id: order.id },
       data: {
-        status: ServiceOrderStatus.CONFIRMED,
+        status: ServiceOrderStatus.IN_PROGRESS,
         customerConfirmedAt: new Date(),
         confirmationTokenHash: null,
         confirmationTokenExpiresAt: null,
@@ -298,6 +291,42 @@ ${summaryHtml}
       select: { rootCompanyId: true },
     });
     const rootCompanyId = company?.rootCompanyId ?? order.companyId;
+    const orderNumber = serviceOrderNumberOf(order);
+
+    void this.notifications.emit({
+      rootCompanyId,
+      type: NotificationType.SERVICE_ORDER_CONFIRMED_BY_CUSTOMER,
+      dedupeKey: `service-order-confirmed-customer:${order.id}`,
+      title: 'Cliente aprovou a ordem de serviço',
+      message: `O cliente aprovou o escopo da ordem de serviço ${orderNumber} — pode iniciar a execução.`,
+      permissionCode: RESPONSIBLE_PERMISSION,
+      linkUrl: '/erp/vendas/ordens-servico',
+      documentRef: orderNumber,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Empresa marca o serviço como finalizado — gera o Pedido de Venda
+   * (combinando itens de serviço e produto num só) e avisa o cliente
+   * por e-mail/WhatsApp que já pode retirar, sem exigir nenhuma nova
+   * confirmação dele (diferente do envio de `sendConfirmation`, este
+   * é só informativo).
+   */
+  async complete(companyId: string, id: string, userId: string) {
+    const order = await this.serviceOrderService.findOne(companyId, id);
+
+    if (order.status !== ServiceOrderStatus.IN_PROGRESS) {
+      throw new BadRequestException(
+        'Somente ordens de serviço em execução podem ser finalizadas.',
+      );
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+    const rootCompanyId = company?.rootCompanyId ?? companyId;
 
     const orderNumber = serviceOrderNumberOf(order);
     const generatedNote = `Gerado automaticamente a partir da Ordem de Serviço ${orderNumber}.`;
@@ -338,29 +367,91 @@ ${summaryHtml}
           })),
         ],
       },
-      order.createdById ?? '',
-      // OS já confirmada pelo cliente — o Pedido gerado nasce pronto
-      // pra virar Venda, sem precisar de aprovação própria.
+      userId,
+      // Serviço já finalizado pela própria empresa — o Pedido gerado
+      // nasce pronto pra virar Venda, sem precisar de aprovação própria.
       true,
     );
 
-    await this.prisma.salesOrder.update({
-      where: { id: salesOrder.id },
-      data: { serviceOrderId: order.id },
-    });
+    await this.prisma.$transaction([
+      this.prisma.serviceOrder.update({
+        where: { id: order.id },
+        data: {
+          status: ServiceOrderStatus.CONFIRMED,
+          completedAt: new Date(),
+          updatedById: userId,
+        },
+      }),
+      this.prisma.salesOrder.update({
+        where: { id: salesOrder.id },
+        data: { serviceOrderId: order.id },
+      }),
+    ]);
 
-    void this.notifications.emit({
-      rootCompanyId,
-      type: NotificationType.SERVICE_ORDER_CONFIRMED_BY_CUSTOMER,
-      dedupeKey: `service-order-confirmed-customer:${order.id}`,
-      title: 'Ordem de serviço confirmada pelo cliente',
-      message: `O cliente confirmou a ordem de serviço ${orderNumber}.`,
-      permissionCode: RESPONSIBLE_PERMISSION,
-      linkUrl: '/erp/vendas/ordens-servico',
-      documentRef: orderNumber,
-    });
+    await this.notifyCompleted(companyId, order, orderNumber);
 
     return { success: true, salesOrder };
+  }
+
+  /** Avisa o cliente (e-mail/WhatsApp, com PDF) que o serviço acabou — sem link, não exige nenhuma ação dele. */
+  private async notifyCompleted(
+    companyId: string,
+    order: Awaited<ReturnType<ServiceOrderService['findOne']>>,
+    orderNumber: string,
+  ) {
+    const partner = order.partner;
+
+    if (!partner.email && !partner.mobile) {
+      return;
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+    const companyName = company?.tradeName || company?.legalName || '';
+    const partnerName = partner.tradeName || partner.legalName;
+
+    const pdf = await this.serviceOrderPdf
+      .generate(order, company)
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Falha ao gerar PDF da ordem de serviço ${orderNumber}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+
+        return null;
+      });
+
+    const summaryHtml = this.serviceOrderService.buildSummaryHtml(order);
+
+    if (partner.email) {
+      await this.emailNotifications.send(
+        companyId,
+        partner.email,
+        `Ordem de Serviço ${orderNumber} finalizada — ${companyName}`,
+        `<p>Olá, ${partnerName},</p>
+<p>O serviço da Ordem de Serviço <strong>${orderNumber}</strong> de <strong>${companyName}</strong> foi finalizado e o veículo já pode ser retirado.</p>
+${summaryHtml}`,
+        pdf
+          ? [
+              {
+                filename: `${orderNumber}.pdf`,
+                content: pdf,
+                contentType: 'application/pdf',
+              },
+            ]
+          : undefined,
+      );
+    }
+
+    if (partner.mobile) {
+      await this.whatsappNotifications.send(
+        companyId,
+        partner.mobile,
+        `Olá, ${partnerName}! O serviço da Ordem de Serviço ${orderNumber} (${companyName}) foi finalizado e o veículo já pode ser retirado.`,
+      );
+    }
   }
 
   /** Consumo público — cliente pede revisão, descrevendo o que falta ajustar. */

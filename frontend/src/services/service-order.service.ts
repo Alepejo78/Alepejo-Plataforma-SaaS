@@ -20,9 +20,9 @@ export const SERVICE_ORDER_STATUS_LABELS: Record<ServiceOrderStatus, string> =
   {
     DRAFT: "Aberta",
     IN_PROGRESS: "Em Execução",
-    AWAITING_CONFIRMATION: "Aguardando confirmação do cliente",
+    AWAITING_CONFIRMATION: "Aguardando aprovação do cliente",
     REVISION_REQUESTED: "Revisão solicitada",
-    CONFIRMED: "Confirmada pelo cliente",
+    CONFIRMED: "Serviço finalizado",
     CONVERTED: "Faturada",
     CANCELLED: "Cancelada",
   };
