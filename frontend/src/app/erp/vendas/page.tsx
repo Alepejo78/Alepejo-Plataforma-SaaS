@@ -689,7 +689,7 @@ export default function VendasPage() {
     async (query: string) => {
       const result = await chartOfAccountService.list({
         search: query || undefined,
-        limit: 20,
+        limit: 200,
       });
 
       return result.data;
