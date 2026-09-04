@@ -47,9 +47,14 @@ const TYPE_MAP: Record<string, FinancialEntryType> = {
   RECEBER: FinancialEntryType.RECEIVABLE,
 };
 
+// Mesmas palavras que aparecem na tela de Contas a Pagar/Receber
+// (FINANCIAL_ENTRY_STATUS_LABELS no frontend) — evita a pessoa
+// digitar um status na planilha que não bate com o que vê no
+// sistema. Aceita variação sem "em"/plural como atalho.
 const STATUS_MAP: Record<string, FinancialEntryStatus> = {
   ABERTO: FinancialEntryStatus.OPEN,
-  PAGO: FinancialEntryStatus.PAID,
+  'EM ABERTO': FinancialEntryStatus.OPEN,
+  BAIXADO: FinancialEntryStatus.PAID,
   CANCELADO: FinancialEntryStatus.CANCELLED,
 };
 
@@ -158,7 +163,12 @@ export class FinancialEntryImportService {
         map,
         'tipo_documento',
       ).toUpperCase();
-      const statusRaw = cellValue(row, map, 'status').toUpperCase();
+      // Colapsa espaço duplo/múltiplo — "Em  Aberto" ou "EM ABERTO"
+      // batem igual na hora de bater com o STATUS_MAP.
+      const statusRaw = cellValue(row, map, 'status')
+        .toUpperCase()
+        .replace(/\s+/g, ' ')
+        .trim();
       const dataPagamentoRaw = cellValue(row, map, 'data_pagamento');
 
       const type = TYPE_MAP[tipoRaw];
@@ -261,7 +271,7 @@ export class FinancialEntryImportService {
 
       const status = statusRaw ? STATUS_MAP[statusRaw] : FinancialEntryStatus.OPEN;
       if (statusRaw && !status) {
-        errors.push('Status deve ser ABERTO, PAGO ou CANCELADO.');
+        errors.push('Status deve ser EM ABERTO, BAIXADO ou CANCELADO.');
       }
 
       // Baixa histórica (título antigo que já veio pago de outro

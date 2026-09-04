@@ -16,6 +16,7 @@ import {
   financialEntryImportService,
   type FinancialEntryImportRowData,
 } from "@/services/financial-entry-import.service";
+import { FINANCIAL_ENTRY_STATUS_LABELS } from "@/services/financial-entry.service";
 import type { ImportPreview } from "@/services/product-import.service";
 
 const LAYOUT_HEADERS = [
@@ -48,7 +49,7 @@ const LAYOUT_EXAMPLE = [
   "NOTA_FISCAL",
   "",
   "Observação opcional",
-  "PAGO",
+  "BAIXADO",
   "15/09/2026",
 ];
 
@@ -191,10 +192,12 @@ export function FinancialEntryImportModal({ onClose, onSaved }: Props) {
                     importe Produtos e Parceiros primeiro. Sem "Número
                     Documento" preenchido, sempre cria um título novo; com
                     ele, atualiza o título já existente com o mesmo
-                    parceiro + número. "Status" vazio entra como Aberto —
-                    título antigo já pago em outro sistema, preencha PAGO
-                    (e "Data Pagamento", se não informar usa o
-                    vencimento); já cancelado, preencha CANCELADO.
+                    parceiro + número. "Status" vazio entra como Em
+                    aberto (mesmas palavras da tela de Contas a
+                    Pagar/Receber) — título antigo já baixado em outro
+                    sistema, preencha BAIXADO (e "Data Pagamento", se
+                    não informar usa o vencimento); já cancelado,
+                    preencha CANCELADO.
                   </p>
                 </div>
 
@@ -321,18 +324,18 @@ export function FinancialEntryImportModal({ onClose, onSaved }: Props) {
                           <td className="px-3 py-2">
                             {row.data.status === "PAID" && (
                               <span className="text-[var(--success)]">
-                                Pago
+                                {FINANCIAL_ENTRY_STATUS_LABELS.PAID}
                               </span>
                             )}
                             {row.data.status === "CANCELLED" && (
                               <span className="text-[var(--text-muted)]">
-                                Cancelado
+                                {FINANCIAL_ENTRY_STATUS_LABELS.CANCELLED}
                               </span>
                             )}
                             {(!row.data.status ||
                               row.data.status === "OPEN") && (
                               <span className="text-[var(--text-secondary)]">
-                                Aberto
+                                {FINANCIAL_ENTRY_STATUS_LABELS.OPEN}
                               </span>
                             )}
                           </td>
