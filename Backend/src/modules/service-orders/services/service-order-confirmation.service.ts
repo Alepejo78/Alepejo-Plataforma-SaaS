@@ -55,18 +55,19 @@ export class ServiceOrderConfirmationService {
   async sendConfirmation(companyId: string, id: string) {
     const order = await this.serviceOrderService.findOne(companyId, id);
 
+    // Iniciar execução/Concluir continuam existindo como passos
+    // manuais próprios, mas não travam mais o envio — fica a
+    // critério de quem está usando decidir quando mandar pro
+    // cliente confirmar (ex.: OS nascida de um orçamento já
+    // aprovado pode ser enviada assim que criada, sem esperar o
+    // serviço ser executado).
     if (
+      order.status !== ServiceOrderStatus.DRAFT &&
       order.status !== ServiceOrderStatus.IN_PROGRESS &&
       order.status !== ServiceOrderStatus.REVISION_REQUESTED
     ) {
       throw new BadRequestException(
-        'Somente ordens de serviço em execução ou com revisão solicitada podem ser enviadas para o cliente confirmar.',
-      );
-    }
-
-    if (!order.completedAt) {
-      throw new BadRequestException(
-        'Marque a ordem de serviço como concluída antes de enviar para confirmação.',
+        'Esta ordem de serviço não pode ser enviada para o cliente confirmar neste status.',
       );
     }
 
@@ -126,6 +127,19 @@ export class ServiceOrderConfirmationService {
 
     const summaryHtml = this.serviceOrderService.buildSummaryHtml(order);
 
+    // Enviado depois de concluído (ver ServiceOrderService.complete) —
+    // avisa que o serviço acabou e já pode buscar o veículo. Enviado
+    // antes disso (ex.: OS nascida de um orçamento já aprovado,
+    // enviada assim que criada), mensagem neutra — o serviço ainda
+    // não foi executado.
+    const introText = order.completedAt
+      ? `O serviço da Ordem de Serviço <strong>${orderNumber}</strong> de <strong>${companyName}</strong> foi concluído e o veículo já pode ser retirado. Confira os detalhes abaixo e clique no botão para confirmar:`
+      : `A Ordem de Serviço <strong>${orderNumber}</strong> de <strong>${companyName}</strong> está pronta para sua confirmação. Confira os detalhes abaixo e clique no botão para confirmar:`;
+
+    const introTextWhatsapp = order.completedAt
+      ? `O serviço da Ordem de Serviço ${orderNumber} (${companyName}) foi concluído e o veículo já pode ser retirado.`
+      : `A Ordem de Serviço ${orderNumber} (${companyName}) está pronta pra você confirmar.`;
+
     const channels: string[] = [];
 
     if (partner.email) {
@@ -134,7 +148,7 @@ export class ServiceOrderConfirmationService {
         partner.email,
         `Ordem de Serviço ${orderNumber} pronta para sua confirmação — ${companyName}`,
         `<p>Olá, ${partnerName},</p>
-<p>O serviço da Ordem de Serviço <strong>${orderNumber}</strong> de <strong>${companyName}</strong> foi concluído. Confira os detalhes abaixo e clique no botão para confirmar:</p>
+<p>${introText}</p>
 ${summaryHtml}
 <p style="text-align: center; margin: 24px 0;">
   <a href="${link}" style="background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Ver e confirmar</a>
@@ -160,7 +174,7 @@ ${summaryHtml}
       const sent = await this.whatsappNotifications.send(
         companyId,
         partner.mobile,
-        `Olá, ${partnerName}! O serviço da Ordem de Serviço ${orderNumber} (${companyName}) foi concluído e está pronto pra você confirmar. Confira aqui: ${link}`,
+        `Olá, ${partnerName}! ${introTextWhatsapp} Confira aqui: ${link}`,
       );
 
       if (sent) {

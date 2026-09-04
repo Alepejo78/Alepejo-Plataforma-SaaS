@@ -1107,7 +1107,8 @@ export default function OrdensDeServicoPage() {
                             </Can>
                           )}
 
-                          {((o.status === "IN_PROGRESS" && o.completedAt) ||
+                          {(o.status === "DRAFT" ||
+                            o.status === "IN_PROGRESS" ||
                             o.status === "REVISION_REQUESTED") && (
                             <Can permission="service-order.send-confirmation">
                               <button
