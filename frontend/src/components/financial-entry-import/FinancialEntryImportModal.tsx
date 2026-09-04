@@ -31,6 +31,8 @@ const LAYOUT_HEADERS = [
   "Tipo Documento",
   "Chave Documento",
   "Observação",
+  "Status",
+  "Data Pagamento",
 ];
 
 const LAYOUT_EXAMPLE = [
@@ -46,6 +48,8 @@ const LAYOUT_EXAMPLE = [
   "NOTA_FISCAL",
   "",
   "Observação opcional",
+  "PAGO",
+  "15/09/2026",
 ];
 
 function extractMessage(err: unknown, fallback: string) {
@@ -187,7 +191,10 @@ export function FinancialEntryImportModal({ onClose, onSaved }: Props) {
                     importe Produtos e Parceiros primeiro. Sem "Número
                     Documento" preenchido, sempre cria um título novo; com
                     ele, atualiza o título já existente com o mesmo
-                    parceiro + número.
+                    parceiro + número. "Status" vazio entra como Aberto —
+                    título antigo já pago em outro sistema, preencha PAGO
+                    (e "Data Pagamento", se não informar usa o
+                    vencimento); já cancelado, preencha CANCELADO.
                   </p>
                 </div>
 
@@ -266,6 +273,7 @@ export function FinancialEntryImportModal({ onClose, onSaved }: Props) {
                         <th className="px-3 py-2">Documento</th>
                         <th className="px-3 py-2">Vencimento</th>
                         <th className="px-3 py-2">Valor</th>
+                        <th className="px-3 py-2">Status</th>
                         <th className="px-3 py-2">Detalhe</th>
                       </tr>
                     </thead>
@@ -309,6 +317,24 @@ export function FinancialEntryImportModal({ onClose, onSaved }: Props) {
                                   currency: "BRL",
                                 })
                               : "—"}
+                          </td>
+                          <td className="px-3 py-2">
+                            {row.data.status === "PAID" && (
+                              <span className="text-[var(--success)]">
+                                Pago
+                              </span>
+                            )}
+                            {row.data.status === "CANCELLED" && (
+                              <span className="text-[var(--text-muted)]">
+                                Cancelado
+                              </span>
+                            )}
+                            {(!row.data.status ||
+                              row.data.status === "OPEN") && (
+                              <span className="text-[var(--text-secondary)]">
+                                Aberto
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-xs text-[var(--danger)]">
                             {row.errors.join(" ")}

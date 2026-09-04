@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 
 import {
   FinancialDocumentType,
+  FinancialEntryStatus,
   FinancialEntryType,
   PaymentMethod,
 } from '@prisma/client';
@@ -37,11 +38,19 @@ const ALL_KEYS = [
   'tipo_documento',
   'chave_documento',
   'observacao',
+  'status',
+  'data_pagamento',
 ];
 
 const TYPE_MAP: Record<string, FinancialEntryType> = {
   PAGAR: FinancialEntryType.PAYABLE,
   RECEBER: FinancialEntryType.RECEIVABLE,
+};
+
+const STATUS_MAP: Record<string, FinancialEntryStatus> = {
+  ABERTO: FinancialEntryStatus.OPEN,
+  PAGO: FinancialEntryStatus.PAID,
+  CANCELADO: FinancialEntryStatus.CANCELLED,
 };
 
 function parseDate(value: string): string | null {
@@ -149,6 +158,8 @@ export class FinancialEntryImportService {
         map,
         'tipo_documento',
       ).toUpperCase();
+      const statusRaw = cellValue(row, map, 'status').toUpperCase();
+      const dataPagamentoRaw = cellValue(row, map, 'data_pagamento');
 
       const type = TYPE_MAP[tipoRaw];
       if (!type) {
@@ -248,6 +259,28 @@ export class FinancialEntryImportService {
         );
       }
 
+      const status = statusRaw ? STATUS_MAP[statusRaw] : FinancialEntryStatus.OPEN;
+      if (statusRaw && !status) {
+        errors.push('Status deve ser ABERTO, PAGO ou CANCELADO.');
+      }
+
+      // Baixa histórica (título antigo que já veio pago de outro
+      // sistema) — sem data de pagamento na planilha, assume o
+      // vencimento (mesmo raciocínio de "sem vencimento calculado,
+      // vence na própria data" do lançamento manual).
+      let paymentDate: string | undefined;
+      if (status === FinancialEntryStatus.PAID) {
+        if (dataPagamentoRaw) {
+          const parsedPaymentDate = parseDate(dataPagamentoRaw);
+          if (!parsedPaymentDate) {
+            errors.push('Data de pagamento inválida (dd/mm/aaaa).');
+          }
+          paymentDate = parsedPaymentDate ?? undefined;
+        } else {
+          paymentDate = dueDate ?? undefined;
+        }
+      }
+
       const existing =
         partnerId && numeroDocumento
           ? await this.financialEntriesRepository.findByPartnerAndDocument(
@@ -256,6 +289,15 @@ export class FinancialEntryImportService {
               numeroDocumento,
             )
           : null;
+
+      // Reabrir/estornar pra depois alterar é fluxo manual de
+      // propósito (mexe com o caixa já fechado) — importação não
+      // pode sobrescrever um título que já foi baixado.
+      if (existing?.status === FinancialEntryStatus.PAID) {
+        errors.push(
+          'Este título já está baixado no sistema — estorne a baixa manualmente antes de reimportar esta linha.',
+        );
+      }
 
       const data: FinancialEntryPreviewRow['data'] = {
         type,
@@ -270,6 +312,8 @@ export class FinancialEntryImportService {
         documentType,
         documentKey: cellValue(row, map, 'chave_documento') || undefined,
         observation: cellValue(row, map, 'observacao') || undefined,
+        status,
+        paymentDate,
         existingId: existing?.id,
       };
 
@@ -315,23 +359,45 @@ export class FinancialEntryImportService {
         observation: row.observation,
       };
 
+      let entryId: string;
+
       if (row.action === 'update' && row.existingId) {
-        await this.financialEntriesService.update(
+        const entry = await this.financialEntriesService.update(
           companyId,
           rootCompanyId,
           row.existingId,
           dto,
           userId,
         );
+        entryId = entry.id;
         updated++;
       } else {
-        await this.financialEntriesService.create(
+        const entry = await this.financialEntriesService.create(
           companyId,
           rootCompanyId,
           dto,
           userId,
         );
+        entryId = entry.id;
         created++;
+      }
+
+      // Título nasce sempre em aberto — se a planilha marcou como
+      // já pago/cancelado (histórico de outro sistema), aplica a
+      // baixa/cancelamento por cima, igual seria feito na tela.
+      if (row.status === FinancialEntryStatus.PAID) {
+        await this.financialEntriesService.settle(
+          companyId,
+          entryId,
+          {
+            paymentDate: row.paymentDate,
+            paymentMethod: row.paymentMethod,
+            paidAmount: row.amount,
+          },
+          userId,
+        );
+      } else if (row.status === FinancialEntryStatus.CANCELLED) {
+        await this.financialEntriesService.cancel(companyId, entryId, userId);
       }
     }
 

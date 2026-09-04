@@ -12,6 +12,7 @@ import {
 
 import {
   FinancialDocumentType,
+  FinancialEntryStatus,
   FinancialEntryType,
   PaymentMethod,
 } from '@prisma/client';
@@ -82,4 +83,16 @@ export class FinancialEntryImportRowDto {
   @IsString()
   @MaxLength(500)
   observation?: string;
+
+  /** Título antigo já baixado/cancelado noutro sistema — sem isso, todo título importado nasce em aberto. */
+  @ApiProperty({ enum: FinancialEntryStatus, required: false })
+  @IsOptional()
+  @IsEnum(FinancialEntryStatus)
+  status?: FinancialEntryStatus;
+
+  /** Só usado quando `status` é PAID — se omitido, cai no vencimento. */
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsDateString()
+  paymentDate?: string;
 }

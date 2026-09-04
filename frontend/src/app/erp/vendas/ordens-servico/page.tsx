@@ -232,7 +232,11 @@ export default function OrdensDeServicoPage() {
   }, []);
 
   const searchQuotes = useCallback(async (query: string) => {
-    const result = await quoteService.list({});
+    // Só orçamento aprovado e ainda não convertido em venda — uma vez
+    // virando Venda, o orçamento não pode gerar OS de novo (evita OS
+    // duplicada a partir do mesmo orçamento, uma pela Venda outra por
+    // aqui).
+    const result = await quoteService.list({ status: "APPROVED" });
     const q = query.trim().toLowerCase();
 
     return result
@@ -772,7 +776,7 @@ export default function OrdensDeServicoPage() {
                   <div className="grid grid-cols-12 items-start gap-2">
                     <div
                       className={
-                        showDescription ? "col-span-4" : "col-span-5"
+                        showDescription ? "col-span-3" : "col-span-5"
                       }
                     >
                       <SearchSelect<Product>
@@ -824,7 +828,7 @@ export default function OrdensDeServicoPage() {
                     <input
                       inputMode="decimal"
                       placeholder="Qtd"
-                      className={`${fieldClass} col-span-2`}
+                      className={`${fieldClass} ${showDescription ? "col-span-1" : "col-span-2"}`}
                       value={it.quantity}
                       onChange={(e) =>
                         update(index, { quantity: e.target.value })

@@ -84,6 +84,26 @@ export class ServiceOrderService {
       throw new NotFoundException('Tipo de receita não encontrado.');
     }
 
+    if (dto.quoteId) {
+      const quote = await this.prisma.quote.findFirst({
+        where: { id: dto.quoteId, companyId },
+      });
+
+      if (!quote) {
+        throw new NotFoundException('Orçamento não encontrado.');
+      }
+
+      // Orçamento aceito direto (sem passar por Pedido) já virou uma
+      // Venda de produto (ver Quote.status no schema) — não pode
+      // também gerar uma Ordem de Serviço, senão o mesmo orçamento
+      // vira duas operações diferentes.
+      if (quote.status === 'CONVERTED') {
+        throw new BadRequestException(
+          'Este orçamento já foi convertido em venda — não pode ser usado para gerar Ordem de Serviço.',
+        );
+      }
+    }
+
     if (dto.serviceItems.length === 0 && dto.productItems.length === 0) {
       throw new BadRequestException(
         'Informe ao menos um serviço realizado ou produto usado.',

@@ -1,6 +1,7 @@
 import { api } from "./api";
 import type {
   FinancialDocumentType,
+  FinancialEntryStatus,
   FinancialEntryType,
   PaymentMethod,
 } from "./financial-entry.service";
@@ -25,6 +26,8 @@ export interface FinancialEntryImportRowData {
   documentType?: FinancialDocumentType;
   documentKey?: string;
   observation?: string;
+  status?: FinancialEntryStatus;
+  paymentDate?: string;
   existingId?: string;
 }
 
