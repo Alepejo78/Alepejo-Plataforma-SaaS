@@ -211,7 +211,7 @@ export function ProductForm({
       chartOfAccountId: text(form.chartOfAccountId),
       saleChartOfAccountId: text(form.saleChartOfAccountId),
       unitId: form.unitId,
-      salePrice: form.salePrice,
+      salePrice: isService ? 0 : form.salePrice,
       minimumStock: isService
         ? undefined
         : form.minimumStock
@@ -531,26 +531,26 @@ export function ProductForm({
         </p>
       )}
 
-      <section className="grid gap-4 md:grid-cols-5">
-        <div>
-          <label className={labelClass} htmlFor="salePrice">
-            Preço venda (R$){" "}
-            <span className="text-[var(--danger)]">*</span>
-          </label>
+      {!isService && (
+        <section className="grid gap-4 md:grid-cols-5">
+          <div>
+            <label className={labelClass} htmlFor="salePrice">
+              Preço venda (R$){" "}
+              <span className="text-[var(--danger)]">*</span>
+            </label>
 
-          <CurrencyInput
-            id="salePrice"
-            className={fieldClass}
-            value={form.salePrice}
-            onChange={(value) => setField("salePrice", value)}
-          />
+            <CurrencyInput
+              id="salePrice"
+              className={fieldClass}
+              value={form.salePrice}
+              onChange={(value) => setField("salePrice", value)}
+            />
 
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Custo e saldo em estoque ficam em Estoque.
-          </p>
-        </div>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Custo e saldo em estoque ficam em Estoque.
+            </p>
+          </div>
 
-        {!isService && (
           <>
             <div>
               <label
@@ -629,8 +629,8 @@ export function ProductForm({
               />
             </div>
           </>
-        )}
-      </section>
+        </section>
+      )}
 
       {error && (
         <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">

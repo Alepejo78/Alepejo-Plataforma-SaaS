@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FileText, Pencil, Plus, Trash2, X } from "lucide-react";
+import { FileText, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import Link from "next/link";
 
 import { maskDocument, maskPhone } from "@/lib/masks";
@@ -11,6 +11,7 @@ import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { PartnerForm } from "@/components/partners/PartnerForm";
+import { PartnerImportModal } from "@/components/partner-import/PartnerImportModal";
 
 import {
   ROLE_LABELS,
@@ -63,6 +64,7 @@ export default function ParceirosPage() {
   const [listError, setListError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] =
     useState<BusinessPartner | null>(null);
   const [saving, setSaving] = useState(false);
@@ -196,6 +198,15 @@ export default function ParceirosPage() {
                 </Link>
 
                 <Can permission="partner.create">
+                  <button
+                    type="button"
+                    onClick={() => setImportOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <Upload size={18} />
+                    Importar planilha
+                  </button>
+
                   <button
                     type="button"
                     onClick={openCreate}
@@ -436,6 +447,13 @@ export default function ParceirosPage() {
             />
           </div>
         </div>
+      )}
+
+      {importOpen && (
+        <PartnerImportModal
+          onClose={() => setImportOpen(false)}
+          onSaved={() => void load()}
+        />
       )}
     </AppShell>
   );

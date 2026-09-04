@@ -557,7 +557,7 @@ export class PurchaseService {
       );
     }
 
-    return this.prisma.purchase.update({
+    await this.prisma.purchase.update({
       where: {
         id,
       },
@@ -566,6 +566,22 @@ export class PurchaseService {
         updatedById: userId,
       },
     });
+
+    // Compra só de item de serviço (nenhum controla estoque) não tem
+    // nada pra receber fisicamente — recebe sozinha, sem esperar um
+    // clique separado em "Receber", só pra gerar o título financeiro.
+    const allServiceItems =
+      purchase.items.length > 0 &&
+      purchase.items.every(
+        (item) =>
+          item.product.inventoryControl === InventoryControl.NONE,
+      );
+
+    if (allServiceItems) {
+      return this.receive(companyId, id, {}, userId);
+    }
+
+    return this.findOne(companyId, id);
   }
 
   async receive(
@@ -844,73 +860,73 @@ export class PurchaseService {
           observation: `Compra ${purchase.id}`,
         };
 
-        if (effectiveInstallments.length) {
-          await this.financialEntriesService.createInstallments(
-            tx,
-            {
-              ...commonEntryData,
-              installments: effectiveInstallments.map(
-                (installment) => ({
-                  dueDate: new Date(installment.dueDate),
-                  amount: installment.amount,
-                }),
-              ),
-            },
-            userId,
-          );
-        } else if (autoInstallments) {
-          await this.financialEntriesService.createInstallments(
-            tx,
-            {
-              ...commonEntryData,
-              installments: autoInstallments,
-            },
-            userId,
-          );
-        } else {
-          // Pagamento único — se o Pedido de origem já tem um título
-          // antecipado em aberto (gerado na escolha do vencedor da
-          // Cotação, ver QuotationService.chooseWinner) e ainda não
-          // vinculado a nenhuma Compra, reaproveita ele em vez de
-          // criar um novo (evita duplicar o valor em Contas a Pagar).
-          const advanceEntry = purchase.purchaseOrderId
-            ? await tx.financialEntry.findFirst({
-                where: {
-                  purchaseOrderId: purchase.purchaseOrderId,
-                  purchaseId: null,
-                  status: FinancialEntryStatus.OPEN,
-                },
-              })
-            : null;
+        // Parcelas finais desta compra, seja qual for a origem
+        // (explícitas, autogeradas, ou pagamento único).
+        const finalInstallments = effectiveInstallments.length
+          ? effectiveInstallments.map((installment) => ({
+              dueDate: new Date(installment.dueDate),
+              amount: installment.amount,
+            }))
+          : autoInstallments
+            ? autoInstallments
+            : [{ dueDate, amount: Number(purchase.totalAmount) }];
 
+        // Se o Pedido de origem já tem um título antecipado em aberto
+        // (gerado na escolha do vencedor da Cotação, ver
+        // QuotationService.chooseWinner) e ainda não vinculado a
+        // nenhuma Compra, reaproveita ele em vez de criar um novo
+        // (evita duplicar o valor em Contas a Pagar) — vale pros três
+        // casos acima, não só pagamento único.
+        const advanceEntry = purchase.purchaseOrderId
+          ? await tx.financialEntry.findFirst({
+              where: {
+                purchaseOrderId: purchase.purchaseOrderId,
+                purchaseId: null,
+                status: FinancialEntryStatus.OPEN,
+              },
+            })
+          : null;
+
+        if (advanceEntry && finalInstallments.length === 1) {
+          await tx.financialEntry.update({
+            where: { id: advanceEntry.id },
+            data: {
+              purchaseId: purchase.id,
+              purchaseOrderId: null,
+              issueDate,
+              termDays,
+              paymentMethod,
+              dueDate: finalInstallments[0].dueDate,
+              documentNumber: commonEntryData.documentNumber,
+              documentKey: commonEntryData.documentKey,
+              documentType: commonEntryData.documentType,
+              observation: commonEntryData.observation,
+              updatedById: userId,
+            },
+          });
+        } else {
           if (advanceEntry) {
+            // Virou parcelado no recebimento — o título antecipado
+            // único não serve mais sozinho, cancela e gera as
+            // parcelas reais abaixo.
             await tx.financialEntry.update({
               where: { id: advanceEntry.id },
               data: {
-                purchaseId: purchase.id,
+                status: FinancialEntryStatus.CANCELLED,
                 purchaseOrderId: null,
-                issueDate,
-                termDays,
-                paymentMethod,
-                dueDate,
-                documentNumber: commonEntryData.documentNumber,
-                documentKey: commonEntryData.documentKey,
-                documentType: commonEntryData.documentType,
-                observation: commonEntryData.observation,
                 updatedById: userId,
               },
             });
-          } else {
-            await this.financialEntriesService.createFromDocument(
-              tx,
-              {
-                ...commonEntryData,
-                amount: Number(purchase.totalAmount),
-                dueDate,
-              },
-              userId,
-            );
           }
+
+          await this.financialEntriesService.createInstallments(
+            tx,
+            {
+              ...commonEntryData,
+              installments: finalInstallments,
+            },
+            userId,
+          );
         }
       },
     );

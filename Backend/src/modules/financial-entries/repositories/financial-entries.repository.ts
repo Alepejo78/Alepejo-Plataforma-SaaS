@@ -41,6 +41,17 @@ export class FinancialEntriesRepository {
     });
   }
 
+  /** Usado pela importação de planilha pra decidir criar x atualizar — título nunca teve chave de dedupe antes disso. */
+  async findByPartnerAndDocument(
+    companyId: string,
+    partnerId: string,
+    documentNumber: string,
+  ): Promise<FinancialEntry | null> {
+    return this.prisma.financialEntry.findFirst({
+      where: { companyId, partnerId, documentNumber },
+    });
+  }
+
   async findAll(
     companyId: string,
     filter: FinancialEntryFilterDto,

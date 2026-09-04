@@ -23,6 +23,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
+import { FinancialEntryImportModal } from "@/components/financial-entry-import/FinancialEntryImportModal";
 
 import {
   DOCUMENT_TYPE_LABELS,
@@ -193,6 +194,8 @@ export function FinancialEntriesScreen({
   const [viewOnly, setViewOnly] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [spreadsheetImportOpen, setSpreadsheetImportOpen] =
+    useState(false);
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
@@ -669,6 +672,17 @@ export function FinancialEntriesScreen({
                 <Can permission="financial-entry.create">
                   <button
                     type="button"
+                    onClick={() => setSpreadsheetImportOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <Upload size={18} />
+                    Importar planilha
+                  </button>
+                </Can>
+
+                <Can permission="financial-entry.create">
+                  <button
+                    type="button"
                     onClick={openCreate}
                     className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
                   >
@@ -1005,6 +1019,13 @@ export function FinancialEntriesScreen({
           direction={type === "PAYABLE" ? "PURCHASE" : "SALE"}
           expenseOnly
           onClose={() => setImportOpen(false)}
+          onSaved={() => void load()}
+        />
+      )}
+
+      {spreadsheetImportOpen && (
+        <FinancialEntryImportModal
+          onClose={() => setSpreadsheetImportOpen(false)}
           onSaved={() => void load()}
         />
       )}

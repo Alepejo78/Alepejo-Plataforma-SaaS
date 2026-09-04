@@ -60,6 +60,9 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { InvoiceImportModule } from './modules/invoice-import/invoice-import.module';
 import { SiteVisitsModule } from './modules/site-visits/site-visits.module';
 import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-notifications.module';
+import { ProductImportModule } from './modules/product-import/product-import.module';
+import { PartnerImportModule } from './modules/partner-import/partner-import.module';
+import { FinancialEntryImportModule } from './modules/financial-entry-import/financial-entry-import.module';
 
 @Module({
   imports: [
@@ -115,6 +118,9 @@ import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-
     InvoiceImportModule,
     SiteVisitsModule,
     InAppNotificationsModule,
+    ProductImportModule,
+    PartnerImportModule,
+    FinancialEntryImportModule,
   ],
   controllers: [AppController],
   providers: [

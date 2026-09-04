@@ -7,6 +7,7 @@ import {
   Plus,
   Settings2,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -16,6 +17,7 @@ import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { ProductForm } from "@/components/products/ProductForm";
+import { ProductImportModal } from "@/components/product-import/ProductImportModal";
 
 import {
   PRODUCT_TYPE_LABELS,
@@ -107,6 +109,7 @@ export default function ProdutosPage() {
   const [listError, setListError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(
     null
   );
@@ -270,6 +273,15 @@ export default function ProdutosPage() {
                 </Link>
 
                 <Can permission="product.create">
+                  <button
+                    type="button"
+                    onClick={() => setImportOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <Upload size={18} />
+                    Importar planilha
+                  </button>
+
                   <button
                     type="button"
                     onClick={openCreate}
@@ -503,6 +515,13 @@ export default function ProdutosPage() {
             />
           </div>
         </div>
+      )}
+
+      {importOpen && (
+        <ProductImportModal
+          onClose={() => setImportOpen(false)}
+          onSaved={() => void load()}
+        />
       )}
     </AppShell>
   );
