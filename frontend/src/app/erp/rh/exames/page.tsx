@@ -434,7 +434,7 @@ export default function ExamesMedicosPage() {
                           <button
                             type="button"
                             onClick={() => openExamModal(e)}
-                            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                           >
                             Registrar exame
                           </button>
@@ -568,7 +568,7 @@ export default function ExamesMedicosPage() {
                                 }
                                 title="Remover"
                                 aria-label="Remover"
-                                className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                                className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                               >
                                 <Trash2 size={14} />
                               </button>

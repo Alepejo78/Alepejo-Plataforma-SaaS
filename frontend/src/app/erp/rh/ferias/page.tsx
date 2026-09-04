@@ -304,7 +304,7 @@ export default function FeriasPage() {
                                 onClick={() => void sendConfirmation(g)}
                                 title="Enviar link de confirmação por e-mail/WhatsApp"
                                 aria-label="Enviar confirmação"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
                               >
                                 <Mail size={16} />
                               </button>
@@ -315,7 +315,7 @@ export default function FeriasPage() {
                                 onClick={() => void confirmItem(g)}
                                 title="Confirmar recebimento manualmente"
                                 aria-label="Confirmar recebimento"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                               >
                                 <Check size={16} />
                               </button>
@@ -337,7 +337,7 @@ export default function FeriasPage() {
                                   }
                                   title="Aprovar (gera título a pagar)"
                                   aria-label="Aprovar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                                 >
                                   <Check size={16} />
                                 </button>
@@ -356,7 +356,7 @@ export default function FeriasPage() {
                                   }
                                   title="Cancelar"
                                   aria-label="Cancelar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                                 >
                                   <XCircle size={16} />
                                 </button>
@@ -378,7 +378,7 @@ export default function FeriasPage() {
                                 }
                                 title="Estornar aprovação (volta a aguardar aprovação)"
                                 aria-label="Estornar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                               >
                                 <XCircle size={16} />
                               </button>
@@ -407,7 +407,7 @@ export default function FeriasPage() {
                                 }}
                                 title="Excluir"
                                 aria-label="Excluir"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                               </button>

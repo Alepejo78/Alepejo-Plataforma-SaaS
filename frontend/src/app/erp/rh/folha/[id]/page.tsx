@@ -362,7 +362,7 @@ export default function FolhaDetalhePage() {
                           type="button"
                           disabled={busyId === "cancel"}
                           onClick={() => void cancel()}
-                          className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                          className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                         >
                           <XCircle size={18} />
                           Cancelar folha
@@ -392,7 +392,7 @@ export default function FolhaDetalhePage() {
                         disabled={busyId === "reverse"}
                         onClick={() => void reverse()}
                         title="Estornar aprovação (volta a rascunho pra editar, apaga os títulos gerados)"
-                        className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                        className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                       >
                         <RotateCcw size={18} />
                         {busyId === "reverse" ? "Estornando..." : "Estornar aprovação"}
@@ -543,7 +543,7 @@ export default function FolhaDetalhePage() {
                                 onClick={() => void sendConfirmation(item)}
                                 title="Enviar link de confirmação por e-mail/WhatsApp"
                                 aria-label="Enviar confirmação"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
                               >
                                 <Mail size={16} />
                               </button>
@@ -554,7 +554,7 @@ export default function FolhaDetalhePage() {
                                 onClick={() => void confirmItem(item)}
                                 title="Confirmar recebimento manualmente"
                                 aria-label="Confirmar recebimento"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                               >
                                 <Check size={16} />
                               </button>
@@ -570,7 +570,7 @@ export default function FolhaDetalhePage() {
                                   onClick={() => void recalculateItem(item.id)}
                                   title="Recalcular a partir do ponto/faltas"
                                   aria-label="Recalcular"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] disabled:opacity-50"
                                 >
                                   <RefreshCw size={16} />
                                 </button>
@@ -583,7 +583,7 @@ export default function FolhaDetalhePage() {
                                   onClick={() => openAdjust(item)}
                                   title="Ajustar proventos/descontos"
                                   aria-label="Ajustar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] disabled:opacity-50"
                                 >
                                   <Settings2 size={16} />
                                 </button>
@@ -596,7 +596,7 @@ export default function FolhaDetalhePage() {
                                   onClick={() => void toggleItem(item)}
                                   title={excluded ? "Reincluir" : "Excluir da folha"}
                                   aria-label={excluded ? "Reincluir" : "Excluir"}
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                  className={`rounded-lg border border-[var(--border)] p-2 transition-colors disabled:opacity-50 ${excluded ? "text-[var(--success)] hover:border-[var(--success)] hover:bg-[var(--success-soft)]" : "text-[var(--danger)] hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"}`}
                                 >
                                   {excluded ? (
                                     <PlusCircle size={16} />

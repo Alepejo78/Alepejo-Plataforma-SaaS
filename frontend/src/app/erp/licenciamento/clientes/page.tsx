@@ -486,7 +486,7 @@ export default function ClientesFaturamentoPage() {
                           }}
                           title="Excluir empresa"
                           aria-label="Excluir empresa"
-                          className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                          className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                         >
                           <Trash2 size={16} />
                         </button>

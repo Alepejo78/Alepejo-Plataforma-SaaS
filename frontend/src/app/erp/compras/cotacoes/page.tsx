@@ -824,7 +824,7 @@ export default function CotacoesPage() {
                                 }
                                 title="Cancelar"
                                 aria-label="Cancelar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <XCircle size={16} />
                               </button>
@@ -841,7 +841,7 @@ export default function CotacoesPage() {
                                 }
                                 title="Excluir"
                                 aria-label="Excluir"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -1139,7 +1139,7 @@ export default function CotacoesPage() {
                         disabled={detailBusy}
                         onClick={() => void undoWinner()}
                         title="Estornar a vencedora (só se o pedido de compra gerado ainda não virou uma compra)"
-                        className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                        className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                       >
                         <Undo2 size={14} />
                         Estornar vencedora
@@ -1270,7 +1270,7 @@ export default function CotacoesPage() {
                                 }
                                 title="Remover proposta"
                                 aria-label="Remover proposta"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Trash2 size={14} />
                               </button>

@@ -542,7 +542,7 @@ export default function FichaEpiPage() {
                                   }
                                   title="Enviar link de confirmação por e-mail/WhatsApp"
                                   aria-label="Enviar confirmação"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-40"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-40"
                                 >
                                   <Mail size={16} />
                                 </button>
@@ -555,7 +555,7 @@ export default function FichaEpiPage() {
                                   }
                                   title="Confirmar entrega manualmente"
                                   aria-label="Confirmar entrega"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-40"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-40"
                                 >
                                   <Check size={16} />
                                 </button>
@@ -570,7 +570,7 @@ export default function FichaEpiPage() {
                                 }
                                 title="Remover"
                                 aria-label="Remover"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                               >
                                 <Trash2 size={16} />
                               </button>

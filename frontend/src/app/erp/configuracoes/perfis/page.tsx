@@ -285,7 +285,7 @@ export default function PerfisPage() {
                               onClick={() =>
                                 void handleRemove(role)
                               }
-                              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                             >
                               Excluir
                             </button>

@@ -1543,7 +1543,7 @@ export default function AcompanhamentoInventarioPage() {
                           type="button"
                           disabled={actionId === detail.id}
                           onClick={() => void cancelCount(detail.id)}
-                          className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-60"
+                          className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-60"
                         >
                           Cancelar contagem
                         </button>
@@ -1556,7 +1556,7 @@ export default function AcompanhamentoInventarioPage() {
                           type="button"
                           disabled={actionId === detail.id}
                           onClick={() => void removeCount(detail)}
-                          className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-60"
+                          className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-60"
                         >
                           <Trash2 size={16} />
                           Excluir

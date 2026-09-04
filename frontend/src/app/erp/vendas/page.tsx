@@ -1531,7 +1531,7 @@ export default function VendasPage() {
                                         : "Editar"
                                     }
                                     aria-label="Editar"
-                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     <Pencil size={16} />
                                   </button>
@@ -1560,7 +1560,7 @@ export default function VendasPage() {
                                 onClick={() => openApprove(s)}
                                 title="Aprovar"
                                 aria-label="Aprovar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                               >
                                 <Check size={16} />
                               </button>
@@ -1580,7 +1580,7 @@ export default function VendasPage() {
                                     : "Cancelar"
                                 }
                                 aria-label="Cancelar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <XCircle size={16} />
                               </button>
@@ -1597,7 +1597,7 @@ export default function VendasPage() {
                                 }
                                 title="Excluir"
                                 aria-label="Excluir"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                               </button>

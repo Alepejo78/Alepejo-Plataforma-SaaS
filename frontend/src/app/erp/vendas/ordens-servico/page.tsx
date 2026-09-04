@@ -1116,7 +1116,7 @@ export default function OrdensDeServicoPage() {
                             onClick={() => downloadPdf(o.id)}
                             title="Baixar PDF"
                             aria-label="Baixar PDF"
-                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--warning)] transition-colors hover:border-[var(--warning)] hover:bg-[var(--warning-soft)]"
                           >
                             <Download size={16} />
                           </button>
@@ -1128,7 +1128,7 @@ export default function OrdensDeServicoPage() {
                                 onClick={() => openEdit(o)}
                                 title="Editar"
                                 aria-label="Editar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                               >
                                 <Edit size={16} />
                               </button>
@@ -1145,7 +1145,7 @@ export default function OrdensDeServicoPage() {
                                 }
                                 title="Iniciar execução"
                                 aria-label="Iniciar execução"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                               >
                                 <Play size={16} />
                               </button>
@@ -1162,7 +1162,7 @@ export default function OrdensDeServicoPage() {
                                 }
                                 title="Estornar início de execução"
                                 aria-label="Estornar início de execução"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                               >
                                 <Undo2 size={16} />
                               </button>
@@ -1177,7 +1177,7 @@ export default function OrdensDeServicoPage() {
                                 onClick={() => void completeOrder(o.id)}
                                 title="Finalizar serviço (gera o Pedido e avisa o cliente)"
                                 aria-label="Finalizar serviço"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                               >
                                 <FileText size={16} />
                               </button>
@@ -1192,7 +1192,7 @@ export default function OrdensDeServicoPage() {
                                 onClick={() => void undoCompleteOrder(o.id)}
                                 title="Estornar finalização (cancela o Pedido gerado)"
                                 aria-label="Estornar finalização"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                               >
                                 <Undo2 size={16} />
                               </button>
@@ -1210,7 +1210,7 @@ export default function OrdensDeServicoPage() {
                                 }
                                 title="Enviar confirmação ao cliente"
                                 aria-label="Enviar confirmação"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
                               >
                                 <Send size={16} />
                               </button>
@@ -1225,7 +1225,7 @@ export default function OrdensDeServicoPage() {
                                 onClick={() => void cancelOrder(o.id)}
                                 title="Cancelar"
                                 aria-label="Cancelar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Ban size={16} />
                               </button>
@@ -1240,7 +1240,7 @@ export default function OrdensDeServicoPage() {
                                 onClick={() => void removeOrder(o.id)}
                                 title="Excluir"
                                 aria-label="Excluir"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                               </button>

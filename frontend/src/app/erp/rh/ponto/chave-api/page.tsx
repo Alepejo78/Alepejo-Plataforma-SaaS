@@ -186,7 +186,7 @@ export default function ChaveApiPontoPage() {
                       onClick={copyKey}
                       title="Copiar"
                       aria-label="Copiar"
-                      className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                      className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                     >
                       <Copy size={16} />
                     </button>
@@ -217,7 +217,7 @@ export default function ChaveApiPontoPage() {
                     type="button"
                     disabled={generating}
                     onClick={() => void revoke()}
-                    className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-60"
+                    className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-5 text-sm font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-60"
                   >
                     <Trash2 size={16} />
                     Revogar

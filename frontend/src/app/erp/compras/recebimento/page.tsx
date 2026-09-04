@@ -726,7 +726,7 @@ export default function RecebimentoPage() {
                                 onClick={() => openReceive(p)}
                                 title="Receber"
                                 aria-label="Receber"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                               >
                                 <PackageCheck size={16} />
                               </button>
@@ -743,7 +743,7 @@ export default function RecebimentoPage() {
                                 }
                                 title="Cancelar"
                                 aria-label="Cancelar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <XCircle size={16} />
                               </button>
@@ -779,7 +779,7 @@ export default function RecebimentoPage() {
                                 }}
                                 title="Estornar recebimento (só se ainda não houver pagamento no financeiro)"
                                 aria-label="Estornar recebimento"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                               >
                                 <Undo2 size={16} />
                               </button>

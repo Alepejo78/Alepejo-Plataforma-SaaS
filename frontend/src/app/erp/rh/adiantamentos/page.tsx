@@ -369,7 +369,7 @@ export default function AdiantamentosPage() {
                                 onClick={() => void sendConfirmation(a)}
                                 title="Enviar link de confirmação por e-mail/WhatsApp"
                                 aria-label="Enviar confirmação"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
                               >
                                 <Mail size={16} />
                               </button>
@@ -380,7 +380,7 @@ export default function AdiantamentosPage() {
                                 onClick={() => void confirmItem(a)}
                                 title="Confirmar recebimento manualmente"
                                 aria-label="Confirmar recebimento"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                               >
                                 <Check size={16} />
                               </button>
@@ -402,7 +402,7 @@ export default function AdiantamentosPage() {
                                   }
                                   title="Aprovar (gera título a pagar)"
                                   aria-label="Aprovar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                                 >
                                   <Check size={16} />
                                 </button>
@@ -421,7 +421,7 @@ export default function AdiantamentosPage() {
                                   }
                                   title="Cancelar"
                                   aria-label="Cancelar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                                 >
                                   <XCircle size={16} />
                                 </button>
@@ -443,7 +443,7 @@ export default function AdiantamentosPage() {
                                 }
                                 title="Estornar aprovação (volta a aguardar aprovação)"
                                 aria-label="Estornar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                               >
                                 <RotateCcw size={16} />
                               </button>
@@ -472,7 +472,7 @@ export default function AdiantamentosPage() {
                                 }}
                                 title="Excluir"
                                 aria-label="Excluir"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                               </button>

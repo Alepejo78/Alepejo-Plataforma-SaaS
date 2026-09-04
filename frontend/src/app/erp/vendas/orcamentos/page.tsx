@@ -895,7 +895,7 @@ export default function OrcamentosPage() {
                                 }
                                 title="Estornar aprovação (exclui o pedido de venda gerado)"
                                 aria-label="Estornar"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                               >
                                 <Undo2 size={16} />
                               </button>
@@ -913,7 +913,7 @@ export default function OrcamentosPage() {
                                   }
                                   title="Editar"
                                   aria-label="Editar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                                 >
                                   <Edit size={16} />
                                 </button>
@@ -932,7 +932,7 @@ export default function OrcamentosPage() {
                                       : "Enviar link de aprovação ao cliente"
                                   }
                                   aria-label="Enviar para aprovação do cliente"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
                                 >
                                   <Send size={16} />
                                 </button>
@@ -947,7 +947,7 @@ export default function OrcamentosPage() {
                                   }
                                   title="Aprovar manualmente (ex.: cliente confirmou por telefone) — gera Pedido de Venda"
                                   aria-label="Aprovar manualmente"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                                 >
                                   <Check size={16} />
                                 </button>
@@ -962,7 +962,7 @@ export default function OrcamentosPage() {
                                   }
                                   title="Cancelar"
                                   aria-label="Cancelar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                                 >
                                   <XCircle size={16} />
                                 </button>
@@ -981,7 +981,7 @@ export default function OrcamentosPage() {
                                   }
                                   title="Aprovar manualmente (ex.: cliente confirmou por telefone) — gera Pedido de Venda"
                                   aria-label="Aprovar manualmente"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                                 >
                                   <Check size={16} />
                                 </button>
@@ -996,7 +996,7 @@ export default function OrcamentosPage() {
                                   }
                                   title="Cancelar"
                                   aria-label="Cancelar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                                 >
                                   <XCircle size={16} />
                                 </button>
@@ -1015,7 +1015,7 @@ export default function OrcamentosPage() {
                                   }
                                   title="Cancelar (o pedido/venda gerado foi excluído por fora)"
                                   aria-label="Cancelar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                                 >
                                   <XCircle size={16} />
                                 </button>
@@ -1030,7 +1030,7 @@ export default function OrcamentosPage() {
                                 onClick={() => void removeQuote(q.id)}
                                 title="Excluir"
                                 aria-label="Excluir"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                               </button>

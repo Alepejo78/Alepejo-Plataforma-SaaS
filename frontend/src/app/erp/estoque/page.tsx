@@ -688,7 +688,7 @@ export default function EstoquePage() {
                             }
                             title="Liberar"
                             aria-label="Liberar"
-                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                           >
                             <Unlock size={16} />
                           </button>

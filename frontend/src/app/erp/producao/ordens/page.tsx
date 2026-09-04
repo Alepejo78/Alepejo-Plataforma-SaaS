@@ -638,7 +638,7 @@ export default function OrdensDeProducaoPage() {
                                   onClick={() => openEdit(o)}
                                   title="Editar"
                                   aria-label="Editar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                                 >
                                   <Edit size={16} />
                                 </button>
@@ -660,7 +660,7 @@ export default function OrdensDeProducaoPage() {
                                   }
                                   title="Iniciar produção"
                                   aria-label="Iniciar produção"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                                 >
                                   <Play size={16} />
                                 </button>
@@ -682,7 +682,7 @@ export default function OrdensDeProducaoPage() {
                                   }
                                   title="Cancelar"
                                   aria-label="Cancelar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                                 >
                                   <XCircle size={16} />
                                 </button>
@@ -699,7 +699,7 @@ export default function OrdensDeProducaoPage() {
                                   onClick={() => openComplete(o)}
                                   title="Concluir produção (gera entrada de estoque)"
                                   aria-label="Concluir produção"
-                                  className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                                  className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                                 >
                                   <CheckCircle2 size={16} />
                                   Concluir
@@ -722,7 +722,7 @@ export default function OrdensDeProducaoPage() {
                                   }
                                   title="Cancelar"
                                   aria-label="Cancelar"
-                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                                 >
                                   <XCircle size={16} />
                                 </button>
@@ -755,7 +755,7 @@ export default function OrdensDeProducaoPage() {
                                 }}
                                 title="Estornar conclusão"
                                 aria-label="Estornar conclusão"
-                                className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                                className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                               >
                                 <Undo2 size={16} />
                                 Estornar
@@ -785,7 +785,7 @@ export default function OrdensDeProducaoPage() {
                                 }}
                                 title="Excluir"
                                 aria-label="Excluir"
-                                className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                                className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                                 Excluir

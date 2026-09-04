@@ -284,7 +284,7 @@ export default function CboPage() {
                             type="button"
                             onClick={() => void remove(item)}
                             aria-label="Excluir"
-                            className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                            className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                           >
                             <Trash2 size={14} />
                           </button>

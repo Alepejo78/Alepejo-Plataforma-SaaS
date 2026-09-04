@@ -601,7 +601,7 @@ export default function ControleDePontoPage() {
                 type="button"
                 disabled={confirmSending}
                 onClick={() => void sendConfirmationIndividual()}
-                className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
               >
                 <Mail size={16} />
                 Enviar confirmação (individual)
@@ -945,7 +945,7 @@ export default function ControleDePontoPage() {
                                     }
                                     title="Ajustar horários"
                                     aria-label="Ajustar horários"
-                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                                   >
                                     <Pencil size={16} />
                                   </button>
@@ -963,7 +963,7 @@ export default function ControleDePontoPage() {
                                     }
                                     title="Aprovar dia"
                                     aria-label="Aprovar dia"
-                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
+                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                                   >
                                     <CheckCircle2 size={16} />
                                   </button>
@@ -982,7 +982,7 @@ export default function ControleDePontoPage() {
                                   }
                                   title="Reabrir dia"
                                   aria-label="Reabrir dia"
-                                  className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                                  className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
                                 >
                                   <Undo2 size={16} />
                                   Reabrir
@@ -1269,7 +1269,7 @@ export default function ControleDePontoPage() {
                           type="button"
                           onClick={() => void reverseAdjustment(adj.id)}
                           disabled={actionKey === `reverse-adj-${adj.id}`}
-                          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                         >
                           <Undo2 size={14} />
                           Desfazer ajuste

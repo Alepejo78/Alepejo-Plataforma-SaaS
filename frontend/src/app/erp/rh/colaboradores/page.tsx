@@ -1070,7 +1070,7 @@ export default function ColaboradoresPage() {
                             onClick={() => openEdit(item)}
                             title="Editar"
                             aria-label="Editar"
-                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                           >
                             <Pencil size={16} />
                           </button>
@@ -2645,7 +2645,7 @@ export default function ColaboradoresPage() {
                                         }
                                         title="Remover"
                                         aria-label="Remover"
-                                        className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                                        className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                                       >
                                         <Trash2 size={14} />
                                       </button>

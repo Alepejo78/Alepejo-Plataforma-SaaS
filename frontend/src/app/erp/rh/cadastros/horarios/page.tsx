@@ -532,7 +532,7 @@ export default function HorariosDeTrabalhoPage() {
                         <button
                           type="button"
                           onClick={() => void openShifts(item)}
-                          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                          className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                         >
                           <Settings size={14} />
                           Configurar horários
@@ -557,7 +557,7 @@ export default function HorariosDeTrabalhoPage() {
                             void removeSchedule(item)
                           }
                           aria-label="Excluir"
-                          className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                          className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -855,7 +855,7 @@ export default function HorariosDeTrabalhoPage() {
                                   void removeShift(shift)
                                 }
                                 aria-label="Excluir"
-                                className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                                className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                               >
                                 <Trash2 size={14} />
                               </button>

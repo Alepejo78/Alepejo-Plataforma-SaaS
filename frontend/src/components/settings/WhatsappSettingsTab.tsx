@@ -289,7 +289,7 @@ export function WhatsappSettingsTab() {
                   type="button"
                   disabled={loggingOut}
                   onClick={() => void handleLogout()}
-                  className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-60"
+                  className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-5 text-sm font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-60"
                 >
                   <Unplug size={16} />
                   {loggingOut ? "Desconectando..." : "Desconectar"}

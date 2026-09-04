@@ -796,7 +796,7 @@ export default function InventarioPage() {
                                 onClick={() => void openEdit(c)}
                                 title="Editar itens"
                                 aria-label="Editar itens"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--primary)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]"
                               >
                                 <Pencil size={16} />
                               </button>
@@ -811,7 +811,7 @@ export default function InventarioPage() {
                                 onClick={() => void openScan(c)}
                                 title="Iniciar contagem"
                                 aria-label="Iniciar contagem"
-                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                               >
                                 <ScanLine size={16} />
                               </button>

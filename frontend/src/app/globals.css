@@ -50,6 +50,14 @@
   --danger: #c02626;
   --danger-soft: #fadddd;
 
+  /* Ações extras dos ícones de tabela (enviar/estornar) — tons
+     distintos de --danger/--warning pra não se confundir nas linhas
+     onde aparecem lado a lado. */
+  --accent-orange: #c2410c;
+  --accent-orange-soft: #ffedd5;
+  --accent-maroon: #9f1239;
+  --accent-maroon-soft: #fbe1e9;
+
   --focus-ring: #1d4ed8;
 
   --shadow-color: 215 25% 27%;
@@ -100,6 +108,11 @@
   --warning-soft: #33260c;
   --danger: #f47171;
   --danger-soft: #3a1717;
+
+  --accent-orange: #fb923c;
+  --accent-orange-soft: #3a2411;
+  --accent-maroon: #fb7185;
+  --accent-maroon-soft: #3a1524;
 
   --focus-ring: #60a5fa;
 

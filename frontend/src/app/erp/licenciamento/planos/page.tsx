@@ -566,7 +566,7 @@ export default function PlanosAdminPage() {
                     type="button"
                     disabled={removingId === plan.id}
                     onClick={() => void removePlan(plan)}
-                    className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-50"
+                    className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50"
                   >
                     Excluir
                   </button>
