@@ -868,15 +868,49 @@ export class PurchaseService {
             userId,
           );
         } else {
-          await this.financialEntriesService.createFromDocument(
-            tx,
-            {
-              ...commonEntryData,
-              amount: Number(purchase.totalAmount),
-              dueDate,
-            },
-            userId,
-          );
+          // Pagamento único — se o Pedido de origem já tem um título
+          // antecipado em aberto (gerado na escolha do vencedor da
+          // Cotação, ver QuotationService.chooseWinner) e ainda não
+          // vinculado a nenhuma Compra, reaproveita ele em vez de
+          // criar um novo (evita duplicar o valor em Contas a Pagar).
+          const advanceEntry = purchase.purchaseOrderId
+            ? await tx.financialEntry.findFirst({
+                where: {
+                  purchaseOrderId: purchase.purchaseOrderId,
+                  purchaseId: null,
+                  status: FinancialEntryStatus.OPEN,
+                },
+              })
+            : null;
+
+          if (advanceEntry) {
+            await tx.financialEntry.update({
+              where: { id: advanceEntry.id },
+              data: {
+                purchaseId: purchase.id,
+                purchaseOrderId: null,
+                issueDate,
+                termDays,
+                paymentMethod,
+                dueDate,
+                documentNumber: commonEntryData.documentNumber,
+                documentKey: commonEntryData.documentKey,
+                documentType: commonEntryData.documentType,
+                observation: commonEntryData.observation,
+                updatedById: userId,
+              },
+            });
+          } else {
+            await this.financialEntriesService.createFromDocument(
+              tx,
+              {
+                ...commonEntryData,
+                amount: Number(purchase.totalAmount),
+                dueDate,
+              },
+              userId,
+            );
+          }
         }
       },
     );

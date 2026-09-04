@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
-import { EmployeeStatus, NotificationType } from '@prisma/client';
+import {
+  EmployeeStatus,
+  FinancialEntryStatus,
+  FinancialEntryType,
+  NotificationType,
+} from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
@@ -51,6 +56,7 @@ export class ScheduledNotificationsService {
     await this.reconcileVacationAndLeave();
     await this.notifyHourBankClosing();
     await this.notifyPointClosing();
+    await this.notifyPaymentReminders();
   }
 
   /**
@@ -388,6 +394,96 @@ export class ScheduledNotificationsService {
           linkUrl: '/erp/rh/ponto/acompanhamento',
           userId: employee.userId,
         });
+      }
+    }
+  }
+
+  /**
+   * Lembrete de vencimento pro cliente (título a receber) — dispara
+   * uma vez em cada gatilho: `daysBeforeDue` dias antes do
+   * vencimento, e de novo quando completar `daysAfterDue` dias
+   * vencido (config por empresa, `PaymentReminderSettings`). Só
+   * títulos a receber (`RECEIVABLE`) — a pagar não entra aqui.
+   */
+  private async notifyPaymentReminders() {
+    const entries = await this.prisma.financialEntry.findMany({
+      where: {
+        type: FinancialEntryType.RECEIVABLE,
+        status: FinancialEntryStatus.OPEN,
+      },
+      include: { partner: true, company: true },
+    });
+
+    const withPartner = entries.filter(
+      (entry) => entry.partner?.email || entry.partner?.mobile,
+    );
+
+    if (withPartner.length === 0) {
+      return;
+    }
+
+    const companyIds = [
+      ...new Set(withPartner.map((entry) => entry.companyId)),
+    ];
+    const settingsList = await this.prisma.paymentReminderSettings.findMany({
+      where: { companyId: { in: companyIds } },
+    });
+    const settingsByCompany = new Map(
+      settingsList.map((s) => [s.companyId, s]),
+    );
+
+    const todayUtc = utcMidnight(new Date());
+
+    for (const entry of withPartner) {
+      const settings = settingsByCompany.get(entry.companyId);
+      const daysBeforeDue = settings?.daysBeforeDue ?? 3;
+      const daysAfterDue = settings?.daysAfterDue ?? 1;
+
+      const dueUtc = utcMidnight(entry.dueDate);
+      const daysUntil = Math.round((dueUtc - todayUtc) / MS_PER_DAY);
+
+      const isBeforeTrigger = daysUntil === daysBeforeDue;
+      const isOverdueTrigger = daysUntil === -daysAfterDue;
+
+      if (!isBeforeTrigger && !isOverdueTrigger) {
+        continue;
+      }
+
+      const partner = entry.partner!;
+      const partnerName = partner.tradeName || partner.legalName;
+      const companyName =
+        entry.company.tradeName || entry.company.legalName;
+      const dueLabel = entry.dueDate.toLocaleDateString('pt-BR', {
+        timeZone: 'UTC',
+      });
+      const amountLabel = Number(entry.amount).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      });
+
+      const message = isOverdueTrigger
+        ? `Olá, ${partnerName}! Sua conta de ${amountLabel} com ${companyName} venceu em ${dueLabel} e ainda está em aberto.`
+        : `Olá, ${partnerName}! Sua conta de ${amountLabel} com ${companyName} vence em ${dueLabel} (em ${daysUntil} dia${daysUntil === 1 ? '' : 's'}).`;
+
+      const subject = isOverdueTrigger
+        ? `Conta em atraso — ${companyName}`
+        : `Lembrete de vencimento — ${companyName}`;
+
+      if (partner.email) {
+        void this.emailNotifications.send(
+          entry.companyId,
+          partner.email,
+          subject,
+          `<p>${message}</p>`,
+        );
+      }
+
+      if (partner.mobile) {
+        void this.whatsappNotifications.send(
+          entry.companyId,
+          partner.mobile,
+          message,
+        );
       }
     }
   }

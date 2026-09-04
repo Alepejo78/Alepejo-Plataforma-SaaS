@@ -17,7 +17,9 @@ const includeRelations = {
       items: {
         include: { product: true },
       },
-      purchaseOrder: true,
+      purchaseOrder: {
+        include: { financialEntries: true },
+      },
     },
   },
 };

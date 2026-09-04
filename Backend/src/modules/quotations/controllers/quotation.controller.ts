@@ -21,6 +21,7 @@ import { CreateQuotationDto } from '../dto/create-quotation.dto';
 import { UpdateQuotationDto } from '../dto/update-quotation.dto';
 import { QuotationFilterDto } from '../dto/quotation-filter.dto';
 import { CreateQuotationOfferDto } from '../dto/create-quotation-offer.dto';
+import { ChooseWinnerDto } from '../dto/choose-winner.dto';
 
 @ApiTags('Quotations')
 @Controller('quotations')
@@ -138,8 +139,9 @@ export class QuotationController {
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Param('offerId') offerId: string,
+    @Body() dto: ChooseWinnerDto,
   ) {
-    return this.service.chooseWinner(companyId, id, offerId, userId);
+    return this.service.chooseWinner(companyId, id, offerId, userId, dto);
   }
 
   @Patch(':id/undo-winner')

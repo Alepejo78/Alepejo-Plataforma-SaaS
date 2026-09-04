@@ -4,11 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { BusinessPartnerRole, QuotationStatus } from '@prisma/client';
+import { BusinessPartnerRole, FinancialEntryStatus, FinancialEntryType, QuotationStatus } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
+import { FinancialEntriesService } from '../../financial-entries/services/financial-entries.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
@@ -21,6 +22,7 @@ import { CreateQuotationDto } from '../dto/create-quotation.dto';
 import { UpdateQuotationDto } from '../dto/update-quotation.dto';
 import { QuotationFilterDto } from '../dto/quotation-filter.dto';
 import { CreateQuotationOfferDto } from '../dto/create-quotation-offer.dto';
+import { ChooseWinnerDto } from '../dto/choose-winner.dto';
 
 const SEQUENCE_TYPE = 'QUOTATION';
 const PURCHASE_ORDER_SEQUENCE_TYPE = 'PURCHASE_ORDER';
@@ -35,6 +37,7 @@ export class QuotationService {
     private readonly documentSequence: DocumentSequenceService,
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
+    private readonly financialEntriesService: FinancialEntriesService,
   ) {}
 
   async create(
@@ -317,6 +320,7 @@ export class QuotationService {
     quotationId: string,
     offerId: string,
     userId: string,
+    dto: ChooseWinnerDto = {},
   ) {
     const quotation = await this.findOne(
       companyId,
@@ -337,6 +341,20 @@ export class QuotationService {
       throw new NotFoundException(
         'Proposta não encontrada.',
       );
+    }
+
+    if (dto.generateFinancialEntry) {
+      if (!dto.dueDate) {
+        throw new BadRequestException(
+          'Informe o vencimento do título antecipado.',
+        );
+      }
+
+      if (!dto.chartOfAccountId) {
+        throw new BadRequestException(
+          'Informe o tipo de despesa do título antecipado.',
+        );
+      }
     }
 
     let purchaseOrderNumber = 0;
@@ -370,11 +388,15 @@ export class QuotationService {
       // A cotação não tem campo de tipo de despesa próprio — sugere a
       // do primeiro item que já tiver uma cadastrada no produto, pra
       // não nascer em branco (dá pra trocar depois, editando o pedido).
+      // O tipo de despesa escolhido pro título antecipado (quando
+      // houver) prevalece sobre a sugestão.
       const suggestedChartOfAccountId =
-        offer.items.find((item) => item.product?.chartOfAccountId)
-          ?.product?.chartOfAccountId ?? undefined;
+        dto.chartOfAccountId ??
+        (offer.items.find((item) => item.product?.chartOfAccountId)
+          ?.product?.chartOfAccountId ??
+          undefined);
 
-      await tx.purchaseOrder.create({
+      const purchaseOrder = await tx.purchaseOrder.create({
         data: {
           companyId,
           number,
@@ -403,6 +425,28 @@ export class QuotationService {
           },
         },
       });
+
+      // Título antecipado — fornecedor que exige pagamento adiantado.
+      // Vira o título da Compra de verdade sozinho quando ela for
+      // recebida (ver PurchaseService.receive), sem duplicar.
+      if (dto.generateFinancialEntry) {
+        await this.financialEntriesService.createFromDocument(
+          tx,
+          {
+            companyId,
+            type: FinancialEntryType.PAYABLE,
+            partnerId: offer.partnerId,
+            amount: Number(offer.totalAmount),
+            issueDate: new Date(),
+            dueDate: new Date(dto.dueDate!),
+            paymentMethod: dto.paymentMethod ?? offer.paymentMethod,
+            chartOfAccountId: dto.chartOfAccountId,
+            purchaseOrderId: purchaseOrder.id,
+            observation: `Pagamento antecipado — Pedido de Compra PC-${String(number).padStart(6, '0')}`,
+          },
+          userId,
+        );
+      }
     });
 
     // Best-effort: avisos por e-mail/WhatsApp nunca devem derrubar a
@@ -497,7 +541,7 @@ ${summaryHtml}
 
     const order = await this.prisma.purchaseOrder.findFirst({
       where: { quotationOfferId: winner.id },
-      include: { purchases: true },
+      include: { purchases: true, financialEntries: true },
     });
 
     if (order && order.purchases.length > 0) {
@@ -506,8 +550,23 @@ ${summaryHtml}
       );
     }
 
+    if (
+      order?.financialEntries.some(
+        (entry) => entry.status === FinancialEntryStatus.PAID,
+      )
+    ) {
+      throw new BadRequestException(
+        'O título antecipado gerado por esta cotação já foi baixado — não é possível estornar a escolha.',
+      );
+    }
+
     await this.prisma.$transaction(async (tx) => {
       if (order) {
+        await tx.financialEntry.updateMany({
+          where: { purchaseOrderId: order.id, status: FinancialEntryStatus.OPEN },
+          data: { status: FinancialEntryStatus.CANCELLED },
+        });
+
         await tx.purchaseOrder.delete({ where: { id: order.id } });
       }
 

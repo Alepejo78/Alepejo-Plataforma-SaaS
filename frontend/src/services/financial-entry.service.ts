@@ -201,6 +201,16 @@ export interface CashFlow {
   months: CashFlowMonth[];
 }
 
+export type PeriodKind = "day" | "week" | "month";
+
+export interface PeriodSummary {
+  period: PeriodKind;
+  start: string;
+  end: string;
+  receivable: CashFlowBucket;
+  payable: CashFlowBucket;
+}
+
 /** Uma fatia do acompanhamento por tipo de despesa/receita. */
 export interface AccountBreakdownRow {
   code: string | null;
@@ -290,6 +300,19 @@ export const financialEntryService = {
     const { data } = await api.get<ApiEnvelope<CashFlow>>(
       "/financial-entries/cash-flow",
       { params: { year } }
+    );
+
+    return data.data;
+  },
+
+  /** Resumo pago/a pagar/recebido/a receber num período curto (dia/semana/mês). */
+  async getPeriodSummary(
+    period: PeriodKind,
+    date: string
+  ): Promise<PeriodSummary> {
+    const { data } = await api.get<ApiEnvelope<PeriodSummary>>(
+      "/financial-entries/period-summary",
+      { params: { period, date } }
     );
 
     return data.data;

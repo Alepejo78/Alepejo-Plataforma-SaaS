@@ -266,6 +266,39 @@ export class FinancialEntriesRepository {
     });
   }
 
+  /**
+   * Mesma ideia de `findForCashFlow`, só que num intervalo arbitrário
+   * (dia/semana/mês) em vez do ano inteiro — usado pela tela de
+   * acompanhamento de fluxo de caixa por período
+   * (`FinancialEntriesService.getPeriodSummary`).
+   */
+  async findForPeriodSummary(
+    companyId: string | string[],
+    start: Date,
+    end: Date,
+  ) {
+    return this.prisma.financialEntry.findMany({
+      where: {
+        companyId: Array.isArray(companyId)
+          ? { in: companyId }
+          : companyId,
+        status: { not: FinancialEntryStatus.CANCELLED },
+        OR: [
+          { dueDate: { gte: start, lt: end } },
+          { paymentDate: { gte: start, lt: end } },
+        ],
+      },
+      select: {
+        type: true,
+        status: true,
+        amount: true,
+        paidAmount: true,
+        dueDate: true,
+        paymentDate: true,
+      },
+    });
+  }
+
   // Observação: Prisma só aceita campos únicos em `where` de update().
   // A checagem de tenant é feita no service (findById) ANTES daqui.
   async update(

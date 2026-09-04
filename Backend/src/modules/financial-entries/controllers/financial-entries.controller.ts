@@ -64,6 +64,27 @@ export class FinancialEntriesController {
     return this.service.getCashFlow(companyId, targetYear);
   }
 
+  @Get('period-summary')
+  @Permissions('financial-entry.view')
+  getPeriodSummary(
+    @CurrentUser('companyId') companyId: string,
+    @Query('period') period?: string,
+    @Query('date') date?: string,
+  ) {
+    const targetPeriod =
+      period === 'day' || period === 'week' || period === 'month'
+        ? period
+        : 'day';
+
+    const referenceDate = date ? new Date(date) : new Date();
+
+    return this.service.getPeriodSummary(
+      companyId,
+      targetPeriod,
+      referenceDate,
+    );
+  }
+
   @Get('account-breakdown')
   @Permissions('financial-entry.view')
   getAccountBreakdown(

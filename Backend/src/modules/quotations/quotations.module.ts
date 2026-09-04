@@ -5,6 +5,7 @@ import { LicenseModule } from '../identity/license/license.module';
 import { BusinessPartnersModule } from '../business-partners/business-partners.module';
 import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { FinancialEntriesModule } from '../financial-entries/financial-entries.module';
 
 import { QuotationController } from './controllers/quotation.controller';
 import { QuotationRepository } from './repositories/quotation.repository';
@@ -17,6 +18,7 @@ import { QuotationService } from './services/quotation.service';
     BusinessPartnersModule,
     DocumentSequenceModule,
     NotificationsModule,
+    FinancialEntriesModule,
   ],
 
   controllers: [QuotationController],

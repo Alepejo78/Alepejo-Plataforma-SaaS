@@ -18,6 +18,7 @@ import {
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
+import { getPeriodRange, type PeriodKind } from '../../../core/utils/date-range.util';
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 import { PayrollConfirmationService } from '../../payroll/services/payroll-confirmation.service';
 import { VacationConfirmationService } from '../../payroll/services/vacation-confirmation.service';
@@ -340,6 +341,7 @@ export class FinancialEntriesService {
       /// Tipo de despesa/receita herdado do documento (compra/venda).
       chartOfAccountId?: string | null;
       purchaseId?: string;
+      purchaseOrderId?: string;
       saleId?: string;
       payrollItemId?: string;
       thirteenthSalaryItemId?: string;
@@ -391,6 +393,7 @@ export class FinancialEntriesService {
       chartOfAccountId?: string | null;
       productId?: string | null;
       purchaseId?: string;
+      purchaseOrderId?: string;
       saleId?: string;
       payrollItemId?: string;
       thirteenthSalaryItemId?: string;
@@ -420,6 +423,7 @@ export class FinancialEntriesService {
           chartOfAccountId: params.chartOfAccountId ?? undefined,
           productId: params.productId ?? undefined,
           purchaseId: params.purchaseId,
+          purchaseOrderId: params.purchaseOrderId,
           saleId: params.saleId,
           payrollItemId: params.payrollItemId,
           thirteenthSalaryItemId: params.thirteenthSalaryItemId,
@@ -602,6 +606,70 @@ export class FinancialEntriesService {
     }
 
     return { year, months };
+  }
+
+  /**
+   * Mesma separação de `getCashFlow` (total/aberto/atrasado por
+   * vencimento; recebido/pago por data de pagamento), só que num
+   * período curto e arbitrário (dia/semana/mês) em vez do ano inteiro
+   * — usado pela tela de acompanhamento de fluxo de caixa.
+   */
+  async getPeriodSummary(
+    companyId: string | string[],
+    period: PeriodKind,
+    referenceDate: Date,
+  ) {
+    const { start, end } = getPeriodRange(period, referenceDate);
+
+    const entries = await this.repository.findForPeriodSummary(
+      companyId,
+      start,
+      end,
+    );
+
+    const today = new Date();
+
+    const emptyBucket = () => ({
+      total: 0,
+      settled: 0,
+      open: 0,
+      overdue: 0,
+    });
+
+    const receivable = emptyBucket();
+    const payable = emptyBucket();
+
+    const inRange = (d: Date) => d >= start && d < end;
+
+    for (const entry of entries) {
+      const bucket =
+        entry.type === FinancialEntryType.RECEIVABLE
+          ? receivable
+          : payable;
+      const amount = Number(entry.amount);
+
+      if (inRange(entry.dueDate)) {
+        bucket.total += amount;
+
+        if (entry.status !== FinancialEntryStatus.PAID) {
+          if (entry.dueDate < today) {
+            bucket.overdue += amount;
+          } else {
+            bucket.open += amount;
+          }
+        }
+      }
+
+      if (
+        entry.status === FinancialEntryStatus.PAID &&
+        entry.paymentDate &&
+        inRange(entry.paymentDate)
+      ) {
+        bucket.settled += Number(entry.paidAmount);
+      }
+    }
+
+    return { period, start, end, receivable, payable };
   }
 
   private async assertChartOfAccount(

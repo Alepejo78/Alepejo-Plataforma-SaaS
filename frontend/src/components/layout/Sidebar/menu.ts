@@ -298,6 +298,15 @@ export const menu: MenuEntry[] = [
         module: "FINANCE",
         permission: "bank-account.view",
       },
+      {
+        id: "lembrete-vencimento",
+        title: "Lembrete de Vencimento",
+        icon: Settings,
+        iconAnim: "settings",
+        href: "/erp/financeiro/configuracoes",
+        module: "FINANCE",
+        permission: "payment-reminder-settings.view",
+      },
     ],
   },
 

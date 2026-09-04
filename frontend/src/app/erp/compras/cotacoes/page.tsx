@@ -48,6 +48,11 @@ import {
   type PaymentMethod,
 } from "@/services/financial-entry.service";
 
+import {
+  chartOfAccountService,
+  type ChartOfAccount,
+} from "@/services/chart-of-account.service";
+
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
@@ -172,6 +177,20 @@ export default function CotacoesPage() {
   const [offerSaving, setOfferSaving] = useState(false);
   const [offerError, setOfferError] = useState("");
 
+  // Escolher vencedora — confirmação com opção de já gerar título
+  // financeiro (pagamento antecipado)
+  const [chooseWinnerOfferId, setChooseWinnerOfferId] = useState<
+    string | null
+  >(null);
+  const [chooseWinnerForm, setChooseWinnerForm] = useState({
+    generateFinancialEntry: false,
+    dueDate: "",
+    paymentMethod: "" as PaymentMethod | "",
+    chartOfAccountId: "",
+    chartOfAccountLabel: "",
+  });
+  const [chooseWinnerError, setChooseWinnerError] = useState("");
+
   const [actionId, setActionId] = useState("");
   const [actionError, setActionError] = useState("");
 
@@ -210,6 +229,15 @@ export default function CotacoesPage() {
     },
     []
   );
+
+  const searchChartOfAccounts = useCallback(async (query: string) => {
+    const result = await chartOfAccountService.list({
+      search: query || undefined,
+      limit: 20,
+    });
+
+    return result.data;
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -496,25 +524,65 @@ export default function CotacoesPage() {
     }
   }
 
-  async function chooseWinner(offerId: string) {
-    if (!detail) {
+  function openChooseWinner(offerId: string) {
+    setChooseWinnerOfferId(offerId);
+    setChooseWinnerForm({
+      generateFinancialEntry: false,
+      dueDate: "",
+      paymentMethod: "",
+      chartOfAccountId: "",
+      chartOfAccountLabel: "",
+    });
+    setChooseWinnerError("");
+  }
+
+  async function confirmChooseWinner() {
+    if (!detail || !chooseWinnerOfferId) {
       return;
     }
 
+    if (chooseWinnerForm.generateFinancialEntry) {
+      if (!chooseWinnerForm.dueDate) {
+        setChooseWinnerError(
+          "Informe o vencimento do título antecipado."
+        );
+
+        return;
+      }
+
+      if (!chooseWinnerForm.chartOfAccountId) {
+        setChooseWinnerError(
+          "Informe o tipo de despesa do título antecipado."
+        );
+
+        return;
+      }
+    }
+
     setDetailBusy(true);
-    setDetailError("");
+    setChooseWinnerError("");
 
     try {
       await quotationService.chooseWinner(
         detail.id,
-        offerId
+        chooseWinnerOfferId,
+        {
+          generateFinancialEntry:
+            chooseWinnerForm.generateFinancialEntry,
+          dueDate: chooseWinnerForm.dueDate || undefined,
+          paymentMethod: chooseWinnerForm.paymentMethod || undefined,
+          chartOfAccountId:
+            chooseWinnerForm.chartOfAccountId || undefined,
+        }
       );
+
+      setChooseWinnerOfferId(null);
 
       await refreshDetail(detail.id);
 
       await load();
     } catch (err) {
-      setDetailError(
+      setChooseWinnerError(
         extractMessage(
           err,
           "Não foi possível escolher o vencedor."
@@ -1164,6 +1232,20 @@ export default function CotacoesPage() {
                           </p>
                         )}
 
+                        {offer.purchaseOrder?.financialEntries?.[0] && (
+                          <p className="mt-1 text-xs font-semibold text-[var(--warning)]">
+                            Título antecipado gerado: vence em{" "}
+                            {date(
+                              offer.purchaseOrder.financialEntries[0]
+                                .dueDate
+                            )}
+                            , {money(
+                              offer.purchaseOrder.financialEntries[0]
+                                .amount
+                            )}
+                          </p>
+                        )}
+
                         {detail.status === "DRAFT" && (
                           <div className="mt-3 flex gap-2">
                             <Can permission="quotation.decide">
@@ -1171,7 +1253,7 @@ export default function CotacoesPage() {
                                 type="button"
                                 disabled={detailBusy}
                                 onClick={() =>
-                                  void chooseWinner(offer.id)
+                                  openChooseWinner(offer.id)
                                 }
                                 className="flex-1 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-[var(--primary-contrast)] disabled:opacity-50"
                               >
@@ -1379,6 +1461,147 @@ export default function CotacoesPage() {
                   {offerSaving
                     ? "Salvando..."
                     : "Adicionar proposta"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Escolher vencedora — confirmação + título antecipado opcional */}
+      {chooseWinnerOfferId && detail && (
+        <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+          <div className="my-8 w-full max-w-xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                Escolher vencedora
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setChooseWinnerOfferId(null)}
+                aria-label="Fechar"
+                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+                <input
+                  type="checkbox"
+                  checked={chooseWinnerForm.generateFinancialEntry}
+                  onChange={(e) =>
+                    setChooseWinnerForm({
+                      ...chooseWinnerForm,
+                      generateFinancialEntry: e.target.checked,
+                    })
+                  }
+                />
+                Gerar título financeiro agora (pagamento antecipado)
+              </label>
+
+              {chooseWinnerForm.generateFinancialEntry && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>
+                      Tipo de despesa
+                    </label>
+
+                    <SearchSelect<ChartOfAccount>
+                      displayLabel={
+                        chooseWinnerForm.chartOfAccountLabel
+                      }
+                      search={searchChartOfAccounts}
+                      getId={(c) => c.id}
+                      getLabel={(c) =>
+                        `${c.code} — ${c.description}`
+                      }
+                      placeholder="Digite para buscar a conta..."
+                      onSelect={(c) =>
+                        setChooseWinnerForm({
+                          ...chooseWinnerForm,
+                          chartOfAccountId: c?.id ?? "",
+                          chartOfAccountLabel: c
+                            ? `${c.code} — ${c.description}`
+                            : "",
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Vencimento
+                    </label>
+
+                    <input
+                      type="date"
+                      className={fieldClass}
+                      value={chooseWinnerForm.dueDate}
+                      onChange={(e) =>
+                        setChooseWinnerForm({
+                          ...chooseWinnerForm,
+                          dueDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Forma de pagamento
+                    </label>
+
+                    <select
+                      className={fieldClass}
+                      value={chooseWinnerForm.paymentMethod}
+                      onChange={(e) =>
+                        setChooseWinnerForm({
+                          ...chooseWinnerForm,
+                          paymentMethod: e.target.value as
+                            | PaymentMethod
+                            | "",
+                        })
+                      }
+                    >
+                      <option value="">Selecione...</option>
+
+                      {Object.entries(PAYMENT_METHOD_LABELS).map(
+                        ([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {chooseWinnerError && (
+                <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                  {chooseWinnerError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setChooseWinnerOfferId(null)}
+                  className="rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)]"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  disabled={detailBusy}
+                  onClick={() => void confirmChooseWinner()}
+                  className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] disabled:opacity-60"
+                >
+                  {detailBusy ? "Confirmando..." : "Confirmar"}
                 </button>
               </div>
             </div>

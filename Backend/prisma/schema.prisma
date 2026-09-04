@@ -212,6 +212,7 @@ model Company {
   productionOrders   ProductionOrder[]
   productionSettings ProductionSettings?
   salesSettings      SalesSettings?
+  paymentReminderSettings PaymentReminderSettings?
 
   timeEntries          TimeEntry[]
   timeSheetApprovals   TimeSheetApproval[]
@@ -1199,6 +1200,11 @@ model PurchaseOrder {
   items     PurchaseOrderItem[]
   purchases Purchase[]
 
+  /// Título de pagamento antecipado, gerado na escolha do vencedor da
+  /// Cotação (ver FinancialEntry.purchaseOrderId) — enquanto nenhuma
+  /// Compra deste Pedido foi recebida ainda.
+  financialEntries FinancialEntry[]
+
   /// Preenchido quando o pedido nasceu da proposta vencedora de uma
   /// cotação.
   quotationId String?
@@ -1502,6 +1508,27 @@ model SalesSettings {
   updatedAt DateTime @updatedAt
 
   @@map("sales_settings")
+}
+
+/// Dias de aviso de vencimento pro cliente (título a receber) —
+/// e-mail/WhatsApp automático, disparado uma vez em cada gatilho
+/// (ver ScheduledNotificationsService.notifyPaymentReminders). Mesmo
+/// padrão de SalesSettings: único por empresa, getOrCreate.
+model PaymentReminderSettings {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Avisa o cliente X dias antes do vencimento.
+  daysBeforeDue Int @default(3)
+
+  /// Avisa o cliente de novo quando completar X dias vencido.
+  daysAfterDue Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_reminder_settings")
 }
 
 model QuoteItem {
@@ -1935,6 +1962,14 @@ model FinancialEntry {
   purchase   Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
   saleId     String?
   sale       Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  /// Preenchido quando o título nasce de pagamento antecipado, na
+  /// escolha do vencedor de uma Cotação de Compra (ver
+  /// QuotationService.chooseWinner) — antes de existir uma Compra de
+  /// verdade. Some (`purchaseId` passa a valer) quando a primeira
+  /// Compra desse Pedido é recebida (ver PurchaseService.receive).
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
 
   /// Preenchido quando o título nasce da aprovação de uma folha de pagamento.
   payrollItemId String?      @unique

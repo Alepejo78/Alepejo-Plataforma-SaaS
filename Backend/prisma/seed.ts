@@ -219,6 +219,14 @@ const permissionGroups = [
     ],
   },
   {
+    code: "PAYMENT_REMINDER_SETTINGS",
+    name: "Configurações de Lembrete de Vencimento",
+    permissions: [
+      ["payment-reminder-settings.view", "Consultar Configurações de Lembrete de Vencimento"],
+      ["payment-reminder-settings.manage", "Alterar Configurações de Lembrete de Vencimento"],
+    ],
+  },
+  {
     code: "SALES_ORDER",
     name: "Pedidos de Venda",
     permissions: [

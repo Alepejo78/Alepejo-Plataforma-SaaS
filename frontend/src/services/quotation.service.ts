@@ -63,7 +63,16 @@ export interface QuotationOffer {
     tradeName?: string | null;
   } | null;
 
-  purchaseOrder?: { id: string; number: number } | null;
+  purchaseOrder?: {
+    id: string;
+    number: number;
+    financialEntries?: {
+      id: string;
+      dueDate: string;
+      amount: string | number;
+      status: "OPEN" | "PAID" | "CANCELLED";
+    }[];
+  } | null;
 }
 
 export interface Quotation {
@@ -193,10 +202,17 @@ export const quotationService = {
 
   async chooseWinner(
     quotationId: string,
-    offerId: string
+    offerId: string,
+    payload?: {
+      generateFinancialEntry: boolean;
+      dueDate?: string;
+      paymentMethod?: PaymentMethod;
+      chartOfAccountId?: string;
+    }
   ): Promise<Quotation> {
     const { data } = await api.patch<ApiEnvelope<Quotation>>(
-      `/quotations/${quotationId}/offers/${offerId}/choose`
+      `/quotations/${quotationId}/offers/${offerId}/choose`,
+      payload ?? {}
     );
 
     return data.data;
