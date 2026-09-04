@@ -43,6 +43,26 @@ import {
         );
       }
 
+      // Código/nome de uma Role excluída continuam ocupados pra
+      // sempre no banco (unique não olha deletedAt) — sem isso,
+      // recriar com o mesmo código/nome batia direto na constraint e
+      // virava erro 500 em vez de restaurar o perfil antigo (mesmo
+      // raciocínio de BusinessPartnersService.create).
+      const deleted = await this.repository.findDeletedByCodeOrName(
+        companyId,
+        dto.code,
+        dto.name,
+      );
+
+      if (deleted) {
+        return this.repository.restore(deleted.id, {
+          code: dto.code,
+          name: dto.name,
+          description: dto.description,
+          active: dto.active ?? true,
+        });
+      }
+
       return this.repository.create({
         company: {
           connect: {

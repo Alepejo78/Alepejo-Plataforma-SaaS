@@ -140,6 +140,35 @@ export class RolesRepository extends BaseRepository {
     });
   }
 
+  /** Role excluída (soft delete) com este código OU nome, se houver — os dois continuam ocupados pra sempre no banco (@@unique não olha deletedAt). */
+  async findDeletedByCodeOrName(
+    companyId: string,
+    code: string,
+    name: string,
+  ): Promise<Role | null> {
+    return this.prisma.role.findFirst({
+      where: {
+        companyId,
+        deletedAt: { not: null },
+        OR: [{ code }, { name }],
+      },
+    });
+  }
+
+  async restore(
+    id: string,
+    data: Prisma.RoleUpdateInput,
+  ): Promise<Role> {
+    return this.prisma.role.update({
+      where: { id },
+      data: {
+        ...data,
+        active: true,
+        deletedAt: null,
+      },
+    });
+  }
+
   async update(
     id: string,
     data: Prisma.RoleUpdateInput,

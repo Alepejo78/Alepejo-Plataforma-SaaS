@@ -52,6 +52,39 @@ export class ProductsRepository {
     });
   }
 
+  /** Produto excluído (soft delete) com este código, se houver — o código continua ocupado pra sempre no banco (@@unique([companyId, code]) não olha deletedAt). */
+  async findDeletedByCode(
+    companyId: string,
+    code: string,
+  ): Promise<Product | null> {
+    return this.prisma.product.findFirst({
+      where: {
+        companyId,
+        code,
+        deletedAt: { not: null },
+      },
+    });
+  }
+
+  async restore(
+    id: string,
+    companyId: string,
+    data: CreateProductDto,
+    userId: string,
+  ): Promise<Product> {
+    return this.prisma.product.update({
+      where: { id },
+      data: {
+        ...data,
+        companyId,
+        active: true,
+        deletedAt: null,
+        createdById: userId,
+        updatedById: userId,
+      },
+    });
+  }
+
   async findAll(companyId: string, filter: ProductFilterDto) {
     const {
       search,

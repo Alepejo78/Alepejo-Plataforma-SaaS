@@ -39,6 +39,25 @@ import {
         );
       }
 
+      // Código de produto excluído continua ocupado no banco pra
+      // sempre (unique não olha deletedAt) — sem isso, recriar com o
+      // mesmo código batia direto na constraint e virava erro 500 em
+      // vez de restaurar o cadastro antigo (mesmo raciocínio de
+      // BusinessPartnersService.create).
+      const deleted = await this.repository.findDeletedByCode(
+        companyId,
+        createProductDto.code,
+      );
+
+      if (deleted) {
+        return this.repository.restore(
+          deleted.id,
+          companyId,
+          createProductDto,
+          userId,
+        );
+      }
+
       const created = await this.repository.create(
         companyId,
         createProductDto,
