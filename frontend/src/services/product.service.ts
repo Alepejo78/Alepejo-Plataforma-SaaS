@@ -100,6 +100,7 @@ export interface Product {
 
 export interface ProductFilter {
   search?: string;
+  code?: string;
   barcode?: string;
   categoryId?: string;
   brandId?: string;

@@ -662,16 +662,20 @@ export default function ComprasPage() {
     setBarcodeError("");
 
     try {
-      const result = await productService.list({
+      const byBarcode = await productService.list({
         barcode: code,
         limit: 1,
       });
 
-      const product = result.data?.[0];
+      // Produto sem código de barras cadastrado — aceita bipar/digitar
+      // o próprio código do produto no lugar.
+      const product =
+        byBarcode.data?.[0] ??
+        (await productService.list({ code, limit: 1 })).data?.[0];
 
       if (!product) {
         setBarcodeError(
-          `Nenhum produto encontrado para o código de barras "${code}".`
+          `Nenhum produto encontrado para o código "${code}".`
         );
 
         return;
