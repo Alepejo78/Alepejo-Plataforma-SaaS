@@ -183,9 +183,25 @@ export const serviceOrderService = {
     return data.data;
   },
 
+  async undoStartExecution(id: string): Promise<ServiceOrder> {
+    const { data } = await api.patch<ApiEnvelope<ServiceOrder>>(
+      `/service-orders/${id}/undo-start-execution`
+    );
+
+    return data.data;
+  },
+
   async complete(id: string): Promise<ServiceOrder> {
     const { data } = await api.patch<ApiEnvelope<ServiceOrder>>(
       `/service-orders/${id}/complete`
+    );
+
+    return data.data;
+  },
+
+  async undoComplete(id: string): Promise<ServiceOrder> {
+    const { data } = await api.patch<ApiEnvelope<ServiceOrder>>(
+      `/service-orders/${id}/undo-complete`
     );
 
     return data.data;

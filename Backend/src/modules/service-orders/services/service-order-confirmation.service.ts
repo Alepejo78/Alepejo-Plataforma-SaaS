@@ -393,6 +393,48 @@ ${summaryHtml}
     return { success: true, salesOrder };
   }
 
+  /**
+   * Estorna "Finalizar serviço" — só permitido enquanto o Pedido de
+   * Venda gerado ainda não virou Venda de verdade (mesma trava de
+   * `SalesOrderService.undoApproval`, reaproveitada aqui: se já
+   * converteu, está amarrado num documento posterior e o estorno é
+   * bloqueado). Cancela o Pedido gerado e volta a OS pra execução.
+   */
+  async undoComplete(companyId: string, id: string, userId: string) {
+    const order = await this.serviceOrderService.findOne(companyId, id);
+
+    if (order.status !== ServiceOrderStatus.CONFIRMED) {
+      throw new BadRequestException(
+        'Somente ordens de serviço com o serviço já finalizado podem ter a finalização estornada.',
+      );
+    }
+
+    if (order.salesOrder) {
+      // `undoApproval` já reverte a OS pra IN_PROGRESS como efeito
+      // colateral (ver SalesOrderService.revertLinkedServiceOrder) —
+      // e é aí que bloqueia sozinho se o Pedido já virou Venda.
+      await this.salesOrderService.undoApproval(
+        companyId,
+        order.salesOrder.id,
+        userId,
+      );
+      await this.salesOrderService.cancel(
+        companyId,
+        order.salesOrder.id,
+        userId,
+      );
+    }
+
+    return this.prisma.serviceOrder.update({
+      where: { id: order.id },
+      data: {
+        status: ServiceOrderStatus.IN_PROGRESS,
+        completedAt: null,
+        updatedById: userId,
+      },
+    });
+  }
+
   /** Avisa o cliente (e-mail/WhatsApp, com PDF) que o serviço acabou — sem link, não exige nenhuma ação dele. */
   private async notifyCompleted(
     companyId: string,

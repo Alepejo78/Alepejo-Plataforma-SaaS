@@ -160,6 +160,17 @@ export class ServiceOrderController {
     return this.service.startExecution(companyId, id, userId);
   }
 
+  @Patch(':id/undo-start-execution')
+  @Permissions('service-order.update')
+  @ApiOperation({ summary: 'Estornar início de execução, voltando para rascunho' })
+  undoStartExecution(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.undoStartExecution(companyId, id, userId);
+  }
+
   @Patch(':id/complete')
   @Permissions('service-order.update')
   @ApiOperation({
@@ -172,6 +183,20 @@ export class ServiceOrderController {
     @Param('id') id: string,
   ) {
     return this.confirmationService.complete(companyId, id, userId);
+  }
+
+  @Patch(':id/undo-complete')
+  @Permissions('service-order.update')
+  @ApiOperation({
+    summary:
+      'Estornar finalização — cancela o Pedido de Venda gerado e volta para execução',
+  })
+  undoComplete(
+    @CurrentUser('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.confirmationService.undoComplete(companyId, id, userId);
   }
 
   @Post(':id/send-confirmation')

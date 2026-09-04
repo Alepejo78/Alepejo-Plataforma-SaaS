@@ -441,6 +441,23 @@ export class ServiceOrderService {
     );
   }
 
+  /** Estorna "Iniciar execução" — volta pra rascunho, nada mais foi gerado ainda nesse ponto. */
+  async undoStartExecution(companyId: string, id: string, userId: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (order.status !== ServiceOrderStatus.IN_PROGRESS) {
+      throw new BadRequestException(
+        'Somente ordens de serviço em execução podem ter o início estornado.',
+      );
+    }
+
+    return this.repository.updateStatus(
+      id,
+      ServiceOrderStatus.DRAFT,
+      userId,
+    );
+  }
+
   async cancel(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 

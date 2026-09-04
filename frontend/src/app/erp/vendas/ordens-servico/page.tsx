@@ -13,6 +13,7 @@ import {
   Plus,
   Send,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 
@@ -653,6 +654,31 @@ export default function OrdensDeServicoPage() {
     }
   }
 
+  async function undoStartExecutionOrder(id: string) {
+    if (
+      !window.confirm(
+        "Estornar o início da execução? A ordem volta para rascunho."
+      )
+    ) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await serviceOrderService.undoStartExecution(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível estornar o início da execução.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   async function completeOrder(id: string) {
     if (
       !window.confirm(
@@ -672,6 +698,31 @@ export default function OrdensDeServicoPage() {
     } catch (err) {
       setActionError(
         extractMessage(err, "Não foi possível finalizar o serviço.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
+  async function undoCompleteOrder(id: string) {
+    if (
+      !window.confirm(
+        "Estornar a finalização do serviço? Cancela o Pedido de Venda gerado e a ordem volta para execução."
+      )
+    ) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await serviceOrderService.undoComplete(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível estornar a finalização.")
       );
     } finally {
       setActionId("");
@@ -1106,12 +1157,44 @@ export default function OrdensDeServicoPage() {
                               <button
                                 type="button"
                                 disabled={busy}
+                                onClick={() =>
+                                  void undoStartExecutionOrder(o.id)
+                                }
+                                title="Estornar início de execução"
+                                aria-label="Estornar início de execução"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"
+                              >
+                                <Undo2 size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {o.status === "IN_PROGRESS" && (
+                            <Can permission="service-order.update">
+                              <button
+                                type="button"
+                                disabled={busy}
                                 onClick={() => void completeOrder(o.id)}
                                 title="Finalizar serviço (gera o Pedido e avisa o cliente)"
                                 aria-label="Finalizar serviço"
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--success)] hover:text-[var(--success)] disabled:opacity-50"
                               >
                                 <FileText size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {o.status === "CONFIRMED" && (
+                            <Can permission="service-order.update">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void undoCompleteOrder(o.id)}
+                                title="Estornar finalização (cancela o Pedido gerado)"
+                                aria-label="Estornar finalização"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--warning)] hover:text-[var(--warning)] disabled:opacity-50"
+                              >
+                                <Undo2 size={16} />
                               </button>
                             </Can>
                           )}
