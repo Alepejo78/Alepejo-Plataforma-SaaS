@@ -430,6 +430,13 @@ export class QuotationService {
       // Vira o título da Compra de verdade sozinho quando ela for
       // recebida (ver PurchaseService.receive), sem duplicar.
       if (dto.generateFinancialEntry) {
+        // Nasce com o número do Pedido de Compra como documento — dá
+        // pra identificar o título em Contas a Pagar antes mesmo da
+        // Compra existir. No recebimento (PurchaseService.receive),
+        // esse valor é substituído pelo número da nota fiscal de
+        // verdade (ou mantido, se a nota não trouxer número).
+        const purchaseOrderDocumentNumber = `PC-${String(number).padStart(6, '0')}`;
+
         await this.financialEntriesService.createFromDocument(
           tx,
           {
@@ -442,7 +449,8 @@ export class QuotationService {
             paymentMethod: dto.paymentMethod ?? offer.paymentMethod,
             chartOfAccountId: dto.chartOfAccountId,
             purchaseOrderId: purchaseOrder.id,
-            observation: `Pagamento antecipado — Pedido de Compra PC-${String(number).padStart(6, '0')}`,
+            documentNumber: purchaseOrderDocumentNumber,
+            observation: `Pagamento antecipado — Pedido de Compra ${purchaseOrderDocumentNumber}`,
           },
           userId,
         );
