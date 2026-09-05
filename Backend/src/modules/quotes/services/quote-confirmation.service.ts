@@ -200,6 +200,27 @@ export class QuoteConfirmationService {
     return quote;
   }
 
+  /**
+   * Trava o link de uma vez só: zera o hash do token com uma condição
+   * (`updateMany` só afeta a linha se o hash ainda for o mesmo que
+   * validamos). Se o cliente clicar duas vezes rápido (ou a conexão
+   * cair e ele tentar de novo), a segunda chamada não encontra mais o
+   * hash esperado — 0 linhas afetadas — e é rejeitada aqui, antes de
+   * gerar um segundo Pedido/Ordem de Serviço pro mesmo orçamento.
+   */
+  private async claimToken(quote: { id: string; confirmationTokenHash: string | null }) {
+    const claimed = await this.prisma.quote.updateMany({
+      where: { id: quote.id, confirmationTokenHash: quote.confirmationTokenHash },
+      data: { confirmationTokenHash: null, confirmationTokenExpiresAt: null },
+    });
+
+    if (claimed.count === 0) {
+      throw new BadRequestException(
+        'Este orçamento não está mais aguardando aprovação.',
+      );
+    }
+  }
+
   /** Resumo pra tela pública (sem login). */
   async getPublicInfo(id: string, token: string) {
     const quote = await this.validatePublicToken(id, token);
@@ -282,6 +303,8 @@ export class QuoteConfirmationService {
       );
     }
 
+    await this.claimToken(quote);
+
     const company = await this.prisma.company.findUnique({
       where: { id: quote.companyId },
       select: { rootCompanyId: true },
@@ -291,11 +314,7 @@ export class QuoteConfirmationService {
     if (quote.purpose === QuotePurpose.SERVICE) {
       await this.prisma.quote.update({
         where: { id: quote.id },
-        data: {
-          customerApprovedAt: new Date(),
-          confirmationTokenHash: null,
-          confirmationTokenExpiresAt: null,
-        },
+        data: { customerApprovedAt: new Date() },
       });
 
       const refreshed = await this.quoteService.findOne(
@@ -384,8 +403,6 @@ export class QuoteConfirmationService {
         installmentInterestAmount: interestAmount,
         plannedInstallments: plannedInstallments ?? Prisma.JsonNull,
         customerApprovedAt: new Date(),
-        confirmationTokenHash: null,
-        confirmationTokenExpiresAt: null,
       },
     });
 
@@ -429,14 +446,14 @@ export class QuoteConfirmationService {
       );
     }
 
+    await this.claimToken(quote);
+
     await this.prisma.quote.update({
       where: { id: quote.id },
       data: {
         status: QuoteStatus.REVISION_REQUESTED,
         customerRevisionNote: dto.message,
         customerRevisionAt: new Date(),
-        confirmationTokenHash: null,
-        confirmationTokenExpiresAt: null,
       },
     });
 
@@ -475,14 +492,14 @@ export class QuoteConfirmationService {
       );
     }
 
+    await this.claimToken(quote);
+
     await this.prisma.quote.update({
       where: { id: quote.id },
       data: {
         status: QuoteStatus.CANCELLED,
         customerCancelReason: dto.reason,
         customerCancelledAt: new Date(),
-        confirmationTokenHash: null,
-        confirmationTokenExpiresAt: null,
       },
     });
 
