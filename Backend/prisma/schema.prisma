@@ -1707,6 +1707,8 @@ model SalesOrderItem {
 enum ServiceOrderStatus {
   /// Aberta.
   DRAFT
+  /// Cliente já autorizou (pelo orçamento de origem ou pelo link) — falta a empresa clicar em "Iniciar execução".
+  APPROVED
   /// Em execução.
   IN_PROGRESS
   /// Enviada, esperando o cliente aprovar o escopo pelo link público.

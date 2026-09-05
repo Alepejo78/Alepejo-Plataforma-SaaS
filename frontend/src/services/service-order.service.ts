@@ -9,6 +9,7 @@ interface ApiEnvelope<T> {
 
 export type ServiceOrderStatus =
   | "DRAFT"
+  | "APPROVED"
   | "IN_PROGRESS"
   | "AWAITING_CONFIRMATION"
   | "REVISION_REQUESTED"
@@ -19,6 +20,7 @@ export type ServiceOrderStatus =
 export const SERVICE_ORDER_STATUS_LABELS: Record<ServiceOrderStatus, string> =
   {
     DRAFT: "Aberta",
+    APPROVED: "Aprovada",
     IN_PROGRESS: "Em Execução",
     AWAITING_CONFIRMATION: "Aguardando aprovação do cliente",
     REVISION_REQUESTED: "Revisão solicitada",

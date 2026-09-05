@@ -12,6 +12,8 @@ import {
 } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
+import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
+import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
@@ -59,6 +61,8 @@ export class ServiceOrderService {
     private readonly prisma: PrismaService,
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly documentSequence: DocumentSequenceService,
+    private readonly emailNotifications: EmailNotificationsService,
+    private readonly whatsappNotifications: WhatsappNotificationsService,
   ) {}
 
   async create(
@@ -134,7 +138,7 @@ export class ServiceOrderService {
 
       if (quote.status === QuoteStatus.APPROVED) {
         quoteInitialState = {
-          status: ServiceOrderStatus.IN_PROGRESS,
+          status: ServiceOrderStatus.APPROVED,
           customerConfirmedAt: quote.customerApprovedAt ?? new Date(),
         };
       }
@@ -323,6 +327,7 @@ export class ServiceOrderService {
 
     if (
       order.status !== ServiceOrderStatus.DRAFT &&
+      order.status !== ServiceOrderStatus.APPROVED &&
       order.status !== ServiceOrderStatus.IN_PROGRESS &&
       order.status !== ServiceOrderStatus.REVISION_REQUESTED
     ) {
@@ -462,23 +467,86 @@ export class ServiceOrderService {
     );
   }
 
+  /**
+   * Início da execução é sempre manual — mesmo numa OS que nasceu já
+   * aprovada (de um orçamento, ou confirmada pelo cliente pelo link),
+   * quem decide quando começar é a empresa, clicando aqui. Exige as
+   * datas de previsão preenchidas porque é isso que vira o aviso ao
+   * cliente (best-effort, não trava se o cliente não tiver contato).
+   */
   async startExecution(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 
-    if (order.status !== ServiceOrderStatus.DRAFT) {
+    if (
+      order.status !== ServiceOrderStatus.DRAFT &&
+      order.status !== ServiceOrderStatus.APPROVED
+    ) {
       throw new BadRequestException(
-        'Somente ordens de serviço em aberto podem iniciar execução.',
+        'Somente ordens de serviço em aberto ou aprovadas podem iniciar execução.',
       );
     }
 
-    return this.repository.updateStatus(
+    if (!order.scheduledStart || !order.scheduledEnd) {
+      throw new BadRequestException(
+        'Preencha o início e o fim previstos antes de iniciar a execução.',
+      );
+    }
+
+    const updated = await this.repository.updateStatus(
       id,
       ServiceOrderStatus.IN_PROGRESS,
       userId,
     );
+
+    void this.notifyExecutionStart(companyId, order);
+
+    return updated;
   }
 
-  /** Estorna "Iniciar execução" — volta pra rascunho, nada mais foi gerado ainda nesse ponto. */
+  /** Best-effort: avisa o cliente da previsão de início/fim ao começar a execução. Nunca lança. */
+  private async notifyExecutionStart(
+    companyId: string,
+    order: Awaited<ReturnType<ServiceOrderService['findOne']>>,
+  ) {
+    const partner = order.partner;
+
+    if (!partner.email && !partner.mobile) {
+      return;
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    const companyName = company?.tradeName || company?.legalName || '';
+    const partnerName = partner.tradeName || partner.legalName;
+    const orderNumber = serviceOrderNumberOf(order);
+    const start = formatDueDate(order.scheduledStart!);
+    const end = formatDueDate(order.scheduledEnd!);
+
+    if (partner.email) {
+      void this.emailNotifications.send(
+        companyId,
+        partner.email,
+        `Execução iniciada — ${orderNumber} — ${companyName}`,
+        `<p>Olá, ${partnerName},</p>
+<p>Iniciamos a execução do serviço da ordem <strong>${orderNumber}</strong>.</p>
+<p><strong>Previsão de início:</strong> ${start}<br/><strong>Previsão de conclusão:</strong> ${end}</p>
+<p>Qualquer dúvida, estamos à disposição.</p>
+<p>Atenciosamente,<br/>${companyName}</p>`,
+      );
+    }
+
+    if (partner.mobile) {
+      void this.whatsappNotifications.send(
+        companyId,
+        partner.mobile,
+        `Olá, ${partnerName}! Iniciamos a execução do serviço ${orderNumber} (${companyName}). Previsão: início em ${start}, conclusão em ${end}.`,
+      );
+    }
+  }
+
+  /** Estorna "Iniciar execução" — volta pro status de antes (aprovada, se o cliente já tinha confirmado; rascunho, senão). */
   async undoStartExecution(companyId: string, id: string, userId: string) {
     const order = await this.findOne(companyId, id);
 
@@ -490,7 +558,9 @@ export class ServiceOrderService {
 
     return this.repository.updateStatus(
       id,
-      ServiceOrderStatus.DRAFT,
+      order.customerConfirmedAt
+        ? ServiceOrderStatus.APPROVED
+        : ServiceOrderStatus.DRAFT,
       userId,
     );
   }
@@ -500,6 +570,7 @@ export class ServiceOrderService {
 
     const cancellable =
       order.status === ServiceOrderStatus.DRAFT ||
+      order.status === ServiceOrderStatus.APPROVED ||
       order.status === ServiceOrderStatus.IN_PROGRESS ||
       order.status === ServiceOrderStatus.AWAITING_CONFIRMATION ||
       order.status === ServiceOrderStatus.REVISION_REQUESTED;

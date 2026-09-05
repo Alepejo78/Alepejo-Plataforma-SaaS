@@ -263,9 +263,12 @@ ${summaryHtml}
   }
 
   /**
-   * Consumo público — cliente aprova o escopo descrito e a OS entra
-   * em execução. Não gera Pedido nenhum ainda (isso só acontece
-   * quando a empresa finaliza o serviço, ver `complete`).
+   * Consumo público — cliente aprova o escopo descrito. A OS não
+   * entra em execução sozinha — fica "aprovada", esperando a empresa
+   * clicar em "Iniciar execução" (ver `ServiceOrderService.
+   * startExecution`), que é quando o cliente é avisado da previsão de
+   * início/fim. Não gera Pedido nenhum ainda (isso só acontece quando
+   * a empresa finaliza o serviço, ver `complete`).
    */
   async confirmPublic(id: string, token: string) {
     const order = await this.validatePublicToken(id, token);
@@ -279,7 +282,7 @@ ${summaryHtml}
     await this.prisma.serviceOrder.update({
       where: { id: order.id },
       data: {
-        status: ServiceOrderStatus.IN_PROGRESS,
+        status: ServiceOrderStatus.APPROVED,
         customerConfirmedAt: new Date(),
         confirmationTokenHash: null,
         confirmationTokenExpiresAt: null,

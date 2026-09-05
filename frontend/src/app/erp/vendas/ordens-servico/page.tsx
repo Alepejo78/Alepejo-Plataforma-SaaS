@@ -118,6 +118,7 @@ const labelClass =
 
 const STATUS_BADGE_CLASS: Record<ServiceOrderStatus, string> = {
   DRAFT: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  APPROVED: "bg-[var(--primary-soft)] text-[var(--primary-text)]",
   IN_PROGRESS: "bg-[var(--warning-soft)] text-[var(--warning)]",
   AWAITING_CONFIRMATION: "bg-[var(--warning-soft)] text-[var(--warning)]",
   REVISION_REQUESTED: "bg-[var(--danger-soft)] text-[var(--danger)]",
@@ -1107,6 +1108,7 @@ export default function OrdensDeServicoPage() {
                   const busy = actionId === o.id;
                   const canEdit =
                     o.status === "DRAFT" ||
+                    o.status === "APPROVED" ||
                     o.status === "IN_PROGRESS" ||
                     o.status === "REVISION_REQUESTED";
                   const canCancel =
@@ -1183,7 +1185,8 @@ export default function OrdensDeServicoPage() {
                             </Can>
                           )}
 
-                          {o.status === "DRAFT" && (
+                          {(o.status === "DRAFT" ||
+                            o.status === "APPROVED") && (
                             <Can permission="service-order.update">
                               <button
                                 type="button"
