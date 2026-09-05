@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * Perfil por gênero em estilo infográfico: grade de 100 bonequinhos
- * (cada um vale 1%) ao lado de um ícone + anel de progresso por
- * gênero — usado tanto no card compacto da Visão Geral quanto na
- * tela de Gráficos de Colaboradores.
+ * Perfil por gênero em estilo infográfico: uma linha por gênero, com
+ * um bonequinho pra cada colaborador (até 100 no total — passando
+ * disso, os bonequinhos passam a representar o percentual em vez da
+ * contagem literal, senão vira uma parede de ícone ilegível) seguido
+ * do ícone sólido + anel de progresso com o percentual.
  */
 
 export const GENDER_PROFILE_COLORS = {
@@ -31,10 +32,10 @@ const PERSON_SILHOUETTE = {
   ),
 };
 
-/** Ícone pequeno usado repetido na grade — mais simples que a silhueta do anel. */
+/** Ícone pequeno repetido na fileira — mais simples que a silhueta do anel. */
 function PictogramPerson({ color }: { color: string }) {
   return (
-    <svg viewBox="0 0 24 28" className="h-full w-full">
+    <svg viewBox="0 0 24 28" className="h-full w-full shrink-0">
       <circle cx="12" cy="6" r="5" fill={color} />
       <path
         d="M12 13c-4.5 0-7.5 2.8-7.5 7v6h15v-6c0-4.2-3-7-7.5-7z"
@@ -49,12 +50,12 @@ function GenderRingIcon({
   gender,
   percent,
   color,
-  size = 72,
+  size,
 }: {
   gender: "MASCULINO" | "FEMININO";
   percent: number;
   color: string;
-  size?: number;
+  size: number;
 }) {
   const radius = 32;
   const circumference = 2 * Math.PI * radius;
@@ -62,21 +63,21 @@ function GenderRingIcon({
   const offset = circumference * (1 - clamped / 100);
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1">
       <svg viewBox="0 0 100 140" style={{ height: size * 0.62, width: size * 0.4 }}>
         <g fill={color}>{PERSON_SILHOUETTE[gender]}</g>
       </svg>
 
       <div className="relative" style={{ height: size, width: size }}>
         <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
-          <circle cx="40" cy="40" r={radius} fill="none" stroke="var(--surface-hover)" strokeWidth="7" />
+          <circle cx="40" cy="40" r={radius} fill="none" stroke="var(--surface-hover)" strokeWidth="8" />
           <circle
             cx="40"
             cy="40"
             r={radius}
             fill="none"
             stroke={color}
-            strokeWidth="7"
+            strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
@@ -84,12 +85,47 @@ function GenderRingIcon({
         </svg>
 
         <div
-          className="absolute inset-0 flex items-center justify-center text-sm font-bold"
-          style={{ color }}
+          className="absolute inset-0 flex items-center justify-center font-bold"
+          style={{ color, fontSize: size * 0.22 }}
         >
           {Math.round(clamped)}%
         </div>
       </div>
+    </div>
+  );
+}
+
+function GenderRow({
+  gender,
+  count,
+  iconCount,
+  percent,
+  color,
+  ringSize,
+  iconSize,
+}: {
+  gender: "MASCULINO" | "FEMININO";
+  count: number;
+  iconCount: number;
+  percent: number;
+  color: string;
+  ringSize: number;
+  iconSize: number;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="flex min-w-0 flex-1 flex-wrap content-center gap-0.5"
+        title={`${count} colaborador(es)`}
+      >
+        {Array.from({ length: iconCount }, (_, i) => (
+          <div key={i} style={{ height: iconSize, width: iconSize * 0.86 }}>
+            <PictogramPerson color={color} />
+          </div>
+        ))}
+      </div>
+
+      <GenderRingIcon gender={gender} percent={percent} color={color} size={ringSize} />
     </div>
   );
 }
@@ -101,7 +137,7 @@ export function GenderProfileChart({
 }: {
   masculinoCount: number;
   femininoCount: number;
-  /** Versão menor (card da Visão Geral) — grade com ícones menores e anéis reduzidos. */
+  /** Versão bem pequena (card da Visão Geral). */
   compact?: boolean;
 }) {
   const total = masculinoCount + femininoCount;
@@ -112,43 +148,39 @@ export function GenderProfileChart({
 
   const masculinoPercent = (masculinoCount / total) * 100;
   const femininoPercent = (femininoCount / total) * 100;
-  const masculinoIcons = Math.round(masculinoPercent);
 
-  const icons = Array.from({ length: 100 }, (_, i) => ({
-    key: i,
-    color:
-      i < masculinoIcons
-        ? GENDER_PROFILE_COLORS.MASCULINO
-        : GENDER_PROFILE_COLORS.FEMININO,
-  }));
+  // Até 100 colaboradores, cada bonequinho é uma pessoa de verdade.
+  // Passando disso, uma parede de ícones fica ilegível — troca pra
+  // representar o percentual (100 bonequinhos no total, divididos
+  // pela proporção de cada gênero).
+  const masculinoIcons =
+    total <= 100 ? masculinoCount : Math.round(masculinoPercent);
+  const femininoIcons =
+    total <= 100 ? femininoCount : Math.round(femininoPercent);
+
+  const ringSize = compact ? 44 : 60;
+  const iconSize = compact ? 12 : 16;
 
   return (
-    <div className={`flex items-center ${compact ? "gap-3" : "gap-6"}`}>
-      <div
-        className="grid flex-1 grid-cols-10"
-        style={{ gap: compact ? 2 : 6 }}
-      >
-        {icons.map((icon) => (
-          <div key={icon.key} className="aspect-[24/28]">
-            <PictogramPerson color={icon.color} />
-          </div>
-        ))}
-      </div>
-
-      <div className="flex shrink-0 flex-col gap-3">
-        <GenderRingIcon
-          gender="MASCULINO"
-          percent={masculinoPercent}
-          color={GENDER_PROFILE_COLORS.MASCULINO}
-          size={compact ? 52 : 72}
-        />
-        <GenderRingIcon
-          gender="FEMININO"
-          percent={femininoPercent}
-          color={GENDER_PROFILE_COLORS.FEMININO}
-          size={compact ? 52 : 72}
-        />
-      </div>
+    <div className={compact ? "space-y-2" : "space-y-3"}>
+      <GenderRow
+        gender="MASCULINO"
+        count={masculinoCount}
+        iconCount={masculinoIcons}
+        percent={masculinoPercent}
+        color={GENDER_PROFILE_COLORS.MASCULINO}
+        ringSize={ringSize}
+        iconSize={iconSize}
+      />
+      <GenderRow
+        gender="FEMININO"
+        count={femininoCount}
+        iconCount={femininoIcons}
+        percent={femininoPercent}
+        color={GENDER_PROFILE_COLORS.FEMININO}
+        ringSize={ringSize}
+        iconSize={iconSize}
+      />
     </div>
   );
 }
