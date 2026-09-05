@@ -80,8 +80,12 @@ export class QuoteConfirmationService {
 
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = hashToken(token);
+    // `validUntil` é data pura (meia-noite UTC do dia escolhido) — o
+    // link precisa valer o dia INTEIRO, então a expiração real é o
+    // início do dia seguinte (senão já nasce expirado depois das 21h
+    // no horário do Brasil, por causa do fuso).
     const expiresAt = quote.validUntil
-      ? new Date(quote.validUntil)
+      ? new Date(new Date(quote.validUntil).getTime() + 24 * 60 * 60 * 1000)
       : new Date(Date.now() + FALLBACK_TOKEN_TTL_MS);
 
     await this.prisma.quote.update({
