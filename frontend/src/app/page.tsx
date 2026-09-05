@@ -29,6 +29,7 @@ import {
 
 import { AppShell } from "@/components";
 import { DashboardHeader } from "@/components/dashboard";
+import { GenderProfileChart } from "@/components/dashboard/GenderProfileChart";
 
 import { useAuth } from "@/providers/AuthProvider";
 import { partnerService } from "@/services/partner.service";
@@ -91,85 +92,6 @@ const GENDER_COLORS: Record<string, string> = {
   FEMININO: "#d6336c",
   OUTRO: "var(--text-muted)",
 };
-
-/** Silhuetas simples (cabeça + corpo) — a de mulher tem saia, a de homem não. */
-const PERSON_SHAPES = {
-  MASCULINO: (
-    <>
-      <circle cx="50" cy="22" r="16" />
-      <rect x="28" y="40" width="44" height="56" rx="10" />
-      <rect x="32" y="94" width="14" height="42" rx="6" />
-      <rect x="54" y="94" width="14" height="42" rx="6" />
-    </>
-  ),
-  FEMININO: (
-    <>
-      <circle cx="50" cy="22" r="16" />
-      <path d="M40 40 H60 L82 96 H18 Z" />
-      <rect x="34" y="96" width="12" height="40" rx="5" />
-      <rect x="54" y="96" width="12" height="40" rx="5" />
-    </>
-  ),
-};
-
-/**
- * Ícone sólido (homem/mulher) ao lado de um anel de progresso com o
- * percentual no meio — referência: infográfico de gênero com ícone +
- * anel colorido.
- */
-function GenderRingIcon({
-  gender,
-  percent,
-  color,
-}: {
-  gender: "MASCULINO" | "FEMININO";
-  percent: number;
-  color: string;
-}) {
-  const radius = 32;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.max(0, Math.min(100, percent));
-  const offset = circumference * (1 - clamped / 100);
-
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <svg viewBox="0 0 100 140" className="h-14 w-9">
-        <g fill={color}>{PERSON_SHAPES[gender]}</g>
-      </svg>
-
-      <div className="relative h-[72px] w-[72px]">
-        <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
-          <circle
-            cx="40"
-            cy="40"
-            r={radius}
-            fill="none"
-            stroke="var(--surface-hover)"
-            strokeWidth="7"
-          />
-          <circle
-            cx="40"
-            cy="40"
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth="7"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-          />
-        </svg>
-
-        <div
-          className="absolute inset-0 flex items-center justify-center text-sm font-bold"
-          style={{ color }}
-        >
-          {Math.round(clamped)}%
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /** Paleta pra "por setor" — quantidade de setores varia por empresa, então roda em ciclo. */
 const SECTOR_COLORS = [
@@ -485,15 +407,10 @@ export default function HomePage() {
       fill: GENDER_COLORS[g.gender as string] ?? "var(--text-muted)",
     }));
 
-  const genderTotal = genderChart.reduce((sum, g) => sum + g.value, 0);
   const masculinoCount =
     employeesByGender.find((g) => g.gender === "MASCULINO")?.count ?? 0;
   const femininoCount =
     employeesByGender.find((g) => g.gender === "FEMININO")?.count ?? 0;
-  const masculinoPercent =
-    genderTotal > 0 ? (masculinoCount / genderTotal) * 100 : 0;
-  const femininoPercent =
-    genderTotal > 0 ? (femininoCount / genderTotal) * 100 : 0;
 
   const sectorChart = employeesBySector.map((s, i) => ({
     name: s.sectorName,
@@ -1036,24 +953,17 @@ export default function HomePage() {
                   Nenhum colaborador ativo cadastrado ainda.
                 </p>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-5">
                   <div>
-                    <p className="mb-1 text-center text-xs font-medium text-[var(--text-muted)]">
+                    <p className="mb-2 text-center text-xs font-medium text-[var(--text-muted)]">
                       Por gênero
                     </p>
 
-                    <div className="flex h-36 flex-col items-center justify-center gap-3">
-                      <GenderRingIcon
-                        gender="MASCULINO"
-                        percent={masculinoPercent}
-                        color={GENDER_COLORS.MASCULINO}
-                      />
-                      <GenderRingIcon
-                        gender="FEMININO"
-                        percent={femininoPercent}
-                        color={GENDER_COLORS.FEMININO}
-                      />
-                    </div>
+                    <GenderProfileChart
+                      masculinoCount={masculinoCount}
+                      femininoCount={femininoCount}
+                      compact
+                    />
                   </div>
 
                   <div>

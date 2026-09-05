@@ -17,9 +17,9 @@ import {
 
 import { AppShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { GenderProfileChart } from "@/components/dashboard/GenderProfileChart";
 
 import {
-  GENDER_LABELS,
   employeeReportsService,
   type EmployeeIndicators,
 } from "@/services/hr.service";
@@ -32,6 +32,7 @@ const CHART_COLORS = [
   "var(--primary-hover)",
   "var(--text-secondary)",
 ];
+
 
 function money(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -133,11 +134,6 @@ export default function GraficosColaboradoresPage() {
   );
 
   const bySector = data?.bySector ?? [];
-
-  const byGender = (data?.byGender ?? []).map((g) => ({
-    name: g.gender ? GENDER_LABELS[g.gender] : "Não informado",
-    count: g.count,
-  }));
 
   const chartHeight = Math.max(
     220,
@@ -242,114 +238,62 @@ export default function GraficosColaboradoresPage() {
               )}
             </Panel>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Panel title="Colaboradores por setor">
-                {bySector.length === 0 ? (
-                  <p className="text-sm text-[var(--text-muted)]">
-                    Sem dados.
-                  </p>
-                ) : (
-                  <div style={{ height: 280 }}>
-                    <ResponsiveContainer
-                      width="100%"
-                      height="100%"
-                    >
-                      <PieChart>
-                        <Pie
-                          data={bySector}
-                          dataKey="count"
-                          nameKey="sectorName"
-                          innerRadius={60}
-                          outerRadius={100}
-                          paddingAngle={2}
-                        >
-                          {bySector.map((entry, index) => (
-                            <Cell
-                              key={entry.sectorId ?? index}
-                              fill={
-                                CHART_COLORS[
-                                  index % CHART_COLORS.length
-                                ]
-                              }
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={tooltipStyle} />
-                        <Legend
-                          wrapperStyle={{
-                            fontSize: 12,
-                            color: "var(--text-secondary)",
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </Panel>
-
-              <Panel title="Colaboradores por sexo">
-                {byGender.length === 0 ? (
-                  <p className="text-sm text-[var(--text-muted)]">
-                    Sem dados.
-                  </p>
-                ) : (
-                  <div style={{ height: 280 }}>
-                    <ResponsiveContainer
-                      width="100%"
-                      height="100%"
-                    >
-                      <BarChart
-                        data={byGender}
-                        margin={{
-                          top: 8,
-                          right: 8,
-                          bottom: 8,
-                          left: 8,
-                        }}
+            <Panel title="Colaboradores por setor">
+              {bySector.length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)]">
+                  Sem dados.
+                </p>
+              ) : (
+                <div style={{ height: 280 }}>
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                  >
+                    <PieChart>
+                      <Pie
+                        data={bySector}
+                        dataKey="count"
+                        nameKey="sectorName"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
                       >
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          stroke="var(--border)"
-                          vertical={false}
-                        />
-                        <XAxis
-                          dataKey="name"
-                          stroke="var(--text-muted)"
-                          fontSize={12}
-                        />
-                        <YAxis
-                          allowDecimals={false}
-                          stroke="var(--text-muted)"
-                          fontSize={12}
-                        />
-                        <Tooltip
-                          contentStyle={tooltipStyle}
-                          cursor={{
-                            fill: "var(--surface-hover)",
-                          }}
-                        />
-                        <Bar
-                          dataKey="count"
-                          name="Colaboradores"
-                          radius={[4, 4, 0, 0]}
-                        >
-                          {byGender.map((entry, index) => (
-                            <Cell
-                              key={entry.name}
-                              fill={
-                                CHART_COLORS[
-                                  index % CHART_COLORS.length
-                                ]
-                              }
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </Panel>
-            </div>
+                        {bySector.map((entry, index) => (
+                          <Cell
+                            key={entry.sectorId ?? index}
+                            fill={
+                              CHART_COLORS[
+                                index % CHART_COLORS.length
+                              ]
+                            }
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Legend
+                        wrapperStyle={{
+                          fontSize: 12,
+                          color: "var(--text-secondary)",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Colaboradores por sexo">
+              <GenderProfileChart
+                masculinoCount={
+                  data?.byGender.find((g) => g.gender === "MASCULINO")
+                    ?.count ?? 0
+                }
+                femininoCount={
+                  data?.byGender.find((g) => g.gender === "FEMININO")
+                    ?.count ?? 0
+                }
+              />
+            </Panel>
           </div>
         )}
       </ListPageLayout>
