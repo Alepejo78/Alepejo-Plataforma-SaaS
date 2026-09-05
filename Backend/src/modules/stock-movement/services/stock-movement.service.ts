@@ -105,36 +105,58 @@ import {
       let quantity = Number(
         inventory.quantity,
       );
-  
+
+      // Custo médio ponderado — só mexe nele numa ENTRADA com custo
+      // informado (mesma fórmula de PurchaseService.receive). Sem
+      // custo informado, ou em saída/ajuste, o custo médio existente
+      // fica como está: saída não muda o custo do que ficou, e ajuste
+      // pode tanto subir quanto descer a quantidade, sem um custo de
+      // origem claro pra misturar.
+      let averageCost: number | undefined;
+
       switch (dto.type) {
         case StockMovementType.ENTRY:
+          if (dto.unitCost !== undefined) {
+            const existingQuantity = quantity;
+            const existingAverageCost = Number(inventory.averageCost);
+            const totalQuantity = existingQuantity + dto.quantity;
+
+            averageCost =
+              totalQuantity > 0
+                ? (existingQuantity * existingAverageCost +
+                    dto.quantity * dto.unitCost) /
+                  totalQuantity
+                : existingAverageCost;
+          }
+
           quantity += dto.quantity;
           break;
-  
+
         case StockMovementType.EXIT:
           if (quantity < dto.quantity) {
             throw new BadRequestException(
               'Saldo insuficiente.',
             );
           }
-  
+
           quantity -= dto.quantity;
           break;
-  
+
         case StockMovementType.ADJUSTMENT:
           quantity = dto.quantity;
           break;
-  
+
         default:
           break;
       }
-  
+
       await this.prisma.inventory.update({
         where: {
           id: inventory.id,
         },
         data: {
           quantity,
+          ...(averageCost !== undefined && { averageCost }),
         },
       });
     }

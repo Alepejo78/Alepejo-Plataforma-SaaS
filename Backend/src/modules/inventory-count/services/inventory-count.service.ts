@@ -730,13 +730,18 @@ export class InventoryCountService {
 
           inventoryId = inventory.id;
         } else {
+          // Produto nunca teve saldo lançado nesse depósito — sem
+          // histórico de compra, não tem como saber o custo real.
+          // Usa o preço de venda cadastrado como custo inicial (opção
+          // do usuário) em vez de deixar zerado; assim que entrar uma
+          // compra de verdade, o custo médio ponderado corrige sozinho.
           const created = await tx.inventory.create({
             data: {
               companyId,
               warehouseId: count.warehouseId,
               productId: item.productId,
               quantity: finalQuantity,
-              averageCost: 0,
+              averageCost: Number(item.product.salePrice),
             },
           });
 
