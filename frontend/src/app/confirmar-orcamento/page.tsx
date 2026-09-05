@@ -117,17 +117,11 @@ function ConfirmarOrcamentoContent() {
     setError("");
 
     try {
-      await quotePublicService.approve(
-        id,
-        token,
-        info?.purpose === "SERVICE"
-          ? {}
-          : {
-              paymentTiming,
-              installmentsCount:
-                paymentTiming === "A_PRAZO" ? installmentsCount : undefined,
-            }
-      );
+      await quotePublicService.approve(id, token, {
+        paymentTiming,
+        installmentsCount:
+          paymentTiming === "A_PRAZO" ? installmentsCount : undefined,
+      });
 
       setFinalStatus("APPROVED");
       setDone(true);
@@ -355,19 +349,11 @@ function ConfirmarOrcamentoContent() {
                   <button
                     type="button"
                     disabled={submitting}
-                    onClick={() =>
-                      info.purpose === "SERVICE"
-                        ? void handleApprove()
-                        : setMode("approve")
-                    }
+                    onClick={() => setMode("approve")}
                     className="flex flex-col items-center gap-1 rounded-xl bg-[var(--primary)] px-3 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
                   >
                     <CheckCircle2 size={18} />
-                    {info.purpose === "SERVICE"
-                      ? submitting
-                        ? "Autorizando..."
-                        : "Autorizar serviço"
-                      : "Aprovar"}
+                    {info.purpose === "SERVICE" ? "Autorizar serviço" : "Aprovar"}
                   </button>
 
                   <button

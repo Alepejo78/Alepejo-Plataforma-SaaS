@@ -329,11 +329,13 @@ export class QuoteConfirmationService {
   }
 
   /**
-   * Consumo público — cliente aprova. Orçamento de venda escolhe
-   * forma de pagamento aqui e já vira Pedido de Venda. Orçamento de
-   * serviço (purpose SERVICE) só autoriza — forma de pagamento fica
-   * pra quando a Ordem de Serviço for criada, e não gera Pedido
-   * nenhum (ver QuoteService.performApproval).
+   * Consumo público — cliente aprova, escolhendo forma de pagamento
+   * (à vista/a prazo + parcelas) igual em orçamento de venda ou de
+   * serviço. A diferença fica só no que acontece depois de aprovado:
+   * venda já vira Pedido de Venda; serviço só autoriza (a Ordem de
+   * Serviço herda esse mesmo prazo/parcelas quando for criada — ver
+   * `QuoteService.performApproval` e `importFromQuote` no frontend),
+   * sem gerar Pedido nenhum.
    */
   async approvePublic(id: string, token: string, dto: PublicApproveQuoteDto) {
     const quote = await this.validatePublicToken(id, token);
@@ -349,35 +351,6 @@ export class QuoteConfirmationService {
       select: { rootCompanyId: true },
     });
     const rootCompanyId = company?.rootCompanyId ?? quote.companyId;
-
-    if (quote.purpose === QuotePurpose.SERVICE) {
-      await this.claimDecision(quote.id, { customerApprovedAt: new Date() });
-
-      const refreshed = await this.quoteService.findOne(
-        quote.companyId,
-        quote.id,
-      );
-
-      const approved = await this.quoteService.performApproval(
-        quote.companyId,
-        rootCompanyId,
-        refreshed,
-        quote.createdById ?? '',
-      );
-
-      void this.notifications.emit({
-        rootCompanyId,
-        type: NotificationType.QUOTE_SERVICE_APPROVED,
-        dedupeKey: `quote-service-approved:${quote.id}`,
-        title: 'Orçamento de serviço aprovado',
-        message: `O cliente autorizou o serviço do orçamento ${quoteNumberOf(quote)} — aguardando gerar a Ordem de Serviço.`,
-        permissionCode: 'service-order.create',
-        linkUrl: '/erp/vendas/ordens-servico',
-        documentRef: quoteNumberOf(quote),
-      });
-
-      return { success: true, quote: approved };
-    }
 
     const settings = await this.salesSettings.getSettings(quote.companyId);
 
@@ -451,16 +424,29 @@ export class QuoteConfirmationService {
       quote.createdById ?? '',
     );
 
-    void this.notifications.emit({
-      rootCompanyId,
-      type: NotificationType.QUOTE_APPROVED_BY_CUSTOMER,
-      dedupeKey: `quote-approved-customer:${quote.id}`,
-      title: 'Orçamento aprovado pelo cliente',
-      message: `O cliente aprovou o orçamento ${quoteNumberOf(quote)}.`,
-      permissionCode: 'quote.approve',
-      linkUrl: '/erp/vendas/orcamentos',
-      documentRef: quoteNumberOf(quote),
-    });
+    if (quote.purpose === QuotePurpose.SERVICE) {
+      void this.notifications.emit({
+        rootCompanyId,
+        type: NotificationType.QUOTE_SERVICE_APPROVED,
+        dedupeKey: `quote-service-approved:${quote.id}`,
+        title: 'Orçamento de serviço aprovado',
+        message: `O cliente autorizou o serviço do orçamento ${quoteNumberOf(quote)} — aguardando gerar a Ordem de Serviço.`,
+        permissionCode: 'service-order.create',
+        linkUrl: '/erp/vendas/ordens-servico',
+        documentRef: quoteNumberOf(quote),
+      });
+    } else {
+      void this.notifications.emit({
+        rootCompanyId,
+        type: NotificationType.QUOTE_APPROVED_BY_CUSTOMER,
+        dedupeKey: `quote-approved-customer:${quote.id}`,
+        title: 'Orçamento aprovado pelo cliente',
+        message: `O cliente aprovou o orçamento ${quoteNumberOf(quote)}.`,
+        permissionCode: 'quote.approve',
+        linkUrl: '/erp/vendas/orcamentos',
+        documentRef: quoteNumberOf(quote),
+      });
+    }
 
     return { success: true, quote: approved };
   }

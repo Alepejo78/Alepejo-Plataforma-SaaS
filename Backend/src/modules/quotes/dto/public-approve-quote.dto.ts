@@ -8,7 +8,7 @@ export class PublicApproveQuoteDto {
     enum: ['A_VISTA', 'A_PRAZO'],
     required: false,
     description:
-      'Obrigatório só em orçamento de venda — orçamento de serviço não escolhe forma de pagamento aqui (isso é definido na Ordem de Serviço).',
+      'Forma de pagamento escolhida na aprovação — igual em orçamento de venda ou de serviço.',
   })
   @IsOptional()
   @IsIn(['A_VISTA', 'A_PRAZO'], {
