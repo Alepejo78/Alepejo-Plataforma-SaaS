@@ -2,10 +2,18 @@ import * as crypto from 'crypto';
 
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
-import { NotificationType, QuotePurpose, QuoteStatus } from '@prisma/client';
+import {
+  NotificationType,
+  Prisma,
+  QuotePurpose,
+  QuoteStatus,
+} from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
-import { applyInstallmentInterest } from '../../../core/utils/installment.util';
+import {
+  applyInstallmentInterest,
+  buildAutoInstallments,
+} from '../../../core/utils/installment.util';
 import { findUsersWithPermission } from '../../../core/utils/permission-users.util';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
@@ -349,6 +357,24 @@ export class QuoteConfirmationService {
       Number(quote.freightValue) +
       otherExpenses;
 
+    // Parcelas planejadas no orçamento vêm do rascunho (normalmente
+    // 1, o valor cheio) — a quantidade escolhida agora pelo cliente
+    // pode ser outra, então recalcula do zero pra não ficar com o
+    // número de parcelas dizendo uma coisa e as parcelas de verdade
+    // outra.
+    const plannedInstallments =
+      installmentsCount > 1
+        ? buildAutoInstallments(
+            new Date(),
+            quote.termDays ?? 0,
+            installmentsCount,
+            netAmount,
+          ).map((row) => ({
+            dueDate: row.dueDate.toISOString(),
+            amount: row.amount,
+          }))
+        : null;
+
     await this.prisma.quote.update({
       where: { id: quote.id },
       data: {
@@ -356,6 +382,7 @@ export class QuoteConfirmationService {
         otherExpenses,
         netAmount,
         installmentInterestAmount: interestAmount,
+        plannedInstallments: plannedInstallments ?? Prisma.JsonNull,
         customerApprovedAt: new Date(),
         confirmationTokenHash: null,
         confirmationTokenExpiresAt: null,
