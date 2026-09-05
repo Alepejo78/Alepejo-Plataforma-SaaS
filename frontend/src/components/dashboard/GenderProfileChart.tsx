@@ -113,9 +113,9 @@ function GenderRow({
   iconSize: number;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <div
-        className="flex min-w-0 flex-1 flex-wrap content-center gap-0.5"
+        className="flex max-w-full flex-wrap items-center gap-0.5"
         title={`${count} colaborador(es)`}
       >
         {Array.from({ length: iconCount }, (_, i) => (

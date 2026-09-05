@@ -186,114 +186,117 @@ export default function GraficosColaboradoresPage() {
               />
             </div>
 
-            <Panel title="Colaboradores por função">
-              {byFunction.length === 0 ? (
-                <p className="text-sm text-[var(--text-muted)]">
-                  Sem dados.
-                </p>
-              ) : (
-                <div style={{ height: chartHeight }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={byFunction}
-                      layout="vertical"
-                      margin={{
-                        top: 8,
-                        right: 24,
-                        bottom: 8,
-                        left: 8,
-                      }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="var(--border)"
-                        horizontal={false}
-                      />
-                      <XAxis
-                        type="number"
-                        allowDecimals={false}
-                        stroke="var(--text-muted)"
-                        fontSize={12}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="jobFunctionName"
-                        stroke="var(--text-muted)"
-                        fontSize={12}
-                        width={160}
-                      />
-                      <Tooltip
-                        contentStyle={tooltipStyle}
-                        cursor={{ fill: "var(--surface-hover)" }}
-                      />
-                      <Bar
-                        dataKey="count"
-                        name="Colaboradores"
-                        fill="var(--primary)"
-                        radius={[0, 4, 4, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </Panel>
-
-            <Panel title="Colaboradores por setor">
-              {bySector.length === 0 ? (
-                <p className="text-sm text-[var(--text-muted)]">
-                  Sem dados.
-                </p>
-              ) : (
-                <div style={{ height: 280 }}>
-                  <ResponsiveContainer
-                    width="100%"
-                    height="100%"
-                  >
-                    <PieChart>
-                      <Pie
-                        data={bySector}
-                        dataKey="count"
-                        nameKey="sectorName"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                      >
-                        {bySector.map((entry, index) => (
-                          <Cell
-                            key={entry.sectorId ?? index}
-                            fill={
-                              CHART_COLORS[
-                                index % CHART_COLORS.length
-                              ]
-                            }
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={tooltipStyle} />
-                      <Legend
-                        wrapperStyle={{
-                          fontSize: 12,
-                          color: "var(--text-secondary)",
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Panel title="Colaboradores por função">
+                {byFunction.length === 0 ? (
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Sem dados.
+                  </p>
+                ) : (
+                  <div style={{ height: Math.max(220, chartHeight) }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={byFunction}
+                        layout="vertical"
+                        margin={{
+                          top: 8,
+                          right: 16,
+                          bottom: 8,
+                          left: 8,
                         }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </Panel>
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="var(--border)"
+                          horizontal={false}
+                        />
+                        <XAxis
+                          type="number"
+                          allowDecimals={false}
+                          stroke="var(--text-muted)"
+                          fontSize={12}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="jobFunctionName"
+                          stroke="var(--text-muted)"
+                          fontSize={11}
+                          width={90}
+                        />
+                        <Tooltip
+                          contentStyle={tooltipStyle}
+                          cursor={{ fill: "var(--surface-hover)" }}
+                        />
+                        <Bar
+                          dataKey="count"
+                          name="Colaboradores"
+                          fill="var(--primary)"
+                          radius={[0, 4, 4, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </Panel>
 
-            <Panel title="Colaboradores por sexo">
-              <GenderProfileChart
-                masculinoCount={
-                  data?.byGender.find((g) => g.gender === "MASCULINO")
-                    ?.count ?? 0
-                }
-                femininoCount={
-                  data?.byGender.find((g) => g.gender === "FEMININO")
-                    ?.count ?? 0
-                }
-              />
-            </Panel>
+              <Panel title="Colaboradores por setor">
+                {bySector.length === 0 ? (
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Sem dados.
+                  </p>
+                ) : (
+                  <div style={{ height: 220 }}>
+                    <ResponsiveContainer
+                      width="100%"
+                      height="100%"
+                    >
+                      <PieChart>
+                        <Pie
+                          data={bySector}
+                          dataKey="count"
+                          nameKey="sectorName"
+                          innerRadius={45}
+                          outerRadius={75}
+                          paddingAngle={2}
+                        >
+                          {bySector.map((entry, index) => (
+                            <Cell
+                              key={entry.sectorId ?? index}
+                              fill={
+                                CHART_COLORS[
+                                  index % CHART_COLORS.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Legend
+                          wrapperStyle={{
+                            fontSize: 11,
+                            color: "var(--text-secondary)",
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </Panel>
+
+              <Panel title="Colaboradores por sexo">
+                <GenderProfileChart
+                  masculinoCount={
+                    data?.byGender.find((g) => g.gender === "MASCULINO")
+                      ?.count ?? 0
+                  }
+                  femininoCount={
+                    data?.byGender.find((g) => g.gender === "FEMININO")
+                      ?.count ?? 0
+                  }
+                  compact
+                />
+              </Panel>
+            </div>
           </div>
         )}
       </ListPageLayout>
