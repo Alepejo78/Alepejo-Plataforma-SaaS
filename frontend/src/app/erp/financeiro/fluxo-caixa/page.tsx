@@ -694,9 +694,21 @@ function PeriodSummaryView({
 
         <div className="space-y-3">
           {[
-            { label: "Recebido", value: receivable?.settled },
-            { label: "A receber (previsto)", value: receivable?.open },
-            { label: "Vencido", value: receivable?.overdue },
+            {
+              label: "Recebido",
+              value: receivable?.settled,
+              color: "text-[var(--success)]",
+            },
+            {
+              label: "A receber (previsto)",
+              value: receivable?.open,
+              color: "text-[var(--primary)]",
+            },
+            {
+              label: "Vencido",
+              value: receivable?.overdue,
+              color: "text-[var(--danger)]",
+            },
           ].map((row) => (
             <div
               key={row.label}
@@ -709,7 +721,7 @@ function PeriodSummaryView({
               {loading ? (
                 <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
               ) : (
-                <span className="font-medium text-[var(--text-primary)]">
+                <span className={`font-medium ${row.color}`}>
                   {moneyFull(row.value ?? 0)}
                 </span>
               )}
@@ -717,7 +729,7 @@ function PeriodSummaryView({
           ))}
         </div>
 
-        <div className="mt-4 rounded-xl bg-[var(--surface-hover)] p-3">
+        <div className="mt-4 rounded-xl bg-[var(--success-soft)] p-3">
           <p className="text-xs text-[var(--text-muted)]">
             Total do período
           </p>
@@ -738,9 +750,21 @@ function PeriodSummaryView({
 
         <div className="space-y-3">
           {[
-            { label: "Pago", value: payable?.settled },
-            { label: "A pagar (previsto)", value: payable?.open },
-            { label: "Vencido", value: payable?.overdue },
+            {
+              label: "Pago",
+              value: payable?.settled,
+              color: "text-[var(--primary)]",
+            },
+            {
+              label: "A pagar (previsto)",
+              value: payable?.open,
+              color: "text-[var(--accent-orange)]",
+            },
+            {
+              label: "Vencido",
+              value: payable?.overdue,
+              color: "text-[var(--danger)]",
+            },
           ].map((row) => (
             <div
               key={row.label}
@@ -753,7 +777,7 @@ function PeriodSummaryView({
               {loading ? (
                 <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
               ) : (
-                <span className="font-medium text-[var(--text-primary)]">
+                <span className={`font-medium ${row.color}`}>
                   {moneyFull(row.value ?? 0)}
                 </span>
               )}
@@ -761,7 +785,7 @@ function PeriodSummaryView({
           ))}
         </div>
 
-        <div className="mt-4 rounded-xl bg-[var(--surface-hover)] p-3">
+        <div className="mt-4 rounded-xl bg-[var(--danger-soft)] p-3">
           <p className="text-xs text-[var(--text-muted)]">
             Total do período
           </p>
