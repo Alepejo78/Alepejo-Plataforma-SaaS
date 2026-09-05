@@ -373,13 +373,13 @@ export default function HomePage() {
       label: "A receber",
       emDia: (aReceberMes ?? 0) - aReceberVencido,
       vencido: aReceberVencido,
-      fill: "var(--success)",
+      fill: "var(--primary)",
     },
     {
       label: "A pagar",
       emDia: (aPagarMes ?? 0) - aPagarVencido,
       vencido: aPagarVencido,
-      fill: "var(--danger)",
+      fill: "var(--accent-orange)",
     },
   ];
 
@@ -453,20 +453,33 @@ export default function HomePage() {
               </div>
 
               <div className="space-y-3">
-                {[
-                  {
-                    label: "A receber no mês",
-                    value: aReceberMes,
-                  },
-                  { label: "A pagar no mês", value: aPagarMes },
-                  {
-                    label: "Saldo previsto",
-                    value:
-                      aReceberMes !== null && aPagarMes !== null
-                        ? aReceberMes - aPagarMes
-                        : null,
-                  },
-                ].map((linha) => (
+                {(() => {
+                  const saldoPrevisto =
+                    aReceberMes !== null && aPagarMes !== null
+                      ? aReceberMes - aPagarMes
+                      : null;
+
+                  return [
+                    {
+                      label: "A receber no mês",
+                      value: aReceberMes,
+                      color: "text-[var(--primary)]",
+                    },
+                    {
+                      label: "A pagar no mês",
+                      value: aPagarMes,
+                      color: "text-[var(--accent-orange)]",
+                    },
+                    {
+                      label: "Saldo previsto",
+                      value: saldoPrevisto,
+                      color:
+                        saldoPrevisto !== null && saldoPrevisto < 0
+                          ? "text-[var(--danger)]"
+                          : "text-[var(--success)]",
+                    },
+                  ];
+                })().map((linha) => (
                   <div
                     key={linha.label}
                     className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
@@ -478,7 +491,7 @@ export default function HomePage() {
                     {cashFlowLoading ? (
                       <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
                     ) : (
-                      <span className="font-medium text-[var(--text-primary)]">
+                      <span className={`font-medium ${linha.color}`}>
                         {linha.value !== null
                           ? money(linha.value)
                           : "—"}
@@ -526,7 +539,7 @@ export default function HomePage() {
                           dataKey="vencido"
                           name="Vencido"
                           stackId="valor"
-                          fill="var(--warning)"
+                          fill="var(--danger)"
                           radius={[0, 6, 6, 0]}
                         />
                       </BarChart>
@@ -719,17 +732,33 @@ export default function HomePage() {
               </div>
 
               <div className="space-y-3">
-                {[
-                  { label: "Recebido", value: recebidoTotal },
-                  { label: "Pago", value: pagoTotal },
-                  {
-                    label: "Total em caixa",
-                    value:
-                      recebidoTotal !== null && pagoTotal !== null
-                        ? recebidoTotal - pagoTotal
-                        : null,
-                  },
-                ].map((linha) => (
+                {(() => {
+                  const totalEmCaixa =
+                    recebidoTotal !== null && pagoTotal !== null
+                      ? recebidoTotal - pagoTotal
+                      : null;
+
+                  return [
+                    {
+                      label: "Recebido",
+                      value: recebidoTotal,
+                      color: "text-[var(--success)]",
+                    },
+                    {
+                      label: "Pago",
+                      value: pagoTotal,
+                      color: "text-[var(--danger)]",
+                    },
+                    {
+                      label: "Total em caixa",
+                      value: totalEmCaixa,
+                      color:
+                        totalEmCaixa !== null && totalEmCaixa < 0
+                          ? "text-[var(--danger)]"
+                          : "text-[var(--success)]",
+                    },
+                  ];
+                })().map((linha) => (
                   <div
                     key={linha.label}
                     className="flex items-center justify-between border-b border-[var(--border)] pb-2 last:border-0"
@@ -741,7 +770,7 @@ export default function HomePage() {
                     {cashFlowLoading ? (
                       <span className="h-5 w-20 animate-pulse rounded bg-[var(--surface-hover)]" />
                     ) : (
-                      <span className="font-medium text-[var(--text-primary)]">
+                      <span className={`font-medium ${linha.color}`}>
                         {linha.value !== null
                           ? money(linha.value)
                           : "—"}
