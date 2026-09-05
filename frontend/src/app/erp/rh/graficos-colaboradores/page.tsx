@@ -284,17 +284,22 @@ export default function GraficosColaboradoresPage() {
               </Panel>
 
               <Panel title="Colaboradores por sexo">
-                <GenderProfileChart
-                  masculinoCount={
-                    data?.byGender.find((g) => g.gender === "MASCULINO")
-                      ?.count ?? 0
-                  }
-                  femininoCount={
-                    data?.byGender.find((g) => g.gender === "FEMININO")
-                      ?.count ?? 0
-                  }
-                  compact
-                />
+                <div
+                  style={{ height: 220 }}
+                  className="flex items-center justify-center"
+                >
+                  <GenderProfileChart
+                    masculinoCount={
+                      data?.byGender.find((g) => g.gender === "MASCULINO")
+                        ?.count ?? 0
+                    }
+                    femininoCount={
+                      data?.byGender.find((g) => g.gender === "FEMININO")
+                        ?.count ?? 0
+                    }
+                    compact
+                  />
+                </div>
               </Panel>
             </div>
           </div>

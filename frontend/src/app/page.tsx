@@ -959,11 +959,13 @@ export default function HomePage() {
                       Por gênero
                     </p>
 
-                    <GenderProfileChart
-                      masculinoCount={masculinoCount}
-                      femininoCount={femininoCount}
-                      compact
-                    />
+                    <div className="flex justify-center">
+                      <GenderProfileChart
+                        masculinoCount={masculinoCount}
+                        femininoCount={femininoCount}
+                        compact
+                      />
+                    </div>
                   </div>
 
                   <div>
