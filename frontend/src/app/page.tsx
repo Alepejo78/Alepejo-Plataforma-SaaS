@@ -947,62 +947,72 @@ export default function HomePage() {
 
               {hrLoading ? (
                 <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
-              ) : genderChart.length === 0 &&
-                sectorChart.length === 0 ? (
+              ) : genderChart.length === 0 ? (
                 <p className="py-6 text-center text-sm text-[var(--text-muted)]">
                   Nenhum colaborador ativo cadastrado ainda.
                 </p>
               ) : (
-                <div className="space-y-5">
-                  <div>
-                    <p className="mb-2 text-center text-xs font-medium text-[var(--text-muted)]">
-                      Por gênero
-                    </p>
+                <div className="flex justify-center">
+                  <GenderProfileChart
+                    masculinoCount={masculinoCount}
+                    femininoCount={femininoCount}
+                    compact
+                  />
+                </div>
+              )}
 
-                    <div className="flex justify-center">
-                      <GenderProfileChart
-                        masculinoCount={masculinoCount}
-                        femininoCount={femininoCount}
-                        compact
+              <p className="mt-4 text-xs text-[var(--text-muted)]">
+                Só colaboradores ativos, somando todas as empresas do grupo.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <UsersRound
+                  size={18}
+                  className="text-[var(--text-secondary)]"
+                />
+
+                <h2 className="font-semibold text-[var(--text-primary)]">
+                  Colaboradores por setor
+                </h2>
+              </div>
+
+              {hrLoading ? (
+                <div className="h-40 animate-pulse rounded-xl bg-[var(--surface-hover)]" />
+              ) : sectorChart.length === 0 ? (
+                <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+                  Nenhum colaborador ativo cadastrado ainda.
+                </p>
+              ) : (
+                <div className="h-36">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={sectorChart}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={28}
+                        outerRadius={52}
+                        paddingAngle={2}
+                      >
+                        {sectorChart.map((item, i) => (
+                          <Cell key={`${item.name}-${i}`} fill={item.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={dashboardTooltipStyle}
+                        formatter={(v, name) => [
+                          `${v} colaborador(es)`,
+                          name,
+                        ]}
                       />
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-1 text-center text-xs font-medium text-[var(--text-muted)]">
-                      Por setor
-                    </p>
-
-                    <div className="h-36">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={sectorChart}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius={28}
-                            outerRadius={52}
-                            paddingAngle={2}
-                          >
-                            {sectorChart.map((item, i) => (
-                              <Cell key={`${item.name}-${i}`} fill={item.fill} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={dashboardTooltipStyle}
-                            formatter={(v, name) => [
-                              `${v} colaborador(es)`,
-                              name,
-                            ]}
-                          />
-                          <Legend
-                            wrapperStyle={{ fontSize: 11 }}
-                            iconSize={8}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                      <Legend
+                        wrapperStyle={{ fontSize: 11 }}
+                        iconSize={8}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               )}
 

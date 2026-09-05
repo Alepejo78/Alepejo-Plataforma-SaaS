@@ -158,11 +158,11 @@ export function GenderProfileChart({
   const femininoIcons =
     total <= 100 ? femininoCount : Math.round(femininoPercent);
 
-  const ringSize = compact ? 44 : 60;
-  const iconSize = compact ? 12 : 16;
+  const ringSize = compact ? 44 : 84;
+  const iconSize = compact ? 12 : 22;
 
   return (
-    <div className={compact ? "space-y-2" : "space-y-3"}>
+    <div className={compact ? "space-y-2" : "space-y-4"}>
       <GenderRow
         gender="MASCULINO"
         count={masculinoCount}
