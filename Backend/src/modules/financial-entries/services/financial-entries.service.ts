@@ -648,15 +648,11 @@ export class FinancialEntriesService {
           : payable;
       const amount = Number(entry.amount);
 
-      if (inRange(entry.dueDate)) {
-        bucket.total += amount;
-
-        if (entry.status !== FinancialEntryStatus.PAID) {
-          if (entry.dueDate < today) {
-            bucket.overdue += amount;
-          } else {
-            bucket.open += amount;
-          }
+      if (inRange(entry.dueDate) && entry.status !== FinancialEntryStatus.PAID) {
+        if (entry.dueDate < today) {
+          bucket.overdue += amount;
+        } else {
+          bucket.open += amount;
         }
       }
 
@@ -668,6 +664,15 @@ export class FinancialEntriesService {
         bucket.settled += Number(entry.paidAmount);
       }
     }
+
+    // "Total do período" é a soma do que aparece no card (recebido/
+    // pago + previsto + vencido) — não só o que venceu no período,
+    // senão um título pago adiantado ou atrasado (data de pagamento
+    // fora do vencimento) aparecia em "Recebido"/"Pago" mas ficava de
+    // fora do total, dando a impressão de que o total esqueceu esse
+    // valor.
+    receivable.total = receivable.settled + receivable.open + receivable.overdue;
+    payable.total = payable.settled + payable.open + payable.overdue;
 
     return { period, start, end, receivable, payable };
   }
