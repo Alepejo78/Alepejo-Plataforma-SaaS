@@ -13,18 +13,13 @@ import {
 } from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
-import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
-import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 import { SalesOrderService } from '../../sales-orders/services/sales-order.service';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
-import { buildEmailDocumentSummaryHtml } from '../../../core/utils/email-document-summary.util';
-
 import { QuoteRepository } from '../repositories/quote.repository';
-import { QuotePdfService } from './quote-pdf.service';
 
 import { CreateQuoteDto } from '../dto/create-quote.dto';
 import { UpdateQuoteDto } from '../dto/update-quote.dto';
@@ -41,10 +36,7 @@ export class QuoteService {
     private readonly prisma: PrismaService,
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly documentSequence: DocumentSequenceService,
-    private readonly emailNotifications: EmailNotificationsService,
-    private readonly whatsappNotifications: WhatsappNotificationsService,
     private readonly salesOrderService: SalesOrderService,
-    private readonly quotePdf: QuotePdfService,
   ) {}
 
   async create(
@@ -119,111 +111,7 @@ export class QuoteService {
       );
     });
 
-    void this.notifyPartner(companyId, quote);
-
     return quote;
-  }
-
-  /**
-   * Best-effort: envia o orçamento gerado ao cliente por e-mail/
-   * WhatsApp. Nunca lança — ver EmailNotificationsService.send/
-   * WhatsappNotificationsService.send.
-   */
-  private async notifyPartner(
-    companyId: string,
-    quote: Awaited<ReturnType<QuoteRepository['create']>>,
-  ) {
-    const partner = quote.partner;
-
-    if (!partner.email && !partner.mobile) {
-      return;
-    }
-
-    const company = await this.prisma.company.findUnique({
-      where: { id: companyId },
-    });
-
-    const companyName =
-      company?.tradeName || company?.legalName || 'AlePejo ERP';
-    const partnerName = partner.tradeName || partner.legalName;
-    const quoteNumber = `ORC-${String(quote.number).padStart(6, '0')}`;
-    const value = new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(Number(quote.netAmount));
-
-    const formatDate = (value: Date | null) =>
-      value
-        ? value.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
-        : undefined;
-
-    const summaryHtml = buildEmailDocumentSummaryHtml({
-      items: quote.items.map((item) => ({
-        description: item.product?.description ?? item.productId,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        totalPrice: Number(item.totalPrice),
-      })),
-      totals: {
-        totalAmount: Number(quote.totalAmount),
-        discountValue: Number(quote.discountValue),
-        freightValue: Number(quote.freightValue),
-        otherExpenses: Number(quote.otherExpenses),
-        netAmount: Number(quote.netAmount),
-      },
-      meta: [
-        quote.quoteDate && {
-          label: 'Data',
-          value: formatDate(quote.quoteDate)!,
-        },
-        quote.validUntil && {
-          label: 'Válido até',
-          value: formatDate(quote.validUntil)!,
-        },
-      ].filter((m): m is { label: string; value: string } => Boolean(m)),
-    });
-
-    if (partner.email) {
-      const pdf = await this.quotePdf
-        .generate(quote, company)
-        .catch((err: unknown) => {
-          this.logger.warn(
-            `Falha ao gerar PDF do orçamento ${quoteNumber}: ${
-              err instanceof Error ? err.message : String(err)
-            }`,
-          );
-
-          return null;
-        });
-
-      void this.emailNotifications.send(
-        companyId,
-        partner.email,
-        `Orçamento ${quoteNumber} — ${companyName}`,
-        `<p>Olá, ${partnerName},</p>
-<p>Segue nosso orçamento <strong>${quoteNumber}</strong> de <strong>${companyName}</strong>, no valor de <strong>${value}</strong>.</p>
-${summaryHtml}
-<p>Qualquer dúvida, estamos à disposição.</p>
-<p>Atenciosamente,<br/>${companyName}</p>`,
-        pdf
-          ? [
-              {
-                filename: `${quoteNumber}.pdf`,
-                content: pdf,
-                contentType: 'application/pdf',
-              },
-            ]
-          : undefined,
-      );
-    }
-
-    if (partner.mobile) {
-      void this.whatsappNotifications.send(
-        companyId,
-        partner.mobile,
-        `Olá, ${partnerName}! Segue nosso orçamento ${quoteNumber} de ${companyName}, no valor de ${value}. Qualquer dúvida, estamos à disposição.`,
-      );
-    }
   }
 
   async findAll(companyId: string, filter: QuoteFilterDto) {
