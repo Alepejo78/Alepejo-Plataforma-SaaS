@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PaymentMethod, Prisma, Quote } from '@prisma/client';
+import { PaymentMethod, Prisma, Quote, QuoteItemKind } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 
@@ -20,6 +20,7 @@ const includeRelations = {
   },
   sale: true,
   salesOrder: true,
+  serviceOrder: { select: { id: true, number: true, status: true } },
 };
 
 @Injectable()
@@ -41,6 +42,8 @@ export class QuoteRepository {
         number,
         partnerId: dto.partnerId,
         warehouseId: dto.warehouseId,
+        purpose: dto.purpose,
+        serviceDescription: dto.serviceDescription,
         quoteDate: dto.quoteDate
           ? new Date(dto.quoteDate)
           : undefined,
@@ -68,6 +71,8 @@ export class QuoteRepository {
         items: {
           create: dto.items.map((item) => ({
             productId: item.productId,
+            itemKind: item.itemKind,
+            description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             totalPrice: item.quantity * item.unitPrice,
@@ -86,6 +91,7 @@ export class QuoteRepository {
         warehouseId: filter.warehouseId,
       }),
       ...(filter.status && { status: filter.status }),
+      ...(filter.purpose && { purpose: filter.purpose }),
     };
 
     return this.prisma.quote.findMany({
@@ -110,6 +116,7 @@ export class QuoteRepository {
       quoteDate?: Date;
       validUntil?: Date;
       observation?: string;
+      serviceDescription?: string;
       discountValue?: number;
       freightValue?: number;
       otherExpenses?: number;
@@ -122,6 +129,8 @@ export class QuoteRepository {
       plannedInstallments?: { dueDate: string; amount: number }[] | null;
       items?: {
         productId: string;
+        itemKind?: QuoteItemKind;
+        description?: string;
         quantity: number;
         unitPrice: number;
         totalPrice: number;
@@ -145,6 +154,9 @@ export class QuoteRepository {
         }),
         ...(dto.observation !== undefined && {
           observation: dto.observation,
+        }),
+        ...(dto.serviceDescription !== undefined && {
+          serviceDescription: dto.serviceDescription,
         }),
         ...(dto.discountValue !== undefined && {
           discountValue: dto.discountValue,

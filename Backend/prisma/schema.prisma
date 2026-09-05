@@ -1391,6 +1391,23 @@ enum QuoteStatus {
   CANCELLED
 }
 
+/// SALE: orçamento normal — aprovado pelo cliente já gera o Pedido de
+/// Venda sozinho (ver QuoteService.performApproval). SERVICE: vira
+/// uma Ordem de Serviço — a tela ganha descrição de escopo e itens
+/// separados em serviço/produto (ver QuoteItem.itemKind), e aprovado
+/// pelo cliente NÃO gera Pedido — só libera gerar a Ordem de Serviço
+/// (ver QuoteConfirmationService.approvePublic e
+/// ServiceOrderService.create).
+enum QuotePurpose {
+  SALE
+  SERVICE
+}
+
+enum QuoteItemKind {
+  PRODUCT
+  SERVICE
+}
+
 /// Orçamento: proposta enviada ao cliente antes da venda. Aprovado
 /// gera um Pedido de Venda sozinho (SalesOrder.quoteId) e o status
 /// passa a APPROVED. Se aceito diretamente (sem passar por Pedido),
@@ -1412,6 +1429,15 @@ model Quote {
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
   status QuoteStatus @default(DRAFT)
+
+  /// Venda (padrão) ou serviço — ver QuotePurpose. Só pode ser
+  /// escolhido na criação, não muda depois.
+  purpose QuotePurpose @default(SALE)
+
+  /// Escopo do serviço a ser executado — só preenchido/mostrado
+  /// quando purpose = SERVICE (mesmo papel de
+  /// ServiceOrder.description).
+  serviceDescription String? @db.Text
 
   quoteDate  DateTime?
   validUntil DateTime?
@@ -1532,11 +1558,23 @@ model PaymentReminderSettings {
 }
 
 model QuoteItem {
-  id         String  @id @default(cuid())
-  quoteId    String
-  quote      Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product @relation(fields: [productId], references: [id])
+  id        String  @id @default(cuid())
+  quoteId   String
+  quote     Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  /// Só relevante quando Quote.purpose = SERVICE — separa "Serviços
+  /// Realizados" de "Produtos e Materiais Usados" na tela (mesmo
+  /// papel de ServiceOrderServiceItem/ServiceOrderProductItem, só que
+  /// numa tabela só em vez de duas). Orçamento de venda (purpose
+  /// SALE) sempre usa PRODUCT, ignorado pela tela.
+  itemKind QuoteItemKind @default(PRODUCT)
+
+  /// Detalhe do que foi/será executado — só usado em itens SERVICE,
+  /// mesmo papel de ServiceOrderServiceItem.description.
+  description String? @db.Text
+
   quantity   Decimal @db.Decimal(18, 3)
   unitPrice  Decimal @db.Decimal(18, 2)
   totalPrice Decimal @db.Decimal(18, 2)
@@ -3754,6 +3792,10 @@ enum NotificationType {
   QUOTE_REVISION_REQUESTED
   QUOTE_CANCELLED_BY_CUSTOMER
   QUOTE_APPROVED_BY_CUSTOMER
+  /// Orçamento de serviço (Quote.purpose SERVICE) autorizado pelo
+  /// cliente — não gera Pedido sozinho (ver QuoteConfirmationService.
+  /// approvePublic), só avisa que já pode gerar a Ordem de Serviço.
+  QUOTE_SERVICE_APPROVED
   SERVICE_ORDER_REVISION_REQUESTED
   SERVICE_ORDER_CANCELLED_BY_CUSTOMER
   SERVICE_ORDER_CONFIRMED_BY_CUSTOMER

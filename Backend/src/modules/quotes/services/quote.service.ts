@@ -5,7 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { BusinessPartnerRole, QuoteStatus } from '@prisma/client';
+import {
+  BusinessPartnerRole,
+  QuoteItemKind,
+  QuotePurpose,
+  QuoteStatus,
+} from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
@@ -302,6 +307,8 @@ ${summaryHtml}
     let items:
       | {
           productId: string;
+          itemKind?: QuoteItemKind;
+          description?: string;
           quantity: number;
           unitPrice: number;
           totalPrice: number;
@@ -329,6 +336,8 @@ ${summaryHtml}
 
       items = dto.items.map((item) => ({
         productId: item.productId,
+        itemKind: item.itemKind,
+        description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.quantity * item.unitPrice,
@@ -357,6 +366,7 @@ ${summaryHtml}
           ? new Date(dto.validUntil)
           : undefined,
         observation: dto.observation,
+        serviceDescription: dto.serviceDescription,
         discountValue,
         freightValue,
         otherExpenses,
@@ -448,8 +458,12 @@ ${summaryHtml}
   }
 
   /**
-   * Miolo da aprovação — gera o Pedido de Venda sozinho e marca
-   * APPROVED. Compartilhado entre `approve()` (aprovação manual, pelo
+   * Miolo da aprovação — marca APPROVED e, só pra orçamento de venda
+   * (purpose SALE), gera o Pedido de Venda sozinho. Orçamento de
+   * serviço (purpose SERVICE) não gera Pedido nenhum aqui — quem gera
+   * é a Ordem de Serviço, quando o serviço é finalizado (ver
+   * ServiceOrderConfirmationService.complete), senão duplicaria o
+   * Pedido. Compartilhado entre `approve()` (aprovação manual, pelo
    * vendedor) e `QuoteConfirmationService.approvePublic()` (aprovação
    * digital, pelo próprio cliente via link — `userId` nesse caso é
    * quem criou o orçamento, já que não há usuário logado).
@@ -460,6 +474,10 @@ ${summaryHtml}
     quote: Awaited<ReturnType<QuoteService['findOne']>>,
     userId: string,
   ) {
+    if (quote.purpose === QuotePurpose.SERVICE) {
+      return this.repository.approve(quote.id, userId);
+    }
+
     const quoteNumber = `ORC-${String(quote.number).padStart(6, '0')}`;
     const generatedNote = `Gerado automaticamente a partir do Orçamento ${quoteNumber}.`;
 
@@ -526,6 +544,12 @@ ${summaryHtml}
     if (quote.status !== QuoteStatus.APPROVED) {
       throw new BadRequestException(
         'Somente orçamentos aprovados podem ser estornados.',
+      );
+    }
+
+    if (quote.serviceOrder) {
+      throw new BadRequestException(
+        'Já foi gerada uma Ordem de Serviço a partir deste orçamento — não é possível estornar.',
       );
     }
 

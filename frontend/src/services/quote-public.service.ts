@@ -10,6 +10,8 @@ export type QuotePaymentTiming = "A_VISTA" | "A_PRAZO";
 
 export interface QuotePublicItem {
   description: string;
+  detail?: string | null;
+  itemKind: "PRODUCT" | "SERVICE";
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -27,6 +29,8 @@ export interface QuotePublicInfo {
   companyLogo?: string | null;
   partnerName: string;
   validUntil?: string | null;
+  purpose: "SALE" | "SERVICE";
+  serviceDescription?: string | null;
   items: QuotePublicItem[];
   netAmount: number;
   status:
@@ -85,9 +89,9 @@ export const quotePublicService = {
     id: string,
     token: string,
     payload: {
-      paymentTiming: QuotePaymentTiming;
+      paymentTiming?: QuotePaymentTiming;
       installmentsCount?: number;
-    }
+    } = {}
   ): Promise<{ success: boolean }> {
     const { data } = await api.post<ApiEnvelope<{ success: boolean }>>(
       `/quotes/public/${id}/approve`,

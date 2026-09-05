@@ -4,7 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { BusinessPartnerRole, ServiceOrderStatus } from '@prisma/client';
+import {
+  BusinessPartnerRole,
+  QuotePurpose,
+  QuoteStatus,
+  ServiceOrderStatus,
+} from '@prisma/client';
 
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 
@@ -84,6 +89,13 @@ export class ServiceOrderService {
       throw new NotFoundException('Tipo de receita não encontrado.');
     }
 
+    // Preenchido só quando a OS nasce de um orçamento de serviço já
+    // autorizado — nesse caso já entra em execução (o cliente já
+    // autorizou lá no orçamento, não precisa confirmar de novo aqui).
+    let quoteInitialState:
+      | { status: ServiceOrderStatus; customerConfirmedAt: Date }
+      | undefined;
+
     if (dto.quoteId) {
       const quote = await this.prisma.quote.findFirst({
         where: { id: dto.quoteId, companyId },
@@ -101,6 +113,30 @@ export class ServiceOrderService {
         throw new BadRequestException(
           'Este orçamento já foi convertido em venda — não pode ser usado para gerar Ordem de Serviço.',
         );
+      }
+
+      if (quote.purpose !== QuotePurpose.SERVICE) {
+        throw new BadRequestException(
+          'Este orçamento é de venda — já gera o Pedido de Venda sozinho, não precisa de Ordem de Serviço.',
+        );
+      }
+
+      const existingServiceOrder = await this.prisma.serviceOrder.findUnique({
+        where: { quoteId: quote.id },
+        select: { id: true, number: true },
+      });
+
+      if (existingServiceOrder) {
+        throw new BadRequestException(
+          `Este orçamento já gerou a Ordem de Serviço ${serviceOrderNumberOf(existingServiceOrder)} — não pode gerar outra.`,
+        );
+      }
+
+      if (quote.status === QuoteStatus.APPROVED) {
+        quoteInitialState = {
+          status: ServiceOrderStatus.IN_PROGRESS,
+          customerConfirmedAt: quote.customerApprovedAt ?? new Date(),
+        };
       }
     }
 
@@ -147,6 +183,7 @@ export class ServiceOrderService {
         totalAmount,
         netAmount,
         userId,
+        quoteInitialState,
       );
     });
 

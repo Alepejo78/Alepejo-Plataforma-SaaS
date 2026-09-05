@@ -2,7 +2,7 @@ import * as crypto from 'crypto';
 
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
-import { NotificationType, QuoteStatus } from '@prisma/client';
+import { NotificationType, QuotePurpose, QuoteStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { applyInstallmentInterest } from '../../../core/utils/installment.util';
@@ -216,8 +216,12 @@ export class QuoteConfirmationService {
         : null,
       partnerName: quote.partner.tradeName || quote.partner.legalName,
       validUntil: quote.validUntil,
+      purpose: quote.purpose,
+      serviceDescription: quote.serviceDescription,
       items: quote.items.map((item) => ({
         description: item.product?.description ?? item.productId,
+        detail: item.description,
+        itemKind: item.itemKind,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         totalPrice: Number(item.totalPrice),
@@ -254,7 +258,13 @@ export class QuoteConfirmationService {
     }
   }
 
-  /** Consumo público — cliente aprova, escolhendo forma de pagamento. */
+  /**
+   * Consumo público — cliente aprova. Orçamento de venda escolhe
+   * forma de pagamento aqui e já vira Pedido de Venda. Orçamento de
+   * serviço (purpose SERVICE) só autoriza — forma de pagamento fica
+   * pra quando a Ordem de Serviço for criada, e não gera Pedido
+   * nenhum (ver QuoteService.performApproval).
+   */
   async approvePublic(id: string, token: string, dto: PublicApproveQuoteDto) {
     const quote = await this.validatePublicToken(id, token);
 
@@ -262,6 +272,48 @@ export class QuoteConfirmationService {
       throw new BadRequestException(
         'Este orçamento não está mais aguardando aprovação.',
       );
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: quote.companyId },
+      select: { rootCompanyId: true },
+    });
+    const rootCompanyId = company?.rootCompanyId ?? quote.companyId;
+
+    if (quote.purpose === QuotePurpose.SERVICE) {
+      await this.prisma.quote.update({
+        where: { id: quote.id },
+        data: {
+          customerApprovedAt: new Date(),
+          confirmationTokenHash: null,
+          confirmationTokenExpiresAt: null,
+        },
+      });
+
+      const refreshed = await this.quoteService.findOne(
+        quote.companyId,
+        quote.id,
+      );
+
+      const approved = await this.quoteService.performApproval(
+        quote.companyId,
+        rootCompanyId,
+        refreshed,
+        quote.createdById ?? '',
+      );
+
+      void this.notifications.emit({
+        rootCompanyId,
+        type: NotificationType.QUOTE_SERVICE_APPROVED,
+        dedupeKey: `quote-service-approved:${quote.id}`,
+        title: 'Orçamento de serviço aprovado',
+        message: `O cliente autorizou o serviço do orçamento ${quoteNumberOf(quote)} — aguardando gerar a Ordem de Serviço.`,
+        permissionCode: 'service-order.create',
+        linkUrl: '/erp/vendas/ordens-servico',
+        documentRef: quoteNumberOf(quote),
+      });
+
+      return { success: true, quote: approved };
     }
 
     const settings = await this.salesSettings.getSettings(quote.companyId);
@@ -309,12 +361,6 @@ export class QuoteConfirmationService {
         confirmationTokenExpiresAt: null,
       },
     });
-
-    const company = await this.prisma.company.findUnique({
-      where: { id: quote.companyId },
-      select: { rootCompanyId: true },
-    });
-    const rootCompanyId = company?.rootCompanyId ?? quote.companyId;
 
     const refreshed = await this.quoteService.findOne(
       quote.companyId,

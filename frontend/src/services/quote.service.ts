@@ -27,9 +27,15 @@ export const QUOTE_STATUS_LABELS: Record<
   CANCELLED: "Cancelado",
 };
 
+export type QuoteItemKind = "PRODUCT" | "SERVICE";
+export type QuotePurpose = "SALE" | "SERVICE";
+
 export interface QuoteItem {
   id: string;
   productId: string;
+  itemKind: QuoteItemKind;
+  /** Detalhe do que foi/será executado — só usado em itens SERVICE. */
+  description?: string | null;
   quantity: string | number;
   unitPrice: string | number;
   totalPrice: string | number;
@@ -53,6 +59,9 @@ export interface Quote {
   partnerId: string;
   warehouseId: string;
   status: QuoteStatus;
+  purpose: QuotePurpose;
+  /** Escopo do serviço — só preenchido/mostrado quando purpose = SERVICE. */
+  serviceDescription?: string | null;
   quoteDate?: string | null;
   validUntil?: string | null;
   observation?: string | null;
@@ -110,6 +119,8 @@ export interface Quote {
 
 export interface QuoteItemPayload {
   productId: string;
+  itemKind?: QuoteItemKind;
+  description?: string;
   quantity: number;
   unitPrice: number;
 }
@@ -117,6 +128,9 @@ export interface QuoteItemPayload {
 export interface QuotePayload {
   partnerId: string;
   warehouseId: string;
+  purpose?: QuotePurpose;
+  /** Escopo do serviço — só usado quando purpose = SERVICE. */
+  serviceDescription?: string;
   quoteDate?: string;
   validUntil?: string;
   observation?: string;
@@ -136,6 +150,7 @@ export interface QuoteFilter {
   partnerId?: string;
   warehouseId?: string;
   status?: QuoteStatus;
+  purpose?: QuotePurpose;
 }
 
 export const quoteService = {

@@ -14,7 +14,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod, QuotePurpose } from '@prisma/client';
 
 import { InstallmentDto } from '../../../core/dto/installment.dto';
 
@@ -28,6 +28,26 @@ export class CreateQuoteDto {
   @ApiProperty()
   @IsString()
   warehouseId: string;
+
+  @ApiProperty({
+    enum: QuotePurpose,
+    required: false,
+    default: QuotePurpose.SALE,
+    description:
+      'SALE (padrão): aprovado pelo cliente já gera o Pedido de Venda. SERVICE: vira Ordem de Serviço — aprovado pelo cliente não gera Pedido.',
+  })
+  @IsOptional()
+  @IsEnum(QuotePurpose)
+  purpose?: QuotePurpose;
+
+  @ApiProperty({
+    required: false,
+    description: 'Escopo do serviço — só usado quando purpose = SERVICE.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  serviceDescription?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

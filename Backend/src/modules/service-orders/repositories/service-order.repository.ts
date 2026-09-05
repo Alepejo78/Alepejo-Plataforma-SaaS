@@ -34,6 +34,13 @@ export class ServiceOrderRepository {
     totalAmount: number,
     netAmount: number,
     userId: string,
+    /**
+     * Só preenchido quando a OS nasce de um orçamento de serviço já
+     * autorizado pelo cliente (ver ServiceOrderService.create) — nesse
+     * caso já entra em execução, sem passar por DRAFT/confirmação de
+     * novo (o cliente já autorizou lá no orçamento).
+     */
+    initialState?: { status: ServiceOrderStatus; customerConfirmedAt: Date },
   ) {
     return tx.serviceOrder.create({
       data: {
@@ -65,6 +72,10 @@ export class ServiceOrderRepository {
             }))
           : undefined,
         quoteId: dto.quoteId,
+        ...(initialState && {
+          status: initialState.status,
+          customerConfirmedAt: initialState.customerConfirmedAt,
+        }),
         createdById: userId,
         updatedById: userId,
         serviceItems: {

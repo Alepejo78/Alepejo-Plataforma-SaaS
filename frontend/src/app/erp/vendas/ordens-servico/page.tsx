@@ -233,11 +233,13 @@ export default function OrdensDeServicoPage() {
   }, []);
 
   const searchQuotes = useCallback(async (query: string) => {
-    // Só orçamento aprovado e ainda não convertido em venda — uma vez
-    // virando Venda, o orçamento não pode gerar OS de novo (evita OS
-    // duplicada a partir do mesmo orçamento, uma pela Venda outra por
-    // aqui).
-    const result = await quoteService.list({ status: "APPROVED" });
+    // Só orçamento PARA ORDEM DE SERVIÇO já aprovado — orçamento de
+    // venda gera o Pedido sozinho na aprovação, não pode também virar
+    // OS (duplicaria o Pedido).
+    const result = await quoteService.list({
+      status: "APPROVED",
+      purpose: "SERVICE",
+    });
     const q = query.trim().toLowerCase();
 
     return result
@@ -413,6 +415,7 @@ export default function OrdensDeServicoPage() {
       partnerId: quote.partnerId,
       partnerLabel:
         quote.partner?.tradeName ?? quote.partner?.legalName ?? "",
+      description: quote.serviceDescription || prev.description,
       chartOfAccountId: quote.chartOfAccountId ?? prev.chartOfAccountId,
       chartOfAccountLabel: quote.chartOfAccount
         ? `${quote.chartOfAccount.code} — ${quote.chartOfAccount.description}`
@@ -423,17 +426,27 @@ export default function OrdensDeServicoPage() {
       quoteId: quote.id,
     }));
 
-    setProductItems(
-      quote.items.map((it) => ({
-        productId: it.productId,
-        productLabel: it.product
-          ? `${it.product.code} — ${it.product.description}`
-          : "",
-        description: "",
-        quantity: String(num(it.quantity)),
-        unitPrice: num(it.unitPrice),
-      }))
-    );
+    const mapQuoteItem = (it: (typeof quote.items)[number]) => ({
+      productId: it.productId,
+      productLabel: it.product
+        ? `${it.product.code} — ${it.product.description}`
+        : "",
+      description: it.description ?? "",
+      quantity: String(num(it.quantity)),
+      unitPrice: num(it.unitPrice),
+    });
+
+    const serviceRows = quote.items
+      .filter((it) => it.itemKind === "SERVICE")
+      .map(mapQuoteItem);
+    const productRows = quote.items
+      .filter((it) => it.itemKind !== "SERVICE")
+      .map(mapQuoteItem);
+
+    if (serviceRows.length) {
+      setServiceItems(serviceRows);
+    }
+    setProductItems(productRows.length ? productRows : []);
   }
 
   const decimal = (value: string) => {
@@ -1307,7 +1320,8 @@ export default function OrdensDeServicoPage() {
             {!viewOnly && !editingId && (
               <div className="mb-4 rounded-xl border border-dashed border-[var(--border)] p-3">
                 <label className={labelClass}>
-                  Gerar a partir de um orçamento aprovado (opcional)
+                  Gerar a partir de um orçamento de serviço aprovado
+                  (opcional)
                 </label>
 
                 <SearchSelect<Quote>
@@ -1327,9 +1341,10 @@ export default function OrdensDeServicoPage() {
                 />
 
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Copia cliente e itens do orçamento para
-                  &quot;Produtos e Materiais Usados&quot; — mova para
-                  &quot;Serviços Realizados&quot; se for o caso.
+                  Copia cliente, escopo e itens (já separados em
+                  Serviços/Produtos) do orçamento — o cliente já
+                  autorizou por lá, então essa OS entra direto em
+                  execução, sem precisar confirmar de novo.
                 </p>
               </div>
             )}

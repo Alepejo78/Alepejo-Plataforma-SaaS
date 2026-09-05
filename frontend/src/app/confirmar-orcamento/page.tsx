@@ -117,11 +117,17 @@ function ConfirmarOrcamentoContent() {
     setError("");
 
     try {
-      await quotePublicService.approve(id, token, {
-        paymentTiming,
-        installmentsCount:
-          paymentTiming === "A_PRAZO" ? installmentsCount : undefined,
-      });
+      await quotePublicService.approve(
+        id,
+        token,
+        info?.purpose === "SERVICE"
+          ? {}
+          : {
+              paymentTiming,
+              installmentsCount:
+                paymentTiming === "A_PRAZO" ? installmentsCount : undefined,
+            }
+      );
 
       setFinalStatus("APPROVED");
       setDone(true);
@@ -190,7 +196,9 @@ function ConfirmarOrcamentoContent() {
     }
 
     if (status === "APPROVED" || status === "CONVERTED") {
-      return "Orçamento aprovado. Você vai receber o Pedido de Venda por e-mail.";
+      return info?.purpose === "SERVICE"
+        ? "Serviço autorizado! Em breve entraremos em contato para agendar a execução."
+        : "Orçamento aprovado. Você vai receber o Pedido de Venda por e-mail.";
     }
 
     if (status === "REVISION_REQUESTED") {
@@ -264,19 +272,72 @@ function ConfirmarOrcamentoContent() {
                   </p>
                 )}
 
-                <div className="mt-2 space-y-1">
-                  {info.items.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between text-[var(--text-secondary)]"
-                    >
-                      <span>
-                        {item.quantity} × {item.description}
-                      </span>
-                      <span>{money(item.totalPrice)}</span>
+                {info.purpose === "SERVICE" && info.serviceDescription && (
+                  <p className="text-[var(--text-secondary)]">
+                    {info.serviceDescription}
+                  </p>
+                )}
+
+                {info.purpose === "SERVICE" ? (
+                  <>
+                    <div className="mt-2">
+                      <p className="mb-1 font-semibold text-[var(--text-primary)]">
+                        Serviços Realizados
+                      </p>
+                      <div className="space-y-1">
+                        {info.items
+                          .filter((item) => item.itemKind === "SERVICE")
+                          .map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex justify-between text-[var(--text-secondary)]"
+                            >
+                              <span>
+                                {item.quantity} × {item.description}
+                                {item.detail ? ` — ${item.detail}` : ""}
+                              </span>
+                              <span>{money(item.totalPrice)}</span>
+                            </div>
+                          ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="mt-2">
+                      <p className="mb-1 font-semibold text-[var(--text-primary)]">
+                        Produtos e Materiais Usados
+                      </p>
+                      <div className="space-y-1">
+                        {info.items
+                          .filter((item) => item.itemKind !== "SERVICE")
+                          .map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex justify-between text-[var(--text-secondary)]"
+                            >
+                              <span>
+                                {item.quantity} × {item.description}
+                              </span>
+                              <span>{money(item.totalPrice)}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-2 space-y-1">
+                    {info.items.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between text-[var(--text-secondary)]"
+                      >
+                        <span>
+                          {item.quantity} × {item.description}
+                        </span>
+                        <span>{money(item.totalPrice)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <p className="mt-2 text-base">
                   <strong>Total:</strong> {money(info.netAmount)}
@@ -293,11 +354,20 @@ function ConfirmarOrcamentoContent() {
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
-                    onClick={() => setMode("approve")}
-                    className="flex flex-col items-center gap-1 rounded-xl bg-[var(--primary)] px-3 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                    disabled={submitting}
+                    onClick={() =>
+                      info.purpose === "SERVICE"
+                        ? void handleApprove()
+                        : setMode("approve")
+                    }
+                    className="flex flex-col items-center gap-1 rounded-xl bg-[var(--primary)] px-3 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
                   >
                     <CheckCircle2 size={18} />
-                    Aprovar
+                    {info.purpose === "SERVICE"
+                      ? submitting
+                        ? "Autorizando..."
+                        : "Autorizar serviço"
+                      : "Aprovar"}
                   </button>
 
                   <button

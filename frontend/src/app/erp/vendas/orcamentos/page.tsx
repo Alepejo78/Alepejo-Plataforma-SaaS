@@ -128,6 +128,8 @@ function formatOrderNumber(n: number) {
 interface ItemForm {
   productId: string;
   productLabel: string;
+  /** Detalhe do que foi/será executado — só usado nos itens de "Serviços Realizados". */
+  description: string;
   quantity: string;
   unitPrice: number;
 }
@@ -136,6 +138,7 @@ function emptyItem(): ItemForm {
   return {
     productId: "",
     productLabel: "",
+    description: "",
     quantity: "",
     unitPrice: 0,
   };
@@ -146,6 +149,8 @@ function emptyForm() {
     partnerId: "",
     partnerLabel: "",
     warehouseId: "",
+    purpose: "SALE" as "SALE" | "SERVICE",
+    serviceDescription: "",
     quoteDate: todayIso(),
     validUntil: "",
     observation: "",
@@ -177,6 +182,12 @@ export default function OrcamentosPage() {
   );
   const [form, setForm] = useState(emptyForm());
   const [items, setItems] = useState<ItemForm[]>([
+    emptyItem(),
+  ]);
+  // Só usado quando form.purpose === "SERVICE" — grupo "Serviços
+  // Realizados" separado de `items` ("Produtos e Materiais Usados"),
+  // mesmo esquema de duas listas da Ordem de Serviço.
+  const [serviceItems, setServiceItems] = useState<ItemForm[]>([
     emptyItem(),
   ]);
   // Parcelas planejadas — editável linha a linha (dias, vencimento e
@@ -279,6 +290,7 @@ export default function OrcamentosPage() {
       warehouseId: warehouses[0]?.id ?? "",
     });
     setItems([emptyItem()]);
+    setServiceItems([emptyItem()]);
     setInstallments([{ days: "", dueDate: "", amount: 0 }]);
     setFormError("");
     setFormOpen(true);
@@ -292,6 +304,8 @@ export default function OrcamentosPage() {
         quote.partner?.legalName ??
         "",
       warehouseId: quote.warehouseId,
+      purpose: quote.purpose,
+      serviceDescription: quote.serviceDescription ?? "",
       quoteDate: quote.quoteDate
         ? quote.quoteDate.slice(0, 10)
         : "",
@@ -314,16 +328,25 @@ export default function OrcamentosPage() {
         ? `${quote.chartOfAccount.code} — ${quote.chartOfAccount.description}`
         : "",
     });
-    setItems(
-      quote.items.map((it) => ({
-        productId: it.productId,
-        productLabel: it.product
-          ? `${it.product.code} — ${it.product.description}`
-          : "",
-        quantity: String(num(it.quantity)),
-        unitPrice: num(it.unitPrice),
-      }))
-    );
+    const mapItem = (it: (typeof quote.items)[number]): ItemForm => ({
+      productId: it.productId,
+      productLabel: it.product
+        ? `${it.product.code} — ${it.product.description}`
+        : "",
+      description: it.description ?? "",
+      quantity: String(num(it.quantity)),
+      unitPrice: num(it.unitPrice),
+    });
+
+    const productRows = quote.items
+      .filter((it) => it.itemKind !== "SERVICE")
+      .map(mapItem);
+    const serviceRows = quote.items
+      .filter((it) => it.itemKind === "SERVICE")
+      .map(mapItem);
+
+    setItems(productRows.length ? productRows : [emptyItem()]);
+    setServiceItems(serviceRows.length ? serviceRows : [emptyItem()]);
 
     const quoteDateStr = quote.quoteDate
       ? quote.quoteDate.slice(0, 10)
@@ -404,6 +427,20 @@ export default function OrcamentosPage() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function updateServiceItem(index: number, patch: Partial<ItemForm>) {
+    setServiceItems((prev) =>
+      prev.map((it, i) => (i === index ? { ...it, ...patch } : it))
+    );
+  }
+
+  function addServiceItem() {
+    setServiceItems((prev) => [...prev, emptyItem()]);
+  }
+
+  function removeServiceItem(index: number) {
+    setServiceItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
   function updateInstallment(
     index: number,
     patch: Partial<InstallmentRow>
@@ -442,10 +479,17 @@ export default function OrcamentosPage() {
     setInstallments((prev) => prev.filter((_, i) => i !== index));
   }
 
-  const itemsTotal = items.reduce(
-    (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
-    0
-  );
+  const itemsTotal =
+    items.reduce(
+      (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
+      0
+    ) +
+    (form.purpose === "SERVICE"
+      ? serviceItems.reduce(
+          (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
+          0
+        )
+      : 0);
 
   const netTotal =
     itemsTotal -
@@ -463,10 +507,18 @@ export default function OrcamentosPage() {
     const validItems = items.filter(
       (it) => it.productId && decimal(it.quantity) > 0
     );
+    const validServiceItems =
+      form.purpose === "SERVICE"
+        ? serviceItems.filter(
+            (it) => it.productId && decimal(it.quantity) > 0
+          )
+        : [];
 
-    if (validItems.length === 0) {
+    if (validItems.length === 0 && validServiceItems.length === 0) {
       setFormError(
-        "Adicione ao menos um item com produto e quantidade."
+        form.purpose === "SERVICE"
+          ? "Adicione ao menos um serviço realizado ou produto usado."
+          : "Adicione ao menos um item com produto e quantidade."
       );
 
       return;
@@ -490,10 +542,15 @@ export default function OrcamentosPage() {
       return;
     }
 
-    const validItemsTotal = validItems.reduce(
-      (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
-      0
-    );
+    const validItemsTotal =
+      validItems.reduce(
+        (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
+        0
+      ) +
+      validServiceItems.reduce(
+        (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
+        0
+      );
     // As parcelas dividem o líquido (o que o cliente paga de fato) —
     // desconto/frete/outras despesas já entram na conta.
     const validNetTotal =
@@ -537,6 +594,11 @@ export default function OrcamentosPage() {
     const payload = {
       partnerId: form.partnerId,
       warehouseId: form.warehouseId,
+      purpose: form.purpose,
+      serviceDescription:
+        form.purpose === "SERVICE"
+          ? form.serviceDescription || undefined
+          : undefined,
       quoteDate: form.quoteDate || undefined,
       validUntil: form.validUntil || undefined,
       observation: form.observation || undefined,
@@ -550,11 +612,21 @@ export default function OrcamentosPage() {
         : undefined,
       installments: finalInstallments,
       chartOfAccountId: form.chartOfAccountId,
-      items: validItems.map((it) => ({
-        productId: it.productId,
-        quantity: decimal(it.quantity),
-        unitPrice: it.unitPrice,
-      })),
+      items: [
+        ...validServiceItems.map((it) => ({
+          productId: it.productId,
+          itemKind: "SERVICE" as const,
+          description: it.description || undefined,
+          quantity: decimal(it.quantity),
+          unitPrice: it.unitPrice,
+        })),
+        ...validItems.map((it) => ({
+          productId: it.productId,
+          itemKind: "PRODUCT" as const,
+          quantity: decimal(it.quantity),
+          unitPrice: it.unitPrice,
+        })),
+      ],
     };
 
     try {
@@ -814,6 +886,9 @@ export default function OrcamentosPage() {
                     Número
                   </th>
                   <th className="px-4 py-3 font-semibold">
+                    Tipo
+                  </th>
+                  <th className="px-4 py-3 font-semibold">
                     Data
                   </th>
                   <th className="px-4 py-3 font-semibold">
@@ -843,6 +918,18 @@ export default function OrcamentosPage() {
                     >
                       <td className="whitespace-nowrap px-4 py-3 font-medium text-[var(--text-primary)]">
                         {formatNumber(q.number)}
+                      </td>
+
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            q.purpose === "SERVICE"
+                              ? "bg-[var(--accent-orange-soft)] text-[var(--accent-orange)]"
+                              : "bg-[var(--primary-soft)] text-[var(--primary)]"
+                          }`}
+                        >
+                          {q.purpose === "SERVICE" ? "Serviço" : "Venda"}
+                        </span>
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
@@ -1118,6 +1205,64 @@ export default function OrcamentosPage() {
 
             <fieldset disabled={viewOnly} className="contents">
             <div className="space-y-4">
+              {editingId ? (
+                <p className="text-sm text-[var(--text-muted)]">
+                  {form.purpose === "SERVICE"
+                    ? "Orçamento para Ordem de Serviço"
+                    : "Orçamento de Venda"}
+                </p>
+              ) : (
+                <div className="flex gap-2 rounded-xl border border-[var(--border)] p-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({ ...prev, purpose: "SALE" }))
+                    }
+                    className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                      form.purpose === "SALE"
+                        ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                    }`}
+                  >
+                    Orçamento de Venda
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({ ...prev, purpose: "SERVICE" }))
+                    }
+                    className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                      form.purpose === "SERVICE"
+                        ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                    }`}
+                  >
+                    Orçamento para Ordem de Serviço
+                  </button>
+                </div>
+              )}
+
+              {form.purpose === "SERVICE" && (
+                <div>
+                  <label className={labelClass}>
+                    Descrição do serviço (escopo)
+                  </label>
+
+                  <textarea
+                    rows={2}
+                    className={`${fieldClass} h-auto py-2`}
+                    value={form.serviceDescription}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        serviceDescription: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              )}
+
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="sm:col-span-2 lg:col-span-1">
                   <label className={labelClass}>
@@ -1224,9 +1369,120 @@ export default function OrcamentosPage() {
                 </div>
               </div>
 
+              {form.purpose === "SERVICE" && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className={labelClass}>
+                      Serviços Realizados
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={addServiceItem}
+                      className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                    >
+                      <Plus size={14} />
+                      Adicionar item
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {serviceItems.map((it, index) => {
+                      const subtotal = decimal(it.quantity) * it.unitPrice;
+
+                      return (
+                        <div
+                          key={index}
+                          className="grid grid-cols-12 items-start gap-2 rounded-xl border border-[var(--border)] p-2"
+                        >
+                          <div className="col-span-3">
+                            <SearchSelect<Product>
+                              displayLabel={it.productLabel}
+                              search={searchProducts}
+                              getId={(p) => p.id}
+                              getLabel={(p) =>
+                                `${p.code} — ${p.description}`
+                              }
+                              getSubLabel={(p) => money(p.salePrice)}
+                              placeholder="Digite para buscar o produto..."
+                              onSelect={(p) =>
+                                updateServiceItem(index, {
+                                  productId: p?.id ?? "",
+                                  productLabel: p
+                                    ? `${p.code} — ${p.description}`
+                                    : "",
+                                  unitPrice:
+                                    p && !it.unitPrice
+                                      ? num(p.salePrice)
+                                      : it.unitPrice,
+                                })
+                              }
+                            />
+                          </div>
+
+                          <input
+                            placeholder="Detalhe do serviço (opcional)"
+                            className={`${fieldClass} col-span-3`}
+                            value={it.description}
+                            onChange={(e) =>
+                              updateServiceItem(index, {
+                                description: e.target.value,
+                              })
+                            }
+                          />
+
+                          <input
+                            inputMode="decimal"
+                            placeholder="Qtd"
+                            className={`${fieldClass} col-span-1`}
+                            value={it.quantity}
+                            onChange={(e) =>
+                              updateServiceItem(index, {
+                                quantity: e.target.value,
+                              })
+                            }
+                          />
+
+                          <CurrencyInput
+                            placeholder="Preço unit."
+                            wrapperClassName="col-span-2"
+                            className={fieldClass}
+                            value={it.unitPrice}
+                            onChange={(value) =>
+                              updateServiceItem(index, {
+                                unitPrice: value,
+                              })
+                            }
+                          />
+
+                          <div className="col-span-2 whitespace-nowrap py-2.5 text-right text-sm font-medium text-[var(--text-primary)]">
+                            {money(subtotal)}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeServiceItem(index)}
+                            disabled={serviceItems.length === 1}
+                            title="Remover item"
+                            aria-label="Remover item"
+                            className="col-span-1 flex justify-center py-2 text-[var(--text-secondary)] transition-colors hover:text-[var(--danger)] disabled:opacity-30"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className={labelClass}>Itens</label>
+                  <label className={labelClass}>
+                    {form.purpose === "SERVICE"
+                      ? "Produtos e Materiais Usados"
+                      : "Itens"}
+                  </label>
 
                   <button
                     type="button"

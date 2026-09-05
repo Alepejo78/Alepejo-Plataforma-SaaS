@@ -1,4 +1,4 @@
-import { QuoteStatus } from '@prisma/client';
+import { QuotePurpose, QuoteStatus } from '@prisma/client';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class QuoteFilterDto {
@@ -13,4 +13,8 @@ export class QuoteFilterDto {
   @IsOptional()
   @IsEnum(QuoteStatus)
   status?: QuoteStatus;
+
+  @IsOptional()
+  @IsEnum(QuotePurpose)
+  purpose?: QuotePurpose;
 }
