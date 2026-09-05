@@ -230,4 +230,13 @@ export const quoteService = {
 
     return data.data;
   },
+
+  /** Estorna o envio: invalida o link e volta pra rascunho (edita e reenvia). */
+  async undoSendConfirmation(id: string): Promise<Quote> {
+    const { data } = await api.patch<ApiEnvelope<Quote>>(
+      `/quotes/${id}/undo-send-confirmation`
+    );
+
+    return data.data;
+  },
 };

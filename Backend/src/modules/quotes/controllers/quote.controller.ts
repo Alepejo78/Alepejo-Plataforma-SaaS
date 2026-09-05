@@ -166,6 +166,19 @@ export class QuoteController {
     return this.service.approve(companyId, rootCompanyId, id, userId);
   }
 
+  @Patch(':id/undo-send-confirmation')
+  @Permissions('quote.send-confirmation')
+  @ApiOperation({
+    summary:
+      'Estornar envio (invalida o link mandado ao cliente e volta para rascunho, pra editar e reenviar)',
+  })
+  undoSendConfirmation(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.undoSendConfirmation(companyId, id);
+  }
+
   @Patch(':id/undo-approval')
   @Permissions('quote.approve')
   @ApiOperation({

@@ -216,4 +216,16 @@ export class QuoteRepository {
       include: includeRelations,
     });
   }
+
+  async revertToDraft(id: string): Promise<Quote> {
+    return this.prisma.quote.update({
+      where: { id },
+      data: {
+        status: 'DRAFT',
+        confirmationTokenHash: null,
+        confirmationTokenExpiresAt: null,
+      },
+      include: includeRelations,
+    });
+  }
 }

@@ -760,6 +760,34 @@ export default function OrcamentosPage() {
     }
   }
 
+  async function undoSendConfirmation(id: string) {
+    if (
+      !window.confirm(
+        "Estornar o envio? O link já mandado ao cliente para de funcionar e o orçamento volta para rascunho, pra poder editar e reenviar."
+      )
+    ) {
+      return;
+    }
+
+    setActionId(id);
+    setActionError("");
+
+    try {
+      await quoteService.undoSendConfirmation(id);
+
+      await load();
+    } catch (err) {
+      setActionError(
+        extractMessage(
+          err,
+          "Não foi possível estornar o envio deste orçamento."
+        )
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   const semDeposito = warehouses.length === 0;
 
   return (
@@ -1059,6 +1087,21 @@ export default function OrcamentosPage() {
 
                           {q.status === "SENT" && (
                             <>
+                              <Can permission="quote.send-confirmation">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void sendConfirmation(q.id)
+                                  }
+                                  title="Reenviar link de aprovação ao cliente"
+                                  aria-label="Reenviar link"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
+                                >
+                                  <Send size={16} />
+                                </button>
+                              </Can>
+
                               <Can permission="quote.approve">
                                 <button
                                   type="button"
@@ -1071,6 +1114,21 @@ export default function OrcamentosPage() {
                                   className="rounded-lg border border-[var(--border)] p-2 text-[var(--success)] transition-colors hover:border-[var(--success)] hover:bg-[var(--success-soft)] disabled:opacity-50"
                                 >
                                   <Check size={16} />
+                                </button>
+                              </Can>
+
+                              <Can permission="quote.send-confirmation">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void undoSendConfirmation(q.id)
+                                  }
+                                  title="Estornar envio (invalida o link e volta para rascunho, pra editar)"
+                                  aria-label="Estornar envio"
+                                  className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-maroon)] transition-colors hover:border-[var(--accent-maroon)] hover:bg-[var(--accent-maroon-soft)] disabled:opacity-50"
+                                >
+                                  <Undo2 size={16} />
                                 </button>
                               </Can>
 

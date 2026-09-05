@@ -337,6 +337,25 @@ export class QuoteService {
     return this.performApproval(companyId, rootCompanyId, quote, userId);
   }
 
+  /**
+   * Estorna o envio — volta pra rascunho e invalida o link já mandado
+   * ao cliente, pra poder editar (edição só é permitida em rascunho/
+   * revisão solicitada, ver `update()`) e reenviar depois. Reusa a
+   * permissão de `send-confirmation`, igual todo estorno reusa a
+   * permissão da ação direta.
+   */
+  async undoSendConfirmation(companyId: string, id: string) {
+    const quote = await this.findOne(companyId, id);
+
+    if (quote.status !== QuoteStatus.SENT) {
+      throw new BadRequestException(
+        'Somente orçamentos aguardando aprovação do cliente podem ter o envio estornado.',
+      );
+    }
+
+    return this.repository.revertToDraft(quote.id);
+  }
+
   isApprovable(status: QuoteStatus) {
     return (
       status === QuoteStatus.DRAFT ||
