@@ -423,8 +423,24 @@ export default function OrdensDeServicoPage() {
       termDays:
         quote.termDays != null ? String(quote.termDays) : prev.termDays,
       paymentMethod: quote.paymentMethod ?? prev.paymentMethod,
+      installmentsCount: quote.installmentsCount
+        ? String(quote.installmentsCount)
+        : prev.installmentsCount,
       quoteId: quote.id,
     }));
+
+    // Cliente já aprovou prazo/parcelas lá no orçamento — só falta
+    // preencher as datas de previsão do serviço, não repetir esse
+    // trabalho aqui.
+    if (quote.plannedInstallments && quote.plannedInstallments.length > 0) {
+      setInstallments(
+        quote.plannedInstallments.map((row) => ({
+          days: "",
+          dueDate: row.dueDate.slice(0, 10),
+          amount: num(row.amount),
+        }))
+      );
+    }
 
     const mapQuoteItem = (it: (typeof quote.items)[number]) => ({
       productId: it.productId,
