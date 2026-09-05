@@ -95,6 +95,14 @@ export class QuoteConfirmationService {
         confirmationTokenHash: tokenHash,
         confirmationTokenExpiresAt: expiresAt,
         confirmationSentAt: new Date(),
+        // Começa um ciclo de decisão novo — sem isso, um orçamento que
+        // já teve revisão pedida uma vez travaria pra sempre a
+        // aprovação do reenvio seguinte (ver `claimDecision`).
+        customerApprovedAt: null,
+        customerRevisionNote: null,
+        customerRevisionAt: null,
+        customerCancelledAt: null,
+        customerCancelReason: null,
       },
     });
 
@@ -175,7 +183,20 @@ export class QuoteConfirmationService {
     return { sent: channels.length > 0, channels };
   }
 
-  private async validatePublicToken(id: string, token: string) {
+  /**
+   * O link continua válido depois de decidido (aprovado/revisão
+   * pedida/cancelado) — só pra consulta, sem repetir a ação — porque
+   * o cliente pode querer reabrir o mesmo e-mail/WhatsApp mais tarde
+   * pra conferir o que decidiu. Por isso o hash nunca é apagado (ver
+   * `claimDecision`). A data de expiração (`válido até`) só é
+   * respeitada enquanto o orçamento ainda está pendente — depois de
+   * decidido, ela deixa de fazer sentido pra bloquear a consulta.
+   */
+  private async validatePublicToken(
+    id: string,
+    token: string,
+    opts?: { forConsultationOnly?: boolean },
+  ) {
     const quote = await this.prisma.quote.findFirst({
       where: { id },
       include: {
@@ -187,15 +208,19 @@ export class QuoteConfirmationService {
     if (
       !quote ||
       !quote.confirmationTokenHash ||
-      !quote.confirmationTokenExpiresAt ||
-      quote.confirmationTokenExpiresAt < new Date()
+      hashToken(token) !== quote.confirmationTokenHash
     ) {
       throw new BadRequestException(
         'Link de aprovação inválido ou expirado. Peça um novo link.',
       );
     }
 
-    if (hashToken(token) !== quote.confirmationTokenHash) {
+    const alreadyDecided = !this.quoteService.isApprovable(quote.status);
+    const expired =
+      !quote.confirmationTokenExpiresAt ||
+      quote.confirmationTokenExpiresAt < new Date();
+
+    if (expired && !(opts?.forConsultationOnly && alreadyDecided)) {
       throw new BadRequestException(
         'Link de aprovação inválido ou expirado. Peça um novo link.',
       );
@@ -205,17 +230,27 @@ export class QuoteConfirmationService {
   }
 
   /**
-   * Trava o link de uma vez só: zera o hash do token com uma condição
-   * (`updateMany` só afeta a linha se o hash ainda for o mesmo que
-   * validamos). Se o cliente clicar duas vezes rápido (ou a conexão
-   * cair e ele tentar de novo), a segunda chamada não encontra mais o
-   * hash esperado — 0 linhas afetadas — e é rejeitada aqui, antes de
-   * gerar um segundo Pedido/Ordem de Serviço pro mesmo orçamento.
+   * Trava a decisão de uma vez só: só grava se nenhum dos três
+   * desfechos (aprovado/revisão/cancelado) já tiver sido registrado —
+   * `updateMany` com essa condição só afeta a linha se ainda estiver
+   * em aberto. Se o cliente clicar duas vezes rápido (ou a conexão
+   * cair e ele tentar de novo), a segunda chamada não encontra mais a
+   * linha em aberto — 0 linhas afetadas — e é rejeitada aqui, antes de
+   * gerar um segundo Pedido/Ordem de Serviço pro mesmo orçamento. Não
+   * mexe no token — ele continua servindo pra consulta depois.
    */
-  private async claimToken(quote: { id: string; confirmationTokenHash: string | null }) {
+  private async claimDecision(
+    quoteId: string,
+    data: Prisma.QuoteUpdateManyMutationInput,
+  ) {
     const claimed = await this.prisma.quote.updateMany({
-      where: { id: quote.id, confirmationTokenHash: quote.confirmationTokenHash },
-      data: { confirmationTokenHash: null, confirmationTokenExpiresAt: null },
+      where: {
+        id: quoteId,
+        customerApprovedAt: null,
+        customerRevisionAt: null,
+        customerCancelledAt: null,
+      },
+      data,
     });
 
     if (claimed.count === 0) {
@@ -227,7 +262,9 @@ export class QuoteConfirmationService {
 
   /** Resumo pra tela pública (sem login). */
   async getPublicInfo(id: string, token: string) {
-    const quote = await this.validatePublicToken(id, token);
+    const quote = await this.validatePublicToken(id, token, {
+      forConsultationOnly: true,
+    });
 
     const company = await this.prisma.company.findUnique({
       where: { id: quote.companyId },
@@ -307,8 +344,6 @@ export class QuoteConfirmationService {
       );
     }
 
-    await this.claimToken(quote);
-
     const company = await this.prisma.company.findUnique({
       where: { id: quote.companyId },
       select: { rootCompanyId: true },
@@ -316,10 +351,7 @@ export class QuoteConfirmationService {
     const rootCompanyId = company?.rootCompanyId ?? quote.companyId;
 
     if (quote.purpose === QuotePurpose.SERVICE) {
-      await this.prisma.quote.update({
-        where: { id: quote.id },
-        data: { customerApprovedAt: new Date() },
-      });
+      await this.claimDecision(quote.id, { customerApprovedAt: new Date() });
 
       const refreshed = await this.quoteService.findOne(
         quote.companyId,
@@ -398,16 +430,13 @@ export class QuoteConfirmationService {
           }))
         : null;
 
-    await this.prisma.quote.update({
-      where: { id: quote.id },
-      data: {
-        installmentsCount,
-        otherExpenses,
-        netAmount,
-        installmentInterestAmount: interestAmount,
-        plannedInstallments: plannedInstallments ?? Prisma.JsonNull,
-        customerApprovedAt: new Date(),
-      },
+    await this.claimDecision(quote.id, {
+      installmentsCount,
+      otherExpenses,
+      netAmount,
+      installmentInterestAmount: interestAmount,
+      plannedInstallments: plannedInstallments ?? Prisma.JsonNull,
+      customerApprovedAt: new Date(),
     });
 
     const refreshed = await this.quoteService.findOne(
@@ -450,15 +479,10 @@ export class QuoteConfirmationService {
       );
     }
 
-    await this.claimToken(quote);
-
-    await this.prisma.quote.update({
-      where: { id: quote.id },
-      data: {
-        status: QuoteStatus.REVISION_REQUESTED,
-        customerRevisionNote: dto.message,
-        customerRevisionAt: new Date(),
-      },
+    await this.claimDecision(quote.id, {
+      status: QuoteStatus.REVISION_REQUESTED,
+      customerRevisionNote: dto.message,
+      customerRevisionAt: new Date(),
     });
 
     const quoteNumber = quoteNumberOf(quote);
@@ -496,15 +520,10 @@ export class QuoteConfirmationService {
       );
     }
 
-    await this.claimToken(quote);
-
-    await this.prisma.quote.update({
-      where: { id: quote.id },
-      data: {
-        status: QuoteStatus.CANCELLED,
-        customerCancelReason: dto.reason,
-        customerCancelledAt: new Date(),
-      },
+    await this.claimDecision(quote.id, {
+      status: QuoteStatus.CANCELLED,
+      customerCancelReason: dto.reason,
+      customerCancelledAt: new Date(),
     });
 
     const quoteNumber = quoteNumberOf(quote);
