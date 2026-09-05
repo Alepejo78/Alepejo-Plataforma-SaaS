@@ -253,32 +253,51 @@ export default function OrcamentosPage() {
     []
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setListError("");
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) {
+        setLoading(true);
+      }
+      setListError("");
 
-    try {
-      const result = await quoteService.list({
-        status: (statusFilter || undefined) as
-          | QuoteStatus
-          | undefined,
-      });
+      try {
+        const result = await quoteService.list({
+          status: (statusFilter || undefined) as
+            | QuoteStatus
+            | undefined,
+        });
 
-      setQuotes(result);
-    } catch (err) {
-      setListError(
-        extractMessage(
-          err,
-          "Não foi possível carregar os orçamentos."
-        )
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter]);
+        setQuotes(result);
+      } catch (err) {
+        setListError(
+          extractMessage(
+            err,
+            "Não foi possível carregar os orçamentos."
+          )
+        );
+      } finally {
+        if (!opts?.silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [statusFilter]
+  );
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // Cliente pode aprovar/revisar/cancelar pelo link a qualquer momento,
+  // sem o usuário fazer nada aqui — atualiza a lista sozinho pra
+  // mostrar o status novo sem precisar dar F5.
+  useEffect(() => {
+    const interval = setInterval(
+      () => void load({ silent: true }),
+      20000
+    );
+
+    return () => clearInterval(interval);
   }, [load]);
 
   function openCreate() {

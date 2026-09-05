@@ -264,32 +264,51 @@ export default function OrdensDeServicoPage() {
       .slice(0, 20);
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setListError("");
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) {
+        setLoading(true);
+      }
+      setListError("");
 
-    try {
-      const result = await serviceOrderService.list({
-        status: (statusFilter || undefined) as
-          | ServiceOrderStatus
-          | undefined,
-      });
+      try {
+        const result = await serviceOrderService.list({
+          status: (statusFilter || undefined) as
+            | ServiceOrderStatus
+            | undefined,
+        });
 
-      setOrders(result);
-    } catch (err) {
-      setListError(
-        extractMessage(
-          err,
-          "Não foi possível carregar as ordens de serviço."
-        )
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter]);
+        setOrders(result);
+      } catch (err) {
+        setListError(
+          extractMessage(
+            err,
+            "Não foi possível carregar as ordens de serviço."
+          )
+        );
+      } finally {
+        if (!opts?.silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [statusFilter]
+  );
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // Cliente pode confirmar/revisar/cancelar pelo link a qualquer
+  // momento, sem o usuário fazer nada aqui — atualiza a lista sozinho
+  // pra mostrar o status novo sem precisar dar F5.
+  useEffect(() => {
+    const interval = setInterval(
+      () => void load({ silent: true }),
+      20000
+    );
+
+    return () => clearInterval(interval);
   }, [load]);
 
   function openCreate() {
