@@ -3,6 +3,33 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Limite de relatórios ampliado; Importar/Exportar Parceiros vira permissão própria; "Limpar tudo" nas notificações (06-09-2026)
+
+Trabalho retomado do Claude Desktop (estava pronto mas não commitado) — testado local e commitado nesta sessão via Claude Code.
+
+- **Filtros de listagem** de vários módulos (Parceiros, Produtos, Estoque,
+  Financeiro, RH, Categorias, Marcas etc.) tiveram o `limit` máximo elevado
+  de 20/100 para **10000**, pra relatórios trazerem a base inteira em vez
+  de só a primeira página. Confirmado em teste local: requisição de
+  relatório de Parceiros saiu com `?limit=10000` e voltou 200.
+- **Permissões `partner.import`/`partner.export`** criadas, separadas de
+  `partner.create` (antes o botão "Importar planilha" usava a mesma
+  permissão de cadastrar). Entram como colunas próprias em
+  `BUSINESS_COLUMNS`/`GENERIC_COLUMNS` da matriz de Perfis (mesmo padrão
+  do `payroll.confirm-item`, ver entrada acima). Script
+  `Backend/prisma/scripts/add-partner-import-export-permissions.ts`
+  insere as permissões novas direto no banco (mais seguro que rodar o
+  `seed.ts` inteiro num ambiente com dado real) e concede automaticamente
+  a todo perfil `ADMIN` existente — rodado localmente, falta rodar em
+  produção depois do deploy no Railway (ver [[projeto-migracao-esperar-deploy-railway]]).
+- **Botão "Limpar tudo"** no sino de notificações (`NotificationsButton.tsx`)
+  — marca todas as notificações visíveis como lidas de uma vez.
+  Endpoint novo `PATCH /notifications/read-all`
+  (`InAppNotificationsService.markAllAsRead`).
+- Testado local ponta a ponta (login como Administrador): botões
+  Importar/Exportar na tela de Parceiros, colunas na matriz de Perfis,
+  "Limpar tudo" zerando o sino, e o `limit=10000` na rede.
+
 ## 🟢 Holerite: % de INSS/IRRF, desconto de benefícios, confirmação digital e logo (01-09-2026)
 
 **Cálculo do holerite** (`PayrollItemBuilderService`):
