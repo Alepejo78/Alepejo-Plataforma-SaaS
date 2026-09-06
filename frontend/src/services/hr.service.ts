@@ -33,7 +33,7 @@ function createAuxiliaryService<T>(resource: string) {
     async list(search?: string): Promise<Paged<T>> {
       const { data } = await api.get<ApiEnvelope<Paged<T>>>(
         `/${resource}`,
-        { params: { search, limit: 100 } }
+        { params: { search, limit: 10000 } }
       );
 
       return data.data;

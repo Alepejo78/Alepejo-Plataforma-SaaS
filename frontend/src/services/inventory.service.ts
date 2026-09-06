@@ -179,7 +179,7 @@ export const inventoryService = {
     const { data } = await api.get<
       ApiEnvelope<Paged<InventoryItem>>
     >("/inventory", {
-      params: { limit: 100, ...filter },
+      params: { limit: 10000, ...filter },
     });
 
     return data.data;

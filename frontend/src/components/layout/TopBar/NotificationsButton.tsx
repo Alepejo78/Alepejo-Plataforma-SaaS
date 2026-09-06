@@ -89,6 +89,17 @@ export function NotificationsButton() {
     }
   }
 
+  async function handleClearAll() {
+    const previous = items;
+    setItems([]);
+
+    try {
+      await notificationService.markAllAsRead();
+    } catch {
+      setItems(previous);
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -124,10 +135,20 @@ export function NotificationsButton() {
 
       {open && (
         <div className="absolute right-0 z-40 mt-2 w-96 max-w-[90vw] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-xl">
-          <div className="border-b border-[var(--border)] px-4 py-3">
+          <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
             <span className="text-sm font-semibold text-[var(--text-primary)]">
               Notificações
             </span>
+
+            {items.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="text-xs font-medium text-[var(--primary)] hover:underline"
+              >
+                Limpar tudo
+              </button>
+            )}
           </div>
 
           <div className="max-h-96 overflow-y-auto">

@@ -19,6 +19,14 @@ export class InAppNotificationsController {
     return this.service.listUnread(user);
   }
 
+  @Patch('read-all')
+  @ApiOperation({
+    summary: 'Marca todas as notificações visíveis como lidas — limpa o sino.',
+  })
+  markAllAsRead(@CurrentUser() user: AuthenticatedUser) {
+    return this.service.markAllAsRead(user);
+  }
+
   @Patch(':id/read')
   @ApiOperation({
     summary: 'Marca uma notificação como lida — some do sino.',

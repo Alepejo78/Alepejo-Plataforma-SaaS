@@ -182,11 +182,13 @@ export default function ParceirosPage() {
               </div>
 
               <div className="flex gap-2">
-                <ExportButton
-                  tableRef={exportTableRef}
-                  filename="parceiros"
-                  sheetName="Parceiros"
-                />
+                <Can permission="partner.export">
+                  <ExportButton
+                    tableRef={exportTableRef}
+                    filename="parceiros"
+                    sheetName="Parceiros"
+                  />
+                </Can>
 
                 <Link
                   href="/erp/parceiros/relatorio"
@@ -197,7 +199,7 @@ export default function ParceirosPage() {
                   Relatório
                 </Link>
 
-                <Can permission="partner.create">
+                <Can permission="partner.import">
                   <button
                     type="button"
                     onClick={() => setImportOpen(true)}
@@ -206,7 +208,9 @@ export default function ParceirosPage() {
                     <Upload size={18} />
                     Importar planilha
                   </button>
+                </Can>
 
+                <Can permission="partner.create">
                   <button
                     type="button"
                     onClick={openCreate}

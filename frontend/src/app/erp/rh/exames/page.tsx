@@ -139,7 +139,7 @@ export default function ExamesMedicosPage() {
     try {
       const result = await employeeService.list({
         search: search || undefined,
-        limit: 100,
+        limit: 10000,
       });
 
       setEmployees(result);

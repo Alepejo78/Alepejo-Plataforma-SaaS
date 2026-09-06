@@ -24,8 +24,8 @@ export class BrandFilterDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(100)
-  limit = 20;
+  @Max(10000)
+  limit = 10000;
 
   @IsOptional()
   @IsIn(['name', 'createdAt'])

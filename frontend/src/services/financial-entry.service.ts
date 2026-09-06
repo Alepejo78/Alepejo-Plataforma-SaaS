@@ -234,7 +234,7 @@ export const financialEntryService = {
       ApiEnvelope<Paged<FinancialEntry>>
     >("/financial-entries", {
       params: {
-        limit: 100,
+        limit: 10000,
         ...filter,
         overdue:
           filter.overdue === true ? "true" : undefined,

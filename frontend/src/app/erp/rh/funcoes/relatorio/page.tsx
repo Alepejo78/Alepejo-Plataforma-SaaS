@@ -60,7 +60,7 @@ function RelatorioFuncoesPageInner() {
       const result = await jobFunctionService.list({
         search: search || undefined,
         sectorId: sectorId || undefined,
-        limit: 100,
+        limit: 10000,
       });
 
       setFunctions(result);

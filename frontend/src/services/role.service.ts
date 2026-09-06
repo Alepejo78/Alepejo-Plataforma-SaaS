@@ -37,7 +37,7 @@ export const roleService = {
     const { data } = await api.get<
       ApiEnvelope<Paginated<Role>>
     >("/identity/roles", {
-      params: { search: search || undefined, limit: 200 },
+      params: { search: search || undefined, limit: 10000 },
     });
 
     return data.data.items;

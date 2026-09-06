@@ -16,6 +16,6 @@ export class EmployeeExamFilterDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(200)
-  limit = 100;
+  @Max(10000)
+  limit = 10000;
 }

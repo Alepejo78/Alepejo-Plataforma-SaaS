@@ -364,6 +364,8 @@ const permissionGroups = [
       ["partner.update", "Alterar Parceiros"],
       ["partner.delete", "Excluir Parceiros"],
       ["partner.report", "Ver Relatório de Parceiros"],
+      ["partner.import", "Importar Parceiros"],
+      ["partner.export", "Exportar Parceiros"],
     ],
   },
   {

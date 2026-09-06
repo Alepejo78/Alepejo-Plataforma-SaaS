@@ -28,7 +28,7 @@ export const chartOfAccountClassificationService = {
     const { data } = await api.get<
       ApiEnvelope<Paged<ChartOfAccountClassification>>
     >("/chart-of-account-classifications", {
-      params: { search, limit: 100 },
+      params: { search, limit: 10000 },
     });
 
     return data.data;

@@ -98,7 +98,7 @@ function RelatorioContasContent() {
         status: status || undefined,
         dueFrom: dueFrom || undefined,
         dueTo: dueTo || undefined,
-        limit: 100,
+        limit: 10000,
       });
 
       setEntries(result.data);

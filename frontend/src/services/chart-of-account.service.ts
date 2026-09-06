@@ -62,7 +62,7 @@ export const chartOfAccountService = {
     const { data } = await api.get<
       ApiEnvelope<Paged<ChartOfAccount>>
     >("/chart-of-accounts", {
-      params: { limit: 200, ...filter },
+      params: { limit: 10000, ...filter },
     });
 
     return data.data;

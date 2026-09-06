@@ -62,8 +62,8 @@ export class FinancialEntryFilterDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(200)
-  limit = 50;
+  @Max(10000)
+  limit = 10000;
 
   @IsOptional()
   @IsIn(['dueDate', 'issueDate', 'amount', 'createdAt'])

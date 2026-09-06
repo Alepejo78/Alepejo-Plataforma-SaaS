@@ -82,7 +82,7 @@ function RelatorioProdutosPageInner() {
     // Custo médio é por produto+depósito — pra mostrar 1 valor por
     // produto no relatório, pondera pela quantidade em cada depósito.
     inventoryService
-      .list({ limit: 100 })
+      .list({ limit: 10000 })
       .then((result) => {
         const totals: Record<
           string,
@@ -126,7 +126,7 @@ function RelatorioProdutosPageInner() {
         brandId: brandId || undefined,
         type: type || undefined,
         status: status || undefined,
-        limit: 100,
+        limit: 10000,
       });
 
       setProducts(result.data);

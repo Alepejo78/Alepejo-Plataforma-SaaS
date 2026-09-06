@@ -62,7 +62,7 @@ function RelatorioParceirosPageInner() {
       const result = await partnerService.list({
         search: search || undefined,
         role,
-        limit: 100,
+        limit: 10000,
       });
 
       setPartners(result.data);

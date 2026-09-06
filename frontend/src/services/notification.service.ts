@@ -43,4 +43,8 @@ export const notificationService = {
   async markAsRead(id: string): Promise<void> {
     await api.patch(`/notifications/${id}/read`);
   },
+
+  async markAllAsRead(): Promise<void> {
+    await api.patch("/notifications/read-all");
+  },
 };

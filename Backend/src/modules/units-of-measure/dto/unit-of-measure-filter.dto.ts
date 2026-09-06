@@ -34,8 +34,8 @@ export class UnitOfMeasureFilterDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  limit = 10;
+  @Max(10000)
+  limit = 10000;
 
   @ApiPropertyOptional({
     default: 'description',

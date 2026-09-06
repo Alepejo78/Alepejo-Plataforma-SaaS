@@ -50,7 +50,7 @@ export class PartnerImportController {
 
   @Post('confirm')
   @Module('BPS')
-  @Permissions('partner.create')
+  @Permissions('partner.import')
   @ApiOperation({ summary: 'Grava as linhas validadas (cria ou atualiza)' })
   confirm(
     @CurrentUser('rootCompanyId') rootCompanyId: string,

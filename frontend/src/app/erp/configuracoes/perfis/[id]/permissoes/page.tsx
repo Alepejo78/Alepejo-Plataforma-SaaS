@@ -32,6 +32,8 @@ function extractMessage(err: unknown, fallback: string) {
 // do grupo (ex.: "partner.view" -> sufixo "view").
 const GENERIC_COLUMNS: { key: string; label: string }[] = [
   { key: "create", label: "Cadastrar" },
+  { key: "import", label: "Importar" },
+  { key: "export", label: "Exportar" },
   { key: "update", label: "Editar" },
   { key: "cancel", label: "Cancelar" },
   { key: "approve", label: "Aprovar" },

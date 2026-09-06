@@ -93,6 +93,20 @@ export class InAppNotificationsService {
     });
   }
 
+  /** Marca como lidas todas as notificações hoje visíveis pro sino desse usuário. */
+  async markAllAsRead(user: AuthenticatedUser): Promise<void> {
+    const visible = await this.listUnread(user);
+
+    if (visible.length === 0) {
+      return;
+    }
+
+    await this.prisma.notification.updateMany({
+      where: { id: { in: visible.map((n) => n.id) } },
+      data: { readAt: new Date() },
+    });
+  }
+
   /**
    * Registra uma notificação de forma idempotente (upsert por
    * dedupeKey) — nunca lança, best-effort igual ao padrão de
