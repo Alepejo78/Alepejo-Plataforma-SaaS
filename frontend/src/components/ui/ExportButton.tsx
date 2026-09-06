@@ -6,13 +6,24 @@ import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import {
   buildCsv,
   extractTableData,
+  type TableExportData,
   saveExportFile,
 } from "@/lib/exportTable";
 import { buildXlsx } from "@/lib/xlsxWriter";
 
 interface ExportButtonProps {
-  /** Ref da <table> que será lida (cabeçalho + linhas visíveis na tela). */
-  tableRef: RefObject<HTMLTableElement | null>;
+  /**
+   * Ref da <table> que será lida (cabeçalho + linhas visíveis na tela).
+   * Ignorado quando `getData` é informado.
+   */
+  tableRef?: RefObject<HTMLTableElement | null>;
+  /**
+   * Monta os dados a exportar direto do estado da tela — usar sempre
+   * que a tabela mostrar menos campos do que o cadastro tem, ou juntar
+   * mais de um campo numa mesma célula (ex.: nome + apelido na mesma
+   * coluna), pra não exportar dado faltando ou concatenado.
+   */
+  getData?: () => TableExportData;
   /** Nome do arquivo, sem extensão. */
   filename: string;
   /** Nome da aba na planilha Excel — usa `filename` se não informado. */
@@ -26,6 +37,7 @@ interface ExportButtonProps {
  */
 export function ExportButton({
   tableRef,
+  getData,
   filename,
   sheetName,
 }: ExportButtonProps) {
@@ -34,13 +46,13 @@ export function ExportButton({
   function handleExport(format: "csv" | "xlsx") {
     setOpen(false);
 
-    const table = tableRef.current;
+    const table = tableRef?.current ?? null;
 
-    if (!table) {
+    if (!getData && !table) {
       return;
     }
 
-    const data = extractTableData(table);
+    const data = getData ? getData() : extractTableData(table!);
 
     if (format === "csv") {
       void saveExportFile(buildCsv(data), `${filename}.csv`, "text/csv");

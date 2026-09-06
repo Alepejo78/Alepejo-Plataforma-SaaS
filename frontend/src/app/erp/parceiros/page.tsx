@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FileText, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import Link from "next/link";
 
@@ -39,6 +39,73 @@ function date(value: string | null | undefined) {
   });
 }
 
+const PERSON_TYPE_LABELS: Record<
+  BusinessPartner["personType"],
+  string
+> = {
+  INDIVIDUAL: "Física",
+  COMPANY: "Jurídica",
+};
+
+const STATUS_LABELS: Record<BusinessPartner["status"], string> = {
+  ACTIVE: "Ativo",
+  INACTIVE: "Inativo",
+  BLOCKED: "Bloqueado",
+};
+
+/**
+ * Monta a exportação a partir dos dados carregados (não da tabela na
+ * tela) — a tabela junta nome+fantasia e e-mail+telefone na mesma
+ * célula pra economizar espaço, e não mostra endereço/observações.
+ */
+function buildPartnersExportData(partners: BusinessPartner[]) {
+  const headers = [
+    "Nome",
+    "Nome fantasia",
+    "Tipo de pessoa",
+    "Documento",
+    "Inscrição estadual",
+    "E-mail",
+    "Telefone",
+    "Celular",
+    "Contato",
+    "CEP",
+    "Endereço",
+    "Número",
+    "Complemento",
+    "Bairro",
+    "Cidade",
+    "UF",
+    "Papéis",
+    "Situação",
+    "Observações",
+  ];
+
+  const rows = partners.map((p) => [
+    p.legalName,
+    p.tradeName ?? "",
+    PERSON_TYPE_LABELS[p.personType],
+    maskDocument(p.document, p.personType),
+    p.stateRegistration ?? "",
+    p.email ?? "",
+    p.phone ? maskPhone(p.phone) : "",
+    p.mobile ? maskPhone(p.mobile) : "",
+    p.contactName ?? "",
+    p.zipCode ?? "",
+    p.street ?? "",
+    p.number ?? "",
+    p.complement ?? "",
+    p.district ?? "",
+    p.city ?? "",
+    p.state ?? "",
+    p.roles.map((r) => ROLE_LABELS[r]).join(", "),
+    STATUS_LABELS[p.status],
+    p.notes ?? "",
+  ]);
+
+  return { headers, rows };
+}
+
 function extractMessage(err: unknown, fallback: string) {
   const message = (
     err as { response?: { data?: { message?: unknown } } }
@@ -52,7 +119,6 @@ function extractMessage(err: unknown, fallback: string) {
 }
 
 export default function ParceirosPage() {
-  const exportTableRef = useRef<HTMLTableElement>(null);
   const [partners, setPartners] = useState<
     BusinessPartner[]
   >([]);
@@ -184,7 +250,7 @@ export default function ParceirosPage() {
               <div className="flex gap-2">
                 <Can permission="partner.export">
                   <ExportButton
-                    tableRef={exportTableRef}
+                    getData={() => buildPartnersExportData(partners)}
                     filename="parceiros"
                     sheetName="Parceiros"
                   />
@@ -286,7 +352,7 @@ export default function ParceirosPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table ref={exportTableRef} className="w-full text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3 font-semibold">

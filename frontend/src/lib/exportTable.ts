@@ -3,16 +3,31 @@ export interface TableExportData {
   rows: string[][];
 }
 
+/**
+ * Texto de uma célula — quando a célula tem mais de um elemento filho
+ * (ex.: nome em um <p> e nome fantasia em outro, embaixo), junta cada
+ * um com espaço; `textContent` sozinho colaria os dois sem separador
+ * nenhum (ex.: "ClienteFantasia").
+ */
+function cellText(cell: Element): string {
+  if (cell.children.length > 1) {
+    return Array.from(cell.children)
+      .map((child) => child.textContent?.trim() ?? "")
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return cell.textContent?.trim() ?? "";
+}
+
 /** Lê um <table> renderizado na tela e extrai cabeçalho + linhas como texto puro. */
 export function extractTableData(table: HTMLTableElement): TableExportData {
   const headers = Array.from(table.querySelectorAll("thead th")).map(
-    (th) => th.textContent?.trim() ?? ""
+    cellText
   );
 
   const rows = Array.from(table.querySelectorAll("tbody tr")).map((tr) =>
-    Array.from(tr.querySelectorAll("td")).map(
-      (td) => td.textContent?.trim() ?? ""
-    )
+    Array.from(tr.querySelectorAll("td")).map(cellText)
   );
 
   return { headers, rows };
