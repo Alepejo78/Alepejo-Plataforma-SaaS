@@ -843,7 +843,7 @@ export default function HomePage() {
             </div>
 
         <section className="grid gap-5 lg:grid-cols-3">
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Users
                   size={18}
@@ -933,7 +933,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
                 <UsersRound
                   size={18}
@@ -952,7 +952,7 @@ export default function HomePage() {
                   Nenhum colaborador ativo cadastrado ainda.
                 </p>
               ) : (
-                <div className="w-full">
+                <div className="min-h-0 w-full flex-1">
                   <GenderProfileChart
                     masculinoCount={masculinoCount}
                     femininoCount={femininoCount}
@@ -966,7 +966,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
                 <UsersRound
                   size={18}
@@ -985,7 +985,7 @@ export default function HomePage() {
                   Nenhum colaborador ativo cadastrado ainda.
                 </p>
               ) : (
-                <div className="h-36">
+                <div className="min-h-36 flex-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie

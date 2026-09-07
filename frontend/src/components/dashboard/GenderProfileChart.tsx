@@ -1,12 +1,19 @@
 "use client";
 
 /**
- * Perfil por gênero em estilo infográfico, dividido em duas colunas:
- * à esquerda os anéis de percentual (grandes, acompanham a altura do
- * card), à direita a grade de 10 bonequinhos por gênero (2 fileiras
- * de 5, tamanho fixo, colorido até o percentual e apagado dali pra
- * frente). Mesmo padrão nos dois lugares que usam (Visão Geral e
- * Gráficos de colaboradores).
+ * Perfil por gênero em estilo infográfico: uma linha por gênero, com
+ * uma grade densa de 100 bonequinhos (10 colunas, quebra em 10
+ * fileiras) representando o percentual — cada bonequinho vale 1%,
+ * colorido até a marca e apagado dali pra frente — seguida do ícone
+ * sólido + anel de progresso. A grade de bonequinhos ocupa a largura
+ * disponível em tamanho fixo (justificada, não cresce); o anel
+ * acompanha a ALTURA do card (`h-full` até um teto) — se o card
+ * ficar mais alto por causa de um vizinho no mesmo grid (ex.: lista
+ * de aniversariantes), o anel cresce junto. Requer que quem usa este
+ * componente dê uma altura de verdade pra ele (`h-full`/`flex-1` numa
+ * cadeia de flex/grid até o card) — sem isso o anel fica no tamanho
+ * mínimo do conteúdo. Mesmo padrão nos dois lugares que usam (Visão
+ * Geral e Gráficos de colaboradores).
  */
 
 export const GENDER_PROFILE_COLORS = {
@@ -33,7 +40,7 @@ const PERSON_SILHOUETTE = {
   ),
 };
 
-/** Bonequinho pequeno da grade — silhueta diferente por gênero (reto para homem, saia para mulher), igual à referência. */
+/** Bonequinho pequeno da grade — silhueta diferente por gênero (reto para homem, saia para mulher). */
 function PictogramPerson({
   gender,
   color,
@@ -47,7 +54,7 @@ function PictogramPerson({
     <svg
       viewBox="0 0 24 30"
       className="h-full w-full"
-      style={{ opacity: filled ? 1 : 0.25 }}
+      style={{ opacity: filled ? 1 : 0.22 }}
     >
       <circle cx="12" cy="6" r="5" fill={color} />
       {gender === "MASCULINO" ? (
@@ -66,22 +73,24 @@ function PictogramPerson({
 }
 
 /**
- * Anel de progresso grande com o percentual no meio — lado esquerdo
- * do card. `w-full` + `aspect-square` faz o anel acompanhar o
- * tamanho da coluna (e portanto do card), até o teto de `maxSize`.
+ * Ícone sólido (homem/mulher) + anel de progresso com o percentual no
+ * meio. Acompanha a ALTURA da fileira (`h-full`, com `maxSize` como
+ * teto) — quando o card cresce (ex.: card vizinho com mais
+ * aniversariantes empurra a fileira do CSS grid pra ficar mais alta),
+ * o anel cresce junto. O texto do percentual usa unidade de container
+ * query (`cqh`) pra escalar com a altura real do anel sem precisar
+ * medir nada em JS.
  */
-function GenderRingBig({
+function GenderRingIcon({
   gender,
   percent,
   color,
   maxSize,
-  fontSizeClass,
 }: {
   gender: "MASCULINO" | "FEMININO";
   percent: number;
   color: string;
   maxSize: number;
-  fontSizeClass: string;
 }) {
   const radius = 32;
   const circumference = 2 * Math.PI * radius;
@@ -89,14 +98,14 @@ function GenderRingBig({
   const offset = circumference * (1 - clamped / 100);
 
   return (
-    <div className="flex w-full items-center justify-center gap-2">
-      <svg viewBox="0 0 100 140" className="h-[18%] w-[12%] max-h-10 min-h-5 shrink-0">
+    <div className="flex h-full shrink-0 items-center gap-1.5">
+      <svg viewBox="0 0 100 140" className="h-[62%] w-auto">
         <g fill={color}>{PERSON_SILHOUETTE[gender]}</g>
       </svg>
 
       <div
-        className="relative aspect-square w-full"
-        style={{ maxWidth: maxSize }}
+        className="relative aspect-square h-full shrink-0"
+        style={{ maxHeight: maxSize, containerType: "size" }}
       >
         <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
           <circle cx="40" cy="40" r={radius} fill="none" stroke="var(--surface-hover)" strokeWidth="8" />
@@ -114,8 +123,8 @@ function GenderRingBig({
         </svg>
 
         <div
-          className={`absolute inset-0 flex items-center justify-center font-bold ${fontSizeClass}`}
-          style={{ color }}
+          className="absolute inset-0 flex items-center justify-center font-bold"
+          style={{ color, fontSize: "22cqh" }}
         >
           {Math.round(clamped)}%
         </div>
@@ -124,40 +133,54 @@ function GenderRingBig({
   );
 }
 
-const GRID_ICONS = 10;
-const GRID_COLUMNS = 5;
+const GRID_ICONS = 100;
+const GRID_COLUMNS = 10;
 
-/** Grade de bonequinhos — tamanho fixo, não muda com o card (lado direito). */
-function PictogramGrid({
+function GenderRow({
   gender,
   count,
   percent,
   color,
+  ringMaxSize,
   iconSize,
 }: {
   gender: "MASCULINO" | "FEMININO";
   count: number;
   percent: number;
   color: string;
+  ringMaxSize: number;
   iconSize: number;
 }) {
   const filledCount = Math.round((percent / 100) * GRID_ICONS);
 
   return (
-    <div
-      className="grid gap-1"
-      style={{ gridTemplateColumns: `repeat(${GRID_COLUMNS}, ${iconSize}px)` }}
-      title={`${count} colaborador(es)`}
-    >
-      {Array.from({ length: GRID_ICONS }, (_, i) => (
-        <div key={i} style={{ height: iconSize * 1.15, width: iconSize }}>
-          <PictogramPerson
-            gender={gender}
-            color={color}
-            filled={i < filledCount}
-          />
-        </div>
-      ))}
+    <div className="flex min-h-0 flex-1 items-center gap-2">
+      <div
+        className="grid min-w-0 flex-1 gap-[2px]"
+        style={{ gridTemplateColumns: `repeat(${GRID_COLUMNS}, 1fr)` }}
+        title={`${count} colaborador(es)`}
+      >
+        {Array.from({ length: GRID_ICONS }, (_, i) => (
+          <div
+            key={i}
+            className="justify-self-center"
+            style={{ height: iconSize * 1.15, width: iconSize }}
+          >
+            <PictogramPerson
+              gender={gender}
+              color={color}
+              filled={i < filledCount}
+            />
+          </div>
+        ))}
+      </div>
+
+      <GenderRingIcon
+        gender={gender}
+        percent={percent}
+        color={color}
+        maxSize={ringMaxSize}
+      />
     </div>
   );
 }
@@ -181,45 +204,30 @@ export function GenderProfileChart({
   const masculinoPercent = (masculinoCount / total) * 100;
   const femininoPercent = (femininoCount / total) * 100;
 
-  const iconSize = compact ? 14 : 24;
-  const ringMaxSize = compact ? 64 : 120;
-  const ringFontSizeClass = compact ? "text-base" : "text-3xl";
+  // Teto pro anel — deixa crescer com a altura da fileira (card mais
+  // alto por causa de um vizinho, ex.: lista de aniversariantes), mas
+  // sem passar de um tamanho que fique desproporcional.
+  const ringMaxSize = compact ? 64 : 110;
+  const iconSize = compact ? 8 : 13;
 
   return (
-    <div className="flex w-full items-center gap-4">
-      <div className={`flex flex-1 flex-col items-center justify-center ${compact ? "gap-3" : "gap-6"}`}>
-        <GenderRingBig
-          gender="MASCULINO"
-          percent={masculinoPercent}
-          color={GENDER_PROFILE_COLORS.MASCULINO}
-          maxSize={ringMaxSize}
-          fontSizeClass={ringFontSizeClass}
-        />
-        <GenderRingBig
-          gender="FEMININO"
-          percent={femininoPercent}
-          color={GENDER_PROFILE_COLORS.FEMININO}
-          maxSize={ringMaxSize}
-          fontSizeClass={ringFontSizeClass}
-        />
-      </div>
-
-      <div className={`flex shrink-0 flex-col justify-center ${compact ? "gap-3" : "gap-6"}`}>
-        <PictogramGrid
-          gender="MASCULINO"
-          count={masculinoCount}
-          percent={masculinoPercent}
-          color={GENDER_PROFILE_COLORS.MASCULINO}
-          iconSize={iconSize}
-        />
-        <PictogramGrid
-          gender="FEMININO"
-          count={femininoCount}
-          percent={femininoPercent}
-          color={GENDER_PROFILE_COLORS.FEMININO}
-          iconSize={iconSize}
-        />
-      </div>
+    <div className={`flex h-full w-full flex-col ${compact ? "gap-2" : "gap-4"}`}>
+      <GenderRow
+        gender="MASCULINO"
+        count={masculinoCount}
+        percent={masculinoPercent}
+        color={GENDER_PROFILE_COLORS.MASCULINO}
+        ringMaxSize={ringMaxSize}
+        iconSize={iconSize}
+      />
+      <GenderRow
+        gender="FEMININO"
+        count={femininoCount}
+        percent={femininoPercent}
+        color={GENDER_PROFILE_COLORS.FEMININO}
+        ringMaxSize={ringMaxSize}
+        iconSize={iconSize}
+      />
     </div>
   );
 }
