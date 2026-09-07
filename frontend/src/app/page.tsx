@@ -167,7 +167,7 @@ function StatCard({
 export default function HomePage() {
   const { user } = useAuth();
 
-  const [partners, setPartners] = useState<number | null>(
+  const [suppliers, setSuppliers] = useState<number | null>(
     null
   );
   const [customers, setCustomers] = useState<number | null>(
@@ -242,12 +242,12 @@ export default function HomePage() {
 
   useEffect(() => {
     Promise.all([
-      partnerService.list({ limit: 1 }),
+      partnerService.list({ limit: 1, role: "SUPPLIER" }),
       partnerService.list({ limit: 1, role: "CUSTOMER" }),
       productService.list({ limit: 1 }),
     ])
-      .then(([todos, clientes, prods]) => {
-        setPartners(todos.total);
+      .then(([fornecedores, clientes, prods]) => {
+        setSuppliers(fornecedores.total);
         setCustomers(clientes.total);
         setProducts(prods.total);
       })
@@ -1024,9 +1024,9 @@ export default function HomePage() {
 
         <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-5">
           <StatCard
-            title="Parceiros"
-            value={partners !== null ? String(partners) : "—"}
-            hint="Clientes, fornecedores e demais"
+            title="Fornecedores"
+            value={suppliers !== null ? String(suppliers) : "—"}
+            hint="Parceiros com papel de fornecedor"
             icon={Users}
             href="/erp/parceiros"
             loading={loading}
@@ -1062,7 +1062,7 @@ export default function HomePage() {
             hint={
               consolidated
                 ? "Saldo em todas as empresas do grupo"
-                : "Produtos com saldo cadastrado por depósito"
+                : "Produtos com saldo em depósito"
             }
             icon={Boxes}
             href="/erp/estoque"
