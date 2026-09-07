@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  Send,
   Trash2,
   Upload,
   X,
@@ -112,6 +113,7 @@ const labelClass =
 
 const STATUS_BADGE_CLASS: Record<FinancialEntryStatus, string> = {
   OPEN: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  AWAITING_CONFIRMATION: "bg-[var(--primary-soft)] text-[var(--primary-text)]",
   PAID: "bg-[var(--success-soft)] text-[var(--success)]",
   CANCELLED: "bg-[var(--danger-soft)] text-[var(--danger)]",
 };
@@ -595,7 +597,7 @@ export function FinancialEntriesScreen({
 
   async function runAction(
     id: string,
-    action: "reopen" | "cancel" | "remove"
+    action: "reopen" | "cancel" | "remove" | "send-charge"
   ) {
     setActionId(id);
     setActionError("");
@@ -605,6 +607,8 @@ export function FinancialEntriesScreen({
         await financialEntryService.reopen(id);
       } else if (action === "cancel") {
         await financialEntryService.cancel(id);
+      } else if (action === "send-charge") {
+        await financialEntryService.sendCharge(id);
       } else {
         await financialEntryService.remove(id);
       }
@@ -803,7 +807,8 @@ export function FinancialEntriesScreen({
                   const busy = actionId === entry.id;
 
                   const overdue =
-                    entry.status === "OPEN" &&
+                    (entry.status === "OPEN" ||
+                      entry.status === "AWAITING_CONFIRMATION") &&
                     entry.dueDate.slice(0, 10) < today;
 
                   return (
@@ -901,7 +906,8 @@ export function FinancialEntriesScreen({
                             <Eye size={16} />
                           </button>
 
-                          {entry.status === "OPEN" && (
+                          {(entry.status === "OPEN" ||
+                            entry.status === "AWAITING_CONFIRMATION") && (
                             <>
                               {!entry.employeeId && (
                                 <Can permission="financial-entry.update">
@@ -933,6 +939,26 @@ export function FinancialEntriesScreen({
                                   <Check size={16} />
                                 </button>
                               </Can>
+
+                              {type === "RECEIVABLE" && (
+                                <Can permission="financial-entry.update">
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      void runAction(
+                                        entry.id,
+                                        "send-charge"
+                                      )
+                                    }
+                                    title="Reenviar cobrança"
+                                    aria-label="Reenviar cobrança"
+                                    className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                                  >
+                                    <Send size={16} />
+                                  </button>
+                                </Can>
+                              )}
 
                               <Can permission="financial-entry.cancel">
                                 <button

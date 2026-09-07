@@ -24,6 +24,10 @@ import { PayrollConfirmationService } from '../../payroll/services/payroll-confi
 import { VacationConfirmationService } from '../../payroll/services/vacation-confirmation.service';
 import { ThirteenthConfirmationService } from '../../payroll/services/thirteenth-confirmation.service';
 import { SalaryAdvanceConfirmationService } from '../../payroll/services/salary-advance-confirmation.service';
+import {
+  EntryChargeService,
+  type EntryWithPartner as EntryWithPartnerForCharge,
+} from '../../entry-charges/services/entry-charge.service';
 
 import { FinancialEntriesRepository } from '../repositories/financial-entries.repository';
 
@@ -46,6 +50,8 @@ export class FinancialEntriesService {
     private readonly thirteenthConfirmationService: ThirteenthConfirmationService,
     @Inject(forwardRef(() => SalaryAdvanceConfirmationService))
     private readonly salaryAdvanceConfirmationService: SalaryAdvanceConfirmationService,
+    @Inject(forwardRef(() => EntryChargeService))
+    private readonly entryChargeService: EntryChargeService,
   ) {}
 
   async create(
@@ -97,10 +103,14 @@ export class FinancialEntriesService {
         ),
       );
 
+      for (const entry of entries) {
+        void this.entryChargeService.notify(entry as EntryWithPartnerForCharge);
+      }
+
       return entries[0];
     }
 
-    return this.repository.create(companyId, {
+    const entry = await this.repository.create(companyId, {
       type: dto.type,
       partnerId: dto.partnerId,
       employeeId: dto.employeeId,
@@ -118,6 +128,10 @@ export class FinancialEntriesService {
       createdById: userId,
       updatedById: userId,
     } as Prisma.FinancialEntryUncheckedCreateInput);
+
+    void this.entryChargeService.notify(entry as EntryWithPartnerForCharge);
+
+    return entry;
   }
 
   private async assertEmployee(companyId: string, employeeId: string) {
@@ -258,6 +272,15 @@ export class FinancialEntriesService {
     }
 
     return updated;
+  }
+
+  /** Reenvia a cobrança (boleto/PIX/cartão/transferência) já gerada, ou gera na primeira vez. */
+  async sendCharge(companyId: string, id: string) {
+    await this.findOne(companyId, id);
+
+    await this.entryChargeService.resend(companyId, id);
+
+    return { sent: true };
   }
 
   /** Estorna a baixa: volta o título para "em aberto". */
@@ -433,6 +456,7 @@ export class FinancialEntriesService {
           createdById: userId,
           updatedById: userId,
         },
+        include: { partner: true },
       });
 
       entries.push(entry);

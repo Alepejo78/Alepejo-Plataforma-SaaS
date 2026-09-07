@@ -12,6 +12,7 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
+import { EntryChargeService } from '../../entry-charges/services/entry-charge.service';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const FIXED_EXAM_REMINDER_DAYS = 3;
@@ -45,6 +46,7 @@ export class ScheduledNotificationsService {
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
     private readonly inAppNotifications: InAppNotificationsService,
+    private readonly entryChargeService: EntryChargeService,
   ) {}
 
   @Cron('0 8 * * *', { timeZone: 'America/Sao_Paulo' })
@@ -469,12 +471,19 @@ export class ScheduledNotificationsService {
         ? `Conta em atraso — ${companyName}`
         : `Lembrete de vencimento — ${companyName}`;
 
+      // Reenvia junto o mesmo meio de pagamento (boleto/PIX/cartão/
+      // transferência) já gerado pro título — gera na primeira vez se
+      // ainda não existir.
+      const paymentInstructions =
+        await this.entryChargeService.getInstructionsFragment(entry);
+
       if (partner.email) {
         void this.emailNotifications.send(
           entry.companyId,
           partner.email,
           subject,
-          `<p>${message}</p>`,
+          `<p>${message}</p>${paymentInstructions?.html ?? ''}`,
+          paymentInstructions?.attachments,
         );
       }
 
@@ -482,7 +491,9 @@ export class ScheduledNotificationsService {
         void this.whatsappNotifications.send(
           entry.companyId,
           partner.mobile,
-          message,
+          paymentInstructions?.text
+            ? `${message}\n${paymentInstructions.text}`
+            : message,
         );
       }
     }

@@ -24,6 +24,7 @@ interface Paged<T> {
 export type FinancialEntryType = "RECEIVABLE" | "PAYABLE";
 export type FinancialEntryStatus =
   | "OPEN"
+  | "AWAITING_CONFIRMATION"
   | "PAID"
   | "CANCELLED";
 
@@ -53,6 +54,7 @@ export const FINANCIAL_ENTRY_STATUS_LABELS: Record<
   string
 > = {
   OPEN: "Em aberto",
+  AWAITING_CONFIRMATION: "Aguardando comprovação",
   PAID: "Baixado",
   CANCELLED: "Cancelado",
 };
@@ -294,6 +296,15 @@ export const financialEntryService = {
 
   async remove(id: string): Promise<void> {
     await api.delete(`/financial-entries/${id}`);
+  },
+
+  /** Reenvia o boleto/PIX/cartão/transferência já gerado — gera na primeira vez. */
+  async sendCharge(id: string): Promise<{ sent: boolean }> {
+    const { data } = await api.post<ApiEnvelope<{ sent: boolean }>>(
+      `/financial-entries/${id}/send-charge`
+    );
+
+    return data.data;
   },
 
   async getCashFlow(year: number): Promise<CashFlow> {

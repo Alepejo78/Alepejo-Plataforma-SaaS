@@ -32,12 +32,14 @@ import { SalesOrdersModule } from './modules/sales-orders/sales-orders.module';
 import { ServiceOrdersModule } from './modules/service-orders/service-orders.module';
 import { SalesSettingsModule } from './modules/sales-settings/sales-settings.module';
 import { PaymentReminderSettingsModule } from './modules/payment-reminder-settings/payment-reminder-settings.module';
+import { PaymentMethodSettingsModule } from './modules/payment-method-settings/payment-method-settings.module';
 import { QuotationsModule } from './modules/quotations/quotations.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { ChartOfAccountsModule } from './modules/chart-of-accounts/chart-of-accounts.module';
 import { ChartOfAccountClassificationsModule } from './modules/chart-of-account-classifications/chart-of-account-classifications.module';
 import { FinancialEntriesModule } from './modules/financial-entries/financial-entries.module';
+import { EntryChargesModule } from './modules/entry-charges/entry-charges.module';
 import { BankAccountsModule } from './modules/bank-accounts/bank-accounts.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -91,12 +93,14 @@ import { FinancialEntryImportModule } from './modules/financial-entry-import/fin
     ServiceOrdersModule,
     SalesSettingsModule,
     PaymentReminderSettingsModule,
+    PaymentMethodSettingsModule,
     QuotationsModule,
     PayrollModule,
     PurchaseOrdersModule,
     ChartOfAccountsModule,
     ChartOfAccountClassificationsModule,
     FinancialEntriesModule,
+    EntryChargesModule,
     BankAccountsModule,
     BudgetsModule,
     NotificationsModule,

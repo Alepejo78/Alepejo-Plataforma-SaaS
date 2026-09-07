@@ -227,6 +227,14 @@ const permissionGroups = [
     ],
   },
   {
+    code: "PAYMENT_METHOD_SETTINGS",
+    name: "Configurações de Formas de Pagamento",
+    permissions: [
+      ["payment-method-settings.view", "Consultar Configurações de Formas de Pagamento"],
+      ["payment-method-settings.manage", "Alterar Configurações de Formas de Pagamento"],
+    ],
+  },
+  {
     code: "SALES_ORDER",
     name: "Pedidos de Venda",
     permissions: [

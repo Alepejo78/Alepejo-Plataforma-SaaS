@@ -209,10 +209,11 @@ model Company {
   ppeDeliveries      PpeDelivery[]
   benefits           Benefit[]
 
-  productionOrders   ProductionOrder[]
-  productionSettings ProductionSettings?
-  salesSettings      SalesSettings?
+  productionOrders        ProductionOrder[]
+  productionSettings      ProductionSettings?
+  salesSettings           SalesSettings?
   paymentReminderSettings PaymentReminderSettings?
+  paymentMethodSettings   PaymentMethodSettings?
 
   timeEntries          TimeEntry[]
   timeSheetApprovals   TimeSheetApproval[]
@@ -311,6 +312,10 @@ model BusinessPartner {
   status BusinessPartnerStatus @default(ACTIVE)
 
   active Boolean @default(true)
+
+  /// Cliente já criado no Asaas da PRÓPRIA empresa (não o da AlePejo)
+  /// — evita recriar a cada cobrança gerada (boleto/PIX/cartão).
+  asaasCustomerId String? @db.VarChar(50)
 
   sales Sale[] @relation("SalePartner")
 
@@ -630,53 +635,53 @@ model UnitOfMeasure {
 }
 
 model Product {
-  id                       String               @id @default(cuid())
+  id                       String                    @id @default(cuid())
   companyId                String
-  company                  Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company                  Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   categoryId               String?
-  category                 ProductCategory?     @relation(fields: [categoryId], references: [id])
+  category                 ProductCategory?          @relation(fields: [categoryId], references: [id])
   brandId                  String?
-  brand                    Brand?               @relation(fields: [brandId], references: [id])
+  brand                    Brand?                    @relation(fields: [brandId], references: [id])
   unitId                   String
-  unit                     UnitOfMeasure        @relation(fields: [unitId], references: [id])
-  code                     String               @db.VarChar(30)
-  barcode                  String?              @db.VarChar(30)
-  reference                String?              @db.VarChar(50)
-  description              String               @db.VarChar(200)
-  complementaryDescription String?              @db.VarChar(255)
-  type                     ProductType          @default(PRODUCT)
-  inventoryControl         InventoryControl     @default(SIMPLE)
+  unit                     UnitOfMeasure             @relation(fields: [unitId], references: [id])
+  code                     String                    @db.VarChar(30)
+  barcode                  String?                   @db.VarChar(30)
+  reference                String?                   @db.VarChar(50)
+  description              String                    @db.VarChar(200)
+  complementaryDescription String?                   @db.VarChar(255)
+  type                     ProductType               @default(PRODUCT)
+  inventoryControl         InventoryControl          @default(SIMPLE)
   /// Classificação padrão de compra (Tipo de despesa) — quando
   /// preenchida, compras/importação de nota já sugerem essa conta pro
   /// título gerado, sem travar a escolha manual.
   chartOfAccountId         String?
-  chartOfAccount           ChartOfAccount?      @relation("ProductPurchaseChartOfAccount", fields: [chartOfAccountId], references: [id])
+  chartOfAccount           ChartOfAccount?           @relation("ProductPurchaseChartOfAccount", fields: [chartOfAccountId], references: [id])
   /// Classificação padrão de venda (Tipo de receita) — mesmo papel do
   /// campo acima, só que do lado de vendas/orçamentos/pedidos de
   /// venda.
   saleChartOfAccountId     String?
-  saleChartOfAccount       ChartOfAccount?      @relation("ProductSaleChartOfAccount", fields: [saleChartOfAccountId], references: [id])
+  saleChartOfAccount       ChartOfAccount?           @relation("ProductSaleChartOfAccount", fields: [saleChartOfAccountId], references: [id])
   /// Congelado (frente "Interprise") — Product virou cadastro de
   /// grupo, custo real passou a ser Inventory.averageCost (por
   /// empresa/depósito). Default só pra não quebrar create() sem o
   /// campo, não é mais preenchido pela tela.
-  cost                     Decimal              @default(0) @db.Decimal(18, 2)
-  salePrice                Decimal              @db.Decimal(18, 2)
-  minimumStock             Decimal              @default(0) @db.Decimal(18, 3)
-  currentStock             Decimal              @default(0) @db.Decimal(18, 3)
+  cost                     Decimal                   @default(0) @db.Decimal(18, 2)
+  salePrice                Decimal                   @db.Decimal(18, 2)
+  minimumStock             Decimal                   @default(0) @db.Decimal(18, 3)
+  currentStock             Decimal                   @default(0) @db.Decimal(18, 3)
   /// Lote mínimo por ordem de produção — sobrepõe o padrão da
   /// empresa (ProductionSettings.minBatchSize) quando preenchido.
-  minProductionBatch       Decimal?             @db.Decimal(18, 3)
+  minProductionBatch       Decimal?                  @db.Decimal(18, 3)
   /// Peso unitário (kg) — logística/frete, não vem de nota importada.
-  weightKg                 Decimal?             @db.Decimal(10, 3)
+  weightKg                 Decimal?                  @db.Decimal(10, 3)
   /// Cubagem unitária (m³) — logística/frete, não vem de nota importada.
-  cubageM3                 Decimal?             @db.Decimal(10, 4)
-  status                   ProductStatus        @default(ACTIVE)
-  active                   Boolean              @default(true)
+  cubageM3                 Decimal?                  @db.Decimal(10, 4)
+  status                   ProductStatus             @default(ACTIVE)
+  active                   Boolean                   @default(true)
   createdById              String?
   updatedById              String?
-  createdAt                DateTime             @default(now())
-  updatedAt                DateTime             @updatedAt
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
   deletedAt                DateTime?
   Inventory                Inventory[]
   purchaseItems            PurchaseItem[]
@@ -1915,6 +1920,9 @@ enum FinancialEntryType {
 
 enum FinancialEntryStatus {
   OPEN
+  /// Pago no Asaas mas o dinheiro ainda está compensando (comum em
+  /// boleto — leva alguns dias úteis). Ainda não é baixa de verdade.
+  AWAITING_CONFIRMATION
   PAID
   CANCELLED
 }
@@ -2038,6 +2046,10 @@ model FinancialEntry {
   billingChargeId String?        @unique
   billingCharge   BillingCharge? @relation(fields: [billingChargeId], references: [id], onDelete: SetNull)
 
+  /// Cobrança gerada no Asaas da própria empresa (boleto/PIX/cartão)
+  /// pra este título, quando aplicável — ver EntryCharge.
+  charge EntryCharge?
+
   createdById String?
   updatedById String?
 
@@ -2077,10 +2089,114 @@ model BankAccount {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  financialEntries FinancialEntry[]
+  financialEntries      FinancialEntry[]
+  paymentMethodSettings PaymentMethodSettings[] @relation("PaymentMethodSettingsDefaultBankAccount")
 
   @@index([companyId])
   @@map("bank_accounts")
+}
+
+enum SurchargeType {
+  PERCENT
+  FIXED
+}
+
+/// Configuração de cobrança por forma de pagamento, por empresa —
+/// singleton (companyId único), mesmo molde de SalesSettings.
+model PaymentMethodSettings {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// Liga/desliga o uso da conta Asaas sem precisar apagar a chave —
+  /// desligado, todo método vira informativo (sem cobrança real),
+  /// mesmo com API key configurada. Começa desligado por padrão (só
+  /// ativa depois de a empresa configurar e testar a própria conta).
+  asaasEnabled Boolean @default(false)
+
+  /// Credenciais Asaas da PRÓPRIA empresa (não a global da AlePejo,
+  /// que fica só em process.env pro módulo billing).
+  asaasApiKeyEncrypted String?
+  asaasSandbox         Boolean @default(true)
+
+  /// Token que a própria empresa cola na configuração de webhook da
+  /// conta Asaas dela — autentica a chamada de volta pro servidor.
+  asaasWebhookToken String?
+
+  /// Conta usada pra mostrar dados de transferência/depósito.
+  defaultBankAccountId String?
+  defaultBankAccount   BankAccount? @relation("PaymentMethodSettingsDefaultBankAccount", fields: [defaultBankAccountId], references: [id])
+
+  // Acréscimo simples (boleto, transferência/depósito, PIX)
+  boletoSurchargeType    SurchargeType?
+  boletoSurchargeValue   Decimal        @default(0) @db.Decimal(10, 2)
+  transferSurchargeType  SurchargeType?
+  transferSurchargeValue Decimal        @default(0) @db.Decimal(10, 2)
+  pixSurchargeType       SurchargeType?
+  pixSurchargeValue      Decimal        @default(0) @db.Decimal(10, 2)
+
+  // Cartão — acréscimo geral + juros por parcela acima do limite sem
+  // juros (mesmo formato de SalesSettings).
+  cardSurchargeType              SurchargeType?
+  cardSurchargeValue             Decimal        @default(0) @db.Decimal(10, 2)
+  cardMaxInstallments            Int            @default(12)
+  cardInterestFreeInstallments   Int            @default(1)
+  cardInterestRatePerInstallment Decimal        @default(0) @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_method_settings")
+}
+
+enum EntryChargeStatus {
+  PENDING
+  CONFIRMED
+  RECEIVED
+  OVERDUE
+  REFUNDED
+  CANCELLED
+}
+
+/// Cobrança gerada no Asaas (da própria empresa) pra um título a
+/// receber — 1:1 com FinancialEntry. Mesmo raciocínio de
+/// BillingCharge (que é 1:1 com a assinatura da AlePejo — não
+/// reaproveitável aqui porque aponta pra CompanyPlan, não pra
+/// FinancialEntry de cliente).
+model EntryCharge {
+  id               String         @id @default(cuid())
+  financialEntryId String         @unique
+  financialEntry   FinancialEntry @relation(fields: [financialEntryId], references: [id], onDelete: Cascade)
+
+  asaasPaymentId String?           @unique
+  /// BOLETO | PIX | CREDIT_CARD | UNDEFINED (billingType do Asaas)
+  billingType    String
+  status         EntryChargeStatus @default(PENDING)
+  /// Valor já com o acréscimo configurado aplicado.
+  amountCharged  Decimal           @db.Decimal(18, 2)
+
+  invoiceUrl     String? @db.VarChar(255)
+  bankSlipUrl    String? @db.VarChar(255)
+  pixPayload     String?
+  pixQrCodeImage String? @db.Text
+
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("entry_charges")
+}
+
+/// Idempotência do webhook — mesmo papel de BillingWebhookEvent, pro
+/// webhook multi-empresa desta feature (uma URL por empresa).
+model EntryChargeWebhookEvent {
+  id           String   @id @default(cuid())
+  asaasEventId String   @unique @db.VarChar(100)
+  event        String   @db.VarChar(50)
+  payload      Json
+  processedAt  DateTime @default(now())
+
+  @@map("entry_charge_webhook_events")
 }
 
 enum PayrollTaxType {

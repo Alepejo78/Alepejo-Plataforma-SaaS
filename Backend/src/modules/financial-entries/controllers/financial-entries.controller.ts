@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 
 import { FinancialEntryType } from '@prisma/client';
+import { ApiOperation } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
@@ -177,6 +178,18 @@ export class FinancialEntriesController {
     @Param('id') id: string,
   ) {
     return this.service.reopen(companyId, id, userId);
+  }
+
+  @Post(':id/send-charge')
+  @Permissions('financial-entry.update')
+  @ApiOperation({
+    summary: 'Reenvia a cobrança (boleto/PIX/cartão/transferência) do título',
+  })
+  sendCharge(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.sendCharge(companyId, id);
   }
 
   @Patch(':id/cancel')

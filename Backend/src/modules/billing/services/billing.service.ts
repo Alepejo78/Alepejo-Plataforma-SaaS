@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { DefaultAccountingService } from '../../../core/default-accounting/default-accounting.service';
 import { PLATFORM_COMPANY_CODE } from '../../../core/constants/platform.constants';
+import { mapAsaasPaymentStatus } from '../../../core/utils/asaas-status.util';
 import { AsaasService } from './asaas.service';
 import type { BillingTypeValue } from '../dto/subscribe.dto';
 import type { CreateCheckoutDto } from '../dto/create-checkout.dto';
@@ -75,22 +76,7 @@ function formatDate(date: Date): string {
 
 /** Asaas manda vários nomes de status — mapeia pro nosso enum fechado. */
 function mapChargeStatus(asaasStatus: string): BillingChargeStatus {
-  switch (asaasStatus) {
-    case 'RECEIVED':
-    case 'RECEIVED_IN_CASH':
-      return 'RECEIVED';
-    case 'CONFIRMED':
-      return 'CONFIRMED';
-    case 'OVERDUE':
-      return 'OVERDUE';
-    case 'REFUNDED':
-    case 'REFUND_REQUESTED':
-      return 'REFUNDED';
-    case 'PENDING':
-      return 'PENDING';
-    default:
-      return 'CANCELLED';
-  }
+  return mapAsaasPaymentStatus(asaasStatus) as BillingChargeStatus;
 }
 
 /**
