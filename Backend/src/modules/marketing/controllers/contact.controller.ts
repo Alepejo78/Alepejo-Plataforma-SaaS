@@ -20,10 +20,12 @@ function escapeHtml(value: string): string {
 /**
  * Sem empresa dona (é o site público) — usa o SMTP global do `.env`
  * (mesmo fallback de `EmailNotificationsService.resolveConfig`,
- * companyId inexistente cai direto nele) e manda pro próprio e-mail
- * cadastrado no SMTP, que é quem hoje responde pelos contatos comerciais.
+ * companyId inexistente cai direto nele) pra enviar, mas o destino é
+ * fixo — quem responde pelos contatos comerciais, independente de
+ * qual conta está autenticada no SMTP.
  */
 const PUBLIC_SITE_COMPANY_ID = 'public-site';
+const CONTACT_RECIPIENT_EMAIL = 'alessandro.lourenco@alepejo.com.br';
 
 @ApiTags('Marketing')
 @Controller('contact')
@@ -41,9 +43,7 @@ export class ContactController {
     description: 'Não foi possível enviar — tente novamente mais tarde.',
   })
   async submit(@Body() dto: ContactDto) {
-    const recipient = process.env.SMTP_USER;
-
-    if (!recipient) {
+    if (!process.env.SMTP_USER) {
       throw new BadGatewayException(
         'Envio de contato não configurado.',
       );
@@ -61,7 +61,7 @@ export class ContactController {
 
     const result = await this.emailNotifications.sendVerbose(
       PUBLIC_SITE_COMPANY_ID,
-      recipient,
+      CONTACT_RECIPIENT_EMAIL,
       `Novo contato: ${dto.name}`,
       html,
     );
