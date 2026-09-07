@@ -984,15 +984,16 @@ export default function HomePage() {
                   Nenhum colaborador ativo cadastrado ainda.
                 </p>
               ) : (
-                <div className="h-36">
+                <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={sectorChart}
                         dataKey="value"
                         nameKey="name"
-                        innerRadius={28}
-                        outerRadius={52}
+                        cx="35%"
+                        innerRadius={45}
+                        outerRadius={80}
                         paddingAngle={2}
                       >
                         {sectorChart.map((item, i) => (
@@ -1007,6 +1008,9 @@ export default function HomePage() {
                         ]}
                       />
                       <Legend
+                        layout="vertical"
+                        align="right"
+                        verticalAlign="middle"
                         wrapperStyle={{ fontSize: 11 }}
                         iconSize={8}
                       />

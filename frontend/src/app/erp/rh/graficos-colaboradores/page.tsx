@@ -245,7 +245,7 @@ export default function GraficosColaboradoresPage() {
                     Sem dados.
                   </p>
                 ) : (
-                  <div style={{ height: 220 }}>
+                  <div style={{ height: 280 }}>
                     <ResponsiveContainer
                       width="100%"
                       height="100%"
@@ -255,8 +255,9 @@ export default function GraficosColaboradoresPage() {
                           data={bySector}
                           dataKey="count"
                           nameKey="sectorName"
-                          innerRadius={45}
-                          outerRadius={75}
+                          cx="38%"
+                          innerRadius={65}
+                          outerRadius={115}
                           paddingAngle={2}
                         >
                           {bySector.map((entry, index) => (
@@ -272,8 +273,11 @@ export default function GraficosColaboradoresPage() {
                         </Pie>
                         <Tooltip contentStyle={tooltipStyle} />
                         <Legend
+                          layout="vertical"
+                          align="right"
+                          verticalAlign="middle"
                           wrapperStyle={{
-                            fontSize: 11,
+                            fontSize: 12,
                             color: "var(--text-secondary)",
                           }}
                         />
