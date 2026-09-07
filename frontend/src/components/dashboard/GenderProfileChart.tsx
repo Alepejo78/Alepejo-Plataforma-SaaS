@@ -1,19 +1,18 @@
 "use client";
 
 /**
- * Perfil por gênero em estilo infográfico: uma linha por gênero, com
- * uma grade densa de 100 bonequinhos (10 colunas, quebra em 10
- * fileiras) representando o percentual — cada bonequinho vale 1%,
- * colorido até a marca e apagado dali pra frente — seguida do ícone
- * sólido + anel de progresso. A grade de bonequinhos ocupa a largura
- * disponível em tamanho fixo (justificada, não cresce); o anel
- * acompanha a ALTURA do card (`h-full` até um teto) — se o card
- * ficar mais alto por causa de um vizinho no mesmo grid (ex.: lista
- * de aniversariantes), o anel cresce junto. Requer que quem usa este
- * componente dê uma altura de verdade pra ele (`h-full`/`flex-1` numa
- * cadeia de flex/grid até o card) — sem isso o anel fica no tamanho
- * mínimo do conteúdo. Mesmo padrão nos dois lugares que usam (Visão
- * Geral e Gráficos de colaboradores).
+ * Perfil por gênero em estilo infográfico, dividido ao meio como se
+ * fossem dois cards dentro de um (sem borda entre eles): do lado
+ * esquerdo, a grade densa de 100 bonequinhos por gênero (10 colunas,
+ * 1 bonequinho = 1%, colorido até a marca e apagado dali pra frente,
+ * tamanho fixo — não cresce); do lado direito, o ícone sólido + anel
+ * de progresso de cada gênero, aí sim proporcional ao tamanho da
+ * própria metade (largura E altura), incluindo quando o card cresce
+ * por causa de um vizinho no mesmo grid (ex.: lista de
+ * aniversariantes) — usa unidade de container query (`cqh`) pro texto
+ * do percentual escalar junto, sem precisar medir nada em JS. Mesmo
+ * padrão nos dois lugares que usam (Visão Geral e Gráficos de
+ * colaboradores).
  */
 
 export const GENDER_PROFILE_COLORS = {
@@ -72,25 +71,57 @@ function PictogramPerson({
   );
 }
 
+const GRID_ICONS = 100;
+const GRID_COLUMNS = 10;
+
+/** Grade de bonequinhos de um gênero — tamanho fixo, ocupa a largura da metade esquerda (justificada, não cresce). */
+function PictogramGrid({
+  gender,
+  count,
+  percent,
+  color,
+  iconSize,
+}: {
+  gender: "MASCULINO" | "FEMININO";
+  count: number;
+  percent: number;
+  color: string;
+  iconSize: number;
+}) {
+  const filledCount = Math.round((percent / 100) * GRID_ICONS);
+
+  return (
+    <div
+      className="grid min-h-0 flex-1 content-center gap-[2px]"
+      style={{ gridTemplateColumns: `repeat(${GRID_COLUMNS}, 1fr)` }}
+      title={`${count} colaborador(es)`}
+    >
+      {Array.from({ length: GRID_ICONS }, (_, i) => (
+        <div
+          key={i}
+          className="justify-self-center"
+          style={{ height: iconSize * 1.15, width: iconSize }}
+        >
+          <PictogramPerson gender={gender} color={color} filled={i < filledCount} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
- * Ícone sólido (homem/mulher) + anel de progresso com o percentual no
- * meio. Acompanha a ALTURA da fileira (`h-full`, com `maxSize` como
- * teto) — quando o card cresce (ex.: card vizinho com mais
- * aniversariantes empurra a fileira do CSS grid pra ficar mais alta),
- * o anel cresce junto. O texto do percentual usa unidade de container
- * query (`cqh`) pra escalar com a altura real do anel sem precisar
- * medir nada em JS.
+ * Ícone sólido + anel de progresso de um gênero — ocupa a metade
+ * direita, proporcional a ela (largura E altura via `aspect-square`
+ * dentro de um `flex-1` que estica nos dois eixos).
  */
-function GenderRingIcon({
+function GenderRing({
   gender,
   percent,
   color,
-  maxSize,
 }: {
   gender: "MASCULINO" | "FEMININO";
   percent: number;
   color: string;
-  maxSize: number;
 }) {
   const radius = 32;
   const circumference = 2 * Math.PI * radius;
@@ -98,14 +129,14 @@ function GenderRingIcon({
   const offset = circumference * (1 - clamped / 100);
 
   return (
-    <div className="flex h-full shrink-0 items-center gap-1.5">
-      <svg viewBox="0 0 100 140" className="h-[62%] w-auto">
+    <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
+      <svg viewBox="0 0 100 140" className="h-[55%] w-auto shrink-0">
         <g fill={color}>{PERSON_SILHOUETTE[gender]}</g>
       </svg>
 
       <div
-        className="relative aspect-square h-full shrink-0"
-        style={{ maxHeight: maxSize, containerType: "size" }}
+        className="relative aspect-square h-full max-w-full"
+        style={{ containerType: "size" }}
       >
         <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
           <circle cx="40" cy="40" r={radius} fill="none" stroke="var(--surface-hover)" strokeWidth="8" />
@@ -133,58 +164,6 @@ function GenderRingIcon({
   );
 }
 
-const GRID_ICONS = 100;
-const GRID_COLUMNS = 10;
-
-function GenderRow({
-  gender,
-  count,
-  percent,
-  color,
-  ringMaxSize,
-  iconSize,
-}: {
-  gender: "MASCULINO" | "FEMININO";
-  count: number;
-  percent: number;
-  color: string;
-  ringMaxSize: number;
-  iconSize: number;
-}) {
-  const filledCount = Math.round((percent / 100) * GRID_ICONS);
-
-  return (
-    <div className="flex min-h-0 flex-1 items-center gap-2">
-      <div
-        className="grid min-w-0 flex-1 gap-[2px]"
-        style={{ gridTemplateColumns: `repeat(${GRID_COLUMNS}, 1fr)` }}
-        title={`${count} colaborador(es)`}
-      >
-        {Array.from({ length: GRID_ICONS }, (_, i) => (
-          <div
-            key={i}
-            className="justify-self-center"
-            style={{ height: iconSize * 1.15, width: iconSize }}
-          >
-            <PictogramPerson
-              gender={gender}
-              color={color}
-              filled={i < filledCount}
-            />
-          </div>
-        ))}
-      </div>
-
-      <GenderRingIcon
-        gender={gender}
-        percent={percent}
-        color={color}
-        maxSize={ringMaxSize}
-      />
-    </div>
-  );
-}
-
 export function GenderProfileChart({
   masculinoCount,
   femininoCount,
@@ -204,30 +183,42 @@ export function GenderProfileChart({
   const masculinoPercent = (masculinoCount / total) * 100;
   const femininoPercent = (femininoCount / total) * 100;
 
-  // Teto pro anel — deixa crescer com a altura da fileira (card mais
-  // alto por causa de um vizinho, ex.: lista de aniversariantes), mas
-  // sem passar de um tamanho que fique desproporcional.
-  const ringMaxSize = compact ? 64 : 110;
   const iconSize = compact ? 8 : 13;
+  const gap = compact ? "gap-2" : "gap-4";
 
   return (
-    <div className={`flex h-full w-full flex-col ${compact ? "gap-2" : "gap-4"}`}>
-      <GenderRow
-        gender="MASCULINO"
-        count={masculinoCount}
-        percent={masculinoPercent}
-        color={GENDER_PROFILE_COLORS.MASCULINO}
-        ringMaxSize={ringMaxSize}
-        iconSize={iconSize}
-      />
-      <GenderRow
-        gender="FEMININO"
-        count={femininoCount}
-        percent={femininoPercent}
-        color={GENDER_PROFILE_COLORS.FEMININO}
-        ringMaxSize={ringMaxSize}
-        iconSize={iconSize}
-      />
+    <div className="flex h-full w-full gap-4">
+      {/* Metade esquerda: bonequinhos */}
+      <div className={`flex min-w-0 flex-1 flex-col ${gap}`}>
+        <PictogramGrid
+          gender="MASCULINO"
+          count={masculinoCount}
+          percent={masculinoPercent}
+          color={GENDER_PROFILE_COLORS.MASCULINO}
+          iconSize={iconSize}
+        />
+        <PictogramGrid
+          gender="FEMININO"
+          count={femininoCount}
+          percent={femininoPercent}
+          color={GENDER_PROFILE_COLORS.FEMININO}
+          iconSize={iconSize}
+        />
+      </div>
+
+      {/* Metade direita: ícone + anel, proporcional à própria metade */}
+      <div className={`flex min-w-0 flex-1 flex-col ${gap}`}>
+        <GenderRing
+          gender="MASCULINO"
+          percent={masculinoPercent}
+          color={GENDER_PROFILE_COLORS.MASCULINO}
+        />
+        <GenderRing
+          gender="FEMININO"
+          percent={femininoPercent}
+          color={GENDER_PROFILE_COLORS.FEMININO}
+        />
+      </div>
     </div>
   );
 }
