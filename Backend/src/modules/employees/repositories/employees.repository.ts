@@ -163,6 +163,16 @@ export class EmployeesRepository {
     });
   }
 
+  /** Usado pela importação de planilha pra decidir criar x atualizar — CPF é a chave natural (`@@unique([companyId, cpf])`). */
+  async findByCpf(
+    companyId: string,
+    cpf: string,
+  ): Promise<Employee | null> {
+    return this.prisma.employee.findFirst({
+      where: { companyId, cpf },
+    });
+  }
+
   async findAll(companyId: string, filter: EmployeeFilterDto) {
     const {
       search,

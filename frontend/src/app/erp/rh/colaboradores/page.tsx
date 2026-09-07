@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Upload,
   UserCog,
   X,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { EmployeeImportModal } from "@/components/employee-import/EmployeeImportModal";
 
 import {
   BANK_ACCOUNT_TYPE_LABELS,
@@ -340,6 +342,7 @@ export default function ColaboradoresPage() {
   const [search, setSearch] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("Pessoais");
   const [editingId, setEditingId] = useState<string | null>(
     null
@@ -908,6 +911,17 @@ export default function ColaboradoresPage() {
                   <UserCog size={18} />
                   Funções e cargos
                 </Link>
+
+                <Can permission="employee.import">
+                  <button
+                    type="button"
+                    onClick={() => setImportOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                  >
+                    <Upload size={18} />
+                    Importar planilha
+                  </button>
+                </Can>
 
                 <Can permission="employee.create">
                   <button
@@ -3073,6 +3087,13 @@ export default function ColaboradoresPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {importOpen && (
+        <EmployeeImportModal
+          onClose={() => setImportOpen(false)}
+          onSaved={() => void load()}
+        />
       )}
     </AppShell>
   );

@@ -64,6 +64,7 @@ import { SiteVisitsModule } from './modules/site-visits/site-visits.module';
 import { InAppNotificationsModule } from './modules/in-app-notifications/in-app-notifications.module';
 import { ProductImportModule } from './modules/product-import/product-import.module';
 import { PartnerImportModule } from './modules/partner-import/partner-import.module';
+import { EmployeeImportModule } from './modules/employee-import/employee-import.module';
 import { FinancialEntryImportModule } from './modules/financial-entry-import/financial-entry-import.module';
 
 @Module({
@@ -124,6 +125,7 @@ import { FinancialEntryImportModule } from './modules/financial-entry-import/fin
     InAppNotificationsModule,
     ProductImportModule,
     PartnerImportModule,
+    EmployeeImportModule,
     FinancialEntryImportModule,
   ],
   controllers: [AppController],

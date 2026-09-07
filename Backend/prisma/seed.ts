@@ -662,6 +662,7 @@ const permissionGroups = [
       ["employee.create", "Cadastrar Colaboradores"],
       ["employee.update", "Alterar Colaboradores"],
       ["employee.delete", "Excluir Colaboradores"],
+      ["employee.import", "Importar Colaboradores"],
       [
         "employee.report",
         "Ver Relatórios de RH (Funções, Exames, Aniversariantes)",
