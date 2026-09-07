@@ -60,6 +60,19 @@ function money(value: number): string {
   });
 }
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  DINHEIRO: 'Dinheiro',
+  PIX: 'PIX',
+  BOLETO: 'Boleto',
+  TRANSFERENCIA: 'Transferência',
+  DEPOSITO: 'Depósito',
+  DEBITO: 'Cartão de débito',
+  CREDITO: 'Cartão de crédito',
+  CHEQUE: 'Cheque',
+  DESCONTO_NF: 'Desconto em nota fiscal',
+  OUTRO: 'Outro',
+};
+
 function dateLabel(date: Date): string {
   return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 }
@@ -573,11 +586,19 @@ export class EntryChargeService {
       };
     }
 
-    // Método gerenciável mas sem gateway configurado ainda — avisa sem link real.
+    // Método gerenciável mas sem gateway/chave configurado ainda — só
+    // lembra o título e a forma de pagamento escolhida, sem link real.
+    const methodLabel = entry.paymentMethod
+      ? PAYMENT_METHOD_LABELS[entry.paymentMethod]
+      : null;
+    const methodLine = methodLabel
+      ? `Forma de pagamento: ${methodLabel}.`
+      : '';
+
     return {
       subject: `Título a pagar — ${companyName}`,
-      emailHtml: introHtml,
-      whatsappText: intro,
+      emailHtml: `${introHtml}${methodLine ? `<p>${methodLine}</p>` : ''}`,
+      whatsappText: [intro, methodLine].filter(Boolean).join('\n'),
     };
   }
 
