@@ -110,6 +110,15 @@ export class PaymentMethodSettingsRepository {
       ...(dto.cardInterestRatePerInstallment !== undefined && {
         cardInterestRatePerInstallment: dto.cardInterestRatePerInstallment,
       }),
+      ...(dto.pixKeyEnabled !== undefined && {
+        pixKeyEnabled: dto.pixKeyEnabled,
+      }),
+      ...(dto.pixKeyType !== undefined && { pixKeyType: dto.pixKeyType }),
+      ...(dto.pixKey !== undefined && { pixKey: dto.pixKey }),
+      ...(dto.pixKeyOwnerName !== undefined && {
+        pixKeyOwnerName: dto.pixKeyOwnerName,
+      }),
+      ...(dto.pixKeyCity !== undefined && { pixKeyCity: dto.pixKeyCity }),
     };
 
     return this.prisma.paymentMethodSettings.upsert({

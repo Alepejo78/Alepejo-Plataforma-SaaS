@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 
-import { SurchargeType } from '@prisma/client';
+import { PixKeyType, SurchargeType } from '@prisma/client';
 
 export class UpsertPaymentMethodSettingsDto {
   @ApiPropertyOptional()
@@ -94,4 +94,29 @@ export class UpsertPaymentMethodSettingsDto {
   @IsNumber()
   @Min(0)
   cardInterestRatePerInstallment?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  pixKeyEnabled?: boolean;
+
+  @ApiPropertyOptional({ enum: PixKeyType })
+  @IsOptional()
+  @IsEnum(PixKeyType)
+  pixKeyType?: PixKeyType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  pixKey?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  pixKeyOwnerName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  pixKeyCity?: string;
 }

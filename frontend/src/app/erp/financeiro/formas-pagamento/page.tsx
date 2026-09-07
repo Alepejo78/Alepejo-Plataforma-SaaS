@@ -10,6 +10,7 @@ import { env } from "@/lib/env";
 import {
   paymentMethodSettingsService,
   type PaymentMethodSettings,
+  type PixKeyType,
   type SurchargeType,
 } from "@/services/payment-method-settings.service";
 import {
@@ -185,6 +186,12 @@ export default function FormasDePagamentoPage() {
     value: "0",
   });
   const [pix, setPix] = useState<SurchargeFields>({ type: "", value: "0" });
+
+  const [pixKeyEnabled, setPixKeyEnabled] = useState(false);
+  const [pixKeyType, setPixKeyType] = useState<PixKeyType>("CPF");
+  const [pixKey, setPixKey] = useState("");
+  const [pixKeyOwnerName, setPixKeyOwnerName] = useState("");
+  const [pixKeyCity, setPixKeyCity] = useState("");
   const [card, setCard] = useState<SurchargeFields>({
     type: "",
     value: "0",
@@ -236,6 +243,12 @@ export default function FormasDePagamentoPage() {
         type: result.pixSurchargeType ?? "",
         value: String(Number(result.pixSurchargeValue)),
       });
+
+      setPixKeyEnabled(result.pixKeyEnabled);
+      setPixKeyType(result.pixKeyType ?? "CPF");
+      setPixKey(result.pixKey ?? "");
+      setPixKeyOwnerName(result.pixKeyOwnerName ?? "");
+      setPixKeyCity(result.pixKeyCity ?? "");
       setCard({
         type: result.cardSurchargeType ?? "",
         value: String(Number(result.cardSurchargeValue)),
@@ -292,6 +305,11 @@ export default function FormasDePagamentoPage() {
           Number(cardInterestFreeInstallments) || 0,
         cardInterestRatePerInstallment:
           Number(cardInterestRate.replace(",", ".")) || 0,
+        pixKeyEnabled,
+        pixKeyType,
+        pixKey,
+        pixKeyOwnerName,
+        pixKeyCity,
       });
 
       setSettings(updated);
@@ -570,6 +588,97 @@ export default function FormasDePagamentoPage() {
                   setSaved(false);
                 }}
               />
+
+              <ToggleRow
+                title="Chave PIX própria (sem gateway)"
+                description={
+                  pixKeyEnabled
+                    ? "Ligado — sem o Asaas configurado, o PIX usa essa chave: gera QR Code na hora e manda um link de pagamento ao cliente. Sem baixa automática (confirme o recebimento na mão)."
+                    : "Desligado — sem o Asaas configurado, o PIX fica só um aviso informativo, sem chave nem QR Code."
+                }
+                checked={pixKeyEnabled}
+                onChange={(value) => {
+                  setPixKeyEnabled(value);
+                  setSaved(false);
+                }}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className={labelClass}>Tipo de chave</label>
+
+                  <select
+                    className={fieldClass}
+                    value={pixKeyType}
+                    onChange={(e) => {
+                      setPixKeyType(e.target.value as PixKeyType);
+                      setSaved(false);
+                    }}
+                  >
+                    <option value="CPF">CPF</option>
+                    <option value="CNPJ">CNPJ</option>
+                    <option value="EMAIL">E-mail</option>
+                    <option value="TELEFONE">Telefone</option>
+                    <option value="ALEATORIA">Aleatória</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Chave PIX</label>
+
+                  <input
+                    className={fieldClass}
+                    placeholder="Cole aqui a chave PIX"
+                    value={pixKey}
+                    onChange={(e) => {
+                      setPixKey(e.target.value);
+                      setSaved(false);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>
+                    Nome do recebedor (no QR Code)
+                  </label>
+
+                  <input
+                    maxLength={25}
+                    className={fieldClass}
+                    placeholder="Até 25 caracteres, sem acento"
+                    value={pixKeyOwnerName}
+                    onChange={(e) => {
+                      setPixKeyOwnerName(e.target.value);
+                      setSaved(false);
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Cidade do recebedor (no QR Code)
+                  </label>
+
+                  <input
+                    maxLength={15}
+                    className={fieldClass}
+                    placeholder="Até 15 caracteres, sem acento"
+                    value={pixKeyCity}
+                    onChange={(e) => {
+                      setPixKeyCity(e.target.value);
+                      setSaved(false);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-[var(--text-muted)]">
+                Nome e cidade são exigidos pelo padrão do Banco Central
+                pra gerar o QR Code — aparecem pro cliente que for pagar,
+                iguais ao que aparece hoje no PIX do seu banco.
+              </p>
             </section>
 
             <section className={sectionClass}>

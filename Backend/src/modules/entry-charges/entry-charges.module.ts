@@ -7,6 +7,7 @@ import { PaymentMethodSettingsModule } from '../payment-method-settings/payment-
 import { FinancialEntriesModule } from '../financial-entries/financial-entries.module';
 
 import { EntryChargeWebhookController } from './controllers/entry-charge-webhook.controller';
+import { EntryChargePublicController } from './controllers/entry-charge-public.controller';
 import { EntryChargeService } from './services/entry-charge.service';
 
 @Module({
@@ -18,7 +19,7 @@ import { EntryChargeService } from './services/entry-charge.service';
     forwardRef(() => FinancialEntriesModule),
   ],
 
-  controllers: [EntryChargeWebhookController],
+  controllers: [EntryChargeWebhookController, EntryChargePublicController],
 
   providers: [EntryChargeService],
 

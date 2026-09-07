@@ -7,6 +7,7 @@ interface ApiEnvelope<T> {
 }
 
 export type SurchargeType = "PERCENT" | "FIXED";
+export type PixKeyType = "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "ALEATORIA";
 
 export interface PaymentMethodSettings {
   id: string;
@@ -27,6 +28,11 @@ export interface PaymentMethodSettings {
   cardMaxInstallments: number;
   cardInterestFreeInstallments: number;
   cardInterestRatePerInstallment: string | number;
+  pixKeyEnabled: boolean;
+  pixKeyType: PixKeyType | null;
+  pixKey: string | null;
+  pixKeyOwnerName: string | null;
+  pixKeyCity: string | null;
 }
 
 export interface PaymentMethodSettingsPayload {
@@ -45,6 +51,11 @@ export interface PaymentMethodSettingsPayload {
   cardMaxInstallments?: number;
   cardInterestFreeInstallments?: number;
   cardInterestRatePerInstallment?: number;
+  pixKeyEnabled?: boolean;
+  pixKeyType?: PixKeyType | null;
+  pixKey?: string;
+  pixKeyOwnerName?: string;
+  pixKeyCity?: string;
 }
 
 export interface TestAsaasResult {

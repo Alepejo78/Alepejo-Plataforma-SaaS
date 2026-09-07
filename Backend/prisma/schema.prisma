@@ -2143,6 +2143,19 @@ model PaymentMethodSettings {
   cardInterestFreeInstallments   Int            @default(1)
   cardInterestRatePerInstallment Decimal        @default(0) @db.Decimal(5, 2)
 
+  /// Chave PIX própria da empresa (sem gateway) — liga/desliga
+  /// independente do Asaas. Usada como alternativa mais simples: gera
+  /// QR Code (BR Code padrão Bacen) na hora, sem precisar de conta em
+  /// gateway nenhum, mas sem baixa automática (o cliente paga direto
+  /// na chave, a empresa dá baixa manual quando confirmar o recebimento).
+  pixKeyEnabled Boolean     @default(false)
+  pixKeyType    PixKeyType?
+  pixKey        String?
+  /// Nome do recebedor mostrado no QR Code (máx. 25 caracteres, sem acento).
+  pixKeyOwnerName String?
+  /// Cidade do recebedor mostrada no QR Code (máx. 15 caracteres, sem acento).
+  pixKeyCity      String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2179,6 +2192,11 @@ model EntryCharge {
   bankSlipUrl    String? @db.VarChar(255)
   pixPayload     String?
   pixQrCodeImage String? @db.Text
+
+  /// Token do link público de pagamento (chave PIX própria, sem
+  /// gateway) — guardado em texto puro (baixa sensibilidade: só dá
+  /// acesso aos mesmos dados que já vão ser mandados pro cliente pagar).
+  publicToken String? @unique
 
   lastSentAt DateTime?
   createdAt  DateTime  @default(now())

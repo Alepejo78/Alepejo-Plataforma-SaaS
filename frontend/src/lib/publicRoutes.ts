@@ -29,6 +29,10 @@
  *   cancela sem precisar (nem poder) logar no sistema.
  * - `/confirmar-ordem-servico`: mesma ideia, pra confirmação digital
  *   de execução de serviço (Ordem de Serviço).
+ * - `/pagamento-pix`: link de pagamento via chave PIX própria (sem
+ *   gateway) enviado por e-mail/WhatsApp junto do título a receber —
+ *   mostra a chave, o QR Code e um botão de copiar, sem precisar de
+ *   login.
  * - `/<empresa>/login`: login com o nome da empresa fixo na URL — o
  *   link que o e-mail de "definir senha" passa a mostrar como o
  *   acesso permanente do usuário (ver `sendPasswordResetLink` no
@@ -59,6 +63,7 @@ export const PUBLIC_ROUTES = [
   "/confirmar-ponto",
   "/confirmar-orcamento",
   "/confirmar-ordem-servico",
+  "/pagamento-pix",
 ] as const;
 
 /** `/<slug>/login` — exatamente dois segmentos, o segundo literalmente "login". */

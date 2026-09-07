@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   EntryChargeStatus,
@@ -13,8 +14,12 @@ import {
   SurchargeType,
 } from '@prisma/client';
 
+import * as crypto from 'crypto';
+import * as QRCode from 'qrcode';
+
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { mapAsaasPaymentStatus } from '../../../core/utils/asaas-status.util';
+import { buildPixBRCode } from '../../../core/utils/pix-brcode.util';
 
 import {
   AsaasCredentials,
@@ -223,25 +228,98 @@ export class EntryChargeService {
         entry.companyId,
       );
 
-    if (!billingType || !credentials || !entry.partner!.email) {
-      // Sem gateway configurado (ou sem e-mail pro cliente virar
-      // cliente no Asaas) — fica só informativo, sem link real.
-      return this.prisma.entryCharge.create({
-        data: {
-          financialEntryId: entry.id,
-          billingType: billingType ?? 'UNDEFINED',
-          status: EntryChargeStatus.PENDING,
-          amountCharged,
-        },
-      });
+    if (billingType && credentials && entry.partner!.email) {
+      return this.createAsaasCharge(
+        entry,
+        billingType,
+        amountCharged,
+        credentials,
+      );
     }
 
-    return this.createAsaasCharge(
-      entry,
-      billingType,
-      amountCharged,
-      credentials,
-    );
+    if (entry.paymentMethod === PaymentMethod.PIX) {
+      const staticPixCharge = await this.createStaticPixChargeIfEnabled(
+        entry,
+        amountCharged,
+        settings,
+      );
+
+      if (staticPixCharge) {
+        return staticPixCharge;
+      }
+    }
+
+    // Sem gateway configurado (ou sem e-mail pro cliente virar cliente
+    // no Asaas) e sem chave PIX própria — fica só informativo, sem
+    // link real.
+    return this.prisma.entryCharge.create({
+      data: {
+        financialEntryId: entry.id,
+        billingType: billingType ?? 'UNDEFINED',
+        status: EntryChargeStatus.PENDING,
+        amountCharged,
+      },
+    });
+  }
+
+  /**
+   * Chave PIX própria da empresa, sem gateway — gera o BR Code (padrão
+   * Bacen) e o QR Code na hora, localmente. Sem baixa automática (não
+   * tem webhook aqui): fica pendente até a empresa confirmar o
+   * recebimento na mão, igual transferência/depósito.
+   */
+  private async createStaticPixChargeIfEnabled(
+    entry: EntryWithPartner,
+    amountCharged: number,
+    settings: {
+      pixKeyEnabled: boolean;
+      pixKey: string | null;
+      pixKeyOwnerName: string | null;
+      pixKeyCity: string | null;
+    },
+  ) {
+    if (
+      !settings.pixKeyEnabled ||
+      !settings.pixKey ||
+      !settings.pixKeyOwnerName ||
+      !settings.pixKeyCity
+    ) {
+      return null;
+    }
+
+    const txid = entry.id.replace(/[^A-Za-z0-9]/g, '').slice(0, 25);
+
+    const pixPayload = buildPixBRCode({
+      key: settings.pixKey,
+      merchantName: settings.pixKeyOwnerName,
+      merchantCity: settings.pixKeyCity,
+      amount: amountCharged,
+      txid,
+    });
+
+    const pixQrCodeImage = await QRCode.toBuffer(pixPayload)
+      .then((buffer) => buffer.toString('base64'))
+      .catch((err: unknown) => {
+        this.logger.warn(
+          `Falha ao gerar QR Code do PIX do título ${entry.id}: ${
+            err instanceof Error ? err.message : err
+          }`,
+        );
+
+        return undefined;
+      });
+
+    return this.prisma.entryCharge.create({
+      data: {
+        financialEntryId: entry.id,
+        billingType: 'PIX_MANUAL',
+        status: EntryChargeStatus.PENDING,
+        amountCharged,
+        pixPayload,
+        pixQrCodeImage,
+        publicToken: crypto.randomBytes(24).toString('hex'),
+      },
+    });
   }
 
   private surchargeFor(
@@ -364,7 +442,16 @@ export class EntryChargeService {
 
   private async buildInstructions(
     entry: EntryWithPartner,
-    charge: { billingType: string; amountCharged: unknown; invoiceUrl: string | null; bankSlipUrl: string | null; pixPayload: string | null; pixQrCodeImage: string | null },
+    charge: {
+      id: string;
+      billingType: string;
+      amountCharged: unknown;
+      invoiceUrl: string | null;
+      bankSlipUrl: string | null;
+      pixPayload: string | null;
+      pixQrCodeImage: string | null;
+      publicToken: string | null;
+    },
     /** false quando quem chama já mandou seu próprio texto de abertura (ex.: lembrete de vencimento) — evita repetir saudação/valor/vencimento. */
     includeIntro = true,
   ): Promise<Instructions | null> {
@@ -422,6 +509,29 @@ export class EntryChargeService {
         subject: `Boleto disponível — ${companyName}`,
         emailHtml: `${introHtml}<p>Seu boleto está disponível: <a href="${charge.bankSlipUrl}">${charge.bankSlipUrl}</a></p>`,
         whatsappText: text,
+      };
+    }
+
+    if (charge.billingType === 'PIX_MANUAL' && charge.publicToken) {
+      const frontendUrl =
+        process.env.FRONTEND_URL ?? 'http://localhost:3000';
+      const paymentLink = `${frontendUrl}/pagamento-pix?id=${charge.id}&token=${charge.publicToken}`;
+
+      const attachments: EmailAttachment[] | undefined = charge.pixQrCodeImage
+        ? [
+            {
+              filename: 'pix-qrcode.png',
+              content: Buffer.from(charge.pixQrCodeImage, 'base64'),
+              contentType: 'image/png',
+            },
+          ]
+        : undefined;
+
+      return {
+        subject: `Pague com PIX — ${companyName}`,
+        emailHtml: `${introHtml}<p>Pague com PIX: <a href="${paymentLink}">${paymentLink}</a></p><p>A página mostra a chave, o QR Code e um botão pra copiar.</p>`,
+        whatsappText: `${intro} Pague com PIX — acesse o link pra ver a chave e o QR Code:\n${paymentLink}`,
+        attachments,
       };
     }
 
@@ -538,6 +648,53 @@ export class EntryChargeService {
     }
 
     await this.notify(entry as EntryWithPartner);
+  }
+
+  /**
+   * Página pública de pagamento (chave PIX própria, sem gateway) — o
+   * link mandado por e-mail/WhatsApp aponta pra cá. Só existe pra
+   * cobranças `PIX_MANUAL`; as outras formas (boleto/PIX/cartão via
+   * Asaas) já têm página própria hospedada pelo gateway.
+   */
+  async getPublicInfo(id: string, token: string) {
+    const charge = await this.prisma.entryCharge.findUnique({
+      where: { id },
+      include: { financialEntry: { include: { partner: true } } },
+    });
+
+    if (
+      !charge ||
+      charge.billingType !== 'PIX_MANUAL' ||
+      !charge.publicToken ||
+      charge.publicToken !== token
+    ) {
+      throw new NotFoundException('Link inválido.');
+    }
+
+    const entry = charge.financialEntry;
+
+    const [company, settings] = await Promise.all([
+      this.prisma.company.findUnique({
+        where: { id: entry.companyId },
+        select: { tradeName: true, legalName: true, logo: true, brandingLogoLightEnabled: true },
+      }),
+      this.paymentMethodSettingsRepository.getOrCreate(entry.companyId),
+    ]);
+
+    return {
+      companyName: company?.tradeName || company?.legalName || '',
+      companyLogo: company?.brandingLogoLightEnabled ? company.logo : null,
+      partnerName: entry.partner
+        ? entry.partner.tradeName || entry.partner.legalName
+        : '',
+      amount: Number(charge.amountCharged),
+      dueDate: entry.dueDate,
+      status: entry.status,
+      pixKey: settings.pixKey,
+      pixKeyType: settings.pixKeyType,
+      pixPayload: charge.pixPayload,
+      pixQrCodeImage: charge.pixQrCodeImage,
+    };
   }
 
   /**
