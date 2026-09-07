@@ -93,6 +93,34 @@ function asaasBillingTypeFor(method: PaymentMethod | null): string | null {
   }
 }
 
+/**
+ * `billingType`(s) válido(s) pra forma de pagamento atual — usado pra
+ * detectar quando o título foi editado (ex.: era PIX, virou boleto)
+ * DEPOIS de já ter gerado uma cobrança: a cobrança antiga fica presa
+ * na forma de pagamento com que foi criada, e sem essa checagem o
+ * PIX (ou boleto, etc.) antigo continuaria sendo reenviado pra sempre.
+ * `null` = forma de pagamento sem cobrança gerenciada (dinheiro,
+ * cheque, desconto em NF, outro, ou nenhuma).
+ */
+function expectedBillingTypesFor(
+  method: PaymentMethod | null,
+): string[] | null {
+  switch (method) {
+    case PaymentMethod.BOLETO:
+      return ['BOLETO'];
+    case PaymentMethod.PIX:
+      return ['PIX', 'PIX_MANUAL'];
+    case PaymentMethod.CREDITO:
+    case PaymentMethod.DEBITO:
+      return ['CREDIT_CARD', 'UNDEFINED'];
+    case PaymentMethod.TRANSFERENCIA:
+    case PaymentMethod.DEPOSITO:
+      return ['BANK_TRANSFER'];
+    default:
+      return null;
+  }
+}
+
 function applySurcharge(
   base: number,
   type: SurchargeType | null,
@@ -196,7 +224,26 @@ export class EntryChargeService {
     });
 
     if (existing) {
-      return existing;
+      const expectedBillingTypes = expectedBillingTypesFor(
+        entry.paymentMethod,
+      );
+
+      if (
+        expectedBillingTypes &&
+        expectedBillingTypes.includes(existing.billingType)
+      ) {
+        return existing;
+      }
+
+      // Forma de pagamento foi trocada depois de já ter gerado essa
+      // cobrança (ex.: era PIX, virou boleto) — descarta a antiga (só
+      // localmente; não cancela nada já criado no Asaas) e gera de
+      // novo, compatível com a forma de pagamento atual.
+      await this.prisma.entryCharge.delete({ where: { id: existing.id } });
+
+      if (!expectedBillingTypes) {
+        return null;
+      }
     }
 
     const settings =
