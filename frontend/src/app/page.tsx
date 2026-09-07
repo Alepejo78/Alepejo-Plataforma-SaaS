@@ -842,7 +842,7 @@ export default function HomePage() {
               </p>
             </div>
 
-        <section className="grid gap-5 lg:grid-cols-2">
+        <section className="grid gap-5 lg:grid-cols-3">
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Users
@@ -952,7 +952,7 @@ export default function HomePage() {
                   Nenhum colaborador ativo cadastrado ainda.
                 </p>
               ) : (
-                <div className="flex justify-center">
+                <div className="w-full">
                   <GenderProfileChart
                     masculinoCount={masculinoCount}
                     femininoCount={femininoCount}

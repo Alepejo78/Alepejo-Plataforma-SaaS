@@ -286,7 +286,7 @@ export default function GraficosColaboradoresPage() {
               <Panel title="Colaboradores por sexo">
                 <div
                   style={{ height: 220 }}
-                  className="flex w-full items-center justify-center"
+                  className="flex w-full items-center"
                 >
                   <GenderProfileChart
                     masculinoCount={

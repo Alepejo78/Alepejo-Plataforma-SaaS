@@ -2,10 +2,11 @@
 
 /**
  * Perfil por gênero em estilo infográfico: uma linha por gênero, com
- * um bonequinho pra cada colaborador (até 100 no total — passando
- * disso, os bonequinhos passam a representar o percentual em vez da
- * contagem literal, senão vira uma parede de ícone ilegível) seguido
- * do ícone sólido + anel de progresso com o percentual.
+ * uma grade fixa de 10 bonequinhos (2 fileiras de 5) representando o
+ * percentual — cada bonequinho vale 10%, colorido até a marca e
+ * apagado dali pra frente — seguida do ícone sólido + anel de
+ * progresso com o percentual. Mesmo padrão nos dois lugares que usam
+ * (Visão Geral e Gráficos de colaboradores).
  */
 
 export const GENDER_PROFILE_COLORS = {
@@ -32,20 +33,39 @@ const PERSON_SILHOUETTE = {
   ),
 };
 
-/** Ícone pequeno repetido na fileira — mais simples que a silhueta do anel. */
-function PictogramPerson({ color }: { color: string }) {
+/** Bonequinho pequeno da grade — silhueta diferente por gênero (reto para homem, saia para mulher), igual à referência. */
+function PictogramPerson({
+  gender,
+  color,
+  filled,
+}: {
+  gender: "MASCULINO" | "FEMININO";
+  color: string;
+  filled: boolean;
+}) {
   return (
-    <svg viewBox="0 0 24 28" className="h-full w-full shrink-0">
+    <svg
+      viewBox="0 0 24 30"
+      className="h-full w-full"
+      style={{ opacity: filled ? 1 : 0.25 }}
+    >
       <circle cx="12" cy="6" r="5" fill={color} />
-      <path
-        d="M12 13c-4.5 0-7.5 2.8-7.5 7v6h15v-6c0-4.2-3-7-7.5-7z"
-        fill={color}
-      />
+      {gender === "MASCULINO" ? (
+        <path
+          d="M12 13c-4.5 0-7.5 2.8-7.5 7v7h15v-7c0-4.2-3-7-7.5-7z"
+          fill={color}
+        />
+      ) : (
+        <path
+          d="M12 13c-1.9 0-3.5 1.2-4.1 3L4.5 25h6l.4 4h2.2l.4-4h6l-3.4-9c-.6-1.8-2.2-3-4.1-3z"
+          fill={color}
+        />
+      )}
     </svg>
   );
 }
 
-/** Ícone sólido (homem/mulher) + anel de progresso com o percentual no meio. */
+/** Ícone sólido (homem/mulher) + anel de progresso com o percentual no meio — sempre no mesmo tamanho, não acompanha a largura do card. */
 function GenderRingIcon({
   gender,
   percent,
@@ -68,7 +88,7 @@ function GenderRingIcon({
         <g fill={color}>{PERSON_SILHOUETTE[gender]}</g>
       </svg>
 
-      <div className="relative" style={{ height: size, width: size }}>
+      <div className="relative shrink-0" style={{ height: size, width: size }}>
         <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
           <circle cx="40" cy="40" r={radius} fill="none" stroke="var(--surface-hover)" strokeWidth="8" />
           <circle
@@ -95,10 +115,12 @@ function GenderRingIcon({
   );
 }
 
+const GRID_ICONS = 10;
+const GRID_COLUMNS = 5;
+
 function GenderRow({
   gender,
   count,
-  iconCount,
   percent,
   color,
   ringSize,
@@ -106,21 +128,31 @@ function GenderRow({
 }: {
   gender: "MASCULINO" | "FEMININO";
   count: number;
-  iconCount: number;
   percent: number;
   color: string;
   ringSize: number;
   iconSize: number;
 }) {
+  const filledCount = Math.round((percent / 100) * GRID_ICONS);
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-center gap-3">
       <div
-        className="flex max-w-full flex-wrap items-center gap-0.5"
+        className="grid min-w-0 flex-1 gap-1"
+        style={{ gridTemplateColumns: `repeat(${GRID_COLUMNS}, 1fr)` }}
         title={`${count} colaborador(es)`}
       >
-        {Array.from({ length: iconCount }, (_, i) => (
-          <div key={i} style={{ height: iconSize, width: iconSize * 0.86 }}>
-            <PictogramPerson color={color} />
+        {Array.from({ length: GRID_ICONS }, (_, i) => (
+          <div
+            key={i}
+            className="justify-self-center"
+            style={{ height: iconSize * 1.15, width: iconSize }}
+          >
+            <PictogramPerson
+              gender={gender}
+              color={color}
+              filled={i < filledCount}
+            />
           </div>
         ))}
       </div>
@@ -149,24 +181,14 @@ export function GenderProfileChart({
   const masculinoPercent = (masculinoCount / total) * 100;
   const femininoPercent = (femininoCount / total) * 100;
 
-  // Até 100 colaboradores, cada bonequinho é uma pessoa de verdade.
-  // Passando disso, uma parede de ícones fica ilegível — troca pra
-  // representar o percentual (100 bonequinhos no total, divididos
-  // pela proporção de cada gênero).
-  const masculinoIcons =
-    total <= 100 ? masculinoCount : Math.round(masculinoPercent);
-  const femininoIcons =
-    total <= 100 ? femininoCount : Math.round(femininoPercent);
-
   const ringSize = compact ? 44 : 84;
-  const iconSize = compact ? 12 : 22;
+  const iconSize = compact ? 14 : 24;
 
   return (
-    <div className={compact ? "space-y-2" : "space-y-4"}>
+    <div className={`w-full ${compact ? "space-y-2" : "space-y-4"}`}>
       <GenderRow
         gender="MASCULINO"
         count={masculinoCount}
-        iconCount={masculinoIcons}
         percent={masculinoPercent}
         color={GENDER_PROFILE_COLORS.MASCULINO}
         ringSize={ringSize}
@@ -175,7 +197,6 @@ export function GenderProfileChart({
       <GenderRow
         gender="FEMININO"
         count={femininoCount}
-        iconCount={femininoIcons}
         percent={femininoPercent}
         color={GENDER_PROFILE_COLORS.FEMININO}
         ringSize={ringSize}
