@@ -956,7 +956,6 @@ export default function HomePage() {
                   <GenderProfileChart
                     masculinoCount={masculinoCount}
                     femininoCount={femininoCount}
-                    compact
                   />
                 </div>
               )}

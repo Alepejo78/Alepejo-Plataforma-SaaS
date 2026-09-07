@@ -153,15 +153,15 @@ function GenderRingIcon({
   );
 }
 
+const RING_SIZE = 130;
+const ICON_SIZE = 13;
+
 export function GenderProfileChart({
   masculinoCount,
   femininoCount,
-  compact = false,
 }: {
   masculinoCount: number;
   femininoCount: number;
-  /** Versão bem pequena (card da Visão Geral). */
-  compact?: boolean;
 }) {
   const total = masculinoCount + femininoCount;
 
@@ -172,40 +172,37 @@ export function GenderProfileChart({
   const masculinoPercent = (masculinoCount / total) * 100;
   const femininoPercent = (femininoCount / total) * 100;
 
-  const ringSize = compact ? 72 : 130;
-  const iconSize = compact ? 7 : 13;
-
   return (
     <div className="flex w-full items-center gap-4">
-      <div className={`flex w-1/2 max-w-[50%] flex-col overflow-hidden ${compact ? "gap-3" : "gap-5"}`}>
+      <div className="flex w-1/2 max-w-[50%] flex-col gap-5 overflow-hidden">
         <PictogramGrid
           gender="MASCULINO"
           percent={masculinoPercent}
           count={masculinoCount}
           color={GENDER_PROFILE_COLORS.MASCULINO}
-          iconSize={iconSize}
+          iconSize={ICON_SIZE}
         />
         <PictogramGrid
           gender="FEMININO"
           percent={femininoPercent}
           count={femininoCount}
           color={GENDER_PROFILE_COLORS.FEMININO}
-          iconSize={iconSize}
+          iconSize={ICON_SIZE}
         />
       </div>
 
-      <div className={`flex flex-1 flex-col items-center ${compact ? "gap-3" : "gap-5"}`}>
+      <div className="flex flex-1 flex-col items-center gap-5">
         <GenderRingIcon
           gender="MASCULINO"
           percent={masculinoPercent}
           color={GENDER_PROFILE_COLORS.MASCULINO}
-          size={ringSize}
+          size={RING_SIZE}
         />
         <GenderRingIcon
           gender="FEMININO"
           percent={femininoPercent}
           color={GENDER_PROFILE_COLORS.FEMININO}
-          size={ringSize}
+          size={RING_SIZE}
         />
       </div>
     </div>
