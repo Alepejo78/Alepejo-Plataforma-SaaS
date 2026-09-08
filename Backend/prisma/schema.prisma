@@ -696,6 +696,7 @@ model Product {
   inventoryCountItems      InventoryCountItem[]
   productionOrders         ProductionOrder[]
   financialEntries         FinancialEntry[]
+  financialEntryItems      FinancialEntryItem[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1888,31 +1889,32 @@ model ChartOfAccountClassification {
 }
 
 model ChartOfAccount {
-  id               String                       @id @default(cuid())
-  companyId        String
-  company          Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  code             String                       @db.VarChar(20)
-  classificationId String
-  classification   ChartOfAccountClassification @relation(fields: [classificationId], references: [id])
-  description      String                       @db.VarChar(255)
-  type             ChartOfAccountType           @default(DESPESA)
-  parentId         String?
-  parent           ChartOfAccount?              @relation("ChartOfAccountHierarchy", fields: [parentId], references: [id])
-  children         ChartOfAccount[]             @relation("ChartOfAccountHierarchy")
-  financialEntries FinancialEntry[]
-  purchases        Purchase[]
-  sales            Sale[]
-  purchaseOrders   PurchaseOrder[]
-  salesOrders      SalesOrder[]
-  serviceOrders    ServiceOrder[]
-  quotes           Quote[]
-  products         Product[]                    @relation("ProductPurchaseChartOfAccount")
-  productsForSale  Product[]                    @relation("ProductSaleChartOfAccount")
-  active           Boolean                      @default(true)
-  createdById      String?
-  updatedById      String?
-  createdAt        DateTime                     @default(now())
-  updatedAt        DateTime                     @updatedAt
+  id                  String                       @id @default(cuid())
+  companyId           String
+  company             Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code                String                       @db.VarChar(20)
+  classificationId    String
+  classification      ChartOfAccountClassification @relation(fields: [classificationId], references: [id])
+  description         String                       @db.VarChar(255)
+  type                ChartOfAccountType           @default(DESPESA)
+  parentId            String?
+  parent              ChartOfAccount?              @relation("ChartOfAccountHierarchy", fields: [parentId], references: [id])
+  children            ChartOfAccount[]             @relation("ChartOfAccountHierarchy")
+  financialEntries    FinancialEntry[]
+  financialEntryItems FinancialEntryItem[]
+  purchases           Purchase[]
+  sales               Sale[]
+  purchaseOrders      PurchaseOrder[]
+  salesOrders         SalesOrder[]
+  serviceOrders       ServiceOrder[]
+  quotes              Quote[]
+  products            Product[]                    @relation("ProductPurchaseChartOfAccount")
+  productsForSale     Product[]                    @relation("ProductSaleChartOfAccount")
+  active              Boolean                      @default(true)
+  createdById         String?
+  updatedById         String?
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1990,6 +1992,15 @@ model FinancialEntry {
   /// referência (folha, 13º, férias).
   productId String?
   product   Product? @relation(fields: [productId], references: [id])
+
+  /// Composição do título quando ele nasce de mais de um produto/
+  /// serviço (ex.: importação de orçamento com peça + serviço) — cada
+  /// item tem sua própria conta contábil/produto/valor, e a soma dos
+  /// itens bate com `amount`. `productId`/`chartOfAccountId` acima
+  /// continuam preenchidos (item de maior valor) só pra telas/filtros
+  /// que ainda não sabem ler `items` — o detalhe de verdade mora
+  /// aqui. Título sem mais de 1 item não precisa disso (fica vazio).
+  items FinancialEntryItem[]
 
   /// Data de emissão / da compra.
   issueDate DateTime
@@ -2081,6 +2092,31 @@ model FinancialEntry {
   @@index([dueDate])
   @@index([bankAccountId])
   @@map("financial_entries")
+}
+
+/// Um item/linha de um título que nasce com mais de um produto/
+/// serviço — ver `FinancialEntry.items`.
+model FinancialEntryItem {
+  id String @id @default(cuid())
+
+  financialEntryId String
+  financialEntry   FinancialEntry @relation(fields: [financialEntryId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  chartOfAccountId String?
+  chartOfAccount   ChartOfAccount? @relation(fields: [chartOfAccountId], references: [id])
+
+  description String?  @db.VarChar(255)
+  quantity    Decimal? @db.Decimal(18, 3)
+  amount      Decimal  @db.Decimal(18, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([financialEntryId])
+  @@map("financial_entry_items")
 }
 
 /// Conta bancária da empresa (de onde o dinheiro sai/entra) — só

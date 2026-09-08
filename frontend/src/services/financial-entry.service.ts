@@ -150,13 +150,41 @@ export interface FinancialEntry {
   purchaseOrder?: { number: number } | null;
   quotation?: { number: number } | null;
   sale?: { number: number } | null;
+  /** Composição do título quando ele tem mais de um produto/serviço — vazio pro título de sempre. */
+  items?: FinancialEntryItem[];
+}
+
+export interface FinancialEntryItem {
+  id: string;
+  productId?: string | null;
+  product?: { id: string; code: string; description: string } | null;
+  chartOfAccountId?: string | null;
+  chartOfAccount?: {
+    id: string;
+    code: string;
+    description: string;
+    classification?: { id: string; name: string } | null;
+  } | null;
+  description?: string | null;
+  quantity?: string | number | null;
+  amount: string | number;
+}
+
+export interface FinancialEntryItemPayload {
+  productId?: string;
+  chartOfAccountId?: string;
+  description?: string;
+  quantity?: number;
+  amount: number;
 }
 
 export interface FinancialEntryPayload {
   type: FinancialEntryType;
+  /** Obrigatório só quando não vier `items` (mais de um produto/serviço). */
+  chartOfAccountId?: string;
+  /** Obrigatório só quando não vier `items`. */
+  productId?: string;
   partnerId: string;
-  chartOfAccountId: string;
-  productId: string;
   issueDate: string;
   termDays?: number;
   /** Obrigatório só quando não vier `installments`. */
@@ -164,10 +192,12 @@ export interface FinancialEntryPayload {
   documentNumber?: string;
   documentType?: FinancialDocumentType;
   documentKey?: string;
-  /** Obrigatório só quando não vier `installments` (aí é o total). */
+  /** Obrigatório só quando não vier `installments` nem `items` (nesses casos é calculado). */
   amount?: number;
   /** Parcelamento — cada parcela vira um título próprio, com vencimento e valor editáveis. */
   installments?: { dueDate: string; amount: number }[];
+  /** Mais de um produto/serviço no mesmo título, cada um com sua própria conta contábil — ver `FinancialEntryItem`. */
+  items?: FinancialEntryItemPayload[];
   paymentMethod: PaymentMethod;
   observation?: string;
 }

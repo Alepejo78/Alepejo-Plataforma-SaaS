@@ -147,6 +147,15 @@ interface InstallmentRow {
   amount: number;
 }
 
+/** Um item da composição do título, quando ele tem mais de um produto/serviço — cada um com sua própria conta contábil. */
+interface ItemRow {
+  productId: string;
+  productLabel: string;
+  chartOfAccountId: string;
+  chartOfAccountLabel: string;
+  amount: number;
+}
+
 function emptyForm(): Form {
   const today = todayIso();
 
@@ -216,6 +225,7 @@ export function FinancialEntriesScreen({
   } | null>(null);
   const [form, setForm] = useState<Form>(emptyForm());
   const [installments, setInstallments] = useState<InstallmentRow[]>([]);
+  const [items, setItems] = useState<ItemRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -341,11 +351,93 @@ export function FinancialEntriesScreen({
     });
   }
 
+  /**
+   * "Adicionar item" começa com o produto/conta/valor único já
+   * digitado no formulário (pra ninguém perder o que já preencheu),
+   * a partir daí cada item vira sua própria linha, com produto/conta/
+   * valor editáveis livremente — mesmo padrão de `startInstallments`.
+   */
+  function startItems() {
+    setItems([
+      {
+        productId: form.productId,
+        productLabel: form.productLabel,
+        chartOfAccountId: form.chartOfAccountId,
+        chartOfAccountLabel: form.chartOfAccountLabel,
+        amount: form.amount,
+      },
+      {
+        productId: "",
+        productLabel: "",
+        chartOfAccountId: "",
+        chartOfAccountLabel: "",
+        amount: 0,
+      },
+    ]);
+  }
+
+  function addItem() {
+    setItems((prev) => [
+      ...prev,
+      {
+        productId: "",
+        productLabel: "",
+        chartOfAccountId: "",
+        chartOfAccountLabel: "",
+        amount: 0,
+      },
+    ]);
+  }
+
+  function removeItem(index: number) {
+    setItems((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+
+      // Só um item sobrando não é mais "vários itens" — volta pro
+      // formulário simples de produto/conta/valor único.
+      return next.length <= 1 ? [] : next;
+    });
+  }
+
+  function updateItem(index: number, patch: Partial<ItemRow>) {
+    setItems((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, ...patch } : row))
+    );
+  }
+
+  /** Escolher o produto de um item segue o tipo de despesa/receita cadastrado nele — mesmo padrão de `applyProduct`. */
+  function applyItemProduct(index: number, p: Product | null) {
+    if (!p) {
+      updateItem(index, { productId: "", productLabel: "" });
+      return;
+    }
+
+    const productAccountId =
+      type === "RECEIVABLE" ? p.saleChartOfAccountId : p.chartOfAccountId;
+    const productAccount =
+      type === "RECEIVABLE" ? p.saleChartOfAccount : p.chartOfAccount;
+
+    updateItem(index, {
+      productId: p.id,
+      productLabel: `${p.code} — ${p.description}`,
+      ...(productAccountId && {
+        chartOfAccountId: productAccountId,
+        chartOfAccountLabel: productAccount
+          ? `${productAccount.code} — ${productAccount.description}`
+          : "",
+      }),
+    });
+  }
+
+  const itemsTotal = items.reduce((sum, it) => sum + it.amount, 0);
+  const isMultiItem = items.length > 1;
+
   function openCreate() {
     setViewOnly(false);
     setEditingId(null);
     setForm(emptyForm());
     setInstallments([]);
+    setItems([]);
     setFormError("");
     setOrigin(null);
     setFormOpen(true);
@@ -389,6 +481,21 @@ export function FinancialEntriesScreen({
       observation: entry.observation ?? "",
     });
     setInstallments([]);
+    setItems(
+      entry.items && entry.items.length > 1
+        ? entry.items.map((it) => ({
+            productId: it.productId ?? "",
+            productLabel: it.product
+              ? `${it.product.code} — ${it.product.description}`
+              : "",
+            chartOfAccountId: it.chartOfAccountId ?? "",
+            chartOfAccountLabel: it.chartOfAccount
+              ? `${it.chartOfAccount.code} — ${it.chartOfAccount.description}`
+              : "",
+            amount: num(it.amount),
+          }))
+        : []
+    );
     setFormError("");
     setFormOpen(true);
   }
@@ -467,7 +574,9 @@ export function FinancialEntriesScreen({
   const isParceled = installments.length > 1;
 
   async function save() {
-    if (!form.partnerId || !form.issueDate || form.amount <= 0) {
+    const totalAmount = isMultiItem ? itemsTotal : form.amount;
+
+    if (!form.partnerId || !form.issueDate || totalAmount <= 0) {
       setFormError(
         `Selecione ${partnerLabel.toLowerCase()}, a emissão e um valor maior que zero.`
       );
@@ -475,16 +584,39 @@ export function FinancialEntriesScreen({
       return;
     }
 
-    if (!form.productId) {
-      setFormError("Selecione o produto ou serviço.");
-      return;
-    }
+    let validItems: {
+      productId?: string;
+      chartOfAccountId?: string;
+      amount: number;
+    }[] = [];
 
-    if (!form.chartOfAccountId) {
-      setFormError(
-        `Selecione o tipo de ${type === "RECEIVABLE" ? "receita" : "despesa"}.`
-      );
-      return;
+    if (isMultiItem) {
+      validItems = items
+        .filter((it) => it.productId && it.chartOfAccountId && it.amount > 0)
+        .map((it) => ({
+          productId: it.productId,
+          chartOfAccountId: it.chartOfAccountId,
+          amount: it.amount,
+        }));
+
+      if (validItems.length !== items.length) {
+        setFormError(
+          "Preencha produto, tipo de receita/despesa e valor de todos os itens."
+        );
+        return;
+      }
+    } else {
+      if (!form.productId) {
+        setFormError("Selecione o produto ou serviço.");
+        return;
+      }
+
+      if (!form.chartOfAccountId) {
+        setFormError(
+          `Selecione o tipo de ${type === "RECEIVABLE" ? "receita" : "despesa"}.`
+        );
+        return;
+      }
     }
 
     if (!form.paymentMethod) {
@@ -511,9 +643,9 @@ export function FinancialEntriesScreen({
         return;
       }
 
-      if (Math.abs(installmentsTotal - form.amount) > 0.01) {
+      if (Math.abs(installmentsTotal - totalAmount) > 0.01) {
         setFormError(
-          `A soma das parcelas (${money(installmentsTotal)}) precisa bater com o valor total (${money(form.amount)}).`
+          `A soma das parcelas (${money(installmentsTotal)}) precisa bater com o valor total (${money(totalAmount)}).`
         );
         return;
       }
@@ -526,8 +658,9 @@ export function FinancialEntriesScreen({
       const payload = {
         type,
         partnerId: form.partnerId,
-        chartOfAccountId: form.chartOfAccountId,
-        productId: form.productId,
+        chartOfAccountId: isMultiItem ? undefined : form.chartOfAccountId,
+        productId: isMultiItem ? undefined : form.productId,
+        items: isMultiItem ? validItems : undefined,
         issueDate: form.issueDate,
         termDays: form.termDays
           ? Number(form.termDays)
@@ -535,7 +668,7 @@ export function FinancialEntriesScreen({
         dueDate: isParceled ? undefined : form.dueDate,
         documentNumber: form.documentNumber || undefined,
         documentType: form.documentType || undefined,
-        amount: isParceled ? undefined : form.amount,
+        amount: isParceled || isMultiItem ? undefined : form.amount,
         installments: isParceled ? validInstallments : undefined,
         paymentMethod: form.paymentMethod as PaymentMethod,
         observation: form.observation || undefined,
@@ -843,7 +976,7 @@ export function FinancialEntriesScreen({
               </thead>
 
               <tbody>
-                {entries.map((entry) => {
+                {entries.flatMap((entry) => {
                   const busy = actionId === entry.id;
 
                   const overdue =
@@ -851,12 +984,35 @@ export function FinancialEntriesScreen({
                       entry.status === "AWAITING_CONFIRMATION") &&
                     entry.dueDate.slice(0, 10) < today;
 
+                  // Título com mais de um item (ver `FinancialEntry.items`)
+                  // vira uma linha por item — cada um com sua própria
+                  // conta/valor — mas vencimento, cliente, documento,
+                  // forma de pagamento, status e ações só aparecem na
+                  // 1ª linha (baixar/editar/excluir agem no título
+                  // inteiro, não em cada item separado).
+                  const lineItems =
+                    entry.items && entry.items.length > 1
+                      ? entry.items
+                      : [null];
+
+                  return lineItems.map((item, itemIndex) => {
+                  const isFirst = itemIndex === 0;
+                  const rowChartOfAccount = item
+                    ? item.chartOfAccount
+                    : entry.chartOfAccount;
+                  const rowAmount = item ? item.amount : entry.amount;
+
                   return (
                     <tr
-                      key={entry.id}
-                      className="border-t border-[var(--border)]"
+                      key={`${entry.id}-${itemIndex}`}
+                      className={
+                        isFirst
+                          ? "border-t border-[var(--border)]"
+                          : "border-t border-dashed border-[var(--border)]"
+                      }
                     >
                       <td className="whitespace-nowrap px-4 py-3">
+                        {isFirst && (
                         <span
                           className={
                             overdue
@@ -869,18 +1025,23 @@ export function FinancialEntriesScreen({
                           )}
                           {date(entry.dueDate)}
                         </span>
+                        )}
                       </td>
 
                       <td className="px-4 py-3">
+                        {isFirst && (
                         <p className="font-medium text-[var(--text-primary)]">
                           {entry.partner?.tradeName ??
                             entry.partner?.legalName ??
                             entry.employee?.name ??
                             "—"}
                         </p>
+                        )}
                       </td>
 
                       <td className="px-4 py-3 text-[var(--text-secondary)]">
+                        {isFirst && (
+                        <>
                         {entry.documentNumber ?? "—"}
                         {entry.documentType && (
                           <span className="ml-1 text-xs text-[var(--text-muted)]">
@@ -901,25 +1062,29 @@ export function FinancialEntriesScreen({
                             Chave: {entry.documentKey}
                           </p>
                         )}
+                        </>
+                        )}
                       </td>
 
                       <td className="px-4 py-3 text-[var(--text-secondary)]">
-                        {entry.chartOfAccount
-                          ? `${entry.chartOfAccount.code} — ${entry.chartOfAccount.description}`
+                        {rowChartOfAccount
+                          ? `${rowChartOfAccount.code} — ${rowChartOfAccount.description}`
                           : "—"}
                       </td>
 
                       <td className="px-4 py-3 text-[var(--text-secondary)]">
-                        {entry.paymentMethod
-                          ? PAYMENT_METHOD_LABELS[entry.paymentMethod]
-                          : "—"}
+                        {isFirst &&
+                          (entry.paymentMethod
+                            ? PAYMENT_METHOD_LABELS[entry.paymentMethod]
+                            : "—")}
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
-                        {money(entry.amount)}
+                        {money(rowAmount)}
                       </td>
 
                       <td className="px-4 py-3">
+                        {isFirst && (
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE_CLASS[entry.status]}`}
                         >
@@ -929,9 +1094,11 @@ export function FinancialEntriesScreen({
                             ]
                           }
                         </span>
+                        )}
                       </td>
 
                       <td className="px-4 py-3">
+                        {isFirst && (
                         <div className="flex justify-end gap-2">
                           {/* Sempre disponível: consultar não altera nada,
                               e é a única forma de rever um título já
@@ -1070,9 +1237,11 @@ export function FinancialEntriesScreen({
                             </Can>
                           )}
                         </div>
+                        )}
                       </td>
                     </tr>
                   );
+                  });
                 })}
               </tbody>
             </table>
@@ -1384,70 +1553,165 @@ export function FinancialEntriesScreen({
                 </div>
               </div>
 
-              <div>
-                <label className={labelClass}>
-                  Produto/Serviço
-                </label>
+              {!isMultiItem ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <label className={labelClass}>
+                      Produto/Serviço
+                    </label>
 
-                <SearchSelect<Product>
-                  displayLabel={form.productLabel}
-                  search={searchProducts}
-                  getId={(p) => p.id}
-                  getLabel={(p) => `${p.code} — ${p.description}`}
-                  placeholder="Buscar produto ou serviço..."
-                  onSelect={applyProduct}
-                />
-              </div>
+                    <button
+                      type="button"
+                      onClick={startItems}
+                      className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                    >
+                      <Plus size={14} />
+                      Adicionar item
+                    </button>
+                  </div>
+
+                  <SearchSelect<Product>
+                    displayLabel={form.productLabel}
+                    search={searchProducts}
+                    getId={(p) => p.id}
+                    getLabel={(p) => `${p.code} — ${p.description}`}
+                    placeholder="Buscar produto ou serviço..."
+                    onSelect={applyProduct}
+                  />
+                </>
+              ) : (
+                <div className="space-y-2 rounded-xl border border-[var(--border)] p-4">
+                  <div className="flex items-center justify-between">
+                    <label className={labelClass}>Itens</label>
+
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                    >
+                      <Plus size={14} />
+                      Adicionar item
+                    </button>
+                  </div>
+
+                  {items.map((it, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-12 items-start gap-2"
+                    >
+                      <div className="col-span-5">
+                        <SearchSelect<Product>
+                          displayLabel={it.productLabel}
+                          search={searchProducts}
+                          getId={(p) => p.id}
+                          getLabel={(p) => `${p.code} — ${p.description}`}
+                          placeholder="Produto ou serviço..."
+                          onSelect={(p) => applyItemProduct(index, p)}
+                        />
+                      </div>
+
+                      <div className="col-span-4">
+                        <SearchSelect<ChartOfAccount>
+                          displayLabel={it.chartOfAccountLabel}
+                          search={searchChartOfAccounts}
+                          getId={(c) => c.id}
+                          getLabel={(c) => `${c.code} — ${c.description}`}
+                          getSubLabel={(c) => c.classification?.name}
+                          placeholder={
+                            type === "RECEIVABLE"
+                              ? "Tipo de receita..."
+                              : "Tipo de despesa..."
+                          }
+                          onSelect={(c) =>
+                            updateItem(index, {
+                              chartOfAccountId: c?.id ?? "",
+                              chartOfAccountLabel: c
+                                ? `${c.code} — ${c.description}`
+                                : "",
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <CurrencyInput
+                          className={fieldClass}
+                          value={it.amount}
+                          onChange={(value) =>
+                            updateItem(index, { amount: value })
+                          }
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeItem(index)}
+                        className="col-span-1 flex items-center justify-center rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Total: {money(itemsTotal)}
+                  </p>
+                </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className={labelClass}>
-                    Valor (R$)
-                  </label>
+                {!isMultiItem && (
+                  <>
+                    <div>
+                      <label className={labelClass}>
+                        Valor (R$)
+                      </label>
 
-                  <CurrencyInput
-                    className={fieldClass}
-                    value={form.amount}
-                    onChange={(value) =>
-                      setForm({
-                        ...form,
-                        amount: value,
-                      })
-                    }
-                  />
-                </div>
+                      <CurrencyInput
+                        className={fieldClass}
+                        value={form.amount}
+                        onChange={(value) =>
+                          setForm({
+                            ...form,
+                            amount: value,
+                          })
+                        }
+                      />
+                    </div>
 
-                <div>
-                  <label className={labelClass}>
-                    {type === "RECEIVABLE"
-                      ? "Tipo de receita"
-                      : "Tipo de despesa"}
-                  </label>
+                    <div>
+                      <label className={labelClass}>
+                        {type === "RECEIVABLE"
+                          ? "Tipo de receita"
+                          : "Tipo de despesa"}
+                      </label>
 
-                  <SearchSelect<ChartOfAccount>
-                    displayLabel={
-                      form.chartOfAccountLabel
-                    }
-                    search={searchChartOfAccounts}
-                    getId={(c) => c.id}
-                    getLabel={(c) =>
-                      `${c.code} — ${c.description}`
-                    }
-                    getSubLabel={(c) =>
-                      c.classification?.name
-                    }
-                    placeholder="Buscar conta do plano de contas..."
-                    onSelect={(c) =>
-                      setForm({
-                        ...form,
-                        chartOfAccountId: c?.id ?? "",
-                        chartOfAccountLabel: c
-                          ? `${c.code} — ${c.description}`
-                          : "",
-                      })
-                    }
-                  />
-                </div>
+                      <SearchSelect<ChartOfAccount>
+                        displayLabel={
+                          form.chartOfAccountLabel
+                        }
+                        search={searchChartOfAccounts}
+                        getId={(c) => c.id}
+                        getLabel={(c) =>
+                          `${c.code} — ${c.description}`
+                        }
+                        getSubLabel={(c) =>
+                          c.classification?.name
+                        }
+                        placeholder="Buscar conta do plano de contas..."
+                        onSelect={(c) =>
+                          setForm({
+                            ...form,
+                            chartOfAccountId: c?.id ?? "",
+                            chartOfAccountLabel: c
+                              ? `${c.code} — ${c.description}`
+                              : "",
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <label className={labelClass}>

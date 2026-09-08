@@ -22,6 +22,7 @@ import {
 } from '@prisma/client';
 
 import { InstallmentDto } from '../../../core/dto/installment.dto';
+import { FinancialEntryItemDto } from '../../../core/dto/financial-entry-item.dto';
 
 export class CreateFinancialEntryDto {
   @IsEnum(FinancialEntryType)
@@ -37,13 +38,35 @@ export class CreateFinancialEntryDto {
   @IsString({ message: 'Informe o parceiro ou o colaborador.' })
   employeeId?: string;
 
+  /// Obrigatório só quando não vier `items` (mais de um produto/
+  /// serviço) — nesse caso a conta de cada item é que vale, este
+  /// campo vira só um resumo (item de maior valor).
+  @ValidateIf((dto) => !dto.items || dto.items.length === 0)
   @IsString({ message: 'Informe o tipo de despesa/receita.' })
-  chartOfAccountId: string;
+  chartOfAccountId?: string;
 
   /// Produto ou serviço do lançamento — todo título tem que sair
-  /// vinculado a algo (decisão do usuário, 26-08-2026).
+  /// vinculado a algo (decisão do usuário, 26-08-2026). Obrigatório
+  /// só quando não vier `items` — mesmo raciocínio de
+  /// `chartOfAccountId` acima.
+  @ValidateIf((dto) => !dto.items || dto.items.length === 0)
   @IsString({ message: 'Informe o produto ou serviço.' })
-  productId: string;
+  productId?: string;
+
+  /// Mais de um produto/serviço no mesmo título (ver
+  /// `FinancialEntry.items`) — cada item com sua própria conta
+  /// contábil/produto/valor. Quando informado, `productId`/
+  /// `chartOfAccountId`/`amount` acima são só um resumo (preenchidos
+  /// a partir do item de maior valor), o valor de verdade é a soma
+  /// dos itens. Parcelado (`installments` também informado): cada
+  /// parcela recebe os mesmos itens, com o valor de cada um dividido
+  /// proporcionalmente.
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => FinancialEntryItemDto)
+  items?: FinancialEntryItemDto[];
 
   @IsDateString()
   issueDate: string;
@@ -86,8 +109,14 @@ export class CreateFinancialEntryDto {
   @MaxLength(50)
   documentKey?: string;
 
-  /// Obrigatório só quando não vier `installments` (ver acima).
-  @ValidateIf((dto) => !dto.installments || dto.installments.length === 0)
+  /// Obrigatório só quando não vier `installments` nem `items` — nos
+  /// dois casos o valor de verdade é calculado (soma das parcelas ou
+  /// dos itens).
+  @ValidateIf(
+    (dto) =>
+      (!dto.installments || dto.installments.length === 0) &&
+      (!dto.items || dto.items.length === 0),
+  )
   @Type(() => Number)
   @IsNumber()
   @IsPositive()

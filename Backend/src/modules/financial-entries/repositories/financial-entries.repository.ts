@@ -18,6 +18,14 @@ const includeRelations = {
   chartOfAccount: {
     include: { classification: true },
   },
+  // Composição do título quando ele tem mais de um produto/serviço
+  // (ver FinancialEntry.items) — vazio pro título de sempre.
+  items: {
+    include: {
+      product: true,
+      chartOfAccount: { include: { classification: true } },
+    },
+  },
   // Rastreabilidade: de qual documento esse título nasceu (só o
   // número de cada um, pra montar o rótulo "Gerado por: Compra C-x").
   purchase: { select: { number: true } },
@@ -333,5 +341,33 @@ export class FinancialEntriesRepository {
     return this.prisma.financialEntry.delete({
       where: { id },
     });
+  }
+
+  /** Substitui a composição de itens do título por inteiro (delete + insert) — não dá pra saber quais "já eram" os mesmos de antes, então refaz do zero. */
+  async replaceItems(
+    financialEntryId: string,
+    items: {
+      productId?: string;
+      chartOfAccountId?: string;
+      description?: string;
+      quantity?: number;
+      amount: number;
+    }[],
+  ): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.financialEntryItem.deleteMany({
+        where: { financialEntryId },
+      }),
+      this.prisma.financialEntryItem.createMany({
+        data: items.map((item) => ({
+          financialEntryId,
+          productId: item.productId,
+          chartOfAccountId: item.chartOfAccountId,
+          description: item.description,
+          quantity: item.quantity,
+          amount: item.amount,
+        })),
+      }),
+    ]);
   }
 }

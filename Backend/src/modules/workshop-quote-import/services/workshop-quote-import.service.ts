@@ -179,25 +179,14 @@ export class WorkshopQuoteImportService {
       }),
     );
 
-    // Um título só cobrindo todos os itens — produto/conta contábil
-    // do título seguem o item de maior valor (mesmo critério já usado
-    // em Compra/Venda/Cotação quando o documento tem mais de um item
-    // e o título só aceita um produto/uma conta). A quebra em mais de
-    // um título só acontece por parcela (vencimentos diferentes), não
-    // por item.
+    // Um título só cobrindo todos os itens (cada um com sua própria
+    // conta contábil, ver `FinancialEntry.items`) — a quebra em mais
+    // de um título só acontece por parcela (vencimentos diferentes),
+    // não por item.
     const totalAmount = resolvedItems.reduce(
       (sum, item) => sum + item.netValue,
       0,
     );
-    const mainItem = resolvedItems.reduce((max, item) =>
-      item.netValue > max.netValue ? item : max,
-    );
-    const itemsDescription = resolvedItems
-      .map(
-        (item) =>
-          `${item.description} (R$ ${item.netValue.toFixed(2).replace('.', ',')})`,
-      )
-      .join('; ');
 
     const installments = buildAutoInstallments(
       new Date(`${dto.issueDate}T00:00:00Z`),
@@ -212,14 +201,19 @@ export class WorkshopQuoteImportService {
       {
         type: FinancialEntryType.RECEIVABLE,
         partnerId,
-        chartOfAccountId: mainItem.chartOfAccountId,
-        productId: mainItem.productId,
+        items: resolvedItems.map((item) => ({
+          productId: item.productId,
+          chartOfAccountId: item.chartOfAccountId,
+          description: item.description,
+          quantity: item.quantity,
+          amount: item.netValue,
+        })),
         issueDate: dto.issueDate,
         termDays: dto.termDays,
         paymentMethod: dto.paymentMethod,
         documentNumber: dto.documentNumber,
         documentType: FinancialDocumentType.ORDEM_SERVICO,
-        observation: `Importado do orçamento de oficina — ${itemsDescription}`,
+        observation: 'Importado do orçamento de oficina.',
         installments: installments.map((i) => ({
           dueDate: i.dueDate.toISOString(),
           amount: i.amount,

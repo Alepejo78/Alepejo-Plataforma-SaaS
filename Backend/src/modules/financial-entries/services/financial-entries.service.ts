@@ -73,8 +73,32 @@ export class FinancialEntriesService {
       );
     }
 
-    await this.assertChartOfAccount(rootCompanyId, dto.chartOfAccountId);
-    await this.assertProduct(rootCompanyId, dto.productId);
+    const hasItems = !!dto.items && dto.items.length > 0;
+
+    if (hasItems) {
+      for (const item of dto.items!) {
+        if (item.chartOfAccountId) {
+          await this.assertChartOfAccount(rootCompanyId, item.chartOfAccountId);
+        }
+        if (item.productId) {
+          await this.assertProduct(rootCompanyId, item.productId);
+        }
+      }
+    } else {
+      await this.assertChartOfAccount(rootCompanyId, dto.chartOfAccountId!);
+      await this.assertProduct(rootCompanyId, dto.productId!);
+    }
+
+    // Mais de um produto/serviço: o resumo (produto/conta/valor de
+    // nível superior) segue o item de maior valor — mesmo critério já
+    // usado em Compra/Venda/Cotação quando o documento tem mais de um
+    // item (ver `WorkshopQuoteImportService`).
+    const mainItem = hasItems ? this.pickMainItem(dto.items!) : null;
+    const chartOfAccountId = mainItem?.chartOfAccountId ?? dto.chartOfAccountId;
+    const productId = mainItem?.productId ?? dto.productId;
+    const itemsTotal = hasItems
+      ? dto.items!.reduce((sum, item) => sum + item.amount, 0)
+      : undefined;
 
     if (dto.installments && dto.installments.length > 0) {
       const entries = await this.prisma.$transaction((tx) =>
@@ -85,8 +109,8 @@ export class FinancialEntriesService {
             type: dto.type,
             partnerId: dto.partnerId,
             employeeId: dto.employeeId,
-            chartOfAccountId: dto.chartOfAccountId,
-            productId: dto.productId,
+            chartOfAccountId,
+            productId,
             issueDate: new Date(dto.issueDate),
             termDays: dto.termDays,
             paymentMethod: dto.paymentMethod,
@@ -103,6 +127,14 @@ export class FinancialEntriesService {
         ),
       );
 
+      if (hasItems) {
+        await this.attachItemsProportionally(
+          entries,
+          dto.items!,
+          itemsTotal!,
+        );
+      }
+
       for (const entry of entries) {
         void this.entryChargeService.notify(entry as EntryWithPartnerForCharge);
       }
@@ -114,24 +146,70 @@ export class FinancialEntriesService {
       type: dto.type,
       partnerId: dto.partnerId,
       employeeId: dto.employeeId,
-      chartOfAccountId: dto.chartOfAccountId,
-      productId: dto.productId,
+      chartOfAccountId,
+      productId,
       issueDate: new Date(dto.issueDate),
       termDays: dto.termDays,
       dueDate: new Date(dto.dueDate!),
       documentNumber: dto.documentNumber,
       documentType: dto.documentType,
       documentKey: dto.documentKey,
-      amount: dto.amount!,
+      amount: hasItems ? itemsTotal! : dto.amount!,
       paymentMethod: dto.paymentMethod,
       observation: dto.observation,
       createdById: userId,
       updatedById: userId,
     } as Prisma.FinancialEntryUncheckedCreateInput);
 
+    if (hasItems) {
+      await this.repository.replaceItems(entry.id, dto.items!);
+    }
+
     void this.entryChargeService.notify(entry as EntryWithPartnerForCharge);
 
     return entry;
+  }
+
+  private pickMainItem<T extends { amount: number }>(items: T[]): T {
+    return items.reduce((max, item) => (item.amount > max.amount ? item : max));
+  }
+
+  /**
+   * Divide os itens do documento entre as parcelas geradas,
+   * proporcionalmente ao valor de cada uma — ex.: item de R$100 num
+   * documento de R$225 parcelado em 2x (R$112,50 cada) vira R$50 na
+   * parcela 1 e R$50 na parcela 2 (a última parcela de cada item
+   * absorve o resto do arredondamento, mesmo padrão de
+   * `buildAutoInstallments`).
+   */
+  private async attachItemsProportionally(
+    entries: FinancialEntry[],
+    items: {
+      productId?: string;
+      chartOfAccountId?: string;
+      description?: string;
+      quantity?: number;
+      amount: number;
+    }[],
+    totalAmount: number,
+  ) {
+    for (const entry of entries) {
+      const fraction = Number(entry.amount) / totalAmount;
+      let allocated = 0;
+
+      const entryItems = items.map((item, index) => {
+        const isLast = index === items.length - 1;
+        const amount = isLast
+          ? Math.round((Number(entry.amount) - allocated) * 100) / 100
+          : Math.round(item.amount * fraction * 100) / 100;
+
+        allocated += amount;
+
+        return { ...item, amount };
+      });
+
+      await this.repository.replaceItems(entry.id, entryItems);
+    }
   }
 
   private async assertEmployee(companyId: string, employeeId: string) {
@@ -200,50 +278,98 @@ export class FinancialEntriesService {
       );
     }
 
-    if (dto.chartOfAccountId) {
-      await this.assertChartOfAccount(
-        rootCompanyId,
-        dto.chartOfAccountId,
-      );
+    const hasItems = !!dto.items && dto.items.length > 0;
+
+    if (hasItems) {
+      for (const item of dto.items!) {
+        if (item.chartOfAccountId) {
+          await this.assertChartOfAccount(rootCompanyId, item.chartOfAccountId);
+        }
+        if (item.productId) {
+          await this.assertProduct(rootCompanyId, item.productId);
+        }
+      }
+    } else {
+      if (dto.chartOfAccountId) {
+        await this.assertChartOfAccount(
+          rootCompanyId,
+          dto.chartOfAccountId,
+        );
+      }
+
+      if (dto.productId) {
+        await this.assertProduct(rootCompanyId, dto.productId);
+      }
     }
 
-    if (dto.productId) {
-      await this.assertProduct(rootCompanyId, dto.productId);
-    }
+    const mainItem = hasItems ? this.pickMainItem(dto.items!) : null;
+    const chartOfAccountId = mainItem?.chartOfAccountId ?? dto.chartOfAccountId;
+    const productId = mainItem?.productId ?? dto.productId;
+    const itemsTotal = hasItems
+      ? dto.items!.reduce((sum, item) => sum + item.amount, 0)
+      : undefined;
 
     // Parcelar na edição: o título vira a 1ª parcela e as demais
     // nascem como títulos novos, todos com os mesmos dados (parceiro/
     // conta/produto/documento/forma de pagamento) — mesmo raciocínio
     // de `createInstallments`, só que a partir de um título que já
-    // existia em vez de nascer parcelado.
+    // existia em vez de nascer parcelado. Com itens: cada parcela
+    // (a que já existia e as novas) recebe os mesmos itens, valor
+    // dividido proporcionalmente — refaz as linhas do zero.
     if (dto.installments && dto.installments.length > 0) {
-      return this.splitIntoInstallments(entry, dto, userId);
+      const entries = await this.splitIntoInstallments(
+        entry,
+        dto,
+        userId,
+        { chartOfAccountId, productId },
+      );
+
+      if (hasItems) {
+        await this.attachItemsProportionally(
+          entries,
+          dto.items!,
+          itemsTotal!,
+        );
+      }
+
+      return entries;
     }
 
-    const { installments: _installments, ...rest } = dto;
+    const { installments: _installments, items: _items, ...rest } = dto;
 
-    return this.repository.update(id, {
+    const updated = await this.repository.update(id, {
       ...rest,
+      ...(chartOfAccountId && { chartOfAccountId }),
+      ...(productId && { productId }),
+      ...(hasItems && { amount: itemsTotal }),
       ...(dto.issueDate && {
         issueDate: new Date(dto.issueDate),
       }),
       ...(dto.dueDate && { dueDate: new Date(dto.dueDate) }),
       updatedById: userId,
     } as Prisma.FinancialEntryUncheckedUpdateInput);
+
+    if (hasItems) {
+      await this.repository.replaceItems(id, dto.items!);
+    }
+
+    return updated;
   }
 
   private async splitIntoInstallments(
     entry: FinancialEntry,
     dto: UpdateFinancialEntryDto,
     userId: string,
+    itemsOverride: { chartOfAccountId?: string; productId?: string },
   ) {
     const [first, ...rest] = dto.installments!;
 
     const shared = {
       partnerId: dto.partnerId ?? entry.partnerId ?? undefined,
       employeeId: entry.employeeId ?? undefined,
-      chartOfAccountId: dto.chartOfAccountId ?? entry.chartOfAccountId ?? undefined,
-      productId: dto.productId ?? entry.productId ?? undefined,
+      chartOfAccountId:
+        itemsOverride.chartOfAccountId ?? entry.chartOfAccountId ?? undefined,
+      productId: itemsOverride.productId ?? entry.productId ?? undefined,
       issueDate: dto.issueDate ? new Date(dto.issueDate) : entry.issueDate,
       termDays: dto.termDays ?? entry.termDays ?? undefined,
       documentNumber: dto.documentNumber ?? entry.documentNumber ?? undefined,
