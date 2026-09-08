@@ -834,6 +834,75 @@ export class FinancialEntriesService {
   }
 
   /**
+   * Fluxo de caixa dia a dia de um mês — visão mais detalhada que
+   * `getCashFlow` (mensal) e `getPeriodSummary` (um período por vez).
+   * Por dia: `previsto` segue o vencimento (qualquer título não
+   * cancelado, pago ou não — é o "estava programado pra esse dia"),
+   * `recebido`/`pago` segue a data em que o título foi baixado de
+   * verdade. Os dois JUNTOS (não um substituindo o outro) — decisão
+   * do usuário, 08-09-2026: um título baixado no mesmo dia do
+   * vencimento conta nos dois, de propósito.
+   */
+  async getDailyCashFlow(companyId: string, year: number, month: number) {
+    const entries = await this.repository.findForDailyCashFlow(
+      companyId,
+      year,
+      month,
+    );
+
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const firstWeekday = new Date(
+      Date.UTC(year, month - 1, 1),
+    ).getUTCDay();
+
+    const days = Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+
+      return {
+        day,
+        week: Math.ceil((day + firstWeekday) / 7),
+        receivablePrevisto: 0,
+        receivableRecebido: 0,
+        payablePrevisto: 0,
+        payablePago: 0,
+      };
+    });
+
+    const inMonth = (d: Date) =>
+      d.getUTCFullYear() === year && d.getUTCMonth() === month - 1;
+
+    for (const entry of entries) {
+      if (inMonth(entry.dueDate)) {
+        const bucket = days[entry.dueDate.getUTCDate() - 1];
+        const amount = Number(entry.amount);
+
+        if (entry.type === FinancialEntryType.RECEIVABLE) {
+          bucket.receivablePrevisto += amount;
+        } else {
+          bucket.payablePrevisto += amount;
+        }
+      }
+
+      if (
+        entry.status === FinancialEntryStatus.PAID &&
+        entry.paymentDate &&
+        inMonth(entry.paymentDate)
+      ) {
+        const bucket = days[entry.paymentDate.getUTCDate() - 1];
+        const paidAmount = Number(entry.paidAmount);
+
+        if (entry.type === FinancialEntryType.RECEIVABLE) {
+          bucket.receivableRecebido += paidAmount;
+        } else {
+          bucket.payablePago += paidAmount;
+        }
+      }
+    }
+
+    return { year, month, days };
+  }
+
+  /**
    * Mesma separação de `getCashFlow` (total/aberto/atrasado por
    * vencimento; recebido/pago por data de pagamento), só que num
    * período curto e arbitrário (dia/semana/mês) em vez do ano inteiro

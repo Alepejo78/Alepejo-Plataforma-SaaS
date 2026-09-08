@@ -291,6 +291,35 @@ export class FinancialEntriesRepository {
     });
   }
 
+  /** Mesmo recorte de `findForCashFlow`, só que dentro de um mês (pro fluxo de caixa diário). */
+  async findForDailyCashFlow(
+    companyId: string,
+    year: number,
+    month: number,
+  ) {
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const monthEnd = new Date(Date.UTC(year, month, 1));
+
+    return this.prisma.financialEntry.findMany({
+      where: {
+        companyId,
+        status: { not: FinancialEntryStatus.CANCELLED },
+        OR: [
+          { dueDate: { gte: monthStart, lt: monthEnd } },
+          { paymentDate: { gte: monthStart, lt: monthEnd } },
+        ],
+      },
+      select: {
+        type: true,
+        status: true,
+        amount: true,
+        paidAmount: true,
+        dueDate: true,
+        paymentDate: true,
+      },
+    });
+  }
+
   /**
    * Mesma ideia de `findForCashFlow`, só que num intervalo arbitrário
    * (dia/semana/mês) em vez do ano inteiro — usado pela tela de

@@ -65,6 +65,27 @@ export class FinancialEntriesController {
     return this.service.getCashFlow(companyId, targetYear);
   }
 
+  @Get('cash-flow/daily')
+  @Permissions('financial-entry.view')
+  getDailyCashFlow(
+    @CurrentUser('companyId') companyId: string,
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+  ) {
+    const now = new Date();
+    const parsedYear = Number(year);
+    const parsedMonth = Number(month);
+
+    const targetYear =
+      year && Number.isInteger(parsedYear) ? parsedYear : now.getFullYear();
+    const targetMonth =
+      month && parsedMonth >= 1 && parsedMonth <= 12
+        ? parsedMonth
+        : now.getMonth() + 1;
+
+    return this.service.getDailyCashFlow(companyId, targetYear, targetMonth);
+  }
+
   @Get('period-summary')
   @Permissions('financial-entry.view')
   getPeriodSummary(

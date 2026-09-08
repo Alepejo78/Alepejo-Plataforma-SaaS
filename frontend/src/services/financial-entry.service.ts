@@ -242,6 +242,21 @@ export interface CashFlow {
   months: CashFlowMonth[];
 }
 
+export interface DailyCashFlowDay {
+  day: number;
+  week: number;
+  receivablePrevisto: number;
+  receivableRecebido: number;
+  payablePrevisto: number;
+  payablePago: number;
+}
+
+export interface DailyCashFlow {
+  year: number;
+  month: number;
+  days: DailyCashFlowDay[];
+}
+
 export type PeriodKind = "day" | "week" | "month";
 
 export interface PeriodSummary {
@@ -351,6 +366,19 @@ export const financialEntryService = {
     const { data } = await api.get<ApiEnvelope<CashFlow>>(
       "/financial-entries/cash-flow",
       { params: { year } }
+    );
+
+    return data.data;
+  },
+
+  /** Fluxo de caixa dia a dia de um mês — previsto (vencimento) e recebido/pago (baixa) lado a lado, com semana de cada dia pra filtrar. */
+  async getDailyCashFlow(
+    year: number,
+    month: number
+  ): Promise<DailyCashFlow> {
+    const { data } = await api.get<ApiEnvelope<DailyCashFlow>>(
+      "/financial-entries/cash-flow/daily",
+      { params: { year, month } }
     );
 
     return data.data;

@@ -16,6 +16,8 @@ import {
   financialEntryService,
   type CashFlow,
   type CashFlowBucket,
+  type DailyCashFlow,
+  type DailyCashFlowDay,
   type PeriodKind,
   type PeriodSummary,
 } from "@/services/financial-entry.service";
@@ -24,6 +26,21 @@ import {
   budgetService,
   type BudgetYear,
 } from "@/services/budget.service";
+
+const MONTH_NAMES_FULL = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
 const MONTH_LABELS = [
   "Jan",
@@ -237,7 +254,7 @@ export default function FluxoCaixaPage() {
 
   // Visão por período (dia/semana/mês) — alternativa à visão anual
   // acima, pra ver rápido se precisa reduzir despesa no curto prazo.
-  const [mode, setMode] = useState<"ano" | "periodo">("ano");
+  const [mode, setMode] = useState<"ano" | "periodo" | "diario">("ano");
   const [period, setPeriod] = useState<PeriodKind>("month");
   const [referenceDate, setReferenceDate] = useState(todayIso());
   const [periodSummary, setPeriodSummary] = useState<PeriodSummary | null>(
@@ -245,6 +262,46 @@ export default function FluxoCaixaPage() {
   );
   const [periodLoading, setPeriodLoading] = useState(true);
   const [periodError, setPeriodError] = useState("");
+
+  // Visão diária — dia a dia do mês inteiro, com opção de filtrar só
+  // uma semana (mesmo modelo da planilha de fluxo de caixa da empresa).
+  const today = new Date();
+  const [dailyMonth, setDailyMonth] = useState(today.getMonth() + 1);
+  const [dailyYear, setDailyYear] = useState(today.getFullYear());
+  const [dailyFlow, setDailyFlow] = useState<DailyCashFlow | null>(null);
+  const [dailyLoading, setDailyLoading] = useState(true);
+  const [dailyError, setDailyError] = useState("");
+  const [dailyFilter, setDailyFilter] = useState<"dia" | "semana">("dia");
+  const [dailyWeek, setDailyWeek] = useState(1);
+
+  const loadDaily = useCallback(async () => {
+    setDailyLoading(true);
+    setDailyError("");
+
+    try {
+      const result = await financialEntryService.getDailyCashFlow(
+        dailyYear,
+        dailyMonth
+      );
+
+      setDailyFlow(result);
+    } catch (err) {
+      setDailyError(
+        extractMessage(
+          err,
+          "Não foi possível carregar o fluxo de caixa diário."
+        )
+      );
+    } finally {
+      setDailyLoading(false);
+    }
+  }, [dailyYear, dailyMonth]);
+
+  useEffect(() => {
+    if (mode === "diario") {
+      void loadDaily();
+    }
+  }, [mode, loadDaily]);
 
   const loadPeriod = useCallback(async () => {
     setPeriodLoading(true);
@@ -389,7 +446,7 @@ export default function FluxoCaixaPage() {
                   />
                 )}
 
-                {mode === "ano" ? (
+                {mode === "diario" ? null : mode === "ano" ? (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -493,7 +550,105 @@ export default function FluxoCaixaPage() {
                   {PERIOD_LABELS[p]}
                 </button>
               ))}
+
+              <button
+                type="button"
+                onClick={() => setMode("diario")}
+                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                  mode === "diario"
+                    ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
+                    : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                Diário
+              </button>
             </div>
+
+            {mode === "diario" && (
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={dailyMonth}
+                  onChange={(e) => setDailyMonth(Number(e.target.value))}
+                  className="h-11 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
+                >
+                  {MONTH_NAMES_FULL.map((label, i) => (
+                    <option key={label} value={i + 1}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="number"
+                  value={dailyYear}
+                  onChange={(e) =>
+                    setDailyYear(Number(e.target.value) || dailyYear)
+                  }
+                  className="h-11 w-24 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
+                />
+
+                <div className="flex gap-2 rounded-xl border border-[var(--border)] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setDailyFilter("dia")}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                      dailyFilter === "dia"
+                        ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                    }`}
+                  >
+                    Dia
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDailyFilter("semana")}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                      dailyFilter === "semana"
+                        ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                    }`}
+                  >
+                    Semana
+                  </button>
+                </div>
+
+                {dailyFilter === "semana" && dailyFlow && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDailyWeek((w) => Math.max(1, w - 1))
+                      }
+                      aria-label="Semana anterior"
+                      className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+
+                    <span className="min-w-24 text-center text-sm font-medium text-[var(--text-primary)]">
+                      Semana {dailyWeek}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDailyWeek((w) =>
+                          Math.min(
+                            dailyFlow.days[dailyFlow.days.length - 1].week,
+                            w + 1
+                          )
+                        )
+                      }
+                      aria-label="Próxima semana"
+                      className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {mode === "periodo" && periodError && (
               <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
@@ -506,10 +661,23 @@ export default function FluxoCaixaPage() {
                 {error}
               </div>
             )}
+
+            {mode === "diario" && dailyError && (
+              <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                {dailyError}
+              </div>
+            )}
           </>
         }
       >
-        {mode === "periodo" ? (
+        {mode === "diario" ? (
+          <DailyCashFlowView
+            flow={dailyFlow}
+            loading={dailyLoading}
+            filterMode={dailyFilter}
+            week={dailyWeek}
+          />
+        ) : mode === "periodo" ? (
           <PeriodSummaryView
             summary={periodSummary}
             loading={periodLoading}
@@ -793,6 +961,215 @@ function PeriodSummaryView({
             {moneyFull(payable?.total ?? 0)}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- Visão diária — dia a dia do mês, com filtro por semana ----
+
+interface DailyRow extends DailyCashFlowDay {
+  total: number;
+  totalPago: number;
+  cumulative: number;
+}
+
+/**
+ * Acumulativo reinicia do zero a cada lista processada — visão "Dia"
+ * processa o mês inteiro (acumulado contínuo), visão "Semana" processa
+ * só os dias daquela semana (acumulado reinicia), mesmo comportamento
+ * de uma planilha com SUBTOTAL + AutoFiltro por semana.
+ */
+function buildDailyRows(days: DailyCashFlowDay[]): DailyRow[] {
+  let cumulative = 0;
+
+  return days.map((d) => {
+    cumulative += d.receivablePrevisto - d.payablePrevisto;
+
+    return {
+      ...d,
+      total: d.receivablePrevisto + d.receivableRecebido,
+      totalPago: d.payablePrevisto + d.payablePago,
+      cumulative,
+    };
+  });
+}
+
+function DailyCashFlowView({
+  flow,
+  loading,
+  filterMode,
+  week,
+}: {
+  flow: DailyCashFlow | null;
+  loading: boolean;
+  filterMode: "dia" | "semana";
+  week: number;
+}) {
+  if (loading || !flow) {
+    return (
+      <div className="space-y-2 p-4">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-10 animate-pulse rounded-xl bg-[var(--surface-hover)]"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  const filteredDays =
+    filterMode === "semana"
+      ? flow.days.filter((d) => d.week === week)
+      : flow.days;
+
+  const rows = buildDailyRows(filteredDays);
+
+  const totalReceivablePrevisto = filteredDays.reduce(
+    (sum, d) => sum + d.receivablePrevisto,
+    0
+  );
+  const totalPayablePrevisto = filteredDays.reduce(
+    (sum, d) => sum + d.payablePrevisto,
+    0
+  );
+
+  return (
+    <div>
+      <div className="grid gap-4 border-b border-[var(--border)] p-4 sm:grid-cols-3">
+        <div className="rounded-xl bg-[var(--success-soft)] p-3">
+          <p className="text-xs text-[var(--text-muted)]">
+            Total {filterMode === "semana" ? "da semana" : "do mês"} — a
+            receber (previsto)
+          </p>
+          <p className="text-lg font-bold text-[var(--success)]">
+            {moneyFull(totalReceivablePrevisto)}
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-[var(--danger-soft)] p-3">
+          <p className="text-xs text-[var(--text-muted)]">
+            Total {filterMode === "semana" ? "da semana" : "do mês"} — a
+            pagar (previsto)
+          </p>
+          <p className="text-lg font-bold text-[var(--danger)]">
+            {moneyFull(totalPayablePrevisto)}
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-[var(--surface-hover)] p-3">
+          <p className="text-xs text-[var(--text-muted)]">Diferença</p>
+          <p
+            className={`text-lg font-bold ${
+              totalReceivablePrevisto - totalPayablePrevisto >= 0
+                ? "text-[var(--success)]"
+                : "text-[var(--danger)]"
+            }`}
+          >
+            {moneyFull(totalReceivablePrevisto - totalPayablePrevisto)}
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="sticky top-0 z-10 bg-[var(--table-header-bg)] text-[var(--table-header-fg)]">
+            <tr>
+              <th rowSpan={2} className="px-3 py-2 font-semibold">
+                Sem.
+              </th>
+              <th rowSpan={2} className="px-3 py-2 font-semibold">
+                Dia
+              </th>
+              <th
+                colSpan={3}
+                className="border-l border-white/20 px-3 py-2 text-center font-semibold uppercase tracking-wide text-[var(--success)]"
+              >
+                A receber
+              </th>
+              <th
+                colSpan={3}
+                className="border-l border-white/20 px-3 py-2 text-center font-semibold uppercase tracking-wide text-[var(--danger)]"
+              >
+                A pagar
+              </th>
+              <th
+                rowSpan={2}
+                className="border-l border-white/20 px-3 py-2 text-right font-semibold"
+              >
+                Acumulativo
+              </th>
+            </tr>
+            <tr>
+              <th className="border-l border-white/20 px-3 py-1.5 text-right font-medium">
+                Previsto
+              </th>
+              <th className="px-3 py-1.5 text-right font-medium">
+                Recebido
+              </th>
+              <th className="px-3 py-1.5 text-right font-medium">Total</th>
+              <th className="border-l border-white/20 px-3 py-1.5 text-right font-medium">
+                Previsto
+              </th>
+              <th className="px-3 py-1.5 text-right font-medium">Pago</th>
+              <th className="px-3 py-1.5 text-right font-medium">
+                Total pago
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.day}
+                className="border-t border-[var(--border)]"
+              >
+                <td className="px-3 py-2 text-[var(--text-muted)]">
+                  {row.week}
+                </td>
+                <td className="px-3 py-2 font-medium text-[var(--text-primary)]">
+                  {row.day}
+                </td>
+                <td className="border-l border-[var(--border)] px-3 py-2 text-right text-[var(--text-secondary)]">
+                  {row.receivablePrevisto > 0
+                    ? moneyFull(row.receivablePrevisto)
+                    : ""}
+                </td>
+                <td className="px-3 py-2 text-right text-[var(--text-secondary)]">
+                  {row.receivableRecebido > 0
+                    ? moneyFull(row.receivableRecebido)
+                    : ""}
+                </td>
+                <td className="px-3 py-2 text-right font-medium text-[var(--success)]">
+                  {row.total > 0 ? moneyFull(row.total) : ""}
+                </td>
+                <td className="border-l border-[var(--border)] px-3 py-2 text-right text-[var(--text-secondary)]">
+                  {row.payablePrevisto > 0
+                    ? moneyFull(row.payablePrevisto)
+                    : ""}
+                </td>
+                <td className="px-3 py-2 text-right text-[var(--text-secondary)]">
+                  {row.payablePago > 0 ? moneyFull(row.payablePago) : ""}
+                </td>
+                <td className="px-3 py-2 text-right font-medium text-[var(--danger)]">
+                  {row.totalPago > 0 ? moneyFull(row.totalPago) : ""}
+                </td>
+                <td
+                  className={`border-l border-[var(--border)] px-3 py-2 text-right font-bold ${
+                    row.cumulative < 0
+                      ? "text-[var(--danger)]"
+                      : row.cumulative > 0
+                        ? "text-[var(--success)]"
+                        : "text-[var(--text-muted)]"
+                  }`}
+                >
+                  {moneyFull(row.cumulative)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
