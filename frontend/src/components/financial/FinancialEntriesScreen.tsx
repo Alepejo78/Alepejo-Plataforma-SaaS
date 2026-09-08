@@ -5,7 +5,9 @@ import Link from "next/link";
 import {
   AlertTriangle,
   Check,
+  Download,
   Eye,
+  FileSpreadsheet,
   FileText,
   Pencil,
   Plus,
@@ -20,7 +22,8 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
-import { ExportButton } from "@/components/ui/ExportButton";
+import { MenuButton } from "@/components/ui/MenuButton";
+import { buildExportMenuItems } from "@/lib/exportMenuItems";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
@@ -664,12 +667,6 @@ export function FinancialEntriesScreen({
               </div>
 
               <div className="flex gap-2">
-                <ExportButton
-                  tableRef={exportTableRef}
-                  filename={type === "RECEIVABLE" ? "contas-a-receber" : "contas-a-pagar"}
-                  sheetName={title}
-                />
-
                 <Link
                   href={`/erp/financeiro/contas/relatorio?type=${type}`}
                   target="_blank"
@@ -679,40 +676,53 @@ export function FinancialEntriesScreen({
                   Relatório
                 </Link>
 
-                <Can permission="financial-entry.create">
-                  <button
-                    type="button"
-                    onClick={() => setImportOpen(true)}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                  >
-                    <Upload size={18} />
-                    Importar documento
-                  </button>
-                </Can>
+                <MenuButton
+                  label="Importar/Exportar"
+                  icon={<Upload size={18} />}
+                  items={[
+                    {
+                      label: "Exportar",
+                      icon: <Download size={16} />,
+                      items: buildExportMenuItems({
+                        tableRef: exportTableRef,
+                        filename:
+                          type === "RECEIVABLE"
+                            ? "contas-a-receber"
+                            : "contas-a-pagar",
+                        sheetName: title,
+                      }),
+                    },
+                    {
+                      label: "Importar planilha",
+                      icon: <FileSpreadsheet size={16} />,
+                      onClick: () => setSpreadsheetImportOpen(true),
+                    },
+                  ]}
+                />
 
                 <Can permission="financial-entry.create">
-                  <button
-                    type="button"
-                    onClick={() => setSpreadsheetImportOpen(true)}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                  >
-                    <Upload size={18} />
-                    Importar planilha
-                  </button>
+                  <MenuButton
+                    label="Importar documentos"
+                    icon={<Upload size={18} />}
+                    items={[
+                      {
+                        label: "Importar documento",
+                        icon: <FileText size={16} />,
+                        onClick: () => setImportOpen(true),
+                      },
+                      ...(type === "RECEIVABLE"
+                        ? [
+                            {
+                              label: "Importar orçamento (oficina)",
+                              icon: <FileText size={16} />,
+                              onClick: () =>
+                                setWorkshopQuoteImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
                 </Can>
-
-                {type === "RECEIVABLE" && (
-                  <Can permission="financial-entry.create">
-                    <button
-                      type="button"
-                      onClick={() => setWorkshopQuoteImportOpen(true)}
-                      className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                    >
-                      <Upload size={18} />
-                      Importar orçamento (oficina)
-                    </button>
-                  </Can>
-                )}
 
                 <Can permission="financial-entry.create">
                   <button

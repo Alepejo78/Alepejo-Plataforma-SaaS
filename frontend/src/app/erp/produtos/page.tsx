@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Download,
+  FileSpreadsheet,
   FileText,
   Pencil,
   Plus,
@@ -14,8 +16,10 @@ import Link from "next/link";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
+import { useAuth } from "@/providers/AuthProvider";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
-import { ExportButton } from "@/components/ui/ExportButton";
+import { MenuButton } from "@/components/ui/MenuButton";
+import { buildExportMenuItems } from "@/lib/exportMenuItems";
 import { ProductForm } from "@/components/products/ProductForm";
 import { ProductImportModal } from "@/components/product-import/ProductImportModal";
 
@@ -92,6 +96,9 @@ function extractMessage(err: unknown, fallback: string) {
 }
 
 export default function ProdutosPage() {
+  const { can } = useAuth();
+  const canImport = can("product.create");
+
   const exportTableRef = useRef<HTMLTableElement>(null);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -249,12 +256,6 @@ export default function ProdutosPage() {
               </div>
 
               <div className="flex gap-2">
-                <ExportButton
-                  tableRef={exportTableRef}
-                  filename="produtos"
-                  sheetName="Produtos"
-                />
-
                 <Link
                   href="/erp/produtos/relatorio"
                   target="_blank"
@@ -272,16 +273,32 @@ export default function ProdutosPage() {
                   Categorias, marcas e unidades
                 </Link>
 
-                <Can permission="product.create">
-                  <button
-                    type="button"
-                    onClick={() => setImportOpen(true)}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                  >
-                    <Upload size={18} />
-                    Importar planilha
-                  </button>
+                <MenuButton
+                  label="Importar/Exportar"
+                  icon={<Upload size={18} />}
+                  items={[
+                    {
+                      label: "Exportar",
+                      icon: <Download size={16} />,
+                      items: buildExportMenuItems({
+                        tableRef: exportTableRef,
+                        filename: "produtos",
+                        sheetName: "Produtos",
+                      }),
+                    },
+                    ...(canImport
+                      ? [
+                          {
+                            label: "Importar planilha",
+                            icon: <FileSpreadsheet size={16} />,
+                            onClick: () => setImportOpen(true),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
 
+                <Can permission="product.create">
                   <button
                     type="button"
                     onClick={openCreate}

@@ -1,15 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
+import {
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 
 import { maskDocument, maskPhone } from "@/lib/masks";
+import { buildExportMenuItems } from "@/lib/exportMenuItems";
 
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
+import { useAuth } from "@/providers/AuthProvider";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
-import { ExportButton } from "@/components/ui/ExportButton";
+import { MenuButton } from "@/components/ui/MenuButton";
 import { PartnerForm } from "@/components/partners/PartnerForm";
 import { PartnerImportModal } from "@/components/partner-import/PartnerImportModal";
 
@@ -119,6 +130,8 @@ function extractMessage(err: unknown, fallback: string) {
 }
 
 export default function ParceirosPage() {
+  const { can } = useAuth();
+
   const [partners, setPartners] = useState<
     BusinessPartner[]
   >([]);
@@ -248,14 +261,6 @@ export default function ParceirosPage() {
               </div>
 
               <div className="flex gap-2">
-                <Can permission="partner.export">
-                  <ExportButton
-                    getData={() => buildPartnersExportData(partners)}
-                    filename="parceiros"
-                    sheetName="Parceiros"
-                  />
-                </Can>
-
                 <Link
                   href="/erp/parceiros/relatorio"
                   target="_blank"
@@ -265,16 +270,37 @@ export default function ParceirosPage() {
                   Relatório
                 </Link>
 
-                <Can permission="partner.import">
-                  <button
-                    type="button"
-                    onClick={() => setImportOpen(true)}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                  >
-                    <Upload size={18} />
-                    Importar planilha
-                  </button>
-                </Can>
+                {(can("partner.export") || can("partner.import")) && (
+                  <MenuButton
+                    label="Importar/Exportar"
+                    icon={<Upload size={18} />}
+                    items={[
+                      ...(can("partner.export")
+                        ? [
+                            {
+                              label: "Exportar",
+                              icon: <Download size={16} />,
+                              items: buildExportMenuItems({
+                                getData: () =>
+                                  buildPartnersExportData(partners),
+                                filename: "parceiros",
+                                sheetName: "Parceiros",
+                              }),
+                            },
+                          ]
+                        : []),
+                      ...(can("partner.import")
+                        ? [
+                            {
+                              label: "Importar planilha",
+                              icon: <FileSpreadsheet size={16} />,
+                              onClick: () => setImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                )}
 
                 <Can permission="partner.create">
                   <button

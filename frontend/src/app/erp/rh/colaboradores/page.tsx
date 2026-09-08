@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  Download,
+  FileSpreadsheet,
   Loader2,
   Pencil,
   Plus,
@@ -15,7 +17,8 @@ import {
 import { AppShell } from "@/components";
 import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
-import { ExportButton } from "@/components/ui/ExportButton";
+import { MenuButton } from "@/components/ui/MenuButton";
+import { buildExportMenuItems } from "@/lib/exportMenuItems";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { EmployeeImportModal } from "@/components/employee-import/EmployeeImportModal";
@@ -320,7 +323,7 @@ function emptyForm(companyId = ""): FormState {
 }
 
 export default function ColaboradoresPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const exportTableRef = useRef<HTMLTableElement>(null);
 
   const [items, setItems] = useState<Employee[]>([]);
@@ -898,12 +901,6 @@ export default function ColaboradoresPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <ExportButton
-                  tableRef={exportTableRef}
-                  filename="colaboradores"
-                  sheetName="Colaboradores"
-                />
-
                 <Link
                   href="/erp/rh/funcoes"
                   className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
@@ -912,16 +909,30 @@ export default function ColaboradoresPage() {
                   Funções e cargos
                 </Link>
 
-                <Can permission="employee.import">
-                  <button
-                    type="button"
-                    onClick={() => setImportOpen(true)}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                  >
-                    <Upload size={18} />
-                    Importar planilha
-                  </button>
-                </Can>
+                <MenuButton
+                  label="Importar/Exportar"
+                  icon={<Upload size={18} />}
+                  items={[
+                    {
+                      label: "Exportar",
+                      icon: <Download size={16} />,
+                      items: buildExportMenuItems({
+                        tableRef: exportTableRef,
+                        filename: "colaboradores",
+                        sheetName: "Colaboradores",
+                      }),
+                    },
+                    ...(can("employee.import")
+                      ? [
+                          {
+                            label: "Importar planilha",
+                            icon: <FileSpreadsheet size={16} />,
+                            onClick: () => setImportOpen(true),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
 
                 <Can permission="employee.create">
                   <button
