@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Layers,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
@@ -11,6 +12,7 @@ import {
 import { AppShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
+import { MenuButton } from "@/components/ui/MenuButton";
 
 import {
   financialEntryService,
@@ -303,6 +305,23 @@ export default function FluxoCaixaPage() {
     }
   }, [mode, loadDaily]);
 
+  const dailyFilteredDays = dailyFlow
+    ? dailyFilter === "semana"
+      ? dailyFlow.days.filter((d) => d.week === dailyWeek)
+      : dailyFlow.days
+    : [];
+
+  const dailyTotals = {
+    receivable: dailyFilteredDays.reduce(
+      (sum, d) => sum + d.receivablePrevisto,
+      0
+    ),
+    payable: dailyFilteredDays.reduce(
+      (sum, d) => sum + d.payablePrevisto,
+      0
+    ),
+  };
+
   const loadPeriod = useCallback(async () => {
     setPeriodLoading(true);
     setPeriodError("");
@@ -424,20 +443,12 @@ export default function FluxoCaixaPage() {
       <ListPageLayout
         header={
           <>
-            <header className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-                  Fluxo de caixa
-                </h1>
+            <header className="flex flex-wrap items-center justify-between gap-3">
+              <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+                Fluxo de caixa
+              </h1>
 
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Totais mensais calculados a partir das contas a
-                  receber e a pagar. Não é possível digitar valores
-                  aqui.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-end gap-3">
                 {mode === "ano" && (
                   <ExportButton
                     tableRef={exportTableRef}
@@ -446,7 +457,37 @@ export default function FluxoCaixaPage() {
                   />
                 )}
 
-                {mode === "diario" ? null : mode === "ano" ? (
+                <MenuButton
+                  label="Visão"
+                  icon={<Layers size={18} />}
+                  items={[
+                    { label: "Visão anual", onClick: () => setMode("ano") },
+                    {
+                      label: "Dia",
+                      onClick: () => {
+                        setMode("periodo");
+                        setPeriod("day");
+                      },
+                    },
+                    {
+                      label: "Semana",
+                      onClick: () => {
+                        setMode("periodo");
+                        setPeriod("week");
+                      },
+                    },
+                    {
+                      label: "Mês",
+                      onClick: () => {
+                        setMode("periodo");
+                        setPeriod("month");
+                      },
+                    },
+                    { label: "Diário", onClick: () => setMode("diario") },
+                  ]}
+                />
+
+                {mode === "ano" && (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -470,7 +511,9 @@ export default function FluxoCaixaPage() {
                       <ChevronRight size={18} />
                     </button>
                   </div>
-                ) : (
+                )}
+
+                {mode === "periodo" && (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -517,138 +560,95 @@ export default function FluxoCaixaPage() {
                     </button>
                   </div>
                 )}
-              </div>
-            </header>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setMode("ano")}
-                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
-                  mode === "ano"
-                    ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
-                    : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                Visão anual
-              </button>
-
-              {(Object.keys(PERIOD_LABELS) as PeriodKind[]).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => {
-                    setMode("periodo");
-                    setPeriod(p);
-                  }}
-                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
-                    mode === "periodo" && period === p
-                      ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
-                      : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                  }`}
-                >
-                  {PERIOD_LABELS[p]}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => setMode("diario")}
-                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
-                  mode === "diario"
-                    ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
-                    : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                Diário
-              </button>
-            </div>
-
-            {mode === "diario" && (
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={dailyMonth}
-                  onChange={(e) => setDailyMonth(Number(e.target.value))}
-                  className="h-11 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
-                >
-                  {MONTH_NAMES_FULL.map((label, i) => (
-                    <option key={label} value={i + 1}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  type="number"
-                  value={dailyYear}
-                  onChange={(e) =>
-                    setDailyYear(Number(e.target.value) || dailyYear)
-                  }
-                  className="h-11 w-24 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
-                />
-
-                <div className="flex gap-2 rounded-xl border border-[var(--border)] p-1">
-                  <button
-                    type="button"
-                    onClick={() => setDailyFilter("dia")}
-                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                      dailyFilter === "dia"
-                        ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
-                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                    }`}
-                  >
-                    Dia
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDailyFilter("semana")}
-                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                      dailyFilter === "semana"
-                        ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
-                        : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                    }`}
-                  >
-                    Semana
-                  </button>
-                </div>
-
-                {dailyFilter === "semana" && dailyFlow && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDailyWeek((w) => Math.max(1, w - 1))
-                      }
-                      aria-label="Semana anterior"
-                      className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                {mode === "diario" && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={dailyMonth}
+                      onChange={(e) => setDailyMonth(Number(e.target.value))}
+                      className="h-11 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
                     >
-                      <ChevronLeft size={16} />
-                    </button>
+                      {MONTH_NAMES_FULL.map((label, i) => (
+                        <option key={label} value={i + 1}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
 
-                    <span className="min-w-24 text-center text-sm font-medium text-[var(--text-primary)]">
-                      Semana {dailyWeek}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDailyWeek((w) =>
-                          Math.min(
-                            dailyFlow.days[dailyFlow.days.length - 1].week,
-                            w + 1
-                          )
-                        )
+                    <input
+                      type="number"
+                      value={dailyYear}
+                      onChange={(e) =>
+                        setDailyYear(Number(e.target.value) || dailyYear)
                       }
-                      aria-label="Próxima semana"
-                      className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
+                      className="h-11 w-24 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
+                    />
+
+                    <div className="flex gap-2 rounded-xl border border-[var(--border)] p-1">
+                      <button
+                        type="button"
+                        onClick={() => setDailyFilter("dia")}
+                        className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                          dailyFilter === "dia"
+                            ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                            : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                        }`}
+                      >
+                        Dia
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDailyFilter("semana")}
+                        className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                          dailyFilter === "semana"
+                            ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                            : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                        }`}
+                      >
+                        Semana
+                      </button>
+                    </div>
+
+                    {dailyFilter === "semana" && dailyFlow && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDailyWeek((w) => Math.max(1, w - 1))
+                          }
+                          aria-label="Semana anterior"
+                          className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+
+                        <span className="min-w-20 text-center text-sm font-medium text-[var(--text-primary)]">
+                          Semana {dailyWeek}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDailyWeek((w) =>
+                              Math.min(
+                                dailyFlow.days[dailyFlow.days.length - 1]
+                                  .week,
+                                w + 1
+                              )
+                            )
+                          }
+                          aria-label="Próxima semana"
+                          className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            </header>
 
             {mode === "periodo" && periodError && (
               <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
@@ -667,15 +667,20 @@ export default function FluxoCaixaPage() {
                 {dailyError}
               </div>
             )}
+
+            {mode === "diario" && !dailyLoading && dailyFlow && (
+              <DailySummaryCards
+                totals={dailyTotals}
+                filterMode={dailyFilter}
+              />
+            )}
           </>
         }
       >
         {mode === "diario" ? (
           <DailyCashFlowView
-            flow={dailyFlow}
+            days={dailyFilteredDays}
             loading={dailyLoading}
-            filterMode={dailyFilter}
-            week={dailyWeek}
           />
         ) : mode === "periodo" ? (
           <PeriodSummaryView
@@ -995,18 +1000,59 @@ function buildDailyRows(days: DailyCashFlowDay[]): DailyRow[] {
   });
 }
 
-function DailyCashFlowView({
-  flow,
-  loading,
+/** Cards de total — ficam no cabeçalho fixo da página (fora da área que rola), por isso são um componente à parte de `DailyCashFlowView`. */
+function DailySummaryCards({
+  totals,
   filterMode,
-  week,
 }: {
-  flow: DailyCashFlow | null;
-  loading: boolean;
+  totals: { receivable: number; payable: number };
   filterMode: "dia" | "semana";
-  week: number;
 }) {
-  if (loading || !flow) {
+  const label = filterMode === "semana" ? "semana" : "mês";
+  const diff = totals.receivable - totals.payable;
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      <div className="rounded-xl bg-[var(--success-soft)] px-3 py-2">
+        <p className="text-xs text-[var(--text-muted)]">
+          Total do {label} — a receber (previsto)
+        </p>
+        <p className="text-base font-bold text-[var(--success)]">
+          {moneyFull(totals.receivable)}
+        </p>
+      </div>
+
+      <div className="rounded-xl bg-[var(--danger-soft)] px-3 py-2">
+        <p className="text-xs text-[var(--text-muted)]">
+          Total do {label} — a pagar (previsto)
+        </p>
+        <p className="text-base font-bold text-[var(--danger)]">
+          {moneyFull(totals.payable)}
+        </p>
+      </div>
+
+      <div className="rounded-xl bg-[var(--surface-hover)] px-3 py-2">
+        <p className="text-xs text-[var(--text-muted)]">Diferença</p>
+        <p
+          className={`text-base font-bold ${
+            diff >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"
+          }`}
+        >
+          {moneyFull(diff)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DailyCashFlowView({
+  days,
+  loading,
+}: {
+  days: DailyCashFlowDay[];
+  loading: boolean;
+}) {
+  if (loading) {
     return (
       <div className="space-y-2 p-4">
         {Array.from({ length: 9 }).map((_, i) => (
@@ -1019,60 +1065,16 @@ function DailyCashFlowView({
     );
   }
 
-  const filteredDays =
-    filterMode === "semana"
-      ? flow.days.filter((d) => d.week === week)
-      : flow.days;
-
-  const rows = buildDailyRows(filteredDays);
-
-  const totalReceivablePrevisto = filteredDays.reduce(
-    (sum, d) => sum + d.receivablePrevisto,
-    0
-  );
-  const totalPayablePrevisto = filteredDays.reduce(
-    (sum, d) => sum + d.payablePrevisto,
-    0
-  );
+  const rows = buildDailyRows(days);
 
   return (
     <div>
-      <div className="grid gap-4 border-b border-[var(--border)] p-4 sm:grid-cols-3">
-        <div className="rounded-xl bg-[var(--success-soft)] p-3">
-          <p className="text-xs text-[var(--text-muted)]">
-            Total {filterMode === "semana" ? "da semana" : "do mês"} — a
-            receber (previsto)
-          </p>
-          <p className="text-lg font-bold text-[var(--success)]">
-            {moneyFull(totalReceivablePrevisto)}
-          </p>
-        </div>
-
-        <div className="rounded-xl bg-[var(--danger-soft)] p-3">
-          <p className="text-xs text-[var(--text-muted)]">
-            Total {filterMode === "semana" ? "da semana" : "do mês"} — a
-            pagar (previsto)
-          </p>
-          <p className="text-lg font-bold text-[var(--danger)]">
-            {moneyFull(totalPayablePrevisto)}
-          </p>
-        </div>
-
-        <div className="rounded-xl bg-[var(--surface-hover)] p-3">
-          <p className="text-xs text-[var(--text-muted)]">Diferença</p>
-          <p
-            className={`text-lg font-bold ${
-              totalReceivablePrevisto - totalPayablePrevisto >= 0
-                ? "text-[var(--success)]"
-                : "text-[var(--danger)]"
-            }`}
-          >
-            {moneyFull(totalReceivablePrevisto - totalPayablePrevisto)}
-          </p>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
+      {/* Sem overflow-x-auto aqui: esse wrapper vira sua própria caixa de
+          rolagem (mesmo só configurando o eixo x) e o sticky do cabeçalho
+          gruda nela em vez de grudar na área que realmente rola
+          (o painel do ListPageLayout) — a tabela cabe sem rolagem
+          horizontal, então não precisa desse wrapper. */}
+      <div>
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 z-10 bg-[var(--table-header-bg)] text-[var(--table-header-fg)]">
             <tr>
