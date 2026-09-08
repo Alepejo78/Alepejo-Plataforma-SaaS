@@ -15,6 +15,7 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 import { buildEmailDocumentSummaryHtml } from '../../../core/utils/email-document-summary.util';
+import { pickPrimaryProductId } from '../../../core/utils/financial-entry-product.util';
 
 import { QuotationRepository } from '../repositories/quotation.repository';
 
@@ -448,6 +449,7 @@ export class QuotationService {
             dueDate: new Date(dto.dueDate!),
             paymentMethod: dto.paymentMethod ?? offer.paymentMethod,
             chartOfAccountId: dto.chartOfAccountId,
+            productId: dto.productId ?? pickPrimaryProductId(offer.items),
             purchaseOrderId: purchaseOrder.id,
             documentNumber: purchaseOrderDocumentNumber,
             observation: `Pagamento antecipado — Pedido de Compra ${purchaseOrderDocumentNumber}`,

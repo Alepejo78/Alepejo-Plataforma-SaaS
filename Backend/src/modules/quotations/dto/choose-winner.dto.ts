@@ -32,4 +32,13 @@ export class ChooseWinnerDto {
   @IsOptional()
   @IsString()
   chartOfAccountId?: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Produto/serviço do título antecipado — sem informar, usa o item de maior valor da proposta vencedora.',
+  })
+  @IsOptional()
+  @IsString()
+  productId?: string;
 }

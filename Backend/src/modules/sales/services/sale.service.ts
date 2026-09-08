@@ -24,6 +24,7 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { calculateAvailableQuantity } from '../../../core/utils/inventory.util';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
 import { buildAutoInstallments } from '../../../core/utils/installment.util';
+import { pickPrimaryProductId } from '../../../core/utils/financial-entry-product.util';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
@@ -910,6 +911,7 @@ export class SaleService {
       documentKey: approveFields.invoiceKey,
       documentType,
       chartOfAccountId: sale.chartOfAccountId,
+      productId: pickPrimaryProductId(sale.items),
       saleId: sale.id,
       observation: `Venda ${sale.id}`,
     };

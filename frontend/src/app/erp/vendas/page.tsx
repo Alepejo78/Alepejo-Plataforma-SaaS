@@ -56,6 +56,7 @@ import {
 import {
   productService,
   type Product,
+  type InventoryControl,
 } from "@/services/product.service";
 
 import {
@@ -154,6 +155,9 @@ interface ItemForm {
   // pedida - já convertida) — undefined quando o item não veio de
   // um pedido, ou veio "à parte" sem bater com nenhum item dele.
   maxQuantity?: number;
+  // Serviço/despesa (inventoryControl "NONE") não controla estoque —
+  // não entra na checagem de saldo disponível ao confirmar a venda.
+  inventoryControl?: InventoryControl;
 }
 
 function emptyItem(): ItemForm {
@@ -1227,9 +1231,16 @@ export default function VendasPage() {
     setConfirmItems([]);
     setConfirmChecking(true);
 
+    // Serviço/despesa (inventoryControl "NONE") não controla
+    // estoque — não entra na checagem de saldo disponível, mesmo
+    // critério já aplicado no backend (sale.service.ts).
+    const itemsComEstoque = validItems.filter(
+      (it) => it.inventoryControl !== "NONE"
+    );
+
     try {
       const results = await Promise.all(
-        validItems.map(async (it) => {
+        itemsComEstoque.map(async (it) => {
           const res = await inventoryService.list({
             productId: it.productId,
             warehouseId: form.warehouseId,
@@ -1947,6 +1958,7 @@ export default function VendasPage() {
                                   p && !it.unitPrice
                                     ? num(p.salePrice)
                                     : it.unitPrice,
+                                inventoryControl: p?.inventoryControl,
                               });
 
                               // Sugere a classificação do produto

@@ -363,6 +363,7 @@ export class FinancialEntriesService {
       documentType?: FinancialDocumentType | null;
       /// Tipo de despesa/receita herdado do documento (compra/venda).
       chartOfAccountId?: string | null;
+      productId?: string | null;
       purchaseId?: string;
       purchaseOrderId?: string;
       saleId?: string;

@@ -23,6 +23,7 @@ import { FinancialEntriesService } from '../../financial-entries/services/financ
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
 import { buildAutoInstallments } from '../../../core/utils/installment.util';
+import { pickPrimaryProductId } from '../../../core/utils/financial-entry-product.util';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
@@ -856,6 +857,7 @@ export class PurchaseService {
           documentKey: dto.invoiceKey,
           documentType,
           chartOfAccountId: purchase.chartOfAccountId,
+          productId: pickPrimaryProductId(purchase.items),
           purchaseId: purchase.id,
           observation: `Compra ${purchase.id}`,
         };
@@ -900,6 +902,7 @@ export class PurchaseService {
               documentNumber: commonEntryData.documentNumber,
               documentKey: commonEntryData.documentKey,
               documentType: commonEntryData.documentType,
+              productId: commonEntryData.productId,
               observation: commonEntryData.observation,
               updatedById: userId,
             },
