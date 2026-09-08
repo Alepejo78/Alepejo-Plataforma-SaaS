@@ -60,12 +60,12 @@ const TabsContext = createContext<TabsContextValue | undefined>(
 
 export const APP_LABEL: Record<AppKey, string> = {
   erp: "Sistema ERP",
-  os: "OS",
+  os: "Configurações",
 };
 
 const HOME_TAB: Record<AppKey, TabEntry> = {
   erp: { href: "/", title: "Visão geral" },
-  os: { href: "/os", title: "OS" },
+  os: { href: "/os", title: "Configurações" },
 };
 
 const STORAGE_KEY: Record<AppKey, string> = {

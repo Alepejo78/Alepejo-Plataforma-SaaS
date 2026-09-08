@@ -59,7 +59,7 @@ export function isOsPath(pathname: string): boolean {
  * (ex.: F5, voltar do navegador) e pra saber quais URLs de OS viram guia.
  */
 export const OS_PATH_TITLES: Record<string, string> = {
-  "/os": "OS",
+  "/os": "Configurações",
   "/os/portal": "Portal",
   "/os/seguranca": "Segurança",
   "/os/apis": "APIs",

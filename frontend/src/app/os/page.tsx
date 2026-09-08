@@ -94,11 +94,11 @@ export default function OsHomePage() {
   ].filter((card) => card.visible);
 
   return (
-    <OsShell workspaceLabel="OS">
+    <OsShell workspaceLabel="Configurações">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            OS
+            Configurações
           </h1>
 
           <p className="mt-1 text-sm text-[var(--text-muted)]">
