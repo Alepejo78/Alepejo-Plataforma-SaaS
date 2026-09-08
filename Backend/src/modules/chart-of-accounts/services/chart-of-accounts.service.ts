@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ChartOfAccountType } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
@@ -50,6 +51,80 @@ export class ChartOfAccountsService {
     }
 
     return this.repository.create(companyId, dto, userId);
+  }
+
+  /**
+   * Suporte ao dono da plataforma: importa um plano de contas inteiro
+   * (classificações + contas) de uma vez pra uma empresa cliente que
+   * já tem o próprio plano em outro lugar (ex.: planilha) e precisa
+   * trazer tudo. O que já existir com o mesmo código é ATUALIZADO
+   * (descrição/classificação/tipo), nunca duplicado — diferente de
+   * `create()`, que rejeita código repetido.
+   */
+  async bulkImport(
+    companyId: string,
+    userId: string,
+    groups: {
+      classification: string;
+      type?: ChartOfAccountType;
+      accounts: { code: string; description: string }[];
+    }[],
+  ) {
+    const result = {
+      classifications: 0,
+      accountsCreated: 0,
+      accountsUpdated: 0,
+    };
+
+    for (const group of groups) {
+      const classification =
+        await this.classificationsService.findOrCreateByName(
+          companyId,
+          group.classification,
+          userId,
+        );
+
+      result.classifications += 1;
+
+      const type = group.type ?? 'DESPESA';
+
+      for (const account of group.accounts) {
+        const code = account.code.trim();
+        const description = account.description.trim();
+        const existing = await this.repository.findByCode(
+          companyId,
+          code,
+        );
+
+        if (existing) {
+          await this.repository.update(
+            existing.id,
+            {
+              description,
+              classificationId: classification.id,
+              type,
+              active: true,
+            },
+            userId,
+          );
+          result.accountsUpdated += 1;
+        } else {
+          await this.repository.create(
+            companyId,
+            {
+              code,
+              description,
+              classificationId: classification.id,
+              type,
+            },
+            userId,
+          );
+          result.accountsCreated += 1;
+        }
+      }
+    }
+
+    return result;
   }
 
   async findAll(companyId: string, filter: ChartOfAccountFilterDto) {

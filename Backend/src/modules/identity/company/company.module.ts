@@ -12,6 +12,7 @@ import { LicenseModule } from '../license/license.module';
 import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../../billing/billing.module';
 import { NotificationsModule } from '../../notifications/notifications.module';
+import { ChartOfAccountsModule } from '../../chart-of-accounts/chart-of-accounts.module';
 
 import { CompanyDeletionService } from './services/company-deletion.service';
 
@@ -24,6 +25,7 @@ import { CompanyDeletionService } from './services/company-deletion.service';
     AuthModule,
     BillingModule,
     NotificationsModule,
+    ChartOfAccountsModule,
   ],
   controllers: [CompanyController],
   providers: [

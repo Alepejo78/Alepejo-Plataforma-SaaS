@@ -46,6 +46,25 @@ export class ChartOfAccountClassificationsService {
     return this.repository.create(companyId, dto, userId);
   }
 
+  /**
+   * Acha pelo nome (reativando se estiver excluída) ou cria — usado
+   * pelo bulk-import do plano de contas
+   * (`ChartOfAccountsService.bulkImport`), que não pode simplesmente
+   * chamar `create()` porque esse já rejeita nome duplicado.
+   */
+  async findOrCreateByName(companyId: string, name: string, userId: string) {
+    const trimmed = name.trim();
+    const existing = await this.repository.findByName(companyId, trimmed);
+
+    if (existing) {
+      return existing.active
+        ? existing
+        : this.repository.restore(existing.id, { name: trimmed }, userId);
+    }
+
+    return this.repository.create(companyId, { name: trimmed }, userId);
+  }
+
   async findAll(
     companyId: string,
     filter: ChartOfAccountClassificationFilterDto,

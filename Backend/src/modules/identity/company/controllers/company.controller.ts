@@ -28,12 +28,14 @@ import { CompanyService } from '../services/company.service';
 import { CompanyOnboardingService } from '../services/company-onboarding.service';
 import { CompanyDeletionService } from '../services/company-deletion.service';
 import { LicenseService } from '../../license/services/license.service';
+import { ChartOfAccountsService } from '../../../chart-of-accounts/services/chart-of-accounts.service';
 
 import { CreateCompanyDto } from '../dto/create-company.dto';
 import { UpdateCompanyDto } from '../dto/update-company.dto';
 import { CompanySignupDto } from '../dto/company-signup.dto';
 import { CompanyAdditionalDto } from '../dto/company-additional.dto';
 import { DeleteCompanyDto } from '../dto/delete-company.dto';
+import { BulkImportChartOfAccountsDto } from '../dto/bulk-import-chart-of-accounts.dto';
 
 /**
  * Não existe (ainda) um conceito de administrador de plataforma
@@ -62,6 +64,7 @@ export class CompanyController {
     private readonly deletionService: CompanyDeletionService,
     private readonly licenseService: LicenseService,
     private readonly authService: AuthService,
+    private readonly chartOfAccountsService: ChartOfAccountsService,
   ) {}
 
   /**
@@ -183,6 +186,31 @@ export class CompanyController {
     @Param('id') id: string,
   ) {
     return this.onboardingService.resendPendingCheckout(companyId, id);
+  }
+
+  /**
+   * Suporte ao dono da plataforma: importa de uma vez o plano de
+   * contas inteiro (classificações + contas) de um cliente que já
+   * tem o próprio plano em outro lugar (ex.: planilha) — mesma trava
+   * de `getPendingCheckoutsByEmail`/`resendPendingCheckout` acima. O
+   * que já existir com o mesmo código é ATUALIZADO, nunca duplicado.
+   */
+  @Post(':companyId/bulk-import-chart-of-accounts')
+  @Permissions('platform.license.manage')
+  @ApiOperation({
+    summary:
+      'Importar plano de contas inteiro (classificações + contas) — dono da plataforma',
+  })
+  bulkImportChartOfAccounts(
+    @Param('companyId') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: BulkImportChartOfAccountsDto,
+  ) {
+    return this.chartOfAccountsService.bulkImport(
+      companyId,
+      userId,
+      dto.groups,
+    );
   }
 
   @Post('additional')
