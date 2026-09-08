@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 
 import { isMarketingHomepage } from "@/lib/publicRoutes";
+
+import { ChromaKeyVideo } from "./ChromaKeyVideo";
 
 /**
  * Páginas em que o Pejo fica de plantão no cantinho. Só as públicas:
@@ -14,19 +16,47 @@ import { isMarketingHomepage } from "@/lib/publicRoutes";
  */
 const PAGINAS_COM_MASCOTE = ["/institucional", "/planos", "/checkout"];
 
+const VIDEO_PADRAO = "/videos/pejo-idle.mp4";
+const VIDEOS_CLIQUE = ["/videos/pejo-click.mp4", "/videos/pejo-click2.mp4"];
+const VIDEO_OCIOSO = "/videos/pejo-nudge.mp4";
+
+/** Espera sem interação até o Pejo "chamar atenção" com uma reação sozinho. */
+const OCIOSO_MS = 10_000;
+
 /**
  * Pejo fixo no canto inferior direito, logo acima da marca "AlePejo
- * ERP Cloud" (`BrandFooter`) — as duas coisas juntas fecham o rodapé
- * da página sem brigar por espaço.
- *
- * Fica sempre em looping, flutuando. Clicando, abre um balão
- * convidando pra demonstração guiada, que é o papel dele: ser o
- * anfitrião.
+ * ERP Cloud" (`BrandFooter`). Três estados de vídeo:
+ * - padrão: em loop, o tempo todo;
+ * - ao clicar: toca uma reação aleatória uma vez e volta pro padrão;
+ * - ocioso (10s sem clique): toca uma reação "chamando atenção" uma
+ *   vez e volta pro padrão, repetindo enquanto ninguém interage.
  */
 export function MascoteFlutuante() {
   const pathname = usePathname();
   const [aberto, setAberto] = useState(false);
   const [visivel, setVisivel] = useState(false);
+  const [video, setVideo] = useState(VIDEO_PADRAO);
+  const ociosoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const reiniciarOcioso = useCallback(() => {
+    if (ociosoTimer.current) {
+      clearTimeout(ociosoTimer.current);
+    }
+
+    ociosoTimer.current = setTimeout(() => {
+      setVideo(VIDEO_OCIOSO);
+    }, OCIOSO_MS);
+  }, []);
+
+  useEffect(() => {
+    reiniciarOcioso();
+
+    return () => {
+      if (ociosoTimer.current) {
+        clearTimeout(ociosoTimer.current);
+      }
+    };
+  }, [reiniciarOcioso]);
 
   /*
    * `isMarketingHomepage` depende do domínio, que só existe no
@@ -49,6 +79,20 @@ export function MascoteFlutuante() {
 
   function aoClicar() {
     setAberto(!aberto);
+    const escolhido =
+      VIDEOS_CLIQUE[Math.floor(Math.random() * VIDEOS_CLIQUE.length)];
+    setVideo(escolhido);
+    reiniciarOcioso();
+  }
+
+  function aoTerminarReacao() {
+    if (video !== VIDEO_PADRAO) {
+      setVideo(VIDEO_PADRAO);
+      // Volta a contar os 10s — sem isso a reação de ociosidade só
+      // aconteceria uma vez na vida da página, em vez de repetir
+      // enquanto ninguém interage.
+      reiniciarOcioso();
+    }
   }
 
   return (
@@ -83,22 +127,12 @@ export function MascoteFlutuante() {
         </div>
       )}
 
-      <video
-        src="/videos/pejo.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
+      <ChromaKeyVideo
+        src={video}
+        loop={video === VIDEO_PADRAO}
+        onEnded={aoTerminarReacao}
         onClick={aoClicar}
-        role="button"
-        tabIndex={0}
-        aria-label="Abrir conversa com o Pejo"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            aoClicar();
-          }
-        }}
-        className="pointer-events-auto mix-blend-screen h-[74px] w-[110px] cursor-pointer object-contain drop-shadow-lg sm:h-[90px] sm:w-[135px]"
+        className="pointer-events-auto h-[110px] w-[160px] cursor-pointer object-contain drop-shadow-lg sm:h-[135px] sm:w-[195px]"
       />
     </div>
   );

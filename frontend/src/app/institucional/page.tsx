@@ -65,10 +65,7 @@ import { companyOnboardingService } from "@/services/company-onboarding.service"
 import { siteVisitService } from "@/services/site-visit.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
 import { Faq } from "@/components/marketing/Faq";
-import {
-  Mascote,
-  type MascoteMood,
-} from "@/components/marketing/Mascote";
+import { ChromaKeyVideo } from "@/components/marketing/ChromaKeyVideo";
 import "@/components/marketing/aurora.css";
 
 /** Dias de teste grátis vigente (Administrar planos) — usado nos textos de chamada pra ação abaixo. */
@@ -1415,9 +1412,6 @@ function DemoTour() {
   const [started, setStarted] = useState(false);
   const [canSpeak, setCanSpeak] = useState(false);
 
-  const [pointing, setPointing] = useState(false);
-  const [reaction, setReaction] = useState<MascoteMood | null>(null);
-
   const step = demoTabs[index];
   const voices = useSpeechVoices();
   const voice = pickVoice(voices);
@@ -1494,32 +1488,6 @@ function DemoTour() {
     };
   }, []);
 
-  // Ao entrar em cada módulo o Pejo aponta pra tela por um instante, e
-  // depois volta a só flutuar — apontar o tempo todo vira estátua.
-  useEffect(() => {
-    if (!playing) {
-      setPointing(false);
-
-      return;
-    }
-
-    setPointing(true);
-    const timer = setTimeout(() => setPointing(false), 1800);
-
-    return () => clearTimeout(timer);
-  }, [playing, index]);
-
-  // Reação a um clique do visitante: dura o tempo da animação e some.
-  useEffect(() => {
-    if (!reaction) {
-      return;
-    }
-
-    const timer = setTimeout(() => setReaction(null), 1900);
-
-    return () => clearTimeout(timer);
-  }, [reaction]);
-
   function play() {
     setStarted(true);
     setPlaying(true);
@@ -1531,32 +1499,6 @@ function DemoTour() {
   }
 
   const finished = started && !playing && index === demoTabs.length - 1;
-
-  /**
-   * O humor do Pejo é o estado do tour traduzido em cara e corpo:
-   * acena antes de começar, aponta ao abrir cada módulo, murcha quando
-   * pausam e comemora no fim. Um clique do visitante passa na frente
-   * de tudo — é a parte em que ele interage com quem está olhando.
-   */
-  const mood: MascoteMood = reaction
-    ? reaction
-    : !started
-      ? "wave"
-      : finished
-        ? "happy"
-        : !playing
-          ? "sad"
-          : pointing
-            ? "point"
-            : "idle";
-
-  /** Clique no mascote — vai revezando as reações pra não cansar. */
-  function reactToClick() {
-    const reactions: MascoteMood[] = ["wave", "spin", "happy"];
-    const current = reactions.indexOf(reaction ?? "happy");
-
-    setReaction(reactions[(current + 1) % reactions.length]);
-  }
 
   return (
     <section id="demonstracao" className="py-20">
@@ -1610,13 +1552,9 @@ function DemoTour() {
               onClick={play}
               className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-[color:rgb(9_13_25_/_0.55)] backdrop-blur-[2px] transition-colors hover:bg-[color:rgb(9_13_25_/_0.62)]"
             >
-              <video
-                src="/videos/pejo.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="mix-blend-screen w-[150px] object-contain sm:w-[190px]"
+              <ChromaKeyVideo
+                src="/videos/pejo-idle.mp4"
+                className="w-[220px] object-contain sm:w-[280px]"
               />
 
               <span className="aurora-banner flex h-16 w-16 items-center justify-center rounded-full text-white shadow-2xl">
@@ -1655,20 +1593,10 @@ function DemoTour() {
 
           <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
             <div className="flex shrink-0 flex-col items-center">
-              <Mascote
-                mood={mood}
-                speaking={playing && sound && canSpeak}
-                onClick={reactToClick}
-                className="h-auto w-[92px] sm:w-[104px]"
+              <ChromaKeyVideo
+                src="/videos/pejo-apresentacao.mp4"
+                className="h-auto w-[110px] sm:w-[125px]"
               />
-
-              <button
-                type="button"
-                onClick={reactToClick}
-                className="mt-1 text-[11px] font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--primary)]"
-              >
-                Clique no Pejo
-              </button>
             </div>
 
             {/* Balão de fala: a pontinha à esquerda liga o texto ao
