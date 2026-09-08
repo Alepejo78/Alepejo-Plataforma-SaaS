@@ -7,6 +7,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { json, urlencoded } from 'express';
 
 import { AppModule } from './app.module';
 
@@ -16,11 +17,24 @@ import { dataPath } from './core/storage/data-dir';
 
 async function bootstrap() {
   const app =
-    await NestFactory.create<NestExpressApplication>(AppModule);
+    await NestFactory.create<NestExpressApplication>(AppModule, {
+      // Desliga o body-parser automático do Nest (limite padrão do
+      // Express é só 100kb) pra registrar o nosso, com limite maior —
+      // ver app.use(json/urlencoded) logo abaixo.
+      bodyParser: false,
+    });
 
   app.setGlobalPrefix('api');
 
   app.use(cookieParser());
+
+  // 100kb padrão do Express estourava em telas que mandam MUITOS
+  // dados no corpo da requisição — ex.: confirmar a importação de uma
+  // planilha inteira de parceiros/produtos/colaboradores (o arquivo em
+  // si já aceita até 10MB via multer nesses módulos; o JSON com as
+  // linhas já revisadas precisa do mesmo fôlego, não só o upload).
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ limit: '10mb', extended: true }));
 
   // Logos enviadas pelo módulo de personalização (BRANDING). Fora do
   // prefixo /api de propósito: são arquivos estáticos, não rotas da API.
