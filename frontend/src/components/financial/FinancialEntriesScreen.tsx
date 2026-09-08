@@ -1243,8 +1243,7 @@ export function FinancialEntriesScreen({
                 </div>
               </div>
 
-              {!editingId && (
-                <div>
+              <div>
                   {!isParceled ? (
                     <button
                       type="button"
@@ -1335,8 +1334,7 @@ export function FinancialEntriesScreen({
                       </p>
                     </div>
                   )}
-                </div>
-              )}
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -1485,8 +1483,9 @@ export function FinancialEntriesScreen({
                   Observação
                 </label>
 
-                <input
-                  className={fieldClass}
+                <textarea
+                  rows={3}
+                  className={`${fieldClass} h-auto py-2.5`}
                   value={form.observation}
                   onChange={(e) =>
                     setForm({

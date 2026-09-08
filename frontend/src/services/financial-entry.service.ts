@@ -265,12 +265,13 @@ export const financialEntryService = {
     return data.data;
   },
 
+  /** Devolve um título só, exceto quando `payload.installments` parcela um título existente — aí devolve a lista (o título vira a 1ª parcela + as novas). */
   async update(
     id: string,
     payload: Partial<Omit<FinancialEntryPayload, "type">>
-  ): Promise<FinancialEntry> {
+  ): Promise<FinancialEntry | FinancialEntry[]> {
     const { data } = await api.patch<
-      ApiEnvelope<FinancialEntry>
+      ApiEnvelope<FinancialEntry | FinancialEntry[]>
     >(`/financial-entries/${id}`, payload);
 
     return data.data;

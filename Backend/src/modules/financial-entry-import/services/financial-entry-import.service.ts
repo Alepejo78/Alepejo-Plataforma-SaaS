@@ -372,13 +372,18 @@ export class FinancialEntryImportService {
       let entryId: string;
 
       if (row.action === 'update' && row.existingId) {
-        const entry = await this.financialEntriesService.update(
+        // Planilha nunca manda `installments` — `update()` sempre
+        // devolve um título só aqui, o array é só pro caso de
+        // parcelar um título existente pela tela (ver
+        // FinancialEntriesService.update).
+        const result = await this.financialEntriesService.update(
           companyId,
           rootCompanyId,
           row.existingId,
           dto,
           userId,
         );
+        const entry = Array.isArray(result) ? result[0] : result;
         entryId = entry.id;
         updated++;
       } else {

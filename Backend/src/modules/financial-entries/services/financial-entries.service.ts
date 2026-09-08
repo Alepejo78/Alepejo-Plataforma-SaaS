@@ -184,6 +184,12 @@ export class FinancialEntriesService {
       );
     }
 
+    if (entry.status === FinancialEntryStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Este título está cancelado e não pode ser alterado.',
+      );
+    }
+
     if (dto.partnerId && dto.partnerId !== entry.partnerId) {
       await this.businessPartnersService.assertHasRole(
         rootCompanyId,
@@ -205,14 +211,79 @@ export class FinancialEntriesService {
       await this.assertProduct(rootCompanyId, dto.productId);
     }
 
+    // Parcelar na edição: o título vira a 1ª parcela e as demais
+    // nascem como títulos novos, todos com os mesmos dados (parceiro/
+    // conta/produto/documento/forma de pagamento) — mesmo raciocínio
+    // de `createInstallments`, só que a partir de um título que já
+    // existia em vez de nascer parcelado.
+    if (dto.installments && dto.installments.length > 0) {
+      return this.splitIntoInstallments(entry, dto, userId);
+    }
+
+    const { installments: _installments, ...rest } = dto;
+
     return this.repository.update(id, {
-      ...dto,
+      ...rest,
       ...(dto.issueDate && {
         issueDate: new Date(dto.issueDate),
       }),
       ...(dto.dueDate && { dueDate: new Date(dto.dueDate) }),
       updatedById: userId,
     } as Prisma.FinancialEntryUncheckedUpdateInput);
+  }
+
+  private async splitIntoInstallments(
+    entry: FinancialEntry,
+    dto: UpdateFinancialEntryDto,
+    userId: string,
+  ) {
+    const [first, ...rest] = dto.installments!;
+
+    const shared = {
+      partnerId: dto.partnerId ?? entry.partnerId ?? undefined,
+      employeeId: entry.employeeId ?? undefined,
+      chartOfAccountId: dto.chartOfAccountId ?? entry.chartOfAccountId ?? undefined,
+      productId: dto.productId ?? entry.productId ?? undefined,
+      issueDate: dto.issueDate ? new Date(dto.issueDate) : entry.issueDate,
+      termDays: dto.termDays ?? entry.termDays ?? undefined,
+      documentNumber: dto.documentNumber ?? entry.documentNumber ?? undefined,
+      documentType: dto.documentType ?? entry.documentType ?? undefined,
+      documentKey: dto.documentKey ?? entry.documentKey ?? undefined,
+      paymentMethod: dto.paymentMethod ?? entry.paymentMethod ?? undefined,
+      observation: dto.observation ?? entry.observation ?? undefined,
+    };
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.financialEntry.update({
+        where: { id: entry.id },
+        data: {
+          ...shared,
+          dueDate: new Date(first.dueDate),
+          amount: first.amount,
+          updatedById: userId,
+        },
+      });
+
+      const created: FinancialEntry[] = [];
+
+      for (const installment of rest) {
+        const newEntry = await tx.financialEntry.create({
+          data: {
+            companyId: entry.companyId,
+            type: entry.type,
+            ...shared,
+            dueDate: new Date(installment.dueDate),
+            amount: installment.amount,
+            createdById: userId,
+            updatedById: userId,
+          },
+        });
+
+        created.push(newEntry);
+      }
+
+      return [updated, ...created];
+    });
   }
 
   /** Baixa: registra o pagamento (a pagar) ou recebimento (a receber). */
