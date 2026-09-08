@@ -184,9 +184,9 @@ export default function OrcamentosPage() {
   const [items, setItems] = useState<ItemForm[]>([
     emptyItem(),
   ]);
-  // Só usado quando form.purpose === "SERVICE" — grupo "Serviços
-  // Realizados" separado de `items` ("Produtos e Materiais Usados"),
-  // mesmo esquema de duas listas da Ordem de Serviço.
+  // Grupo "Serviços Realizados" separado de `items` ("Produtos e
+  // Materiais Usados"), mesmo esquema de duas listas da Ordem de
+  // Serviço — sempre exibido, independente de `form.purpose`.
   const [serviceItems, setServiceItems] = useState<ItemForm[]>([
     emptyItem(),
   ]);
@@ -503,12 +503,10 @@ export default function OrcamentosPage() {
       (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
       0
     ) +
-    (form.purpose === "SERVICE"
-      ? serviceItems.reduce(
-          (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
-          0
-        )
-      : 0);
+    serviceItems.reduce(
+      (sum, it) => sum + decimal(it.quantity) * it.unitPrice,
+      0
+    );
 
   const netTotal =
     itemsTotal -
@@ -526,18 +524,13 @@ export default function OrcamentosPage() {
     const validItems = items.filter(
       (it) => it.productId && decimal(it.quantity) > 0
     );
-    const validServiceItems =
-      form.purpose === "SERVICE"
-        ? serviceItems.filter(
-            (it) => it.productId && decimal(it.quantity) > 0
-          )
-        : [];
+    const validServiceItems = serviceItems.filter(
+      (it) => it.productId && decimal(it.quantity) > 0
+    );
 
     if (validItems.length === 0 && validServiceItems.length === 0) {
       setFormError(
-        form.purpose === "SERVICE"
-          ? "Adicione ao menos um serviço realizado ou produto usado."
-          : "Adicione ao menos um item com produto e quantidade."
+        "Adicione ao menos um serviço realizado ou produto usado."
       );
 
       return;
@@ -1446,8 +1439,7 @@ export default function OrcamentosPage() {
                 </div>
               </div>
 
-              {form.purpose === "SERVICE" && (
-                <div>
+              <div>
                   <div className="mb-2 flex items-center justify-between">
                     <label className={labelClass}>
                       Serviços Realizados
@@ -1551,14 +1543,11 @@ export default function OrcamentosPage() {
                     })}
                   </div>
                 </div>
-              )}
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label className={labelClass}>
-                    {form.purpose === "SERVICE"
-                      ? "Produtos e Materiais Usados"
-                      : "Itens"}
+                    Produtos e Materiais Usados
                   </label>
 
                   <button
