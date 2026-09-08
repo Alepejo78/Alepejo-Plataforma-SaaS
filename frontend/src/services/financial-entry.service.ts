@@ -35,6 +35,7 @@ export type FinancialDocumentType =
   | "NOTA_FISCAL"
   | "FATURA"
   | "RECIBO"
+  | "ORDEM_SERVICO"
   | "OUTRO";
 
 export type PaymentMethod =
@@ -69,6 +70,7 @@ export const DOCUMENT_TYPE_LABELS: Record<
   NOTA_FISCAL: "Nota Fiscal",
   FATURA: "Fatura",
   RECIBO: "Recibo",
+  ORDEM_SERVICO: "Ordem de Serviço",
   OUTRO: "Outro",
 };
 

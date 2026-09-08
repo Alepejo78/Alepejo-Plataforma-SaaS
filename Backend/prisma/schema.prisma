@@ -1946,6 +1946,7 @@ enum FinancialDocumentType {
   NOTA_FISCAL
   FATURA
   RECIBO
+  ORDEM_SERVICO
   OUTRO
 }
 
