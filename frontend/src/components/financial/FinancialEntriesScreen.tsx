@@ -9,9 +9,11 @@ import {
   Eye,
   FileSpreadsheet,
   FileText,
+  List,
   Pencil,
   Plus,
   RotateCcw,
+  Rows3,
   Send,
   Trash2,
   Upload,
@@ -24,6 +26,7 @@ import { Can } from "@/components/auth/Can";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { MenuButton } from "@/components/ui/MenuButton";
 import { buildExportMenuItems } from "@/lib/exportMenuItems";
+import { buildInstallmentsPreview } from "@/lib/dueDate";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
@@ -194,6 +197,9 @@ export function FinancialEntriesScreen({
   const exportTableRef = useRef<HTMLTableElement>(null);
   const [entries, setEntries] = useState<FinancialEntry[]>([]);
 
+  const [viewMode, setViewMode] = useState<"simple" | "detailed">(
+    "detailed"
+  );
   const [statusFilter, setStatusFilter] = useState("OPEN");
   const [search, setSearch] = useState("");
   const [overdueOnly, setOverdueOnly] = useState(false);
@@ -225,6 +231,7 @@ export function FinancialEntriesScreen({
   } | null>(null);
   const [form, setForm] = useState<Form>(emptyForm());
   const [installments, setInstallments] = useState<InstallmentRow[]>([]);
+  const [installmentsCount, setInstallmentsCount] = useState("2");
   const [items, setItems] = useState<ItemRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -573,6 +580,33 @@ export function FinancialEntriesScreen({
 
   const isParceled = installments.length > 1;
 
+  /**
+   * Gera as N parcelas de uma vez (mesmo cálculo do backend — prazo
+   * 30 avança um mês por parcela, ver `buildInstallmentsPreview`) em
+   * vez de precisar adicionar linha por linha. Substitui as parcelas
+   * atuais pelas recém-geradas — trocar a quantidade e gerar de novo
+   * refaz tudo do zero.
+   */
+  function generateInstallments() {
+    const count = Math.max(1, Number(installmentsCount) || 1);
+    const totalAmount = isMultiItem ? itemsTotal : form.amount;
+
+    const rows = buildInstallmentsPreview(
+      form.issueDate,
+      Number(form.termDays) || 0,
+      count,
+      totalAmount
+    );
+
+    setInstallments(
+      rows.map((row) => ({
+        days: "",
+        dueDate: row.dueDate.toISOString().slice(0, 10),
+        amount: row.amount,
+      }))
+    );
+  }
+
   async function save() {
     const totalAmount = isMultiItem ? itemsTotal : form.amount;
 
@@ -857,6 +891,23 @@ export function FinancialEntriesScreen({
                   />
                 </Can>
 
+                <MenuButton
+                  label="Tipo de visão"
+                  icon={<List size={18} />}
+                  items={[
+                    {
+                      label: "Simplificado",
+                      icon: <List size={16} />,
+                      onClick: () => setViewMode("simple"),
+                    },
+                    {
+                      label: "Detalhado",
+                      icon: <Rows3 size={16} />,
+                      onClick: () => setViewMode("detailed"),
+                    },
+                  ]}
+                />
+
                 <Can permission="financial-entry.create">
                   <button
                     type="button"
@@ -957,11 +1008,13 @@ export function FinancialEntriesScreen({
                   <th className="px-4 py-3 font-semibold">
                     Documento
                   </th>
-                  <th className="px-4 py-3 font-semibold">
-                    {type === "RECEIVABLE"
-                      ? "Tipo de receita"
-                      : "Tipo de despesa"}
-                  </th>
+                  {viewMode === "detailed" && (
+                    <th className="px-4 py-3 font-semibold">
+                      {type === "RECEIVABLE"
+                        ? "Tipo de receita"
+                        : "Tipo de despesa"}
+                    </th>
+                  )}
                   <th className="px-4 py-3 font-semibold">
                     Forma de pagamento
                   </th>
@@ -989,9 +1042,13 @@ export function FinancialEntriesScreen({
                   // conta/valor — mas vencimento, cliente, documento,
                   // forma de pagamento, status e ações só aparecem na
                   // 1ª linha (baixar/editar/excluir agem no título
-                  // inteiro, não em cada item separado).
+                  // inteiro, não em cada item separado). Visão
+                  // simplificada não mostra conta nenhuma, então nunca
+                  // faz sentido quebrar em mais de uma linha.
                   const lineItems =
-                    entry.items && entry.items.length > 1
+                    viewMode === "detailed" &&
+                    entry.items &&
+                    entry.items.length > 1
                       ? entry.items
                       : [null];
 
@@ -1066,11 +1123,13 @@ export function FinancialEntriesScreen({
                         )}
                       </td>
 
-                      <td className="px-4 py-3 text-[var(--text-secondary)]">
-                        {rowChartOfAccount
-                          ? `${rowChartOfAccount.code} — ${rowChartOfAccount.description}`
-                          : "—"}
-                      </td>
+                      {viewMode === "detailed" && (
+                        <td className="px-4 py-3 text-[var(--text-secondary)]">
+                          {rowChartOfAccount
+                            ? `${rowChartOfAccount.code} — ${rowChartOfAccount.description}`
+                            : "—"}
+                        </td>
+                      )}
 
                       <td className="px-4 py-3 text-[var(--text-secondary)]">
                         {isFirst &&
@@ -1081,6 +1140,11 @@ export function FinancialEntriesScreen({
 
                       <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-[var(--text-primary)]">
                         {money(rowAmount)}
+                        {isFirst && lineItems.length > 1 && (
+                          <p className="text-xs font-normal text-[var(--text-muted)]">
+                            Total: {money(entry.amount)}
+                          </p>
+                        )}
                       </td>
 
                       <td className="px-4 py-3">
@@ -1275,7 +1339,7 @@ export function FinancialEntriesScreen({
       {/* Novo título / Editar título */}
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+          <div className="my-8 w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
             <div className="mb-6 flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-bold text-[var(--text-primary)]">
@@ -1436,6 +1500,31 @@ export function FinancialEntriesScreen({
                         >
                           <Plus size={14} />
                           Adicionar parcela
+                        </button>
+                      </div>
+
+                      <div className="flex items-end gap-2 rounded-lg bg-[var(--surface-hover)] p-2">
+                        <div className="flex-1">
+                          <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">
+                            Quantidade de parcelas
+                          </label>
+
+                          <input
+                            inputMode="numeric"
+                            className={fieldClass}
+                            value={installmentsCount}
+                            onChange={(e) =>
+                              setInstallmentsCount(e.target.value)
+                            }
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={generateInstallments}
+                          className="h-11 whitespace-nowrap rounded-xl border border-[var(--border)] px-4 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)]"
+                        >
+                          Gerar parcelas
                         </button>
                       </div>
 
