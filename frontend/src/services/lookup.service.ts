@@ -65,9 +65,16 @@ export const lookupService = {
       throw new Error("CNPJ incompleto.");
     }
 
+    // fetch() lança um TypeError genérico em inglês ("Failed to
+    // fetch") pra qualquer falha de rede/CORS/bloqueio de extensão —
+    // sem esse catch, essa mensagem crua vazava direto pro usuário.
     const response = await fetchWithTimeout(
       `https://brasilapi.com.br/api/cnpj/v1/${digits}`
-    );
+    ).catch(() => {
+      throw new Error(
+        "Não foi possível consultar o CNPJ agora — confira sua conexão ou preencha os dados manualmente."
+      );
+    });
 
     if (response.status === 404) {
       throw new Error("CNPJ não encontrado na Receita Federal.");
@@ -79,7 +86,11 @@ export const lookupService = {
       );
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => {
+      throw new Error(
+        "Não foi possível consultar o CNPJ agora."
+      );
+    });
 
     const phone =
       data.ddd_telefone_1 || data.ddd_telefone_2 || "";
@@ -116,7 +127,11 @@ export const lookupService = {
 
     const response = await fetchWithTimeout(
       `https://viacep.com.br/ws/${digits}/json/`
-    );
+    ).catch(() => {
+      throw new Error(
+        "Não foi possível consultar o CEP agora — confira sua conexão ou preencha o endereço manualmente."
+      );
+    });
 
     if (!response.ok) {
       throw new Error(
@@ -124,7 +139,11 @@ export const lookupService = {
       );
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => {
+      throw new Error(
+        "Não foi possível consultar o CEP agora."
+      );
+    });
 
     if (data.erro) {
       throw new Error("CEP não encontrado.");
