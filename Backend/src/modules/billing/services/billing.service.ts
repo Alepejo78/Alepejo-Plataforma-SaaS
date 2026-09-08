@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   BillingChargeStatus,
+  PaymentMethod,
   Prisma,
   type BillingCharge,
 } from '@prisma/client';
@@ -77,6 +78,34 @@ function formatDate(date: Date): string {
 /** Asaas manda vários nomes de status — mapeia pro nosso enum fechado. */
 function mapChargeStatus(asaasStatus: string): BillingChargeStatus {
   return mapAsaasPaymentStatus(asaasStatus) as BillingChargeStatus;
+}
+
+/**
+ * `billingType` do Asaas (PIX/BOLETO/CREDIT_CARD/...) → `PaymentMethod`
+ * do título gerado no Financeiro — sem isso o título nascia sempre sem
+ * forma de pagamento, mesmo já sabendo como foi pago. `undefined` pros
+ * casos sem forma definida ainda (UNDEFINED — cliente escolhe na
+ * fatura) ou não mapeados, em vez de forçar "Outro".
+ */
+function mapAsaasBillingTypeToPaymentMethod(
+  billingType: string | null | undefined,
+): PaymentMethod | undefined {
+  switch (billingType) {
+    case 'PIX':
+      return PaymentMethod.PIX;
+    case 'BOLETO':
+      return PaymentMethod.BOLETO;
+    case 'CREDIT_CARD':
+      return PaymentMethod.CREDITO;
+    case 'DEBIT_CARD':
+      return PaymentMethod.DEBITO;
+    case 'TRANSFER':
+      return PaymentMethod.TRANSFERENCIA;
+    case 'DEPOSIT':
+      return PaymentMethod.DEPOSITO;
+    default:
+      return undefined;
+  }
 }
 
 /**
@@ -156,27 +185,42 @@ export class BillingService {
       paidAt: Date | null;
       type: string;
       invoiceNumber?: string | null;
+      billingType?: string | null;
     },
     planName: string,
   ) {
     const pago =
       charge.status === 'RECEIVED' || charge.status === 'CONFIRMED';
+    const paymentMethod = mapAsaasBillingTypeToPaymentMethod(
+      charge.billingType,
+    );
 
     const existing = await this.prisma.financialEntry.findUnique({
       where: { billingChargeId: charge.id },
     });
 
     if (existing) {
-      // Só acompanha a baixa: valor e vencimento de um título já
-      // lançado são do cliente, não nossos pra reescrever.
+      // Só acompanha a baixa e a forma de pagamento (essa só é
+      // conhecida de verdade quando o cliente efetivamente paga —
+      // "UNDEFINED" na criação vira PIX/BOLETO/cartão real depois) —
+      // valor e vencimento de um título já lançado são do cliente, não
+      // nossos pra reescrever.
+      const data: Prisma.FinancialEntryUpdateInput = {};
+
       if (pago && existing.status !== 'PAID') {
+        data.status = 'PAID';
+        data.paidAmount = existing.amount;
+        data.paymentDate = charge.paidAt ?? new Date();
+      }
+
+      if (paymentMethod && !existing.paymentMethod) {
+        data.paymentMethod = paymentMethod;
+      }
+
+      if (Object.keys(data).length > 0) {
         await this.prisma.financialEntry.update({
           where: { id: existing.id },
-          data: {
-            status: 'PAID',
-            paidAmount: existing.amount,
-            paymentDate: charge.paidAt ?? new Date(),
-          },
+          data,
         });
       }
 
@@ -230,6 +274,7 @@ export class BillingService {
         documentType: 'FATURA',
         type: 'PAYABLE',
         status: pago ? 'PAID' : 'OPEN',
+        paymentMethod,
         issueDate: new Date(),
         dueDate: charge.dueDate,
         amount: charge.value,
