@@ -77,7 +77,7 @@ export function UserMenu() {
             ? `Menu de ${user.name}`
             : "Menu do usuário"
         }
-        className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-base font-semibold text-[var(--primary-contrast)] ring-offset-2 transition-shadow hover:ring-2 hover:ring-[var(--primary)]"
+        className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-xs font-semibold text-[var(--primary-contrast)] ring-offset-2 transition-shadow hover:ring-2 hover:ring-[var(--primary)]"
       >
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element

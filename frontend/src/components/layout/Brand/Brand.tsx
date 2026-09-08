@@ -78,10 +78,10 @@ export function Brand() {
   const displayName = customName || company.name;
 
   // Reduzida em sequência pra caber numa barra do topo mais baixa
-  // (três ajustes pedidos: -10%, mais -15%, mais -20% em cima disso)
-  // — só a exibição na barra do topo, não mexe no valor cadastrado em
-  // Personalização.
-  const logoSize = company.logoWidth * 0.9 * 0.85 * 0.8;
+  // (quatro ajustes pedidos: -10%, mais -15%, mais -20%, mais -30% em
+  // cima disso) — só a exibição na barra do topo, não mexe no valor
+  // cadastrado em Personalização.
+  const logoSize = company.logoWidth * 0.9 * 0.85 * 0.8 * 0.7;
 
   return (
     <div className="flex min-w-0 items-center gap-3">
