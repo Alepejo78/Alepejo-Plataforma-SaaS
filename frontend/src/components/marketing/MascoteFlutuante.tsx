@@ -7,8 +7,6 @@ import { X } from "lucide-react";
 
 import { isMarketingHomepage } from "@/lib/publicRoutes";
 
-import { Mascote, type MascoteMood } from "./Mascote";
-
 /**
  * Páginas em que o Pejo fica de plantão no cantinho. Só as públicas:
  * dentro do ERP a pessoa está trabalhando, e um boneco se mexendo em
@@ -21,23 +19,14 @@ const PAGINAS_COM_MASCOTE = ["/institucional", "/planos", "/checkout"];
  * ERP Cloud" (`BrandFooter`) — as duas coisas juntas fecham o rodapé
  * da página sem brigar por espaço.
  *
- * Ele acena assim que a página abre, para chamar atenção, e depois
- * fica só flutuando. Clicando, abre um balão convidando pra
- * demonstração guiada, que é o papel dele: ser o anfitrião.
+ * Fica sempre em looping, flutuando. Clicando, abre um balão
+ * convidando pra demonstração guiada, que é o papel dele: ser o
+ * anfitrião.
  */
 export function MascoteFlutuante() {
   const pathname = usePathname();
-  const [mood, setMood] = useState<MascoteMood>("wave");
   const [aberto, setAberto] = useState(false);
   const [visivel, setVisivel] = useState(false);
-
-  // O aceno de boas-vindas dura pouco: mascote acenando sem parar a
-  // página inteira cansa e vira ruído no canto do olho.
-  useEffect(() => {
-    const timer = setTimeout(() => setMood("idle"), 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   /*
    * `isMarketingHomepage` depende do domínio, que só existe no
@@ -60,7 +49,6 @@ export function MascoteFlutuante() {
 
   function aoClicar() {
     setAberto(!aberto);
-    setMood(aberto ? "idle" : "happy");
   }
 
   return (
@@ -69,10 +57,7 @@ export function MascoteFlutuante() {
         <div className="pointer-events-auto relative mb-6 w-56 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
           <button
             type="button"
-            onClick={() => {
-              setAberto(false);
-              setMood("idle");
-            }}
+            onClick={() => setAberto(false)}
             aria-label="Fechar"
             className="absolute right-2 top-2 rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
@@ -98,11 +83,27 @@ export function MascoteFlutuante() {
         </div>
       )}
 
-      <Mascote
-        mood={mood}
+      <div
         onClick={aoClicar}
-        className="pointer-events-auto h-auto w-[74px] drop-shadow-lg sm:w-[92px]"
-      />
+        role="button"
+        tabIndex={0}
+        aria-label="Abrir conversa com o Pejo"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            aoClicar();
+          }
+        }}
+        className="pointer-events-auto h-[92px] w-[92px] cursor-pointer overflow-hidden rounded-full border-2 border-[var(--surface)] shadow-lg sm:h-[110px] sm:w-[110px]"
+      >
+        <video
+          src="/videos/pejo-flutuante.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover"
+        />
+      </div>
     </div>
   );
 }
