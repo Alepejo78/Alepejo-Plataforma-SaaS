@@ -209,6 +209,19 @@ export class ServiceOrderController {
     return this.confirmationService.sendConfirmation(companyId, id);
   }
 
+  @Post(':id/notify-schedule')
+  @Permissions('service-order.update')
+  @ApiOperation({
+    summary:
+      'Avisar cliente sobre a previsão de início/fim do serviço — exige as datas preenchidas',
+  })
+  notifySchedule(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.notifyScheduleBestEffort(companyId, id);
+  }
+
   @Patch(':id/cancel')
   @Permissions('service-order.cancel')
   @ApiOperation({ summary: 'Cancelar ordem de serviço' })

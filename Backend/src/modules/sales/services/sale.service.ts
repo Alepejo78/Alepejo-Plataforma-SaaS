@@ -30,6 +30,10 @@ import { calculatePaymentSurcharge } from '../../../core/utils/payment-surcharge
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
 
 import { PaymentMethodSettingsRepository } from '../../payment-method-settings/repositories/payment-method-settings.repository';
+import {
+  EntryChargeService,
+  type EntryWithPartner,
+} from '../../entry-charges/services/entry-charge.service';
 
 import { SaleRepository } from '../repositories/sale.repository';
 
@@ -63,6 +67,7 @@ export class SaleService {
     private readonly documentSequence: DocumentSequenceService,
     private readonly productionOrdersService: ProductionOrdersService,
     private readonly paymentMethodSettingsRepository: PaymentMethodSettingsRepository,
+    private readonly entryChargeService: EntryChargeService,
   ) {}
 
   /**
@@ -338,6 +343,7 @@ export class SaleService {
       warehouseId: string;
       shortfall: number;
     }[] = [];
+    const createdEntries: EntryWithPartner[] = [];
 
     const createdSale = await this.prisma.$transaction(async (tx) => {
       const number = await this.documentSequence.next(
@@ -427,6 +433,7 @@ export class SaleService {
         effectiveDto,
         userId,
         productionShortfalls,
+        createdEntries,
       );
     });
 
@@ -439,6 +446,13 @@ export class SaleService {
         companyId,
         { ...shortfall, saleId: createdSale.id },
       );
+    }
+
+    // Best-effort: dispara a cobrança (e-mail/WhatsApp) de cada título
+    // a receber recém-gerado — o cliente já sabe como pagar sem
+    // precisar que alguém entre em Contas a Receber pra reenviar.
+    for (const entry of createdEntries) {
+      void this.entryChargeService.notify(entry);
     }
 
     return createdSale;
@@ -675,6 +689,7 @@ export class SaleService {
       warehouseId: string;
       shortfall: number;
     }[] = [];
+    const updateCreatedEntries: EntryWithPartner[] = [];
 
     const updatedSale = await this.prisma.$transaction(async (tx) => {
       await this.revertApproval(tx, companyId, sale, userId);
@@ -693,8 +708,13 @@ export class SaleService {
         dto,
         userId,
         updateShortfalls,
+        updateCreatedEntries,
       );
     });
+
+    for (const entry of updateCreatedEntries) {
+      void this.entryChargeService.notify(entry);
+    }
 
     for (const shortfall of updateShortfalls) {
       void this.productionOrdersService.autoGenerateForSaleItem(
@@ -733,6 +753,13 @@ export class SaleService {
       warehouseId: string;
       shortfall: number;
     }[],
+    /**
+     * Recebe (mesmo side-channel de `productionShortfalls`) os
+     * títulos a receber recém-criados — quem chama usa isso depois
+     * que a transação terminar pra disparar a notificação de
+     * cobrança ao cliente (best-effort, ver `EntryChargeService.notify`).
+     */
+    createdEntries?: EntryWithPartner[],
   ) {
     const documentNumber = formatSaleNumber(sale.number);
 
@@ -941,7 +968,7 @@ export class SaleService {
     };
 
     if (effectiveInstallments.length) {
-      await this.financialEntriesService.createInstallments(
+      const entries = await this.financialEntriesService.createInstallments(
         tx,
         {
           ...commonEntryData,
@@ -954,8 +981,9 @@ export class SaleService {
         },
         userId,
       );
+      createdEntries?.push(...(entries as EntryWithPartner[]));
     } else if (autoInstallments) {
-      await this.financialEntriesService.createInstallments(
+      const entries = await this.financialEntriesService.createInstallments(
         tx,
         {
           ...commonEntryData,
@@ -963,8 +991,9 @@ export class SaleService {
         },
         userId,
       );
+      createdEntries?.push(...(entries as EntryWithPartner[]));
     } else {
-      await this.financialEntriesService.createFromDocument(
+      const entry = await this.financialEntriesService.createFromDocument(
         tx,
         {
           ...commonEntryData,
@@ -973,6 +1002,7 @@ export class SaleService {
         },
         userId,
       );
+      createdEntries?.push(entry as EntryWithPartner);
     }
 
     return updated;
@@ -1099,6 +1129,7 @@ export class SaleService {
       warehouseId: string;
       shortfall: number;
     }[] = [];
+    const approveCreatedEntries: EntryWithPartner[] = [];
 
     const updatedSale = await this.prisma.$transaction((tx) =>
       this.applyApproval(
@@ -1108,8 +1139,13 @@ export class SaleService {
         dto,
         userId,
         approveShortfalls,
+        approveCreatedEntries,
       ),
     );
+
+    for (const entry of approveCreatedEntries) {
+      void this.entryChargeService.notify(entry);
+    }
 
     // Best-effort: gera ordem de produção pra cada item que só seguiu
     // porque o usuário confirmou "continuar mesmo assim" com estoque

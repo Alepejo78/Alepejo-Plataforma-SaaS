@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Ban,
+  BellRing,
   Download,
   Edit,
   Eye,
@@ -828,6 +829,27 @@ export default function OrdensDeServicoPage() {
     }
   }
 
+  async function notifyScheduleOrder(id: string) {
+    setActionId(id);
+    setActionError("");
+
+    try {
+      const result = await serviceOrderService.notifySchedule(id);
+
+      window.alert(
+        result.sent
+          ? "Aviso enviado ao cliente."
+          : "O cliente não tem e-mail nem celular cadastrado — não há como enviar o aviso."
+      );
+    } catch (err) {
+      setActionError(
+        extractMessage(err, "Não foi possível enviar o aviso.")
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+
   async function cancelOrder(id: string) {
     if (!window.confirm("Cancelar esta ordem de serviço?")) {
       return;
@@ -1297,6 +1319,23 @@ export default function OrdensDeServicoPage() {
                                 className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
                               >
                                 <Send size={16} />
+                              </button>
+                            </Can>
+                          )}
+
+                          {o.status !== "CANCELLED" && (
+                            <Can permission="service-order.update">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void notifyScheduleOrder(o.id)
+                                }
+                                title="Avisar cliente sobre a previsão de início/fim"
+                                aria-label="Avisar cliente sobre agendamento"
+                                className="rounded-lg border border-[var(--border)] p-2 text-[var(--accent-orange)] transition-colors hover:border-[var(--accent-orange)] hover:bg-[var(--accent-orange-soft)] disabled:opacity-50"
+                              >
+                                <BellRing size={16} />
                               </button>
                             </Can>
                           )}

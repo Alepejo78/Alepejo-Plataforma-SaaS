@@ -219,6 +219,17 @@ export const serviceOrderService = {
     return data.data;
   },
 
+  /** Avisa o cliente sobre a previsão de início/fim — exige as datas preenchidas. */
+  async notifySchedule(
+    id: string
+  ): Promise<{ sent: boolean; channels: string[] }> {
+    const { data } = await api.post<
+      ApiEnvelope<{ sent: boolean; channels: string[] }>
+    >(`/service-orders/${id}/notify-schedule`);
+
+    return data.data;
+  },
+
   async cancel(id: string): Promise<ServiceOrder> {
     const { data } = await api.patch<ApiEnvelope<ServiceOrder>>(
       `/service-orders/${id}/cancel`

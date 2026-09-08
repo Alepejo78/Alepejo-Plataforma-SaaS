@@ -520,6 +520,45 @@ export class ServiceOrderService {
     return updated;
   }
 
+  /**
+   * Monta o aviso de previsão de início/fim — reaproveitado tanto ao
+   * iniciar a execução de verdade quanto pelo botão manual "Avisar
+   * cliente" (`notifyScheduleBestEffort`), que manda o mesmo tipo de
+   * aviso sem depender de a execução ter começado.
+   */
+  private buildScheduleMessage(
+    order: Awaited<ReturnType<ServiceOrderService['findOne']>>,
+    companyName: string,
+    reason: 'started' | 'notice',
+  ) {
+    const partnerName = order.partner.tradeName || order.partner.legalName;
+    const orderNumber = serviceOrderNumberOf(order);
+    const start = formatDueDate(order.scheduledStart!);
+    const end = formatDueDate(order.scheduledEnd!);
+
+    const intro =
+      reason === 'started'
+        ? `Iniciamos a execução do serviço da ordem <strong>${orderNumber}</strong>.`
+        : `Segue a previsão de execução do serviço da ordem <strong>${orderNumber}</strong>.`;
+    const whatsappIntro =
+      reason === 'started'
+        ? `Iniciamos a execução do serviço ${orderNumber}`
+        : `Segue a previsão de execução do serviço ${orderNumber}`;
+
+    return {
+      subject:
+        reason === 'started'
+          ? `Execução iniciada — ${orderNumber} — ${companyName}`
+          : `Previsão de execução — ${orderNumber} — ${companyName}`,
+      emailHtml: `<p>Olá, ${partnerName},</p>
+<p>${intro}</p>
+<p><strong>Previsão de início:</strong> ${start}<br/><strong>Previsão de conclusão:</strong> ${end}</p>
+<p>Qualquer dúvida, estamos à disposição.</p>
+<p>Atenciosamente,<br/>${companyName}</p>`,
+      whatsappText: `Olá, ${partnerName}! ${whatsappIntro} (${companyName}). Previsão: início em ${start}, conclusão em ${end}.`,
+    };
+  }
+
   /** Best-effort: avisa o cliente da previsão de início/fim ao começar a execução. Nunca lança. */
   private async notifyExecutionStart(
     companyId: string,
@@ -536,21 +575,14 @@ export class ServiceOrderService {
     });
 
     const companyName = company?.tradeName || company?.legalName || '';
-    const partnerName = partner.tradeName || partner.legalName;
-    const orderNumber = serviceOrderNumberOf(order);
-    const start = formatDueDate(order.scheduledStart!);
-    const end = formatDueDate(order.scheduledEnd!);
+    const message = this.buildScheduleMessage(order, companyName, 'started');
 
     if (partner.email) {
       void this.emailNotifications.send(
         companyId,
         partner.email,
-        `Execução iniciada — ${orderNumber} — ${companyName}`,
-        `<p>Olá, ${partnerName},</p>
-<p>Iniciamos a execução do serviço da ordem <strong>${orderNumber}</strong>.</p>
-<p><strong>Previsão de início:</strong> ${start}<br/><strong>Previsão de conclusão:</strong> ${end}</p>
-<p>Qualquer dúvida, estamos à disposição.</p>
-<p>Atenciosamente,<br/>${companyName}</p>`,
+        message.subject,
+        message.emailHtml,
       );
     }
 
@@ -558,9 +590,71 @@ export class ServiceOrderService {
       void this.whatsappNotifications.send(
         companyId,
         partner.mobile,
-        `Olá, ${partnerName}! Iniciamos a execução do serviço ${orderNumber} (${companyName}). Previsão: início em ${start}, conclusão em ${end}.`,
+        message.whatsappText,
       );
     }
+  }
+
+  /**
+   * Botão manual "Avisar cliente sobre agendamento" — dispara o mesmo
+   * tipo de aviso de `notifyExecutionStart`, mas sem exigir que a
+   * execução tenha começado nem mudar o status da OS. Diferente dos
+   * outros `notify*` best-effort daqui, este é chamado direto por um
+   * clique do usuário esperando confirmação — por isso lança erro
+   * amigável em vez de falhar silenciosamente.
+   */
+  async notifyScheduleBestEffort(companyId: string, id: string) {
+    const order = await this.findOne(companyId, id);
+
+    if (!order.scheduledStart || !order.scheduledEnd) {
+      throw new BadRequestException(
+        'Preencha a previsão de início e fim antes de enviar.',
+      );
+    }
+
+    const partner = order.partner;
+
+    if (!partner.email && !partner.mobile) {
+      throw new BadRequestException(
+        'Este cliente não tem e-mail nem celular cadastrado — não há como enviar o aviso.',
+      );
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    const companyName = company?.tradeName || company?.legalName || '';
+    const message = this.buildScheduleMessage(order, companyName, 'notice');
+
+    const channels: string[] = [];
+
+    if (partner.email) {
+      const sent = await this.emailNotifications.send(
+        companyId,
+        partner.email,
+        message.subject,
+        message.emailHtml,
+      );
+
+      if (sent) {
+        channels.push('email');
+      }
+    }
+
+    if (partner.mobile) {
+      const sent = await this.whatsappNotifications.send(
+        companyId,
+        partner.mobile,
+        message.whatsappText,
+      );
+
+      if (sent) {
+        channels.push('whatsapp');
+      }
+    }
+
+    return { sent: channels.length > 0, channels };
   }
 
   /** Estorna "Iniciar execução" — volta pro status de antes (aprovada, se o cliente já tinha confirmado; rascunho, senão). */
