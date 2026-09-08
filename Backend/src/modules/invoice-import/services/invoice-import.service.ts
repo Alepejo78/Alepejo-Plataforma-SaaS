@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import {
   BusinessPartnerRole,
@@ -10,6 +10,7 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import { BusinessPartnersRepository } from '../../business-partners/repositories/business-partners.repository';
 import { BusinessPartnersService } from '../../business-partners/services/business-partners.service';
 import { FinancialEntriesService } from '../../financial-entries/services/financial-entries.service';
+import { FinancialEntriesRepository } from '../../financial-entries/repositories/financial-entries.repository';
 import { PurchaseService } from '../../purchase/services/purchase.service';
 import { SaleService } from '../../sales/services/sale.service';
 
@@ -31,6 +32,7 @@ export class InvoiceImportService {
     private readonly businessPartnersRepository: BusinessPartnersRepository,
     private readonly businessPartnersService: BusinessPartnersService,
     private readonly financialEntriesService: FinancialEntriesService,
+    private readonly financialEntriesRepository: FinancialEntriesRepository,
     private readonly purchaseService: PurchaseService,
     private readonly saleService: SaleService,
   ) {}
@@ -322,6 +324,25 @@ export class InvoiceImportService {
       role,
       userId,
     );
+
+    // Mesmo documento pro mesmo parceiro já foi lançado antes — provável
+    // reimportação por engano (ex.: confirmar duas vezes sem perceber).
+    // Sem número de documento não dá pra saber (fica pra revisão manual
+    // igual sempre foi).
+    if (dto.documentNumber) {
+      const existing =
+        await this.financialEntriesRepository.findByPartnerAndDocument(
+          companyId,
+          partnerId,
+          dto.documentNumber,
+        );
+
+      if (existing) {
+        throw new BadRequestException(
+          `Já existe um título lançado para este ${role === BusinessPartnerRole.CUSTOMER ? 'cliente' : 'fornecedor'} com o documento "${dto.documentNumber}" — confira em Contas a ${type === FinancialEntryType.RECEIVABLE ? 'Receber' : 'Pagar'} antes de importar de novo.`,
+        );
+      }
+    }
 
     return this.prisma.$transaction((tx) =>
       this.financialEntriesService.createInstallments(

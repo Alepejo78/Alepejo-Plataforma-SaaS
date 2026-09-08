@@ -18,6 +18,7 @@ import { ProductsService } from '../../products/services/products.service';
 import { UnitsOfMeasureRepository } from '../../units-of-measure/repositories/units-of-measure.repository';
 import { ChartOfAccountsRepository } from '../../chart-of-accounts/repositories/chart-of-accounts.repository';
 import { FinancialEntriesService } from '../../financial-entries/services/financial-entries.service';
+import { FinancialEntriesRepository } from '../../financial-entries/repositories/financial-entries.repository';
 
 import { DocumentTextExtractorService } from '../../invoice-import/services/document-text-extractor.service';
 import { WorkshopQuotePdfParserService } from './workshop-quote-pdf-parser.service';
@@ -45,12 +46,14 @@ export class WorkshopQuoteImportService {
     private readonly unitsOfMeasureRepository: UnitsOfMeasureRepository,
     private readonly chartOfAccountsRepository: ChartOfAccountsRepository,
     private readonly financialEntriesService: FinancialEntriesService,
+    private readonly financialEntriesRepository: FinancialEntriesRepository,
   ) {}
 
   async parseFile(
     buffer: Buffer,
     filename: string | undefined,
     mimetype: string | undefined,
+    companyId: string,
     rootCompanyId: string,
   ) {
     const rawText = await this.documentTextExtractor.extractRawText(
@@ -67,6 +70,25 @@ export class WorkshopQuoteImportService {
           parsed.partner.document,
         )
       : null;
+
+    // Aviso na prévia — o bloqueio de verdade (não deixar confirmar)
+    // acontece em `confirm()`, checado de novo ali porque o
+    // parceiro/documento podem ter sido editados na tela entre o
+    // parse e a confirmação.
+    const alreadyImported =
+      existingPartner && parsed.documentNumber
+        ? !!(await this.financialEntriesRepository.findByPartnerAndDocument(
+            companyId,
+            existingPartner.id,
+            parsed.documentNumber,
+          ))
+        : false;
+
+    if (alreadyImported) {
+      parsed.warnings.push(
+        `Já existe um título lançado para este cliente com o documento "${parsed.documentNumber}" — confirmar vai ser bloqueado, a menos que troque o número do orçamento.`,
+      );
+    }
 
     const items = await Promise.all(
       parsed.items.map(async (item) => {
@@ -100,6 +122,19 @@ export class WorkshopQuoteImportService {
       dto.partner,
       userId,
     );
+
+    const alreadyImported =
+      await this.financialEntriesRepository.findByPartnerAndDocument(
+        companyId,
+        partnerId,
+        dto.documentNumber,
+      );
+
+    if (alreadyImported) {
+      throw new BadRequestException(
+        `Já existe um título lançado para este cliente com o documento "${dto.documentNumber}" — confira em Contas a Receber antes de importar de novo.`,
+      );
+    }
 
     const partAccount = await this.chartOfAccountsRepository.findByCode(
       rootCompanyId,

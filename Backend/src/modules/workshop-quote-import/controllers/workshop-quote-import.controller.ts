@@ -41,6 +41,7 @@ export class WorkshopQuoteImportController {
   )
   parse(
     @UploadedFile() file: Express.Multer.File,
+    @CurrentUser('companyId') companyId: string,
     @CurrentUser('rootCompanyId') rootCompanyId: string,
   ) {
     if (!file) {
@@ -51,6 +52,7 @@ export class WorkshopQuoteImportController {
       file.buffer,
       file.originalname,
       file.mimetype,
+      companyId,
       rootCompanyId,
     );
   }
