@@ -145,66 +145,94 @@ export class WorkshopQuoteImportService {
       SERVICE_CHART_ACCOUNT_CODE,
     );
 
-    const createdEntries: unknown[] = [];
     const createdProducts: string[] = [];
 
-    for (const item of dto.items) {
-      const chartOfAccount =
-        item.kind === 'PART' ? partAccount : serviceAccount;
+    // Cadastra/acha CADA item (peça e serviço podem precisar de
+    // cadastro novo, cada um com sua conta contábil fixa) — mas o
+    // lançamento em si é um título só pro documento inteiro (ver
+    // abaixo). Quebrar título por item, quando não tem por quê, gera
+    // mais baixa manual do que precisa — decisão do usuário,
+    // 08-09-2026.
+    const resolvedItems = await Promise.all(
+      dto.items.map(async (item) => {
+        const chartOfAccount =
+          item.kind === 'PART' ? partAccount : serviceAccount;
 
-      if (!chartOfAccount) {
-        throw new BadRequestException(
-          `Conta contábil ${item.kind === 'PART' ? PART_CHART_ACCOUNT_CODE : SERVICE_CHART_ACCOUNT_CODE} não encontrada no plano de contas desta empresa — cadastre-a antes de importar.`,
+        if (!chartOfAccount) {
+          throw new BadRequestException(
+            `Conta contábil ${item.kind === 'PART' ? PART_CHART_ACCOUNT_CODE : SERVICE_CHART_ACCOUNT_CODE} não encontrada no plano de contas desta empresa — cadastre-a antes de importar.`,
+          );
+        }
+
+        const { productId, created } = await this.resolveProduct(
+          rootCompanyId,
+          item,
+          chartOfAccount.id,
+          userId,
         );
-      }
 
-      const { productId, created } = await this.resolveProduct(
-        rootCompanyId,
-        item,
-        chartOfAccount.id,
-        userId,
-      );
+        if (created) {
+          createdProducts.push(item.code);
+        }
 
-      if (created) {
-        createdProducts.push(item.code);
-      }
+        return { ...item, productId, chartOfAccountId: chartOfAccount.id };
+      }),
+    );
 
-      const installments = buildAutoInstallments(
-        new Date(`${dto.issueDate}T00:00:00Z`),
-        dto.termDays,
-        dto.installmentsCount,
-        item.netValue,
-      );
+    // Um título só cobrindo todos os itens — produto/conta contábil
+    // do título seguem o item de maior valor (mesmo critério já usado
+    // em Compra/Venda/Cotação quando o documento tem mais de um item
+    // e o título só aceita um produto/uma conta). A quebra em mais de
+    // um título só acontece por parcela (vencimentos diferentes), não
+    // por item.
+    const totalAmount = resolvedItems.reduce(
+      (sum, item) => sum + item.netValue,
+      0,
+    );
+    const mainItem = resolvedItems.reduce((max, item) =>
+      item.netValue > max.netValue ? item : max,
+    );
+    const itemsDescription = resolvedItems
+      .map(
+        (item) =>
+          `${item.description} (R$ ${item.netValue.toFixed(2).replace('.', ',')})`,
+      )
+      .join('; ');
 
-      const entry = await this.financialEntriesService.create(
-        companyId,
-        rootCompanyId,
-        {
-          type: FinancialEntryType.RECEIVABLE,
-          partnerId,
-          chartOfAccountId: chartOfAccount.id,
-          productId,
-          issueDate: dto.issueDate,
-          termDays: dto.termDays,
-          paymentMethod: dto.paymentMethod,
-          documentNumber: dto.documentNumber,
-          documentType: FinancialDocumentType.ORDEM_SERVICO,
-          observation: `Importado do orçamento de oficina — ${item.description}`,
-          installments: installments.map((i) => ({
-            dueDate: i.dueDate.toISOString(),
-            amount: i.amount,
-          })),
-        },
-        userId,
-      );
+    const installments = buildAutoInstallments(
+      new Date(`${dto.issueDate}T00:00:00Z`),
+      dto.termDays,
+      dto.installmentsCount,
+      totalAmount,
+    );
 
-      createdEntries.push(entry);
-    }
+    const entry = await this.financialEntriesService.create(
+      companyId,
+      rootCompanyId,
+      {
+        type: FinancialEntryType.RECEIVABLE,
+        partnerId,
+        chartOfAccountId: mainItem.chartOfAccountId,
+        productId: mainItem.productId,
+        issueDate: dto.issueDate,
+        termDays: dto.termDays,
+        paymentMethod: dto.paymentMethod,
+        documentNumber: dto.documentNumber,
+        documentType: FinancialDocumentType.ORDEM_SERVICO,
+        observation: `Importado do orçamento de oficina — ${itemsDescription}`,
+        installments: installments.map((i) => ({
+          dueDate: i.dueDate.toISOString(),
+          amount: i.amount,
+        })),
+      },
+      userId,
+    );
 
     return {
       partnerId,
       createdProducts,
-      entriesCreated: createdEntries.length,
+      entriesCreated: installments.length,
+      entryId: entry.id,
     };
   }
 
