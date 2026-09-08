@@ -354,6 +354,7 @@ export class SaleService {
         totalAmount,
         netAmount,
         userId,
+        sourceOrder?.quoteId ?? undefined,
       );
 
       // Pedido nascido da aprovação de um Orçamento (ver

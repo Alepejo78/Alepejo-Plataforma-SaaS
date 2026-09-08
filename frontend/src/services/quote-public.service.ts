@@ -1,4 +1,6 @@
 import { api } from "./api";
+import type { PaymentMethod } from "./financial-entry.service";
+import type { PaymentMethodSettings } from "./payment-method-settings.service";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -6,7 +8,13 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
-export type QuotePaymentTiming = "A_VISTA" | "A_PRAZO";
+/** Formas de pagamento que o cliente pode escolher no link público. */
+export const PUBLIC_QUOTE_PAYMENT_METHODS: PaymentMethod[] = [
+  "PIX",
+  "BOLETO",
+  "DEBITO",
+  "CREDITO",
+];
 
 export interface QuotePublicItem {
   description: string;
@@ -17,11 +25,19 @@ export interface QuotePublicItem {
   totalPrice: number;
 }
 
-export interface QuotePublicSalesSettings {
-  maxInstallments: number;
-  interestFreeInstallments: number;
-  interestRatePerInstallment: number;
-}
+/** Só os números do acréscimo por forma de pagamento — sem credenciais. */
+export type QuotePublicPaymentSettings = Pick<
+  PaymentMethodSettings,
+  | "boletoSurchargeType"
+  | "boletoSurchargeValue"
+  | "pixSurchargeType"
+  | "pixSurchargeValue"
+  | "cardSurchargeType"
+  | "cardSurchargeValue"
+  | "cardMaxInstallments"
+  | "cardInterestFreeInstallments"
+  | "cardInterestRatePerInstallment"
+>;
 
 export interface QuotePublicInfo {
   quoteNumber: string;
@@ -42,37 +58,12 @@ export interface QuotePublicInfo {
     | "CANCELLED";
   customerRevisionNote?: string | null;
   customerCancelReason?: string | null;
-  salesSettings: QuotePublicSalesSettings;
-}
-
-/**
- * Juros por parcela acima do limite sem juros — mesma fórmula de
- * `Backend/src/core/utils/installment.util.ts#applyInstallmentInterest`,
- * usada aqui só pra mostrar o total em tempo real; o valor final é
- * sempre recalculado (autoritativo) no backend ao confirmar.
- */
-export function previewInstallmentInterest(
-  netAmount: number,
-  installmentsCount: number,
-  settings: QuotePublicSalesSettings
-): number {
-  const chargeable = Math.max(
-    0,
-    installmentsCount - settings.interestFreeInstallments
-  );
-
-  if (chargeable === 0 || settings.interestRatePerInstallment <= 0) {
-    return 0;
-  }
-
-  return (
-    Math.round(
-      netAmount *
-        (settings.interestRatePerInstallment / 100) *
-        chargeable *
-        100
-    ) / 100
-  );
+  /** O que já ficou decidido — presente mesmo depois de aprovado, pra reabrir o link e conferir. */
+  paymentMethod: PaymentMethod | null;
+  installmentsCount: number | null;
+  plannedInstallments: { dueDate: string; amount: number }[] | null;
+  maxInstallments: number;
+  paymentSettings: QuotePublicPaymentSettings;
 }
 
 export const quotePublicService = {
@@ -89,9 +80,9 @@ export const quotePublicService = {
     id: string,
     token: string,
     payload: {
-      paymentTiming?: QuotePaymentTiming;
+      paymentMethod: PaymentMethod;
       installmentsCount?: number;
-    } = {}
+    }
   ): Promise<{ success: boolean }> {
     const { data } = await api.post<ApiEnvelope<{ success: boolean }>>(
       `/quotes/public/${id}/approve`,

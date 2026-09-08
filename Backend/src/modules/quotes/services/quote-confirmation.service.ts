@@ -4,21 +4,21 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
 import {
   NotificationType,
+  PaymentMethod,
   Prisma,
   QuotePurpose,
   QuoteStatus,
 } from '@prisma/client';
 
 import { PrismaService } from '../../../core/prisma/prisma.service';
-import {
-  applyInstallmentInterest,
-  buildAutoInstallments,
-} from '../../../core/utils/installment.util';
+import { buildAutoInstallments } from '../../../core/utils/installment.util';
+import { calculatePaymentSurcharge } from '../../../core/utils/payment-surcharge.util';
 import { findUsersWithPermission } from '../../../core/utils/permission-users.util';
 import { EmailNotificationsService } from '../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
 import { SalesSettingsService } from '../../sales-settings/services/sales-settings.service';
+import { PaymentMethodSettingsRepository } from '../../payment-method-settings/repositories/payment-method-settings.repository';
 
 import { QuoteService } from './quote.service';
 import { QuotePdfService } from './quote-pdf.service';
@@ -43,8 +43,9 @@ function quoteNumberOf(quote: { number: number }) {
  * `VacationConfirmationService` (ver comentário lá): token público,
  * sem login, link por e-mail/WhatsApp. Aqui o cliente tem 3 opções em
  * vez de uma (Aprovar/Revisar/Cancelar), e a aprovação já escolhe a
- * forma de pagamento (à vista/a prazo + parcelas), com juros calculado
- * na hora conforme `SalesSettings`.
+ * forma de pagamento (PIX/boleto/cartão + parcelas quando aplicável),
+ * com o acréscimo calculado na hora conforme `PaymentMethodSettings`
+ * (mesma regra usada em OS/Pedido de Venda/Venda).
  */
 @Injectable()
 export class QuoteConfirmationService {
@@ -58,6 +59,7 @@ export class QuoteConfirmationService {
     private readonly salesSettings: SalesSettingsService,
     private readonly quoteService: QuoteService,
     private readonly quotePdf: QuotePdfService,
+    private readonly paymentMethodSettingsRepository: PaymentMethodSettingsRepository,
   ) {}
 
   /** Gera (ou renova) o link e manda por e-mail/WhatsApp ao cliente. */
@@ -277,6 +279,10 @@ export class QuoteConfirmationService {
     });
 
     const settings = await this.salesSettings.getSettings(quote.companyId);
+    const paymentSettings =
+      await this.paymentMethodSettingsRepository.getOrCreate(
+        quote.companyId,
+      );
 
     return {
       quoteNumber: quoteNumberOf(quote),
@@ -300,11 +306,29 @@ export class QuoteConfirmationService {
       status: quote.status,
       customerRevisionNote: quote.customerRevisionNote,
       customerCancelReason: quote.customerCancelReason,
-      salesSettings: {
-        maxInstallments: settings.maxInstallments,
-        interestFreeInstallments: settings.interestFreeInstallments,
-        interestRatePerInstallment: Number(
-          settings.interestRatePerInstallment,
+      // O que já ficou decidido (quando o cliente reabre o link depois
+      // de aprovar) — pra mostrar exatamente o que ele escolheu, sem
+      // deixar a tela "esquecer" a decisão.
+      paymentMethod: quote.paymentMethod,
+      installmentsCount: quote.installmentsCount,
+      plannedInstallments: quote.plannedInstallments as
+        | { dueDate: string; amount: number }[]
+        | null,
+      maxInstallments: settings.maxInstallments,
+      // Só os números do acréscimo por forma de pagamento — nunca a
+      // chave do Asaas nem qualquer credencial.
+      paymentSettings: {
+        boletoSurchargeType: paymentSettings.boletoSurchargeType,
+        boletoSurchargeValue: Number(paymentSettings.boletoSurchargeValue),
+        pixSurchargeType: paymentSettings.pixSurchargeType,
+        pixSurchargeValue: Number(paymentSettings.pixSurchargeValue),
+        cardSurchargeType: paymentSettings.cardSurchargeType,
+        cardSurchargeValue: Number(paymentSettings.cardSurchargeValue),
+        cardMaxInstallments: paymentSettings.cardMaxInstallments,
+        cardInterestFreeInstallments:
+          paymentSettings.cardInterestFreeInstallments,
+        cardInterestRatePerInstallment: Number(
+          paymentSettings.cardInterestRatePerInstallment,
         ),
       },
     };
@@ -352,38 +376,54 @@ export class QuoteConfirmationService {
     });
     const rootCompanyId = company?.rootCompanyId ?? quote.companyId;
 
+    const canInstall =
+      dto.paymentMethod === PaymentMethod.BOLETO ||
+      dto.paymentMethod === PaymentMethod.CREDITO;
+    const installmentsCount = canInstall
+      ? (dto.installmentsCount ?? 1)
+      : 1;
+
     const settings = await this.salesSettings.getSettings(quote.companyId);
+    const paymentSettings =
+      await this.paymentMethodSettingsRepository.getOrCreate(
+        quote.companyId,
+      );
 
-    const installmentsCount =
-      dto.paymentTiming === 'A_VISTA' ? 1 : (dto.installmentsCount ?? 0);
+    if (canInstall && installmentsCount > 1) {
+      const maxAllowed =
+        dto.paymentMethod === PaymentMethod.CREDITO
+          ? Math.min(
+              settings.maxInstallments,
+              paymentSettings.cardMaxInstallments,
+            )
+          : settings.maxInstallments;
 
-    if (dto.paymentTiming === 'A_PRAZO') {
-      if (!installmentsCount || installmentsCount < 2) {
+      if (installmentsCount > maxAllowed) {
         throw new BadRequestException(
-          'Informe a quantidade de parcelas.',
-        );
-      }
-
-      if (installmentsCount > settings.maxInstallments) {
-        throw new BadRequestException(
-          `No máximo ${settings.maxInstallments} parcelas.`,
+          `No máximo ${maxAllowed} parcelas.`,
         );
       }
     }
 
-    const interestAmount = applyInstallmentInterest(
-      Number(quote.netAmount),
-      installmentsCount,
-      settings.interestFreeInstallments,
-      Number(settings.interestRatePerInstallment),
-    );
-
-    const otherExpenses = Number(quote.otherExpenses) + interestAmount;
-    const netAmount =
+    // Base sem o acréscimo — o mesmo total que já era mostrado antes
+    // de escolher a forma de pagamento.
+    const baseNetAmount =
       Number(quote.totalAmount) -
       Number(quote.discountValue) +
       Number(quote.freightValue) +
-      otherExpenses;
+      Number(quote.otherExpenses);
+
+    const { surchargeAmount, totalWithSurcharge } = calculatePaymentSurcharge(
+      {
+        paymentMethod: dto.paymentMethod,
+        baseAmount: baseNetAmount,
+        installmentsCount,
+        settings: paymentSettings,
+      },
+    );
+
+    const otherExpenses = Number(quote.otherExpenses) + surchargeAmount;
+    const netAmount = totalWithSurcharge;
 
     // Parcelas planejadas no orçamento vêm do rascunho (normalmente
     // 1, o valor cheio) — a quantidade escolhida agora pelo cliente
@@ -404,10 +444,11 @@ export class QuoteConfirmationService {
         : null;
 
     await this.claimDecision(quote.id, {
+      paymentMethod: dto.paymentMethod,
       installmentsCount,
       otherExpenses,
       netAmount,
-      installmentInterestAmount: interestAmount,
+      installmentInterestAmount: surchargeAmount,
       plannedInstallments: plannedInstallments ?? Prisma.JsonNull,
       customerApprovedAt: new Date(),
     });

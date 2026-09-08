@@ -44,6 +44,15 @@ export class SaleRepository {
     totalAmount: number,
     netAmount: number,
     userId: string,
+    /**
+     * Orçamento de origem, copiado de `salesOrder.quoteId` quando a
+     * venda nasce de um Pedido de Venda que veio de um orçamento
+     * aprovado — mesmo padrão de `Purchase.quotationId`. Além de
+     * rastreabilidade, é o que `applyApproval()` usa pra não aplicar
+     * de novo o acréscimo de forma de pagamento já embutido no
+     * orçamento aprovado publicamente.
+     */
+    quoteId?: string,
   ) {
     const issueDate = dto.saleDate
       ? new Date(dto.saleDate)
@@ -86,6 +95,7 @@ export class SaleRepository {
         invoiceKey: dto.invoiceKey,
 
         salesOrderId: dto.salesOrderId,
+        quoteId,
         createdById: userId,
         updatedById: userId,
 

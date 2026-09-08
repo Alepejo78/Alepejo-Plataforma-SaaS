@@ -1464,10 +1464,11 @@ model Quote {
   totalAmount   Decimal @default(0) @db.Decimal(18, 2)
   netAmount     Decimal @default(0) @db.Decimal(18, 2)
 
-  /// Juros de parcelamento escolhido pelo cliente na aprovação
-  /// digital (ver QuoteConfirmationService.approvePublic) — já somado
-  /// dentro de `otherExpenses`/`netAmount` acima; guardado à parte só
-  /// pra mostrar quanto disso é juros.
+  /// Acréscimo total da forma de pagamento escolhida na aprovação
+  /// digital (boleto/pix/transferência fixo ou %, juros de cartão —
+  /// ver QuoteConfirmationService.approvePublic) — já somado dentro de
+  /// `otherExpenses`/`netAmount` acima; guardado à parte só pra
+  /// mostrar quanto disso é acréscimo.
   installmentInterestAmount Decimal @default(0) @db.Decimal(18, 2)
 
   /// Aprovação digital pelo cliente (mesmo esquema de

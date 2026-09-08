@@ -1,9 +1,23 @@
 import type { PaymentMethod } from "@/services/financial-entry.service";
-import type { PaymentMethodSettings } from "@/services/payment-method-settings.service";
+import type { SurchargeType } from "@/services/payment-method-settings.service";
 
 export interface PaymentSurchargeResult {
   surchargeAmount: number;
   totalWithSurcharge: number;
+}
+
+/** Só os campos que a conta de acréscimo realmente usa — qualquer objeto compatível serve (config completa ou só a fatia pública). */
+export interface PaymentSurchargeSettings {
+  boletoSurchargeType: SurchargeType | null;
+  boletoSurchargeValue: string | number;
+  transferSurchargeType?: SurchargeType | null;
+  transferSurchargeValue?: string | number;
+  pixSurchargeType: SurchargeType | null;
+  pixSurchargeValue: string | number;
+  cardSurchargeType: SurchargeType | null;
+  cardSurchargeValue: string | number;
+  cardInterestFreeInstallments: number;
+  cardInterestRatePerInstallment: string | number;
 }
 
 /**
@@ -20,7 +34,7 @@ export function calculatePaymentSurcharge({
   paymentMethod: PaymentMethod | null | undefined;
   baseAmount: number;
   installmentsCount: number;
-  settings: PaymentMethodSettings;
+  settings: PaymentSurchargeSettings;
 }): PaymentSurchargeResult {
   const round = (value: number) => Math.round(value * 100) / 100;
 
@@ -59,8 +73,8 @@ export function calculatePaymentSurcharge({
 
     case "TRANSFERENCIA":
     case "DEPOSITO": {
-      const type = settings.transferSurchargeType;
-      const value = Number(settings.transferSurchargeValue);
+      const type = settings.transferSurchargeType ?? null;
+      const value = Number(settings.transferSurchargeValue ?? 0);
 
       if (type === "FIXED" && value) {
         surchargeAmount = value;

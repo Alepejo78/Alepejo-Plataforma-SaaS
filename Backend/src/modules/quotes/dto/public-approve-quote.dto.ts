@@ -1,27 +1,35 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, Min } from 'class-validator';
+import { IsEnum, IsIn, IsInt, IsOptional, Min } from 'class-validator';
 
-export type QuotePaymentTiming = 'A_VISTA' | 'A_PRAZO';
+import { PaymentMethod } from '@prisma/client';
+
+/** Formas de pagamento que o cliente pode escolher no link público. */
+export const PUBLIC_QUOTE_PAYMENT_METHODS = [
+  PaymentMethod.PIX,
+  PaymentMethod.BOLETO,
+  PaymentMethod.DEBITO,
+  PaymentMethod.CREDITO,
+] as const;
 
 export class PublicApproveQuoteDto {
   @ApiProperty({
-    enum: ['A_VISTA', 'A_PRAZO'],
-    required: false,
+    enum: PUBLIC_QUOTE_PAYMENT_METHODS,
     description:
       'Forma de pagamento escolhida na aprovação — igual em orçamento de venda ou de serviço.',
   })
-  @IsOptional()
-  @IsIn(['A_VISTA', 'A_PRAZO'], {
-    message: 'Informe se o pagamento é à vista ou a prazo.',
+  @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
+  @IsIn(PUBLIC_QUOTE_PAYMENT_METHODS, {
+    message: 'Forma de pagamento não disponível para aprovação pelo cliente.',
   })
-  paymentTiming?: QuotePaymentTiming;
+  paymentMethod: PaymentMethod;
 
   @ApiProperty({
     required: false,
-    description: 'Quantidade de parcelas escolhida (só quando "a prazo").',
+    description:
+      'Quantidade de parcelas (só quando a forma de pagamento permite parcelar — boleto ou cartão de crédito).',
   })
   @IsOptional()
   @IsInt()
-  @Min(2)
+  @Min(1)
   installmentsCount?: number;
 }

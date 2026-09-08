@@ -7,11 +7,12 @@ import { CheckCircle2, MessageSquare, XCircle } from "lucide-react";
 import { AuthBrandHeader } from "@/components/auth/AuthBrandHeader";
 
 import {
-  previewInstallmentInterest,
+  PUBLIC_QUOTE_PAYMENT_METHODS,
   quotePublicService,
-  type QuotePaymentTiming,
   type QuotePublicInfo,
 } from "@/services/quote-public.service";
+import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/services/financial-entry.service";
+import { calculatePaymentSurcharge } from "@/lib/paymentSurcharge";
 
 function extractMessage(err: unknown, fallback: string) {
   const message = (
@@ -42,6 +43,11 @@ function date(value: string | null | undefined) {
 
 type Mode = "idle" | "approve" | "revise" | "cancel";
 
+/** Boleto e cartão de crédito podem ser parcelados; PIX e débito são sempre à vista. */
+function canInstall(method: PaymentMethod | "") {
+  return method === "BOLETO" || method === "CREDITO";
+}
+
 function ConfirmarOrcamentoContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? "";
@@ -58,9 +64,8 @@ function ConfirmarOrcamentoContent() {
   >(null);
 
   const [mode, setMode] = useState<Mode>("idle");
-  const [paymentTiming, setPaymentTiming] =
-    useState<QuotePaymentTiming>("A_VISTA");
-  const [installmentsCount, setInstallmentsCount] = useState(2);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const [installmentsCount, setInstallmentsCount] = useState(1);
   const [revisionMessage, setRevisionMessage] = useState("");
   const [cancelReason, setCancelReason] = useState("");
 
@@ -94,22 +99,40 @@ function ConfirmarOrcamentoContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, token]);
 
-  const interestPreview = useMemo(() => {
-    if (!info || paymentTiming === "A_VISTA") {
-      return 0;
+  const surchargePreview = useMemo(() => {
+    if (!info || !paymentMethod) {
+      return { surchargeAmount: 0, totalWithSurcharge: info?.netAmount ?? 0 };
     }
 
-    return previewInstallmentInterest(
-      info.netAmount,
-      installmentsCount,
-      info.salesSettings
-    );
-  }, [info, paymentTiming, installmentsCount]);
+    return calculatePaymentSurcharge({
+      paymentMethod,
+      baseAmount: info.netAmount,
+      installmentsCount: canInstall(paymentMethod) ? installmentsCount : 1,
+      settings: info.paymentSettings,
+    });
+  }, [info, paymentMethod, installmentsCount]);
 
-  const totalPreview = (info?.netAmount ?? 0) + interestPreview;
+  const maxInstallmentsFor = (method: PaymentMethod | "") => {
+    if (!info) {
+      return 1;
+    }
+
+    if (method === "CREDITO") {
+      return Math.max(
+        1,
+        Math.min(info.maxInstallments, info.paymentSettings.cardMaxInstallments)
+      );
+    }
+
+    if (method === "BOLETO") {
+      return Math.max(1, info.maxInstallments);
+    }
+
+    return 1;
+  };
 
   async function handleApprove() {
-    if (submitting) {
+    if (submitting || !paymentMethod) {
       return;
     }
 
@@ -118,11 +141,17 @@ function ConfirmarOrcamentoContent() {
 
     try {
       await quotePublicService.approve(id, token, {
-        paymentTiming,
-        installmentsCount:
-          paymentTiming === "A_PRAZO" ? installmentsCount : undefined,
+        paymentMethod,
+        installmentsCount: canInstall(paymentMethod)
+          ? installmentsCount
+          : undefined,
       });
 
+      // Recarrega pra pegar o que o backend realmente gravou (total já
+      // com acréscimo, parcelas calculadas) — o que foi digitado aqui
+      // é só a escolha, não necessariamente igual ao valor final.
+      const refreshed = await quotePublicService.getInfo(id, token);
+      setInfo(refreshed);
       setFinalStatus("APPROVED");
       setDone(true);
     } catch (err) {
@@ -206,6 +235,10 @@ function ConfirmarOrcamentoContent() {
     return "Obrigado pela resposta.";
   }
 
+  const decisionShown =
+    (finalStatus === "APPROVED" || info?.status === "APPROVED" || info?.status === "CONVERTED") &&
+    info?.paymentMethod;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-8">
       <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
@@ -226,33 +259,13 @@ function ConfirmarOrcamentoContent() {
           <p className="mt-4 text-sm text-[var(--danger)]">
             {error || "Link inválido. Peça um novo link."}
           </p>
-        ) : done ? (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-2 text-[var(--success)]">
-              <CheckCircle2 size={20} />
-              <p className="text-sm font-medium">{doneMessage()}</p>
-            </div>
-
-            {finalStatus === "REVISION_REQUESTED" && revisionMessage.trim() && (
-              <p className="text-sm text-[var(--text-muted)]">
-                Você pediu: &quot;{revisionMessage.trim()}&quot;
-              </p>
-            )}
-
-            {finalStatus === null &&
-              info?.customerRevisionNote &&
-              info.status === "REVISION_REQUESTED" && (
-                <p className="text-sm text-[var(--text-muted)]">
-                  Você pediu: &quot;{info.customerRevisionNote}&quot;
-                </p>
-              )}
-          </div>
         ) : (
           info && (
             <div className="mt-4 space-y-4">
               <p className="text-sm text-[var(--text-muted)]">
                 Confira o orçamento <strong>{info.quoteNumber}</strong> de{" "}
-                <strong>{info.companyName}</strong> e decida abaixo:
+                <strong>{info.companyName}</strong>
+                {done ? "." : " e decida abaixo:"}
               </p>
 
               <div className="space-y-1 rounded-xl border border-[var(--border)] p-4 text-sm">
@@ -338,13 +351,77 @@ function ConfirmarOrcamentoContent() {
                 </p>
               </div>
 
+              {done && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-[var(--success)]">
+                    <CheckCircle2 size={20} />
+                    <p className="text-sm font-medium">{doneMessage()}</p>
+                  </div>
+
+                  {finalStatus === "REVISION_REQUESTED" && revisionMessage.trim() && (
+                    <p className="text-sm text-[var(--text-muted)]">
+                      Você pediu: &quot;{revisionMessage.trim()}&quot;
+                    </p>
+                  )}
+
+                  {finalStatus === null &&
+                    info.customerRevisionNote &&
+                    info.status === "REVISION_REQUESTED" && (
+                      <p className="text-sm text-[var(--text-muted)]">
+                        Você pediu: &quot;{info.customerRevisionNote}&quot;
+                      </p>
+                    )}
+
+                  {finalStatus === null &&
+                    info.customerCancelReason &&
+                    info.status === "CANCELLED" && (
+                      <p className="text-sm text-[var(--text-muted)]">
+                        Motivo: &quot;{info.customerCancelReason}&quot;
+                      </p>
+                    )}
+
+                  {decisionShown && info.paymentMethod && (
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] p-3 text-sm">
+                      <p className="font-medium text-[var(--text-primary)]">
+                        O que você escolheu
+                      </p>
+                      <p className="mt-1 text-[var(--text-secondary)]">
+                        Forma de pagamento:{" "}
+                        {PAYMENT_METHOD_LABELS[info.paymentMethod]}
+                      </p>
+
+                      {info.plannedInstallments &&
+                      info.plannedInstallments.length > 0 ? (
+                        <div className="mt-1 space-y-0.5">
+                          {info.plannedInstallments.map((row, index) => (
+                            <p
+                              key={index}
+                              className="flex justify-between text-[var(--text-secondary)]"
+                            >
+                              <span>
+                                Parcela {index + 1} — {date(row.dueDate)}
+                              </span>
+                              <span>{money(row.amount)}</span>
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      <p className="mt-1 text-base font-semibold text-[var(--text-primary)]">
+                        Total pago: {money(info.netAmount)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {error && (
                 <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
                   {error}
                 </div>
               )}
 
-              {mode === "idle" && (
+              {!done && mode === "idle" && (
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
@@ -376,42 +453,38 @@ function ConfirmarOrcamentoContent() {
                 </div>
               )}
 
-              {mode === "approve" && (
+              {!done && mode === "approve" && (
                 <div className="space-y-3 rounded-xl border border-[var(--border)] p-4">
                   <p className="text-sm font-medium text-[var(--text-primary)]">
                     Forma de pagamento
                   </p>
 
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentTiming("A_VISTA")}
-                      className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
-                        paymentTiming === "A_VISTA"
-                          ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
-                          : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                      }`}
-                    >
-                      À vista
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentTiming("A_PRAZO")}
-                      className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
-                        paymentTiming === "A_PRAZO"
-                          ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
-                          : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                      }`}
-                    >
-                      A prazo
-                    </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PUBLIC_QUOTE_PAYMENT_METHODS.map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethod(method);
+                          setInstallmentsCount(1);
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                          paymentMethod === method
+                            ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary-text)]"
+                            : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                        }`}
+                      >
+                        {PAYMENT_METHOD_LABELS[method]}
+                      </button>
+                    ))}
                   </div>
 
-                  {paymentTiming === "A_PRAZO" && (
+                  {canInstall(paymentMethod) && (
                     <div>
                       <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
-                        Quantidade de parcelas
+                        {paymentMethod === "BOLETO"
+                          ? "À vista ou parcelado (cada parcela é um boleto)"
+                          : "Quantidade de parcelas"}
                       </label>
 
                       <select
@@ -422,45 +495,41 @@ function ConfirmarOrcamentoContent() {
                         }
                       >
                         {Array.from(
-                          {
-                            length: Math.max(
-                              0,
-                              info.salesSettings.maxInstallments - 1
-                            ),
-                          },
-                          (_, i) => i + 2
+                          { length: maxInstallmentsFor(paymentMethod) },
+                          (_, i) => i + 1
                         ).map((n) => (
                           <option key={n} value={n}>
-                            {n}x
-                            {n > info.salesSettings.interestFreeInstallments
-                              ? " (com juros)"
-                              : " (sem juros)"}
+                            {n === 1 ? "À vista" : `${n}x`}
                           </option>
                         ))}
                       </select>
                     </div>
                   )}
 
-                  <div className="rounded-lg bg-[var(--surface-hover)] p-3 text-sm">
-                    {interestPreview > 0 && (
-                      <p className="text-[var(--text-muted)]">
-                        Juros: {money(interestPreview)}
-                      </p>
-                    )}
+                  {paymentMethod && (
+                    <div className="rounded-lg bg-[var(--surface-hover)] p-3 text-sm">
+                      {surchargePreview.surchargeAmount > 0 && (
+                        <p className="text-[var(--text-muted)]">
+                          Acréscimo: {money(surchargePreview.surchargeAmount)}
+                        </p>
+                      )}
 
-                    <p className="text-base font-semibold text-[var(--text-primary)]">
-                      Total: {money(totalPreview)}
-                      {paymentTiming === "A_PRAZO" &&
-                        ` em ${installmentsCount}x de ${money(
-                          totalPreview / installmentsCount
-                        )}`}
-                    </p>
-                  </div>
+                      <p className="text-base font-semibold text-[var(--text-primary)]">
+                        Total: {money(surchargePreview.totalWithSurcharge)}
+                        {canInstall(paymentMethod) &&
+                          installmentsCount > 1 &&
+                          ` em ${installmentsCount}x de ${money(
+                            surchargePreview.totalWithSurcharge /
+                              installmentsCount
+                          )}`}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      disabled={submitting}
+                      disabled={submitting || !paymentMethod}
                       onClick={() => void handleApprove()}
                       className="flex-1 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
                     >
@@ -479,7 +548,7 @@ function ConfirmarOrcamentoContent() {
                 </div>
               )}
 
-              {mode === "revise" && (
+              {!done && mode === "revise" && (
                 <div className="space-y-3 rounded-xl border border-[var(--border)] p-4">
                   <label className="block text-sm font-medium text-[var(--text-secondary)]">
                     O que precisa ser revisado?
@@ -515,7 +584,7 @@ function ConfirmarOrcamentoContent() {
                 </div>
               )}
 
-              {mode === "cancel" && (
+              {!done && mode === "cancel" && (
                 <div className="space-y-3 rounded-xl border border-[var(--border)] p-4">
                   <label className="block text-sm font-medium text-[var(--text-secondary)]">
                     Motivo do cancelamento
