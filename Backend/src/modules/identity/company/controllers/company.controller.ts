@@ -150,6 +150,24 @@ export class CompanyController {
     return { companyId };
   }
 
+  /**
+   * Suporte ao dono da plataforma: acha a compra que o cliente fez
+   * mas não voltou pra terminar o cadastro — restrita ao e-mail do
+   * dono (`platform.license.manage`, mesma trava de
+   * `platform.company.delete` — ver PermissionsGuard). Devolve o link
+   * de retomada do cadastro (`/cadastro-empresa?checkout=<id>`) pra
+   * reenviar pro cliente.
+   */
+  @Get('pending-checkouts')
+  @Permissions('platform.license.manage')
+  @ApiOperation({
+    summary:
+      'Buscar compra pendente (paga, mas sem cadastro concluído) pelo e-mail do comprador — dono da plataforma',
+  })
+  getPendingCheckouts(@Query('email') email: string) {
+    return this.onboardingService.findPendingCheckoutsByEmail(email);
+  }
+
   @Post('additional')
   @Permissions('company.create')
   @ApiOperation({

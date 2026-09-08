@@ -160,6 +160,41 @@ export class CompanyOnboardingService {
     return { companyId: company.id, userId: user.id };
   }
 
+  /**
+   * Suporte ao dono da plataforma: acha a compra que o cliente fez
+   * (`/planos` → "Comprar agora") mas nunca voltou pra terminar o
+   * cadastro — sem isso não tem como saber o link de retomada
+   * (`/cadastro-empresa?checkout=<id>`) pra reenviar pro cliente.
+   * Só as ainda não convertidas em empresa (`companyId: null`).
+   */
+  async findPendingCheckoutsByEmail(email: string) {
+    const checkouts = await this.prisma.pendingCheckout.findMany({
+      where: {
+        email: { contains: email, mode: 'insensitive' },
+        companyId: null,
+      },
+      include: { plan: { select: { name: true, code: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return checkouts.map((checkout) => ({
+      id: checkout.id,
+      name: checkout.name,
+      email: checkout.email,
+      document: checkout.document,
+      phone: checkout.phone,
+      planName: checkout.plan.name,
+      planCode: checkout.plan.code,
+      billingCycle: checkout.billingCycle,
+      value: Number(checkout.value),
+      paid: checkout.paid,
+      createdAt: checkout.createdAt,
+      expiresAt: checkout.expiresAt,
+      expired: checkout.expiresAt < new Date(),
+      resumeUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/cadastro-empresa?checkout=${checkout.id}`,
+    }));
+  }
+
   /** Checkout precisa existir, não ter expirado e ainda não ter virado empresa. */
   private async loadUsableCheckout(checkoutId: string) {
     const checkout = await this.prisma.pendingCheckout.findUnique({
