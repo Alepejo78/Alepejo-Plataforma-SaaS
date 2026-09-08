@@ -14,7 +14,9 @@ import { AsaasService } from './services/asaas.service';
   // AsaasService também é usado fora deste módulo (ex.:
   // CompanyDeletionService, pra cancelar a assinatura antes de excluir
   // a empresa) — precisa estar exportado pra outro módulo poder
-  // injetar.
-  exports: [AsaasService],
+  // injetar. BillingService também: CompanyOnboardingService usa
+  // listCharges() logo após o cadastro pra já gerar o título da
+  // primeira cobrança, sem esperar o cliente abrir a tela de Cobranças.
+  exports: [AsaasService, BillingService],
 })
 export class BillingModule {}

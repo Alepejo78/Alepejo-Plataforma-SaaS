@@ -82,6 +82,25 @@ export class BillingController {
     return this.billingService.customerReport(resolvedYear);
   }
 
+  /**
+   * Ressincroniza as cobranças/títulos de uma empresa com o Asaas —
+   * mesma sincronização de `me/charges` (`BillingService.listCharges`,
+   * já idempotente), só que sob demanda pelo dono da plataforma. Cobre
+   * o caso de uma empresa que pagou no checkout mas cujo primeiro
+   * título só nasce quando alguém abre a tela de Cobranças — se
+   * ninguém abriu ainda, o título nem aparece em Contas a Pagar nem
+   * em Clientes e faturamento até isso rodar uma vez.
+   */
+  @Post('customers/:companyId/sync-charges')
+  @Permissions('platform.license.manage')
+  @ApiOperation({
+    summary:
+      'Ressincronizar cobranças/títulos de uma empresa com o Asaas (dono da plataforma)',
+  })
+  syncCustomerCharges(@Param('companyId') companyId: string) {
+    return this.billingService.listCharges(companyId);
+  }
+
   @Post('me/cycle')
   @Permissions('license.view')
   @ApiOperation({

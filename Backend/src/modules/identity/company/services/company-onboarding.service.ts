@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 
@@ -13,6 +14,7 @@ import { LicenseService } from '../../license/services/license.service';
 import { CUSTOM_PLAN_CODE } from '../../license/constants/custom-plan.constants';
 import { EmailNotificationsService } from '../../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../../notifications/services/whatsapp-notifications.service';
+import { BillingService } from '../../../billing/services/billing.service';
 
 import { CompanyRepository } from '../repositories/company.repository';
 import { CompanySignupDto } from '../dto/company-signup.dto';
@@ -57,6 +59,8 @@ function documentType(document: string): 'CNPJ' | 'CPF' | null {
  */
 @Injectable()
 export class CompanyOnboardingService {
+  private readonly logger = new Logger(CompanyOnboardingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly companyRepository: CompanyRepository,
@@ -65,6 +69,7 @@ export class CompanyOnboardingService {
     private readonly defaultAccounting: DefaultAccountingService,
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
+    private readonly billingService: BillingService,
   ) {}
 
   /** Cliente novo, sem login prévio — a própria empresa nasce raiz. */
@@ -163,6 +168,24 @@ export class CompanyOnboardingService {
     // pra entrar e reclamar / rodar o backfill manual depois — bem
     // mais recuperável do que falhar antes do login existir.
     await this.defaultAccounting.seedDefaultAccounting(company.id);
+
+    // Quem já pagou no checkout ("Comprar agora") tem assinatura e
+    // cobrança criadas no Asaas ANTES de a empresa existir — sem isso
+    // aqui, o título da primeira cobrança só aparecia em Contas a
+    // Pagar (e o mês em Licenciamento > Clientes e faturamento) na
+    // primeira vez que alguém abrisse a tela de Cobranças (mesma
+    // sincronização de BillingService.listCharges, só que sob
+    // demanda). Best-effort — Asaas fora do ar aqui não pode travar o
+    // cadastro; listCharges roda de novo sozinha quando a tela abrir.
+    if (checkout) {
+      void this.billingService.listCharges(company.id).catch((err) => {
+        this.logger.warn(
+          `Falha ao sincronizar a primeira cobrança da empresa ${company.id}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      });
+    }
 
     return { companyId: company.id, userId: user.id };
   }

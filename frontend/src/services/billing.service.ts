@@ -198,4 +198,15 @@ export const billingService = {
 
     return data.data ?? [];
   },
+
+  /**
+   * Só plataforma — ressincroniza as cobranças/títulos de uma empresa
+   * com o Asaas. Cobre o caso de uma empresa que pagou no checkout mas
+   * cujo primeiro título só nasce quando alguém abre a tela de
+   * Cobranças dela — antes disso, some de Contas a Pagar e da coluna
+   * do mês aqui.
+   */
+  async syncCustomerCharges(companyId: string): Promise<void> {
+    await api.post(`/billing/customers/${companyId}/sync-charges`);
+  },
 };

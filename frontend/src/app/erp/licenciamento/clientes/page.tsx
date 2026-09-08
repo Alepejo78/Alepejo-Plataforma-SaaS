@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  RefreshCw,
   ShieldOff,
   Trash2,
   X,
@@ -223,6 +224,8 @@ export default function ClientesFaturamentoPage() {
   const [companyToDelete, setCompanyToDelete] =
     useState<CustomerReportRow | null>(null);
   const [deletedMessage, setDeletedMessage] = useState("");
+  const [syncingId, setSyncingId] = useState("");
+  const [syncMessage, setSyncMessage] = useState("");
 
   const load = useCallback(async () => {
     if (!allowed) {
@@ -248,6 +251,25 @@ export default function ClientesFaturamentoPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function syncCharges(row: CustomerReportRow) {
+    setSyncingId(row.companyId);
+    setSyncMessage("");
+
+    try {
+      await billingService.syncCustomerCharges(row.companyId);
+      setSyncMessage(
+        `Cobranças de ${row.legalName} ressincronizadas com o Asaas.`
+      );
+      await load();
+    } catch (err) {
+      setSyncMessage(
+        extractMessage(err, "Não foi possível ressincronizar as cobranças.")
+      );
+    } finally {
+      setSyncingId("");
+    }
+  }
 
   if (!allowed) {
     return (
@@ -351,6 +373,12 @@ export default function ClientesFaturamentoPage() {
             {deletedMessage && (
               <div className="rounded-xl border border-[var(--success)] bg-[var(--success-soft)] p-3 text-sm text-[var(--success)]">
                 {deletedMessage}
+              </div>
+            )}
+
+            {syncMessage && (
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] p-3 text-sm text-[var(--text-primary)]">
+                {syncMessage}
               </div>
             )}
           </>
@@ -477,20 +505,37 @@ export default function ClientesFaturamentoPage() {
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-3 text-right">
-                      <Can permission="platform.company.delete">
+                      <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            setDeletedMessage("");
-                            setCompanyToDelete(row);
-                          }}
-                          title="Excluir empresa"
-                          aria-label="Excluir empresa"
-                          className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
+                          disabled={syncingId === row.companyId}
+                          onClick={() => void syncCharges(row)}
+                          title="Ressincronizar cobranças com o Asaas"
+                          aria-label="Ressincronizar cobranças"
+                          className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50"
                         >
-                          <Trash2 size={16} />
+                          {syncingId === row.companyId ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <RefreshCw size={16} />
+                          )}
                         </button>
-                      </Can>
+
+                        <Can permission="platform.company.delete">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeletedMessage("");
+                              setCompanyToDelete(row);
+                            }}
+                            title="Excluir empresa"
+                            aria-label="Excluir empresa"
+                            className="rounded-lg border border-[var(--border)] p-2 text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </Can>
+                      </div>
                     </td>
                   </tr>
                 ))}
