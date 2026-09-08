@@ -33,9 +33,13 @@ export class UsersService {
   ) {}
 
   async create(companyId: string, createUserDto: CreateUserDto) {
-    const userExists = await this.usersRepository.findByEmail(
-      createUserDto.email,
-    );
+    // Sempre minúsculo — garante isso aqui no serviço (não só no DTO da
+    // rota HTTP) porque `CompanyOnboardingService.provisionAdminUser`
+    // chama `create()` direto, por dentro, sem passar pelo
+    // ValidationPipe/@Transform do CreateUserDto.
+    const email = createUserDto.email.trim().toLowerCase();
+
+    const userExists = await this.usersRepository.findByEmail(email);
 
     if (userExists) {
       throw new ConflictException(
@@ -54,7 +58,7 @@ export class UsersService {
         },
       },
       name: createUserDto.name,
-      email: createUserDto.email,
+      email,
       passwordHash,
       department: createUserDto.department,
       manager: createUserDto.manager,
@@ -167,6 +171,12 @@ export class UsersService {
     // setPasswordWithToken), nunca por este PATCH genérico.
     const { roleId, password, companyIds, defaultCompanyId, ...rest } =
       updateUserDto;
+
+    // Mesmo motivo de create(): garante minúsculo aqui, não só no
+    // @Transform do DTO.
+    if (rest.email) {
+      rest.email = rest.email.trim().toLowerCase();
+    }
 
     const updated = await this.usersRepository.update(id, rest);
 

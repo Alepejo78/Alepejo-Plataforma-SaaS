@@ -91,7 +91,10 @@ export class UsersRepository {
   async findByEmail(email: string) {
     return this.prisma.user.findFirst({
       where: {
-        email,
+        // Sem distinguir maiúscula/minúscula — cadastro antigo pode ter
+        // salvo o e-mail em qualquer caixa, login não pode depender de
+        // digitar igualzinho.
+        email: { equals: email, mode: 'insensitive' },
         deletedAt: null,
       },
       include: {

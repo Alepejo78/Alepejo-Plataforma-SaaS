@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsEmail,
@@ -26,6 +27,12 @@ export class CreateUserDto {
     example: 'admin@alepejo.com.br',
     description: 'E-mail de acesso',
   })
+  // Sempre minúsculo — login não deve depender da caixa que foi
+  // digitada no cadastro (ver também UsersRepository.findByEmail /
+  // AuthService.findActiveUserByEmail, que buscam sem diferenciar).
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   @IsEmail({}, { message: 'E-mail inválido.' })
   @IsNotEmpty({ message: 'O e-mail é obrigatório.' })
   @MaxLength(150, {

@@ -91,7 +91,10 @@ export class AuthService {
 
   private async findActiveUserByEmail(email: string) {
     return this.findUserWithAuthContext({
-      email,
+      // Sem distinguir maiúscula/minúscula — mesmo motivo de
+      // UsersRepository.findByEmail (cadastro antigo pode ter salvo em
+      // qualquer caixa).
+      email: { equals: email, mode: 'insensitive' },
       active: true,
       deletedAt: null,
     });
