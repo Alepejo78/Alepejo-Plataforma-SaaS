@@ -23,6 +23,8 @@ export type AppKey = "erp" | "os";
 export interface TabEntry {
   href: string;
   title: string;
+  /** Guia fixada — sobrevive ao "Fechar tudo" e troca o X por um indicador. */
+  pinned?: boolean;
 }
 
 interface AppTabsState {
@@ -40,6 +42,10 @@ interface TabsContextValue {
   /** Abre (ou reaproveita) uma guia e navega — false se bloqueado pelo limite. */
   openTab: (app: AppKey, entry: TabEntry) => boolean;
   closeTab: (app: AppKey, href: string) => void;
+  /** Fecha todas as guias do app, exceto a Home e as fixadas. */
+  closeAllTabs: (app: AppKey) => void;
+  pinTab: (app: AppKey, href: string) => void;
+  unpinTab: (app: AppKey, href: string) => void;
   /** Abre (ou só troca pra) a guia do app — sempre volta pra onde a pessoa parou nele. */
   openApp: (app: AppKey) => void;
   /** Fecha a guia do app — não fecha se for a única aberta. */
@@ -464,6 +470,55 @@ export function TabsProvider({
     [stateFor, setStateFor, router]
   );
 
+  const setPinned = useCallback(
+    (app: AppKey, href: string, pinned: boolean) => {
+      const current = stateFor(app);
+      const nextTabs = current.openTabs.map((tab) =>
+        tab.href === href ? { ...tab, pinned } : tab
+      );
+
+      setStateFor(app, { ...current, openTabs: nextTabs });
+    },
+    [stateFor, setStateFor]
+  );
+
+  const pinTab = useCallback(
+    (app: AppKey, href: string) => setPinned(app, href, true),
+    [setPinned]
+  );
+
+  const unpinTab = useCallback(
+    (app: AppKey, href: string) => setPinned(app, href, false),
+    [setPinned]
+  );
+
+  const closeAllTabs = useCallback(
+    (app: AppKey) => {
+      const current = stateFor(app);
+      const home = HOME_TAB[app];
+
+      // Home nunca fecha; fixadas sobrevivem ao "fechar tudo" — é pra
+      // isso que a fixação serve.
+      const kept = current.openTabs.filter(
+        (tab) => tab.href === home.href || tab.pinned
+      );
+
+      const activeStillOpen = kept.some(
+        (tab) => tab.href === current.activeHref
+      );
+      const nextActive = activeStillOpen
+        ? current.activeHref
+        : kept[kept.length - 1].href;
+
+      setStateFor(app, { openTabs: kept, activeHref: nextActive });
+
+      if (!activeStillOpen) {
+        router.push(nextActive);
+      }
+    },
+    [stateFor, setStateFor, router]
+  );
+
   const openApp = useCallback(
     (app: AppKey) => {
       if (!openApps.includes(app)) {
@@ -504,6 +559,9 @@ export function TabsProvider({
       capMessage,
       openTab,
       closeTab,
+      closeAllTabs,
+      pinTab,
+      unpinTab,
       openApp,
       closeApp,
       isSidebarOpen,
@@ -518,6 +576,9 @@ export function TabsProvider({
       capMessage,
       openTab,
       closeTab,
+      closeAllTabs,
+      pinTab,
+      unpinTab,
       openApp,
       closeApp,
       isSidebarOpen,
@@ -556,6 +617,9 @@ export function useTabs(app: AppKey) {
     capMessage: context.capMessage,
     openTab: (entry: TabEntry) => context.openTab(app, entry),
     closeTab: (href: string) => context.closeTab(app, href),
+    closeAllTabs: () => context.closeAllTabs(app),
+    pinTab: (href: string) => context.pinTab(app, href),
+    unpinTab: (href: string) => context.unpinTab(app, href),
   };
 }
 
