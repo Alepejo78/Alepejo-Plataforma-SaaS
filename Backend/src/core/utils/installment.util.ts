@@ -1,4 +1,4 @@
-import { calculateDueDate } from './business-day.util';
+import { calculateInstallmentDueDate } from './business-day.util';
 
 /**
  * Gera N parcelas igualmente espaçadas por `termDays` a partir da
@@ -27,7 +27,7 @@ export function buildAutoInstallments(
     allocated += amount;
 
     installments.push({
-      dueDate: calculateDueDate(issueDate, termDays * i),
+      dueDate: calculateInstallmentDueDate(issueDate, termDays, i),
       amount,
     });
   }
