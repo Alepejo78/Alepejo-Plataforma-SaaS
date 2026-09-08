@@ -1610,16 +1610,14 @@ function DemoTour() {
               onClick={play}
               className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-[color:rgb(9_13_25_/_0.55)] backdrop-blur-[2px] transition-colors hover:bg-[color:rgb(9_13_25_/_0.62)]"
             >
-              <div className="w-[110px] overflow-hidden rounded-2xl shadow-2xl sm:w-[150px]">
-                <video
-                  src="/videos/pejo-apresentacao.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="h-full w-full object-cover"
-                />
-              </div>
+              <video
+                src="/videos/pejo.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="mix-blend-screen w-[150px] object-contain sm:w-[190px]"
+              />
 
               <span className="aurora-banner flex h-16 w-16 items-center justify-center rounded-full text-white shadow-2xl">
                 <Play size={26} className="ml-1" fill="currentColor" />

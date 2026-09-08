@@ -83,7 +83,12 @@ export function MascoteFlutuante() {
         </div>
       )}
 
-      <div
+      <video
+        src="/videos/pejo.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
         onClick={aoClicar}
         role="button"
         tabIndex={0}
@@ -93,17 +98,8 @@ export function MascoteFlutuante() {
             aoClicar();
           }
         }}
-        className="pointer-events-auto h-[92px] w-[92px] cursor-pointer overflow-hidden rounded-full border-2 border-[var(--surface)] shadow-lg sm:h-[110px] sm:w-[110px]"
-      >
-        <video
-          src="/videos/pejo-flutuante.mp4"
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="h-full w-full object-cover"
-        />
-      </div>
+        className="pointer-events-auto mix-blend-screen h-[74px] w-[110px] cursor-pointer object-contain drop-shadow-lg sm:h-[90px] sm:w-[135px]"
+      />
     </div>
   );
 }
