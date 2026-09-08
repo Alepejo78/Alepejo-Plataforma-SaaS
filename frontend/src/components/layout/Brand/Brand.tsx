@@ -77,11 +77,10 @@ export function Brand() {
 
   const displayName = customName || company.name;
 
-  // Reduzida em sequência pra caber numa barra do topo mais baixa
-  // (quatro ajustes pedidos: -10%, mais -15%, mais -20%, mais -30% em
-  // cima disso) — só a exibição na barra do topo, não mexe no valor
-  // cadastrado em Personalização.
-  const logoSize = company.logoWidth * 0.9 * 0.85 * 0.8 * 0.7;
+  // Metade do valor cadastrado em Personalização — ocupa quase toda a
+  // altura útil da barra do topo (o padding vertical do header é quem
+  // define a folga até a borda do card), sem mexer no valor cadastrado.
+  const logoSize = company.logoWidth * 0.5;
 
   return (
     <div className="flex min-w-0 items-center gap-3">
