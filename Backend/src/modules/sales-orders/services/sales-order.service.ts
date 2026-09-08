@@ -24,6 +24,9 @@ import {
 } from '../../../core/utils/email-document-summary.util';
 import { buildAutoInstallments } from '../../../core/utils/installment.util';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
+import { calculatePaymentSurcharge } from '../../../core/utils/payment-surcharge.util';
+
+import { PaymentMethodSettingsRepository } from '../../payment-method-settings/repositories/payment-method-settings.repository';
 
 import { SalesOrderRepository } from '../repositories/sales-order.repository';
 
@@ -60,6 +63,7 @@ export class SalesOrderService {
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
     private readonly productionOrdersService: ProductionOrdersService,
+    private readonly paymentMethodSettingsRepository: PaymentMethodSettingsRepository,
   ) {}
 
   async create(
@@ -165,9 +169,10 @@ export class SalesOrderService {
    * aprovação (ver `buildAutoInstallments`) — só pra exibição, nada é
    * gravado aqui.
    */
-  private buildPaymentTerms(
+  private async buildPaymentTerms(
+    companyId: string,
     order: Awaited<ReturnType<SalesOrderRepository['create']>>,
-  ): EmailSummaryPaymentTerms | undefined {
+  ): Promise<EmailSummaryPaymentTerms | undefined> {
     if (!order.paymentMethod && !order.termDays) {
       return undefined;
     }
@@ -197,12 +202,25 @@ export class SalesOrderService {
     const termDays = order.termDays ?? 0;
     const count = order.installmentsCount ?? 1;
 
+    // Acréscimo por forma de pagamento (boleto/pix/cartão, configurado
+    // em Formas de Pagamento) — pro cliente já ver, no e-mail do
+    // pedido, o total que vai efetivamente pagar (mesmo cálculo usado
+    // depois pra gerar o título na Venda).
+    const settings =
+      await this.paymentMethodSettingsRepository.getOrCreate(companyId);
+    const { totalWithSurcharge } = calculatePaymentSurcharge({
+      paymentMethod: order.paymentMethod,
+      baseAmount: Number(order.netAmount),
+      installmentsCount: count,
+      settings,
+    });
+
     if (count > 1) {
       const preview = buildAutoInstallments(
         issueDate,
         termDays,
         count,
-        Number(order.netAmount),
+        totalWithSurcharge,
       );
 
       return {
@@ -219,7 +237,7 @@ export class SalesOrderService {
       installments: [
         {
           dueDate: formatDueDate(calculateDueDate(issueDate, termDays)),
-          amount: Number(order.netAmount),
+          amount: totalWithSurcharge,
         },
       ],
     };
@@ -277,7 +295,7 @@ export class SalesOrderService {
             },
           ]
         : undefined,
-      paymentTerms: this.buildPaymentTerms(order),
+      paymentTerms: await this.buildPaymentTerms(companyId, order),
     });
 
     if (partner.email) {

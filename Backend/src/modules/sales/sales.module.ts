@@ -7,6 +7,7 @@ import { BusinessPartnersModule } from '../business-partners/business-partners.m
 import { FinancialEntriesModule } from '../financial-entries/financial-entries.module';
 import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
 import { ProductionModule } from '../production/production.module';
+import { PaymentMethodSettingsModule } from '../payment-method-settings/payment-method-settings.module';
 
 import { SaleController } from './controllers/sale.controller';
 import { SaleRepository } from './repositories/sale.repository';
@@ -20,6 +21,7 @@ import { SaleService } from './services/sale.service';
     FinancialEntriesModule,
     DocumentSequenceModule,
     ProductionModule,
+    PaymentMethodSettingsModule,
   ],
 
   controllers: [

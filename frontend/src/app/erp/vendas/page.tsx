@@ -73,7 +73,13 @@ import {
   type SalesOrder,
 } from "@/services/sales-order.service";
 
+import {
+  paymentMethodSettingsService,
+  type PaymentMethodSettings,
+} from "@/services/payment-method-settings.service";
+
 import { calculateDueDatePreview } from "@/lib/dueDate";
+import { calculatePaymentSurcharge } from "@/lib/paymentSurcharge";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -175,6 +181,8 @@ export default function VendasPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>(
     []
   );
+  const [paymentSettings, setPaymentSettings] =
+    useState<PaymentMethodSettings | null>(null);
 
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -286,6 +294,16 @@ export default function VendasPage() {
         setListError(
           "Não foi possível carregar os depósitos."
         );
+      });
+  }, []);
+
+  useEffect(() => {
+    paymentMethodSettingsService
+      .get()
+      .then(setPaymentSettings)
+      .catch(() => {
+        // Prévia de acréscimo é só um extra visual — sem ela, o
+        // formulário segue funcionando normalmente.
       });
   }, []);
 
@@ -885,6 +903,22 @@ export default function VendasPage() {
     form.discountValue +
     form.freightValue +
     form.otherExpenses;
+
+  // Acréscimo por forma de pagamento (boleto/pix/cartão, configurado
+  // em Formas de Pagamento) — só prévia em tela; o backend recalcula
+  // e vale por cima disso ao salvar. Vindo de um Pedido de Venda, as
+  // parcelas já foram herdadas prontas (possivelmente já com
+  // acréscimo, se o pedido também aplicou o dele) — não soma de novo.
+  const netTotalWithSurcharge =
+    paymentSettings && !(sourceType === "salesOrder" && sourceId)
+      ? calculatePaymentSurcharge({
+          paymentMethod: form.paymentMethod || undefined,
+          baseAmount: netTotal,
+          installmentsCount: Number(form.installmentsCount) || 1,
+          settings: paymentSettings,
+        }).totalWithSurcharge
+      : netTotal;
+  const paymentSurchargeAmount = netTotalWithSurcharge - netTotal;
 
   async function saveCreate(
     allowInsufficientStock = false
@@ -2173,13 +2207,23 @@ export default function VendasPage() {
                       });
 
                       const count = Number(value) || 1;
+                      const total =
+                        paymentSettings &&
+                        !(sourceType === "salesOrder" && sourceId)
+                          ? calculatePaymentSurcharge({
+                              paymentMethod: form.paymentMethod || undefined,
+                              baseAmount: netTotal,
+                              installmentsCount: count,
+                              settings: paymentSettings,
+                            }).totalWithSurcharge
+                          : netTotal;
 
                       setInstallments(
                         buildInstallmentRows(
                           form.saleDate || undefined,
                           Number(form.termDays) || 0,
                           count,
-                          netTotal
+                          total
                         )
                       );
                     }}
@@ -2194,13 +2238,36 @@ export default function VendasPage() {
                   <select
                     className={fieldClass}
                     value={form.paymentMethod}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const paymentMethod = e.target
+                        .value as PaymentMethod | "";
+
                       setForm({
                         ...form,
-                        paymentMethod: e.target
-                          .value as PaymentMethod | "",
-                      })
-                    }
+                        paymentMethod,
+                      });
+
+                      const count = Number(form.installmentsCount) || 1;
+                      const total =
+                        paymentSettings &&
+                        !(sourceType === "salesOrder" && sourceId)
+                          ? calculatePaymentSurcharge({
+                              paymentMethod: paymentMethod || undefined,
+                              baseAmount: netTotal,
+                              installmentsCount: count,
+                              settings: paymentSettings,
+                            }).totalWithSurcharge
+                          : netTotal;
+
+                      setInstallments(
+                        buildInstallmentRows(
+                          form.saleDate || undefined,
+                          Number(form.termDays) || 0,
+                          count,
+                          total
+                        )
+                      );
+                    }}
                   >
                     <option value="">Selecione...</option>
 
@@ -2212,6 +2279,14 @@ export default function VendasPage() {
                       )
                     )}
                   </select>
+
+                  {paymentSurchargeAmount > 0.001 && (
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Acréscimo da forma de pagamento: +{money(
+                        paymentSurchargeAmount
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -2245,8 +2320,8 @@ export default function VendasPage() {
                 onUpdate={updateInstallment}
                 onAdd={addInstallment}
                 onRemove={removeInstallment}
-                total={netTotal}
-                totalLabel="valor líquido"
+                total={netTotalWithSurcharge}
+                totalLabel="valor líquido com acréscimo"
               />
 
               <div className="flex justify-end gap-6 text-sm">

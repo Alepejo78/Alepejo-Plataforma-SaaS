@@ -70,14 +70,14 @@ export class ServiceOrderPdfService {
       doc.on('error', reject);
     });
 
-    this.render(doc, order, company);
+    await this.render(doc, order, company);
 
     doc.end();
 
     return done;
   }
 
-  private render(
+  private async render(
     doc: PDFKit.PDFDocument,
     order: ServiceOrderWithRelations,
     company: Company | null,
@@ -230,7 +230,7 @@ export class ServiceOrderPdfService {
       cursorY = doc.y + 16;
     }
 
-    const paymentTerms = this.serviceOrderService.buildPaymentTerms(order);
+    const paymentTerms = await this.serviceOrderService.buildPaymentTerms(order);
 
     cursorY = this.drawPaymentTerms(doc, paymentTerms, left, cursorY, pageWidth);
 

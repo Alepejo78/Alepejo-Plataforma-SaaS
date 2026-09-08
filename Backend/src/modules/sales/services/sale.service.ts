@@ -26,7 +26,10 @@ import { calculateDueDate } from '../../../core/utils/business-day.util';
 import { buildAutoInstallments } from '../../../core/utils/installment.util';
 import { pickPrimaryProductId } from '../../../core/utils/financial-entry-product.util';
 import { attachAuditNames, attachAuditName } from '../../../core/utils/audit-names.util';
+import { calculatePaymentSurcharge } from '../../../core/utils/payment-surcharge.util';
 import { DocumentSequenceService } from '../../../core/document-sequence/document-sequence.service';
+
+import { PaymentMethodSettingsRepository } from '../../payment-method-settings/repositories/payment-method-settings.repository';
 
 import { SaleRepository } from '../repositories/sale.repository';
 
@@ -59,6 +62,7 @@ export class SaleService {
     private readonly financialEntriesService: FinancialEntriesService,
     private readonly documentSequence: DocumentSequenceService,
     private readonly productionOrdersService: ProductionOrdersService,
+    private readonly paymentMethodSettingsRepository: PaymentMethodSettingsRepository,
   ) {}
 
   /**
@@ -856,6 +860,25 @@ export class SaleService {
     const effectiveInstallmentsCount =
       approveFields.installmentsCount ?? sale.installmentsCount ?? 1;
 
+    // Acréscimo por forma de pagamento (boleto/pix/cartão, conforme
+    // configurado em Formas de Pagamento) — só quando o valor ainda
+    // não veio pronto (parcelas explícitas/planejadas) nem já foi
+    // aplicado antes, na aprovação pública do orçamento de origem
+    // (evita cobrar em dobro).
+    const shouldApplySurcharge =
+      !effectiveInstallments.length && !sale.quoteId;
+    const netAmountForInstallments = shouldApplySurcharge
+      ? calculatePaymentSurcharge({
+          paymentMethod,
+          baseAmount: Number(sale.netAmount),
+          installmentsCount: effectiveInstallmentsCount,
+          settings:
+            await this.paymentMethodSettingsRepository.getOrCreate(
+              companyId,
+            ),
+        }).totalWithSurcharge
+      : Number(sale.netAmount);
+
     const autoInstallments =
       !effectiveInstallments.length &&
       effectiveInstallmentsCount > 1
@@ -863,7 +886,7 @@ export class SaleService {
             issueDate,
             termDays,
             effectiveInstallmentsCount,
-            Number(sale.netAmount),
+            netAmountForInstallments,
           )
         : null;
 
@@ -944,7 +967,7 @@ export class SaleService {
         tx,
         {
           ...commonEntryData,
-          amount: Number(updated.netAmount),
+          amount: netAmountForInstallments,
           dueDate,
         },
         userId,

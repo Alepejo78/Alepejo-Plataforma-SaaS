@@ -6,6 +6,7 @@ import { BusinessPartnersModule } from '../business-partners/business-partners.m
 import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ProductionModule } from '../production/production.module';
+import { PaymentMethodSettingsModule } from '../payment-method-settings/payment-method-settings.module';
 
 import { SalesOrderController } from './controllers/sales-order.controller';
 import { SalesOrderRepository } from './repositories/sales-order.repository';
@@ -19,6 +20,7 @@ import { SalesOrderService } from './services/sales-order.service';
     DocumentSequenceModule,
     NotificationsModule,
     ProductionModule,
+    PaymentMethodSettingsModule,
   ],
 
   controllers: [SalesOrderController],

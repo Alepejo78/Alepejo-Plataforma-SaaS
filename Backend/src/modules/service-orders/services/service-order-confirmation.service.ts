@@ -127,7 +127,7 @@ export class ServiceOrderConfirmationService {
         return null;
       });
 
-    const summaryHtml = this.serviceOrderService.buildSummaryHtml(order);
+    const summaryHtml = await this.serviceOrderService.buildSummaryHtml(order);
 
     const channels: string[] = [];
 
@@ -468,7 +468,7 @@ ${summaryHtml}
         return null;
       });
 
-    const summaryHtml = this.serviceOrderService.buildSummaryHtml(order);
+    const summaryHtml = await this.serviceOrderService.buildSummaryHtml(order);
 
     if (partner.email) {
       await this.emailNotifications.send(

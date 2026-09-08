@@ -24,6 +24,9 @@ import {
 } from '../../../core/utils/email-document-summary.util';
 import { buildAutoInstallments } from '../../../core/utils/installment.util';
 import { calculateDueDate } from '../../../core/utils/business-day.util';
+import { calculatePaymentSurcharge } from '../../../core/utils/payment-surcharge.util';
+
+import { PaymentMethodSettingsRepository } from '../../payment-method-settings/repositories/payment-method-settings.repository';
 
 import { ServiceOrderRepository } from '../repositories/service-order.repository';
 
@@ -63,6 +66,7 @@ export class ServiceOrderService {
     private readonly documentSequence: DocumentSequenceService,
     private readonly emailNotifications: EmailNotificationsService,
     private readonly whatsappNotifications: WhatsappNotificationsService,
+    private readonly paymentMethodSettingsRepository: PaymentMethodSettingsRepository,
   ) {}
 
   async create(
@@ -200,9 +204,9 @@ export class ServiceOrderService {
    * `ServiceOrderPdfService` também usa (formulário impresso mostra
    * forma de pagamento e parcelas, quando houver).
    */
-  buildPaymentTerms(
+  async buildPaymentTerms(
     order: Awaited<ReturnType<ServiceOrderRepository['create']>>,
-  ): EmailSummaryPaymentTerms | undefined {
+  ): Promise<EmailSummaryPaymentTerms | undefined> {
     if (!order.paymentMethod && !order.termDays) {
       return undefined;
     }
@@ -232,12 +236,25 @@ export class ServiceOrderService {
     const termDays = order.termDays ?? 0;
     const count = order.installmentsCount ?? 1;
 
+    // Acréscimo por forma de pagamento (boleto/pix/cartão, configurado
+    // em Formas de Pagamento) — pro cliente já ver, no e-mail/PDF da
+    // OS, o total que vai efetivamente pagar.
+    const settings = await this.paymentMethodSettingsRepository.getOrCreate(
+      order.companyId,
+    );
+    const { totalWithSurcharge } = calculatePaymentSurcharge({
+      paymentMethod: order.paymentMethod,
+      baseAmount: Number(order.netAmount),
+      installmentsCount: count,
+      settings,
+    });
+
     if (count > 1) {
       const preview = buildAutoInstallments(
         issueDate,
         termDays,
         count,
-        Number(order.netAmount),
+        totalWithSurcharge,
       );
 
       return {
@@ -254,7 +271,7 @@ export class ServiceOrderService {
       installments: [
         {
           dueDate: formatDueDate(calculateDueDate(issueDate, termDays)),
-          amount: Number(order.netAmount),
+          amount: totalWithSurcharge,
         },
       ],
     };
@@ -265,9 +282,9 @@ export class ServiceOrderService {
    * produtos) — usado tanto no aviso de criação quanto reaproveitado
    * pelo e-mail de confirmação (ver ServiceOrderConfirmationService).
    */
-  buildSummaryHtml(
+  async buildSummaryHtml(
     order: Awaited<ReturnType<ServiceOrderRepository['create']>>,
-  ): string {
+  ): Promise<string> {
     return buildTwoGroupEmailSummaryHtml({
       groups: [
         {
@@ -296,7 +313,7 @@ export class ServiceOrderService {
         otherExpenses: Number(order.otherExpenses),
         netAmount: Number(order.netAmount),
       },
-      paymentTerms: this.buildPaymentTerms(order),
+      paymentTerms: await this.buildPaymentTerms(order),
     });
   }
 

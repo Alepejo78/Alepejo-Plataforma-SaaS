@@ -66,6 +66,13 @@ import {
   type PaymentMethod,
 } from "@/services/financial-entry.service";
 
+import {
+  paymentMethodSettingsService,
+  type PaymentMethodSettings,
+} from "@/services/payment-method-settings.service";
+
+import { calculatePaymentSurcharge } from "@/lib/paymentSurcharge";
+
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
@@ -170,6 +177,8 @@ export default function OrdensDeServicoPage() {
   const exportTableRef = useRef<HTMLTableElement>(null);
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [paymentSettings, setPaymentSettings] =
+    useState<PaymentMethodSettings | null>(null);
 
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -202,6 +211,17 @@ export default function OrdensDeServicoPage() {
       .then(setWarehouses)
       .catch(() => {
         setListError("Não foi possível carregar os depósitos.");
+      });
+  }, []);
+
+  useEffect(() => {
+    paymentMethodSettingsService
+      .get()
+      .then(setPaymentSettings)
+      .catch(() => {
+        // Prévia de acréscimo é só um extra visual — sem ela, o
+        // formulário segue funcionando normalmente (valor sem
+        // acréscimo, que o backend ainda recalcula certo ao salvar).
       });
   }, []);
 
@@ -545,6 +565,19 @@ export default function OrdensDeServicoPage() {
 
   const netTotal =
     itemsTotal - form.discountValue + form.freightValue + form.otherExpenses;
+
+  // Acréscimo por forma de pagamento (boleto/pix/cartão, configurado
+  // em Formas de Pagamento) — só prévia em tela; o backend recalcula
+  // e vale por cima disso ao salvar.
+  const netTotalWithSurcharge = paymentSettings
+    ? calculatePaymentSurcharge({
+        paymentMethod: form.paymentMethod || undefined,
+        baseAmount: netTotal,
+        installmentsCount: Number(form.installmentsCount) || 1,
+        settings: paymentSettings,
+      }).totalWithSurcharge
+    : netTotal;
+  const paymentSurchargeAmount = netTotalWithSurcharge - netTotal;
 
   async function saveForm() {
     if (!form.partnerId || !form.warehouseId) {
@@ -1613,13 +1646,21 @@ export default function OrdensDeServicoPage() {
                         setForm({ ...form, installmentsCount: value });
 
                         const count = Number(value) || 1;
+                        const total = paymentSettings
+                          ? calculatePaymentSurcharge({
+                              paymentMethod: form.paymentMethod || undefined,
+                              baseAmount: netTotal,
+                              installmentsCount: count,
+                              settings: paymentSettings,
+                            }).totalWithSurcharge
+                          : netTotal;
 
                         setInstallments(
                           buildInstallmentRows(
                             form.scheduledStart || undefined,
                             Number(form.termDays) || 0,
                             count,
-                            netTotal
+                            total
                           )
                         );
                       }}
@@ -1634,14 +1675,32 @@ export default function OrdensDeServicoPage() {
                     <select
                       className={fieldClass}
                       value={form.paymentMethod}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          paymentMethod: e.target.value as
-                            | PaymentMethod
-                            | "",
-                        })
-                      }
+                      onChange={(e) => {
+                        const paymentMethod = e.target.value as
+                          | PaymentMethod
+                          | "";
+
+                        setForm({ ...form, paymentMethod });
+
+                        const count = Number(form.installmentsCount) || 1;
+                        const total = paymentSettings
+                          ? calculatePaymentSurcharge({
+                              paymentMethod: paymentMethod || undefined,
+                              baseAmount: netTotal,
+                              installmentsCount: count,
+                              settings: paymentSettings,
+                            }).totalWithSurcharge
+                          : netTotal;
+
+                        setInstallments(
+                          buildInstallmentRows(
+                            form.scheduledStart || undefined,
+                            Number(form.termDays) || 0,
+                            count,
+                            total
+                          )
+                        );
+                      }}
                     >
                       <option value="">Selecione...</option>
 
@@ -1653,6 +1712,14 @@ export default function OrdensDeServicoPage() {
                         )
                       )}
                     </select>
+
+                    {paymentSurchargeAmount > 0.001 && (
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Acréscimo da forma de pagamento: +{money(
+                          paymentSurchargeAmount
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1661,8 +1728,8 @@ export default function OrdensDeServicoPage() {
                   onUpdate={updateInstallment}
                   onAdd={addInstallment}
                   onRemove={removeInstallment}
-                  total={netTotal}
-                  totalLabel="valor líquido"
+                  total={netTotalWithSurcharge}
+                  totalLabel="valor líquido com acréscimo"
                 />
 
                 {formError && (
