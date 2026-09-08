@@ -25,6 +25,9 @@ const includeRelations = {
   financialEntries: {
     orderBy: { dueDate: 'asc' },
   },
+  // Rastreabilidade: de onde essa venda nasceu (só o número).
+  quote: { select: { number: true } },
+  salesOrder: { select: { number: true } },
 } satisfies Prisma.SaleInclude;
 
 @Injectable()

@@ -28,6 +28,10 @@ const includeRelations = {
   financialEntries: {
     orderBy: { dueDate: 'asc' },
   },
+  // Rastreabilidade: de onde essa compra nasceu (só o número, pra
+  // montar o rótulo "Pedido PC-x / Cotação COT-x" sem outro round trip).
+  purchaseOrder: { select: { number: true } },
+  quotation: { select: { number: true } },
 } satisfies Prisma.PurchaseInclude;
 
 @Injectable()
@@ -43,6 +47,9 @@ export class PurchaseRepository {
     dto: CreatePurchaseDto,
     totalAmount: number,
     userId: string,
+    /// Cotação de origem, herdada do Pedido de Compra de origem (se
+    /// houver) — rastreabilidade, ver `Purchase.quotationId`.
+    quotationId?: string,
   ): Promise<Purchase> {
     const issueDate = dto.purchaseDate
       ? new Date(dto.purchaseDate)
@@ -73,6 +80,7 @@ export class PurchaseRepository {
         dueDate: calculateDueDate(issueDate, termDays),
         paymentMethod: dto.paymentMethod,
         purchaseOrderId: dto.purchaseOrderId,
+        quotationId,
         invoiceNumber: dto.invoiceNumber,
         invoiceKey: dto.invoiceKey,
         invoiceIssueDate: dto.invoiceIssueDate

@@ -1355,6 +1355,21 @@ export default function ComprasPage() {
                         .join(" · ")}
                     </p>
                   )}
+
+                {detail &&
+                  (detail.purchaseOrder || detail.quotation) && (
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      Origem:{" "}
+                      {[
+                        detail.purchaseOrder &&
+                          `Pedido PC-${String(detail.purchaseOrder.number).padStart(6, "0")}`,
+                        detail.quotation &&
+                          `Cotação COT-${String(detail.quotation.number).padStart(6, "0")}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
               </div>
 
               <button

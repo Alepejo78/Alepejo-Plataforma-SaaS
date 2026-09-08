@@ -70,6 +70,9 @@ export interface SalesOrder {
   createdByName?: string | null;
   updatedByName?: string | null;
   items: SalesOrderItem[];
+  /** Rastreabilidade: de onde esse pedido nasceu. */
+  quote?: { number: number } | null;
+  serviceOrder?: { number: number } | null;
 
   partner?: {
     id: string;

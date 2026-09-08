@@ -18,6 +18,8 @@ const includeRelations = {
     },
   },
   purchases: true,
+  // Rastreabilidade: de qual cotação esse pedido nasceu (só o número).
+  quotation: { select: { number: true } },
 };
 
 @Injectable()

@@ -451,6 +451,7 @@ export class QuotationService {
             chartOfAccountId: dto.chartOfAccountId,
             productId: dto.productId ?? pickPrimaryProductId(offer.items),
             purchaseOrderId: purchaseOrder.id,
+            quotationId: quotation.id,
             documentNumber: purchaseOrderDocumentNumber,
             observation: `Pagamento antecipado — Pedido de Compra ${purchaseOrderDocumentNumber}`,
           },

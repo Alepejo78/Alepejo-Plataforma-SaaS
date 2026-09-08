@@ -204,6 +204,7 @@ export class PurchaseService {
       termDays: number | null;
       paymentMethod: PaymentMethod | null;
       installmentsCount: number | null;
+      quotationId: string | null;
       items: { id: string; productId: string }[];
     } | null = null;
 
@@ -301,6 +302,7 @@ export class PurchaseService {
         effectiveDto,
         totalAmount,
         userId,
+        sourceOrder?.quotationId ?? undefined,
       );
 
       if (dto.purchaseOrderId && sourceOrder) {
@@ -859,6 +861,7 @@ export class PurchaseService {
           chartOfAccountId: purchase.chartOfAccountId,
           productId: pickPrimaryProductId(purchase.items),
           purchaseId: purchase.id,
+          quotationId: purchase.quotationId ?? undefined,
           observation: `Compra ${purchase.id}`,
         };
 

@@ -1669,6 +1669,20 @@ export default function VendasPage() {
                         .join(" · ")}
                     </p>
                   )}
+
+                {detail && (detail.quote || detail.salesOrder) && (
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    Origem:{" "}
+                    {[
+                      detail.quote &&
+                        `Orçamento ORC-${String(detail.quote.number).padStart(6, "0")}`,
+                      detail.salesOrder &&
+                        `Pedido de Venda PV-${String(detail.salesOrder.number).padStart(6, "0")}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
               </div>
 
               <button

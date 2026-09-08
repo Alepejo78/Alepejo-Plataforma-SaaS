@@ -366,6 +366,7 @@ export class FinancialEntriesService {
       productId?: string | null;
       purchaseId?: string;
       purchaseOrderId?: string;
+      quotationId?: string;
       saleId?: string;
       payrollItemId?: string;
       thirteenthSalaryItemId?: string;
@@ -418,6 +419,7 @@ export class FinancialEntriesService {
       productId?: string | null;
       purchaseId?: string;
       purchaseOrderId?: string;
+      quotationId?: string;
       saleId?: string;
       payrollItemId?: string;
       thirteenthSalaryItemId?: string;
@@ -448,6 +450,7 @@ export class FinancialEntriesService {
           productId: params.productId ?? undefined,
           purchaseId: params.purchaseId,
           purchaseOrderId: params.purchaseOrderId,
+          quotationId: params.quotationId,
           saleId: params.saleId,
           payrollItemId: params.payrollItemId,
           thirteenthSalaryItemId: params.thirteenthSalaryItemId,

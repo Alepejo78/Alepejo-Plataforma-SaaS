@@ -18,6 +18,9 @@ const includeRelations = {
     },
   },
   sales: true,
+  // Rastreabilidade: de onde esse pedido nasceu (só o número).
+  quote: { select: { number: true } },
+  serviceOrder: { select: { number: true } },
 };
 
 @Injectable()

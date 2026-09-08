@@ -958,6 +958,13 @@ export default function PedidosDeCompraPage() {
                         .join(" · ")}
                     </p>
                   )}
+
+                {detail && detail.quotation && (
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    Origem: Cotação COT-
+                    {String(detail.quotation.number).padStart(6, "0")}
+                  </p>
+                )}
               </div>
 
               <button

@@ -18,6 +18,12 @@ const includeRelations = {
   chartOfAccount: {
     include: { classification: true },
   },
+  // Rastreabilidade: de qual documento esse título nasceu (só o
+  // número de cada um, pra montar o rótulo "Gerado por: Compra C-x").
+  purchase: { select: { number: true } },
+  purchaseOrder: { select: { number: true } },
+  quotation: { select: { number: true } },
+  sale: { select: { number: true } },
 } satisfies Prisma.FinancialEntryInclude;
 
 @Injectable()

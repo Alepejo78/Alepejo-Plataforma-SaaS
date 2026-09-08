@@ -84,6 +84,9 @@ export interface Sale {
   } | null;
   quoteId?: string | null;
   salesOrderId?: string | null;
+  /** Rastreabilidade: de onde essa venda nasceu. */
+  quote?: { number: number } | null;
+  salesOrder?: { number: number } | null;
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;

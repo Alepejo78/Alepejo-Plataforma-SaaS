@@ -1049,6 +1049,20 @@ export default function PedidosDeVendaPage() {
                         .join(" · ")}
                     </p>
                   )}
+
+                {detail && (detail.quote || detail.serviceOrder) && (
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    Origem:{" "}
+                    {[
+                      detail.quote &&
+                        `Orçamento ORC-${String(detail.quote.number).padStart(6, "0")}`,
+                      detail.serviceOrder &&
+                        `Ordem de Serviço OS-${String(detail.serviceOrder.number).padStart(6, "0")}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
               </div>
 
               <button

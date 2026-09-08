@@ -201,6 +201,13 @@ export function FinancialEntriesScreen({
   const [editingId, setEditingId] = useState<string | null>(
     null
   );
+  // Só pra mostrar a rastreabilidade ("Gerado por: ...") no formulário.
+  const [origin, setOrigin] = useState<{
+    purchase?: { number: number } | null;
+    purchaseOrder?: { number: number } | null;
+    quotation?: { number: number } | null;
+    sale?: { number: number } | null;
+  } | null>(null);
   const [form, setForm] = useState<Form>(emptyForm());
   const [installments, setInstallments] = useState<InstallmentRow[]>([]);
   const [saving, setSaving] = useState(false);
@@ -334,6 +341,7 @@ export function FinancialEntriesScreen({
     setForm(emptyForm());
     setInstallments([]);
     setFormError("");
+    setOrigin(null);
     setFormOpen(true);
   }
 
@@ -345,6 +353,12 @@ export function FinancialEntriesScreen({
   function openEdit(entry: FinancialEntry) {
     setViewOnly(false);
     setEditingId(entry.id);
+    setOrigin({
+      purchase: entry.purchase,
+      purchaseOrder: entry.purchaseOrder,
+      quotation: entry.quotation,
+      sale: entry.sale,
+    });
     setForm({
       partnerId: entry.partnerId ?? "",
       partnerLabel:
@@ -1060,14 +1074,38 @@ export function FinancialEntriesScreen({
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-8 w-full max-w-xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                {viewOnly
-                  ? "Título"
-                  : editingId
-                    ? "Editar título"
-                    : "Novo título"}
-              </h2>
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                  {viewOnly
+                    ? "Título"
+                    : editingId
+                      ? "Editar título"
+                      : "Novo título"}
+                </h2>
+
+                {origin &&
+                  (origin.purchase ||
+                    origin.purchaseOrder ||
+                    origin.quotation ||
+                    origin.sale) && (
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      Gerado por:{" "}
+                      {[
+                        origin.purchase &&
+                          `Compra C${String(origin.purchase.number).padStart(9, "0")}`,
+                        origin.purchaseOrder &&
+                          `Pedido PC-${String(origin.purchaseOrder.number).padStart(6, "0")}`,
+                        origin.quotation &&
+                          `Cotação COT-${String(origin.quotation.number).padStart(6, "0")}`,
+                        origin.sale &&
+                          `Venda V${String(origin.sale.number).padStart(9, "0")}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+              </div>
 
               <button
                 type="button"

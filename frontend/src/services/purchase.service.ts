@@ -78,6 +78,10 @@ export interface Purchase {
   invoiceKey?: string | null;
   invoiceIssueDate?: string | null;
   purchaseOrderId?: string | null;
+  quotationId?: string | null;
+  /** Rastreabilidade: de onde essa compra nasceu. */
+  purchaseOrder?: { number: number } | null;
+  quotation?: { number: number } | null;
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;

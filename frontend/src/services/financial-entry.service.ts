@@ -136,11 +136,18 @@ export interface FinancialEntry {
   paymentMethod?: PaymentMethod | null;
   observation?: string | null;
   purchaseId?: string | null;
+  purchaseOrderId?: string | null;
+  quotationId?: string | null;
   saleId?: string | null;
   payrollItemId?: string | null;
   createdAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;
+  /** Rastreabilidade: de qual documento esse título nasceu. */
+  purchase?: { number: number } | null;
+  purchaseOrder?: { number: number } | null;
+  quotation?: { number: number } | null;
+  sale?: { number: number } | null;
 }
 
 export interface FinancialEntryPayload {

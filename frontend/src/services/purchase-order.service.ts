@@ -56,6 +56,8 @@ export interface PurchaseOrder {
   totalAmount: string | number;
   quotationId?: string | null;
   quotationOfferId?: string | null;
+  /** Rastreabilidade: de qual cotação esse pedido nasceu. */
+  quotation?: { number: number } | null;
   chartOfAccountId?: string | null;
   termDays?: number | null;
   paymentMethod?: PaymentMethod | null;

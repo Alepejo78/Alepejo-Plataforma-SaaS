@@ -1018,6 +1018,13 @@ model Purchase {
   purchaseOrderId String?
   purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
+  /// Cotação de origem, copiada de `purchaseOrder.quotationId` — só
+  /// pra não precisar pular por `purchaseOrder` toda vez que alguém
+  /// quiser saber a origem completa da compra (mesmo padrão de
+  /// `Sale.quoteId`, que também denormaliza o avô da cadeia).
+  quotationId String?
+  quotation   Quotation? @relation(fields: [quotationId], references: [id])
+
   createdById String?
   updatedById String?
 
@@ -1072,9 +1079,11 @@ model Quotation {
   quotationDate DateTime?
   observation   String?
 
-  items          QuotationItem[]
-  offers         QuotationOffer[]
-  purchaseOrders PurchaseOrder[]
+  items            QuotationItem[]
+  offers           QuotationOffer[]
+  purchaseOrders   PurchaseOrder[]
+  purchases        Purchase[]
+  financialEntries FinancialEntry[]
 
   createdById String?
   updatedById String?
@@ -2024,6 +2033,13 @@ model FinancialEntry {
   purchaseOrderId String?
   purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
 
+  /// Cotação de origem, quando conhecida no momento da geração (ex.:
+  /// o mesmo adiantamento do `chooseWinner` acima) — mesma ideia de
+  /// `Purchase.quotationId`, pra rastrear a cadeia inteira sem
+  /// precisar pular por `purchaseOrder`.
+  quotationId String?
+  quotation   Quotation? @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+
   /// Preenchido quando o título nasce da aprovação de uma folha de pagamento.
   payrollItemId String?      @unique
   payrollItem   PayrollItem? @relation(fields: [payrollItemId], references: [id], onDelete: SetNull)
@@ -2148,9 +2164,9 @@ model PaymentMethodSettings {
   /// QR Code (BR Code padrão Bacen) na hora, sem precisar de conta em
   /// gateway nenhum, mas sem baixa automática (o cliente paga direto
   /// na chave, a empresa dá baixa manual quando confirmar o recebimento).
-  pixKeyEnabled Boolean     @default(false)
-  pixKeyType    PixKeyType?
-  pixKey        String?
+  pixKeyEnabled   Boolean     @default(false)
+  pixKeyType      PixKeyType?
+  pixKey          String?
   /// Nome do recebedor mostrado no QR Code (máx. 25 caracteres, sem acento).
   pixKeyOwnerName String?
   /// Cidade do recebedor mostrada no QR Code (máx. 15 caracteres, sem acento).
