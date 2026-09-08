@@ -3,16 +3,19 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Vídeo com fundo removido de verdade — os vídeos do Pejo vêm com
- * fundo sólido (preto ou cinza-claro de estúdio), sem canal alfa.
- * `mix-blend-mode` no `<video>` NÃO funciona de forma confiável (o
- * navegador compõe vídeo numa camada própria que ignora blend mode),
- * então a remoção é feita de verdade: o vídeo toca escondido, cada
- * quadro é desenhado num `<canvas>` e os pixels próximos da cor do
- * fundo (amostrada nos 4 cantos do próprio vídeo, funciona pra fundo
- * preto ou cinza-claro sem precisar configurar por vídeo) viram
- * transparentes — o canvas já suporta alfa de verdade em qualquer
- * navegador.
+ * Vídeo com o fundo trocado por branco sólido — os vídeos do Pejo vêm
+ * de estúdio, com fundo preto ou cinza-claro (nunca branco de
+ * verdade, nem transparente). `mix-blend-mode` no `<video>` não
+ * funciona de forma confiável (o navegador compõe vídeo numa camada
+ * própria que ignora blend mode) e remoção com transparência de
+ * verdade deixa uma auréola/halo visível nas bordas — pintar de
+ * branco em vez de vazado fica mais limpo e previsível em qualquer
+ * fundo de página.
+ *
+ * O vídeo toca escondido, cada quadro é desenhado num `<canvas>` e os
+ * pixels próximos da cor do fundo (amostrada nos 4 cantos do próprio
+ * vídeo — funciona pra fundo preto ou cinza-claro sem configurar por
+ * vídeo) viram branco.
  */
 export function ChromaKeyVideo({
   src,
@@ -111,7 +114,7 @@ export function ChromaKeyVideo({
 
         const [kr, kg, kb] = keyColorRef.current;
         const threshold = 34;
-        const feather = 48;
+        const feather = 60;
         const range = feather - threshold;
 
         for (let i = 0; i < data.length; i += 4) {
@@ -121,11 +124,17 @@ export function ChromaKeyVideo({
           const dist = Math.sqrt(dr * dr + dg * dg + db * db);
 
           if (dist < threshold) {
-            data[i + 3] = 0;
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
           } else if (dist < feather) {
-            data[i + 3] = Math.round(
-              ((dist - threshold) / range) * 255,
-            );
+            // Mistura suave pixel-real -> branco, sem nunca abrir mão
+            // da opacidade (evita halo/auréola no contorno do robô).
+            const t = (dist - threshold) / range;
+
+            data[i] = Math.round(255 * (1 - t) + data[i] * t);
+            data[i + 1] = Math.round(255 * (1 - t) + data[i + 1] * t);
+            data[i + 2] = Math.round(255 * (1 - t) + data[i + 2] * t);
           }
         }
 

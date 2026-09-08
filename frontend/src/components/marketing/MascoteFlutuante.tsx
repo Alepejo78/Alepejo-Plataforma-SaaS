@@ -24,8 +24,7 @@ const VIDEO_OCIOSO = "/videos/pejo-nudge.mp4";
 const OCIOSO_MS = 10_000;
 
 /**
- * Pejo fixo no canto inferior direito, logo acima da marca "AlePejo
- * ERP Cloud" (`BrandFooter`). Três estados de vídeo:
+ * Pejo fixo no canto inferior esquerdo. Três estados de vídeo:
  * - padrão: em loop, o tempo todo;
  * - ao clicar: toca uma reação aleatória uma vez e volta pro padrão;
  * - ocioso (10s sem clique): toca uma reação "chamando atenção" uma
@@ -96,7 +95,15 @@ export function MascoteFlutuante() {
   }
 
   return (
-    <div className="pointer-events-none fixed bottom-12 right-3 z-30 flex items-end gap-2 print:hidden sm:right-5">
+    <div className="pointer-events-none fixed bottom-12 left-3 z-30 flex items-end gap-2 print:hidden sm:left-5">
+      <ChromaKeyVideo
+        src={video}
+        loop={video === VIDEO_PADRAO}
+        onEnded={aoTerminarReacao}
+        onClick={aoClicar}
+        className="pointer-events-auto h-[110px] w-[160px] cursor-pointer object-contain drop-shadow-lg sm:h-[135px] sm:w-[195px]"
+      />
+
       {aberto && (
         <div className="pointer-events-auto relative mb-6 w-56 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
           <button
@@ -126,14 +133,6 @@ export function MascoteFlutuante() {
           </Link>
         </div>
       )}
-
-      <ChromaKeyVideo
-        src={video}
-        loop={video === VIDEO_PADRAO}
-        onEnded={aoTerminarReacao}
-        onClick={aoClicar}
-        className="pointer-events-auto h-[110px] w-[160px] cursor-pointer object-contain drop-shadow-lg sm:h-[135px] sm:w-[195px]"
-      />
     </div>
   );
 }
