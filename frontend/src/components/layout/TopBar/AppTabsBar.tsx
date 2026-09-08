@@ -28,7 +28,7 @@ export function AppTabsBar() {
     Boolean(user?.company.brandingThemeToggleEnabled);
 
   return (
-    <header className="flex min-h-16 shrink-0 items-center justify-between gap-3 rounded-3xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 shadow-sm">
+    <header className="flex min-h-11 shrink-0 items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 shadow-sm">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="min-w-0 max-w-[240px] shrink-0">
           <Brand />

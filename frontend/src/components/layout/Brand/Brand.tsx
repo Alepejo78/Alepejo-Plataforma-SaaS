@@ -77,10 +77,11 @@ export function Brand() {
 
   const displayName = customName || company.name;
 
-  // 23,5% menor que o logoWidth configurado (dois ajustes pedidos em
-  // sequência: -10%, depois mais -15% em cima disso) — só a exibição
-  // na barra do topo, não mexe no valor cadastrado em Personalização.
-  const logoSize = company.logoWidth * 0.9 * 0.85;
+  // Reduzida em sequência pra caber numa barra do topo mais baixa
+  // (três ajustes pedidos: -10%, mais -15%, mais -20% em cima disso)
+  // — só a exibição na barra do topo, não mexe no valor cadastrado em
+  // Personalização.
+  const logoSize = company.logoWidth * 0.9 * 0.85 * 0.8;
 
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -97,17 +98,17 @@ export function Brand() {
 
       <div className="min-w-0 flex-1">
         <h1
-          className={`font-bold text-[var(--text-primary)] ${
+          className={`font-bold leading-tight text-[var(--text-primary)] ${
             customName
-              ? `${fitFontSizeClass(displayName)} text-center leading-tight`
-              : "text-2xl truncate"
+              ? `${fitFontSizeClass(displayName)} text-center`
+              : "text-base truncate"
           }`}
         >
           {displayName}
         </h1>
 
         {!customName && (
-          <p className="truncate text-sm text-[var(--text-secondary)]">
+          <p className="truncate text-xs leading-tight text-[var(--text-secondary)]">
             {systemName}
           </p>
         )}
