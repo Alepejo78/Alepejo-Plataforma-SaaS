@@ -11,12 +11,17 @@ import { DefaultAccountingService } from '../../../../core/default-accounting/de
 import { UsersService } from '../../users/services/users.service';
 import { LicenseService } from '../../license/services/license.service';
 import { CUSTOM_PLAN_CODE } from '../../license/constants/custom-plan.constants';
+import { EmailNotificationsService } from '../../../notifications/services/email-notifications.service';
+import { WhatsappNotificationsService } from '../../../notifications/services/whatsapp-notifications.service';
 
 import { CompanyRepository } from '../repositories/company.repository';
 import { CompanySignupDto } from '../dto/company-signup.dto';
 import { CompanyAdditionalDto } from '../dto/company-additional.dto';
 
 const DEFAULT_PLAN_CODE = 'ENTERPRISE';
+
+/** Mesmo prazo de `BillingService.createCheckout` — renovado do zero a cada reenvio. */
+const CHECKOUT_EXPIRES_DAYS = 7;
 
 /** Usado só se a linha de `PlatformSettings` ainda não existir por algum motivo. */
 const FALLBACK_TRIAL_DAYS = 14;
@@ -58,6 +63,8 @@ export class CompanyOnboardingService {
     private readonly usersService: UsersService,
     private readonly licenseService: LicenseService,
     private readonly defaultAccounting: DefaultAccountingService,
+    private readonly emailNotifications: EmailNotificationsService,
+    private readonly whatsappNotifications: WhatsappNotificationsService,
   ) {}
 
   /** Cliente novo, sem login prévio — a própria empresa nasce raiz. */
@@ -191,8 +198,86 @@ export class CompanyOnboardingService {
       createdAt: checkout.createdAt,
       expiresAt: checkout.expiresAt,
       expired: checkout.expiresAt < new Date(),
-      resumeUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/cadastro-empresa?checkout=${checkout.id}`,
+      resumeUrl: this.buildResumeUrl(checkout.id),
     }));
+  }
+
+  private buildResumeUrl(checkoutId: string): string {
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+
+    return `${frontendUrl}/cadastro-empresa?checkout=${checkoutId}`;
+  }
+
+  /**
+   * Reenvia o link de retomada por e-mail/WhatsApp pro cliente que
+   * pagou mas não voltou — mesmo padrão de
+   * `QuoteConfirmationService.sendConfirmation`. Renova o prazo de
+   * expiração do zero (mesma janela de `createCheckout`), pra não
+   * mandar um link que já nasce vencido.
+   */
+  async resendPendingCheckout(companyId: string, id: string) {
+    const checkout = await this.prisma.pendingCheckout.findUnique({
+      where: { id },
+    });
+
+    if (!checkout) {
+      throw new NotFoundException('Compra não encontrada.');
+    }
+
+    if (checkout.companyId) {
+      throw new ConflictException(
+        'Esta compra já foi usada para cadastrar uma empresa.',
+      );
+    }
+
+    if (!checkout.email && !checkout.phone) {
+      throw new BadRequestException(
+        'Essa compra não tem e-mail nem celular cadastrado pra reenviar.',
+      );
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + CHECKOUT_EXPIRES_DAYS);
+
+    await this.prisma.pendingCheckout.update({
+      where: { id },
+      data: { expiresAt },
+    });
+
+    const resumeUrl = this.buildResumeUrl(id);
+    const channels: string[] = [];
+
+    if (checkout.email) {
+      const sent = await this.emailNotifications.send(
+        companyId,
+        checkout.email,
+        'Falta pouco — finalize seu cadastro no AlePejo ERP Cloud',
+        `<p>Olá, ${checkout.name},</p>
+<p>Sua compra do plano já está confirmada — falta só finalizar o cadastro da sua empresa pra começar a usar o sistema.</p>
+<p style="text-align: center; margin: 24px 0;">
+  <a href="${resumeUrl}" style="background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Finalizar cadastro</a>
+</p>
+<p style="font-size: 13px; color: #666;">Se o botão não funcionar, copie e cole este link no navegador:<br><a href="${resumeUrl}">${resumeUrl}</a></p>`,
+      );
+
+      if (sent) {
+        channels.push('email');
+      }
+    }
+
+    if (checkout.phone) {
+      const sent = await this.whatsappNotifications.send(
+        companyId,
+        checkout.phone,
+        `Olá, ${checkout.name}! Sua compra do AlePejo ERP Cloud já está confirmada — falta só finalizar o cadastro da sua empresa: ${resumeUrl}`,
+      );
+
+      if (sent) {
+        channels.push('whatsapp');
+      }
+    }
+
+    return { sent: channels.length > 0, channels, resumeUrl };
   }
 
   /** Checkout precisa existir, não ter expirado e ainda não ter virado empresa. */

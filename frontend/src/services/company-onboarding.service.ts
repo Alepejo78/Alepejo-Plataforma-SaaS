@@ -79,6 +79,24 @@ export interface PublicModule {
   yearlyPrice?: string | number | null;
 }
 
+/** Compra feita em /planos que ainda não virou empresa — cliente pagou e não voltou pra terminar o cadastro. */
+export interface PendingCheckout {
+  id: string;
+  name: string;
+  email: string;
+  document: string;
+  phone: string | null;
+  planName: string;
+  planCode: string;
+  billingCycle: "MONTHLY" | "YEARLY";
+  value: number;
+  paid: boolean;
+  createdAt: string;
+  expiresAt: string;
+  expired: boolean;
+  resumeUrl: string;
+}
+
 export const companyOnboardingService = {
   /** Pública (sem sessão) — lista os planos comerciais pra página de preços. */
   async listPublicPlans(): Promise<PublicPlan[]> {
@@ -132,6 +150,27 @@ export const companyOnboardingService = {
     const { data } = await api.post<
       ApiEnvelope<{ companyId: string }>
     >("/companies/additional", payload);
+
+    return data.data;
+  },
+
+  /** Dono da plataforma — acha a compra pelo e-mail do cliente. */
+  async findPendingCheckouts(email: string): Promise<PendingCheckout[]> {
+    const { data } = await api.get<ApiEnvelope<PendingCheckout[]>>(
+      "/companies/pending-checkouts",
+      { params: { email } }
+    );
+
+    return data.data ?? [];
+  },
+
+  /** Dono da plataforma — reenvia o link de retomada do cadastro por e-mail/WhatsApp. */
+  async resendPendingCheckout(
+    id: string
+  ): Promise<{ sent: boolean; channels: string[]; resumeUrl: string }> {
+    const { data } = await api.post<
+      ApiEnvelope<{ sent: boolean; channels: string[]; resumeUrl: string }>
+    >(`/companies/pending-checkouts/${id}/resend`);
 
     return data.data;
   },

@@ -73,6 +73,8 @@ export const OS_PATH_TITLES: Record<string, string> = {
   "/erp/configuracoes/perfis": "Perfis de acesso",
   "/erp/licenciamento": "Licenciamento",
   "/erp/licenciamento/planos": "Planos e preços",
+  "/erp/licenciamento/clientes": "Clientes e faturamento",
+  "/erp/licenciamento/cadastros-pendentes": "Cadastros pendentes",
   "/erp/configuracoes": "Empresa",
   "/erp/configuracoes/personalizacao": "Personalização",
   "/erp/configuracoes/notificacoes": "Notificações",

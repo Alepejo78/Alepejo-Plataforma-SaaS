@@ -168,6 +168,23 @@ export class CompanyController {
     return this.onboardingService.findPendingCheckoutsByEmail(email);
   }
 
+  /**
+   * Reenvia o link de retomada por e-mail/WhatsApp — mesma trava de
+   * `getPendingCheckouts` acima.
+   */
+  @Post('pending-checkouts/:id/resend')
+  @Permissions('platform.license.manage')
+  @ApiOperation({
+    summary:
+      'Reenviar o link de retomada do cadastro pro cliente (dono da plataforma)',
+  })
+  resendPendingCheckout(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.onboardingService.resendPendingCheckout(companyId, id);
+  }
+
   @Post('additional')
   @Permissions('company.create')
   @ApiOperation({

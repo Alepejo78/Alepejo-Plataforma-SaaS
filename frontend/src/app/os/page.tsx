@@ -3,6 +3,7 @@
 import {
   BadgeCheck,
   Building2,
+  MailQuestion,
   Monitor,
   Plug,
   Settings,
@@ -89,6 +90,14 @@ export default function OsHomePage() {
       href: "/erp/licenciamento/clientes",
       icon: Users,
       iconAnim: "users",
+      visible: can("platform.license.manage"),
+    },
+    {
+      title: "Cadastros pendentes",
+      description: "Cliente pagou mas não terminou o cadastro — reenviar o link, só o dono da plataforma",
+      href: "/erp/licenciamento/cadastros-pendentes",
+      icon: MailQuestion,
+      iconAnim: "mailquestion",
       visible: can("platform.license.manage"),
     },
   ].filter((card) => card.visible);
