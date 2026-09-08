@@ -24,6 +24,7 @@ import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
+import { WorkshopQuoteImportModal } from "@/components/workshop-quote-import/WorkshopQuoteImportModal";
 import { FinancialEntryImportModal } from "@/components/financial-entry-import/FinancialEntryImportModal";
 
 import {
@@ -197,6 +198,8 @@ export function FinancialEntriesScreen({
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [spreadsheetImportOpen, setSpreadsheetImportOpen] =
+    useState(false);
+  const [workshopQuoteImportOpen, setWorkshopQuoteImportOpen] =
     useState(false);
   const [editingId, setEditingId] = useState<string | null>(
     null
@@ -698,6 +701,19 @@ export function FinancialEntriesScreen({
                   </button>
                 </Can>
 
+                {type === "RECEIVABLE" && (
+                  <Can permission="financial-entry.create">
+                    <button
+                      type="button"
+                      onClick={() => setWorkshopQuoteImportOpen(true)}
+                      className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                    >
+                      <Upload size={18} />
+                      Importar orçamento (oficina)
+                    </button>
+                  </Can>
+                )}
+
                 <Can permission="financial-entry.create">
                   <button
                     type="button"
@@ -1066,6 +1082,13 @@ export function FinancialEntriesScreen({
       {spreadsheetImportOpen && (
         <FinancialEntryImportModal
           onClose={() => setSpreadsheetImportOpen(false)}
+          onSaved={() => void load()}
+        />
+      )}
+
+      {workshopQuoteImportOpen && (
+        <WorkshopQuoteImportModal
+          onClose={() => setWorkshopQuoteImportOpen(false)}
           onSaved={() => void load()}
         />
       )}

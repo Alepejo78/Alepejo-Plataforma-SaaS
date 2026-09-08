@@ -66,6 +66,7 @@ import { ProductImportModule } from './modules/product-import/product-import.mod
 import { PartnerImportModule } from './modules/partner-import/partner-import.module';
 import { EmployeeImportModule } from './modules/employee-import/employee-import.module';
 import { FinancialEntryImportModule } from './modules/financial-entry-import/financial-entry-import.module';
+import { WorkshopQuoteImportModule } from './modules/workshop-quote-import/workshop-quote-import.module';
 
 @Module({
   imports: [
@@ -127,6 +128,7 @@ import { FinancialEntryImportModule } from './modules/financial-entry-import/fin
     PartnerImportModule,
     EmployeeImportModule,
     FinancialEntryImportModule,
+    WorkshopQuoteImportModule,
   ],
   controllers: [AppController],
   providers: [
