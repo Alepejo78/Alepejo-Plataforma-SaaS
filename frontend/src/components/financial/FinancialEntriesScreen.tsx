@@ -547,10 +547,7 @@ export function FinancialEntriesScreen({
     });
     setForm({
       partnerId: entry.partnerId ?? "",
-      partnerLabel:
-        entry.partner?.tradeName ??
-        entry.partner?.legalName ??
-        "",
+      partnerLabel: entry.partner?.legalName ?? "",
       chartOfAccountId: entry.chartOfAccountId ?? "",
       chartOfAccountLabel: entry.chartOfAccount
         ? `${entry.chartOfAccount.code} — ${entry.chartOfAccount.description}`
@@ -1178,8 +1175,7 @@ export function FinancialEntriesScreen({
                       <td className="px-4 py-3">
                         {isFirst && (
                         <p className="font-medium text-[var(--text-primary)]">
-                          {entry.partner?.tradeName ??
-                            entry.partner?.legalName ??
+                          {entry.partner?.legalName ??
                             entry.employee?.name ??
                             "—"}
                         </p>
@@ -1490,18 +1486,14 @@ export function FinancialEntriesScreen({
                   displayLabel={form.partnerLabel}
                   search={searchPartners}
                   getId={(p) => p.id}
-                  getLabel={(p) =>
-                    p.tradeName ?? p.legalName
-                  }
+                  getLabel={(p) => p.legalName}
                   getSubLabel={(p) => p.document}
                   placeholder={`Digite para buscar ${partnerLabel.toLowerCase()}...`}
                   onSelect={(p) =>
                     setForm({
                       ...form,
                       partnerId: p?.id ?? "",
-                      partnerLabel: p
-                        ? (p.tradeName ?? p.legalName)
-                        : "",
+                      partnerLabel: p?.legalName ?? "",
                     })
                   }
                 />
@@ -2028,8 +2020,7 @@ export function FinancialEntriesScreen({
                 </h2>
 
                 <p className="text-sm text-[var(--text-muted)]">
-                  {settleTarget.partner?.tradeName ??
-                    settleTarget.partner?.legalName ??
+                  {settleTarget.partner?.legalName ??
                     settleTarget.employee?.name}{" "}
                   · {money(settleTarget.amount)}
                 </p>
