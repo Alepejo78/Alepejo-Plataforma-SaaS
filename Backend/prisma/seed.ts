@@ -962,17 +962,25 @@ async function main() {
     },
   ];
 
+  // Só CRIA — nunca faz update num plano que já existe. Preço, nome,
+  // destaque, ativo/inativo e módulos de um plano comercial são dados
+  // de negócio geridos na tela de administração
+  // (`/erp/licenciamento/planos`); um `db seed` rodado de novo em
+  // produção (parte do fluxo normal de deploy) não pode voltar atrás
+  // numa decisão tomada por lá (ex.: plano desativado/excluído,
+  // decisão do usuário 09-09-2026). Só serve pra garantir que o
+  // catálogo comercial exista na primeira vez (banco novo).
   for (const def of COMMERCIAL_PLANS) {
-    const commercialPlan = await prisma.plan.upsert({
+    const existing = await prisma.plan.findUnique({
       where: { code: def.code },
-      update: {
-        name: def.name,
-        description: def.description,
-        sortOrder: def.sortOrder,
-        highlighted: def.highlighted,
-        active: true,
-      },
-      create: {
+    });
+
+    if (existing) {
+      continue;
+    }
+
+    const commercialPlan = await prisma.plan.create({
+      data: {
         code: def.code,
         name: def.name,
         description: def.description,
@@ -989,12 +997,8 @@ async function main() {
         continue;
       }
 
-      await prisma.planModule.upsert({
-        where: {
-          planId_moduleId: { planId: commercialPlan.id, moduleId: mod.id },
-        },
-        update: { included: true },
-        create: {
+      await prisma.planModule.create({
+        data: {
           planId: commercialPlan.id,
           moduleId: mod.id,
           included: true,

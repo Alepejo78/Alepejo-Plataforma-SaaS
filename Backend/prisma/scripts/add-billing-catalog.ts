@@ -80,17 +80,22 @@ const PLANS: {
 ];
 
 async function main() {
+  // Só CRIA — nunca faz update num plano que já existe (mesma regra
+  // do seed.ts, ver comentário lá: preço/nome/ativo é dado de negócio
+  // gerido em `/erp/licenciamento/planos`, não pode ser sobrescrito
+  // rodando este script de novo).
   for (const def of PLANS) {
-    const plan = await prisma.plan.upsert({
+    const existing = await prisma.plan.findUnique({
       where: { code: def.code },
-      update: {
-        name: def.name,
-        description: def.description,
-        sortOrder: def.sortOrder,
-        highlighted: def.highlighted,
-        active: true,
-      },
-      create: {
+    });
+
+    if (existing) {
+      console.log(`Plano já existe, não mexi: ${def.code}`);
+      continue;
+    }
+
+    const plan = await prisma.plan.create({
+      data: {
         code: def.code,
         name: def.name,
         description: def.description,
@@ -110,14 +115,12 @@ async function main() {
         continue;
       }
 
-      await prisma.planModule.upsert({
-        where: { planId_moduleId: { planId: plan.id, moduleId: mod.id } },
-        update: { included: true },
-        create: { planId: plan.id, moduleId: mod.id, included: true },
+      await prisma.planModule.create({
+        data: { planId: plan.id, moduleId: mod.id, included: true },
       });
     }
 
-    console.log(`Plano OK: ${def.code} (${def.moduleCodes.length} módulo(s))`);
+    console.log(`Plano criado: ${def.code} (${def.moduleCodes.length} módulo(s))`);
   }
 }
 
