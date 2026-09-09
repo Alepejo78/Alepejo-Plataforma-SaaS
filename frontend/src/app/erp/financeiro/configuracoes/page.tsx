@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Settings } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 
 import {
   paymentReminderSettingsService,
@@ -107,6 +108,7 @@ export default function ConfiguracoesDeLembreteDePagamentoPage() {
   }
 
   return (
+    <PageAccessGuard permission="payment-reminder-settings.view">
     <AppShell workspaceLabel="Configurações do financeiro">
       <div className="space-y-6">
         <div>
@@ -219,5 +221,6 @@ export default function ConfiguracoesDeLembreteDePagamentoPage() {
         </section>
       </div>
     </AppShell>
+    </PageAccessGuard>
   );
 }

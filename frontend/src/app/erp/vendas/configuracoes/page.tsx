@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Settings } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 
 import {
   salesSettingsService,
@@ -130,6 +131,7 @@ export default function ConfiguracoesDeVendasPage() {
   }
 
   return (
+    <PageAccessGuard permission="sales-settings.view">
     <AppShell workspaceLabel="Configurações de vendas">
       <div className="space-y-6">
         <div>
@@ -264,5 +266,6 @@ export default function ConfiguracoesDeVendasPage() {
         </section>
       </div>
     </AppShell>
+    </PageAccessGuard>
   );
 }

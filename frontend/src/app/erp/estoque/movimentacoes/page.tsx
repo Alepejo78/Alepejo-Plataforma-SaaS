@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 
@@ -112,6 +113,7 @@ export default function MovimentacoesPage() {
   }, [load]);
 
   return (
+    <PageAccessGuard permission="stock-movement.view">
     <AppShell workspaceLabel="Movimentações">
       <ListPageLayout
         header={
@@ -293,5 +295,6 @@ export default function MovimentacoesPage() {
         )}
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }

@@ -19,6 +19,7 @@ import {
 } from "recharts";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 
 import {
@@ -339,6 +340,7 @@ export default function GraficosFluxoCaixaPage() {
   }));
 
   return (
+    <PageAccessGuard permission="financial-entry.view">
     <AppShell workspaceLabel="Financeiro">
       <ListPageLayout
         header={
@@ -608,5 +610,6 @@ export default function GraficosFluxoCaixaPage() {
         )}
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }

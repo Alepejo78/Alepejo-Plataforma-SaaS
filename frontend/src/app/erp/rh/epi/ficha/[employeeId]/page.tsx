@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
 
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import {
   employeeService,
   ppeDeliveryService,
@@ -42,7 +43,7 @@ function datetime(value: string | null | undefined) {
   return new Date(value).toLocaleString("pt-BR");
 }
 
-export default function FichaEpiImpressaoPage() {
+function FichaEpiImpressaoPageInner() {
   const params = useParams<{ employeeId: string }>();
   const router = useRouter();
 
@@ -260,5 +261,13 @@ export default function FichaEpiImpressaoPage() {
         <p className="pt-8 text-center">{companyName}</p>
       </div>
     </div>
+  );
+}
+
+export default function FichaEpiImpressaoPage() {
+  return (
+    <PageAccessGuard permission="ppe-delivery.view">
+      <FichaEpiImpressaoPageInner />
+    </PageAccessGuard>
   );
 }

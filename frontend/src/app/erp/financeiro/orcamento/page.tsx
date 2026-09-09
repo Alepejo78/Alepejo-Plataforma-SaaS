@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
@@ -139,6 +140,7 @@ export default function OrcamentoPage() {
   const totals = budget?.totals;
 
   return (
+    <PageAccessGuard permission="budget.view">
     <AppShell workspaceLabel="Financeiro">
       <ListPageLayout
         header={
@@ -458,5 +460,6 @@ export default function OrcamentoPage() {
         )}
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }

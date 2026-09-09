@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { OsShell } from "@/components";
+import { Can } from "@/components/auth/Can";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import {
@@ -36,67 +37,73 @@ export default function CadastrosProdutoPage() {
         </header>
 
         <div className="grid gap-5 lg:grid-cols-3">
-          <SimpleCrudPanel
-            title="Unidades de medida"
-            singular="a unidade"
-            permissionPrefix="unit-of-measure"
-            service={unitService}
-            fields={[
-              {
-                key: "code",
-                label: "Sigla (UN, KG...)",
-                required: true,
-                maxLength: 10,
-                width: "max-w-32",
-              },
-              {
-                key: "description",
-                label: "Descrição",
-                required: true,
-                maxLength: 120,
-              },
-            ]}
-          />
+          <Can permission="unit-of-measure.view">
+            <SimpleCrudPanel
+              title="Unidades de medida"
+              singular="a unidade"
+              permissionPrefix="unit-of-measure"
+              service={unitService}
+              fields={[
+                {
+                  key: "code",
+                  label: "Sigla (UN, KG...)",
+                  required: true,
+                  maxLength: 10,
+                  width: "max-w-32",
+                },
+                {
+                  key: "description",
+                  label: "Descrição",
+                  required: true,
+                  maxLength: 120,
+                },
+              ]}
+            />
+          </Can>
 
-          <SimpleCrudPanel
-            title="Categorias"
-            singular="a categoria"
-            permissionPrefix="product-category"
-            service={categoryService}
-            fields={[
-              {
-                key: "name",
-                label: "Nome",
-                required: true,
-                maxLength: 120,
-              },
-              {
-                key: "description",
-                label: "Descrição",
-                maxLength: 255,
-              },
-            ]}
-          />
+          <Can permission="product-category.view">
+            <SimpleCrudPanel
+              title="Categorias"
+              singular="a categoria"
+              permissionPrefix="product-category"
+              service={categoryService}
+              fields={[
+                {
+                  key: "name",
+                  label: "Nome",
+                  required: true,
+                  maxLength: 120,
+                },
+                {
+                  key: "description",
+                  label: "Descrição",
+                  maxLength: 255,
+                },
+              ]}
+            />
+          </Can>
 
-          <SimpleCrudPanel
-            title="Marcas"
-            singular="a marca"
-            permissionPrefix="brand"
-            service={brandService}
-            fields={[
-              {
-                key: "name",
-                label: "Nome",
-                required: true,
-                maxLength: 120,
-              },
-              {
-                key: "description",
-                label: "Descrição",
-                maxLength: 255,
-              },
-            ]}
-          />
+          <Can permission="brand.view">
+            <SimpleCrudPanel
+              title="Marcas"
+              singular="a marca"
+              permissionPrefix="brand"
+              service={brandService}
+              fields={[
+                {
+                  key: "name",
+                  label: "Nome",
+                  required: true,
+                  maxLength: 120,
+                },
+                {
+                  key: "description",
+                  label: "Descrição",
+                  maxLength: 255,
+                },
+              ]}
+            />
+          </Can>
         </div>
       </div>
     </OsShell>

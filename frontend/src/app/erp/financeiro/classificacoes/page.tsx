@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { OsShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import { chartOfAccountClassificationService } from "@/services/chart-of-account-classification.service";
 
 export default function ClassificacoesPage() {
   return (
+    <PageAccessGuard permission="chart-of-account-classification.view">
     <OsShell workspaceLabel="Financeiro">
       <div className="space-y-6">
         <header>
@@ -50,5 +52,6 @@ export default function ClassificacoesPage() {
         </div>
       </div>
     </OsShell>
+    </PageAccessGuard>
   );
 }

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 
@@ -82,6 +83,7 @@ export default function AniversariantesPage() {
   }, [month, load]);
 
   return (
+    <PageAccessGuard permission="employee.view">
     <AppShell workspaceLabel="Recursos Humanos">
       <ListPageLayout
         header={
@@ -212,5 +214,6 @@ export default function AniversariantesPage() {
         )}
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }

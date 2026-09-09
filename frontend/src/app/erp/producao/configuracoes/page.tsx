@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Factory } from "lucide-react";
 
 import { OsShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 
 import {
   productionSettingsService,
@@ -189,6 +190,7 @@ export default function ConfiguracoesDeProducaoPage() {
   }
 
   return (
+    <PageAccessGuard permission="production-settings.view">
     <OsShell workspaceLabel="Configurações de produção">
       <div className="space-y-6">
         <div>
@@ -300,5 +302,6 @@ export default function ConfiguracoesDeProducaoPage() {
         </section>
       </div>
     </OsShell>
+    </PageAccessGuard>
   );
 }

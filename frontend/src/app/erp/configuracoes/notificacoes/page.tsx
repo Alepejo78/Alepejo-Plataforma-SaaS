@@ -1,6 +1,7 @@
 "use client";
 
 import { OsShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { WhatsappSettingsTab } from "@/components/settings/WhatsappSettingsTab";
 
 /**
@@ -15,16 +16,18 @@ import { WhatsappSettingsTab } from "@/components/settings/WhatsappSettingsTab";
  */
 export default function NotificacoesPage() {
   return (
-    <OsShell workspaceLabel="Notificações">
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Notificações
-        </h1>
+    <PageAccessGuard permission="whatsapp.view">
+      <OsShell workspaceLabel="Notificações">
+        <div className="mx-auto max-w-5xl space-y-6 p-6">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+            Notificações
+          </h1>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-          <WhatsappSettingsTab />
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <WhatsappSettingsTab />
+          </div>
         </div>
-      </div>
-    </OsShell>
+      </OsShell>
+    </PageAccessGuard>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 
 import {
@@ -109,6 +110,7 @@ export default function IndicadoresRhPage() {
   }, [load]);
 
   return (
+    <PageAccessGuard permission="employee.view">
     <AppShell workspaceLabel="Recursos Humanos">
       <ListPageLayout
         header={
@@ -299,5 +301,6 @@ export default function IndicadoresRhPage() {
         )}
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }

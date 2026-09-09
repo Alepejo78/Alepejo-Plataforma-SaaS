@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Copy, KeyRound, Trash2 } from "lucide-react";
 
 import { OsShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 
 import {
   timeClockApiKeyService,
@@ -103,6 +104,7 @@ export default function ChaveApiPontoPage() {
   }
 
   return (
+    <PageAccessGuard permission="time-clock.manage-api-key">
     <OsShell workspaceLabel="Chave de API — relógio de ponto">
       <div className="space-y-6">
         <div>
@@ -235,5 +237,6 @@ export default function ChaveApiPontoPage() {
         </section>
       </div>
     </OsShell>
+    </PageAccessGuard>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from "recharts";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { GenderProfileChart } from "@/components/dashboard/GenderProfileChart";
 
@@ -141,6 +142,7 @@ export default function GraficosColaboradoresPage() {
   );
 
   return (
+    <PageAccessGuard permission="employee.view">
     <AppShell workspaceLabel="Recursos Humanos">
       <ListPageLayout
         header={
@@ -304,5 +306,6 @@ export default function GraficosColaboradoresPage() {
         )}
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }

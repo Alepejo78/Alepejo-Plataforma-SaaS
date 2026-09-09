@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, CreditCard, RefreshCw } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { env } from "@/lib/env";
 
 import {
@@ -362,6 +363,7 @@ export default function FormasDePagamentoPage() {
     : "";
 
   return (
+    <PageAccessGuard permission="payment-method-settings.view">
     <AppShell workspaceLabel="Formas de pagamento">
       <div className="space-y-6">
         <div>
@@ -775,5 +777,6 @@ export default function FormasDePagamentoPage() {
         )}
       </div>
     </AppShell>
+    </PageAccessGuard>
   );
 }

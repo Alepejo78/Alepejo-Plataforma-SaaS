@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 
 import { employeeService, type Employee } from "@/services/hr.service";
 import { timeEntryService } from "@/services/time-tracking.service";
@@ -116,6 +117,7 @@ export default function PontoManualPage() {
   }
 
   return (
+    <PageAccessGuard permission="time-entry.create">
     <AppShell workspaceLabel="Ponto - Manual">
       <div className="mx-auto max-w-2xl space-y-6">
         <header>
@@ -251,5 +253,6 @@ export default function PontoManualPage() {
         </section>
       </div>
     </AppShell>
+    </PageAccessGuard>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Printer } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 
@@ -30,6 +31,7 @@ export default function EtiquetasCtpsPage() {
   );
 
   return (
+    <PageAccessGuard permission="employee.view">
     <AppShell workspaceLabel="Recursos Humanos">
       <ListPageLayout
         header={
@@ -100,5 +102,6 @@ export default function EtiquetasCtpsPage() {
         )}
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Printer } from "lucide-react";
 
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { companyService } from "@/services/company.service";
 import { exportCsv } from "@/lib/exportCsv";
@@ -189,6 +190,7 @@ export default function AcompanhamentoProducaoPage() {
   const today = new Date().toLocaleDateString("pt-BR");
 
   return (
+    <PageAccessGuard permission="production-order.view">
     <div className="mx-auto max-w-6xl p-6 print:max-w-none print:p-0">
       <style>{`
         @media print {
@@ -425,5 +427,6 @@ export default function AcompanhamentoProducaoPage() {
         </table>
       </div>
     </div>
+    </PageAccessGuard>
   );
 }

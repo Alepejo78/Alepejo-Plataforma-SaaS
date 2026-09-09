@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, EyeOff, Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 
 import { OsShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
@@ -208,39 +208,68 @@ function moduleOf(row: GroupRow): string | null {
   return GROUP_MODULE[row.groupCode] ?? null;
 }
 
-interface MenuRow {
-  id: string;
-  title: string;
-  isGroup: boolean;
-}
-
 /**
- * "Visão geral" (Home) nunca aparece aqui — é a página que abre
- * sozinha ao entrar no sistema, não faz sentido deixar escondível.
+ * "Visão geral" (Home) nunca entra aqui — é a página que abre sozinha
+ * ao entrar no sistema, não faz sentido deixar escondível.
  */
 const HOME_MENU_ID = "visao-geral";
 
-/** Achata `menu.ts` (grupos + itens soltos) numa lista pra exibir em tabela. */
-function buildMenuRows(): MenuRow[] {
-  const rows: MenuRow[] = [];
+interface FlatMenuItem {
+  id: string;
+  title: string;
+  permission?: string | string[];
+}
+
+/** Achata `menu.ts` (grupos + itens soltos) numa lista só, carregando a permissão de cada um — é por ela que cada item se liga a uma linha da matriz abaixo. */
+function flattenMenu(): FlatMenuItem[] {
+  const items: FlatMenuItem[] = [];
 
   for (const entry of menu) {
     if (entry.id === HOME_MENU_ID) {
       continue;
     }
 
-    if (isMenuGroup(entry)) {
-      rows.push({ id: entry.id, title: entry.title, isGroup: true });
+    items.push({ id: entry.id, title: entry.title, permission: entry.permission });
 
+    if (isMenuGroup(entry)) {
       for (const child of entry.children) {
-        rows.push({ id: child.id, title: child.title, isGroup: false });
+        items.push({
+          id: child.id,
+          title: child.title,
+          permission: child.permission,
+        });
       }
-    } else {
-      rows.push({ id: entry.id, title: entry.title, isGroup: false });
     }
   }
 
-  return rows;
+  return items;
+}
+
+const FLAT_MENU_ITEMS = flattenMenu();
+
+/**
+ * Item(ns) de menu que esta linha da matriz controla — cruza pelo
+ * código da permissão (`row.permissions[].code` contra
+ * `item.permission`), não por nome, então continua certo mesmo se o
+ * grupo mudar de nome. Uma linha pode não corresponder a nenhum item
+ * (grupo só de administração, sem entrada na sidebar) ou a mais de um
+ * (ex.: "Contas a pagar/receber" usa a mesma permissão em 3 telas) —
+ * nesse caso a coluna "Ocultar" esconde as telas todas juntas.
+ */
+function menuItemsForRow(row: GroupRow): FlatMenuItem[] {
+  const codes = new Set(row.permissions.map((p) => p.code));
+
+  return FLAT_MENU_ITEMS.filter((item) => {
+    if (!item.permission) {
+      return false;
+    }
+
+    const perms = Array.isArray(item.permission)
+      ? item.permission
+      : [item.permission];
+
+    return perms.some((code) => codes.has(code));
+  });
 }
 
 export default function ConfigurarPerfilPage() {
@@ -263,7 +292,6 @@ export default function ConfigurarPerfilPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const menuRows = useMemo(buildMenuRows, []);
   const [hiddenMenuItems, setHiddenMenuItems] = useState<Set<string>>(
     new Set()
   );
@@ -498,18 +526,29 @@ export default function ConfigurarPerfilPage() {
     }
   }
 
-  async function toggleMenuItemHidden(id: string) {
+  // Semântica invertida de propósito: o checkbox representa "Visível"
+  // (marcado = aparece no menu), não "Ocultar" — assim uma linha cujas
+  // permissões acabaram de ser todas concedidas por "Marcar tudo" já
+  // aparece com a caixa de visibilidade também marcada (comportamento
+  // padrão é visível), em vez de parecer que "marcar tudo" esqueceu
+  // essa coluna.
+  async function toggleMenuItemsVisible(ids: string[]) {
+    if (ids.length === 0) {
+      return;
+    }
+
     const previous = hiddenMenuItems;
+    const allVisible = ids.every((id) => !previous.has(id));
     const next = new Set(previous);
 
-    if (next.has(id)) {
-      next.delete(id);
+    if (allVisible) {
+      ids.forEach((id) => next.add(id));
     } else {
-      next.add(id);
+      ids.forEach((id) => next.delete(id));
     }
 
     setHiddenMenuItems(next);
-    setMenuItemSaving(id);
+    setMenuItemSaving(ids.join(","));
     setError("");
 
     try {
@@ -532,7 +571,7 @@ export default function ConfigurarPerfilPage() {
   }
 
   const totalColumns =
-    2 + GENERIC_COLUMNS.length + BUSINESS_COLUMNS.length;
+    3 + GENERIC_COLUMNS.length + BUSINESS_COLUMNS.length;
 
   function renderGroupRow(row: GroupRow) {
     const locked = isLocked(row);
@@ -541,6 +580,10 @@ export default function ConfigurarPerfilPage() {
     const rowChecked =
       !locked && rowIds.length > 0 && rowIds.every((id) => grants.has(id));
     const rowPending = rowIds.some((id) => pending.has(id));
+
+    const menuIds = menuItemsForRow(row).map((item) => item.id);
+    const menuVisible =
+      menuIds.length > 0 && menuIds.every((id) => !hiddenMenuItems.has(id));
 
     return (
       <tr key={row.groupId} className={locked ? "opacity-60" : undefined}>
@@ -570,6 +613,20 @@ export default function ConfigurarPerfilPage() {
               }
               onChange={() => void toggle(rowIds)}
             />
+          )}
+        </td>
+
+        <td className="border-t border-[var(--border)] px-2 py-2 text-center">
+          {menuIds.length > 0 && (
+            <input
+              type="checkbox"
+              checked={menuVisible}
+              disabled={locked || menuItemSaving === menuIds.join(",")}
+              onChange={() => void toggleMenuItemsVisible(menuIds)}
+            />
+          )}
+          {menuIds.length === 0 && (
+            <span className="text-[var(--text-muted)]">—</span>
           )}
         </td>
 
@@ -759,6 +816,10 @@ export default function ConfigurarPerfilPage() {
                     Marcar tudo
                   </th>
 
+                  <th className="px-2 py-3 text-center font-semibold">
+                    Visível
+                  </th>
+
                   {GENERIC_COLUMNS.map((column) => (
                     <th
                       key={column.key}
@@ -795,68 +856,6 @@ export default function ConfigurarPerfilPage() {
                 )}
               </tbody>
           </table>
-        )}
-
-        {!loading && (
-          <div className="mt-8 border-t border-[var(--border)] px-4 pt-6">
-            <h2 className="flex items-center gap-2 text-base font-bold text-[var(--text-primary)]">
-              <EyeOff size={18} />
-              Menu visível para este perfil
-            </h2>
-
-            <p className="mt-1 max-w-2xl text-sm text-[var(--text-muted)]">
-              Marque "Ocultar" pra reduzir o menu lateral de quem tem
-              este perfil — ninguém perde acesso: a tela continua
-              existindo, só some da navegação. Um perfil mais amplo
-              (ex.: Administrador) nunca perde item por causa de outro
-              perfil mais restrito que a mesma pessoa também tenha.
-            </p>
-
-            <div className="mt-4 max-w-xl overflow-hidden rounded-2xl border border-[var(--border)]">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
-                  <tr>
-                    <th className="px-4 py-2.5 font-semibold">
-                      Item do menu
-                    </th>
-                    <th className="px-4 py-2.5 text-right font-semibold">
-                      Ocultar
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {menuRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-t border-[var(--border)]"
-                    >
-                      <td
-                        className={`px-4 py-2 ${
-                          row.isGroup
-                            ? "font-semibold text-[var(--text-primary)]"
-                            : "pl-8 text-[var(--text-secondary)]"
-                        }`}
-                      >
-                        {row.title}
-                      </td>
-
-                      <td className="px-4 py-2 text-right">
-                        <input
-                          type="checkbox"
-                          checked={hiddenMenuItems.has(row.id)}
-                          disabled={menuItemSaving === row.id}
-                          onChange={() =>
-                            void toggleMenuItemHidden(row.id)
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         )}
       </ListPageLayout>
     </OsShell>

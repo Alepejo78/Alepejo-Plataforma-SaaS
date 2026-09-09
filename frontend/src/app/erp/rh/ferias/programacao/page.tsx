@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 
@@ -127,6 +128,7 @@ export default function ProgramacaoFeriasPage() {
   }
 
   return (
+    <PageAccessGuard permission="vacation.create">
     <AppShell workspaceLabel="Programação de Férias">
       <ListPageLayout
         header={
@@ -264,5 +266,6 @@ export default function ProgramacaoFeriasPage() {
         </div>
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }

@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { OsShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import { benefitService } from "@/services/hr.service";
 
 export default function BeneficiosRhPage() {
   return (
+    <PageAccessGuard permission="benefit.view">
     <OsShell workspaceLabel="Benefícios">
       <div className="space-y-6">
         <header>
@@ -67,5 +69,6 @@ export default function BeneficiosRhPage() {
         </div>
       </div>
     </OsShell>
+    </PageAccessGuard>
   );
 }

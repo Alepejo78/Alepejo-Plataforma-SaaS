@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { MenuButton } from "@/components/ui/MenuButton";
@@ -439,6 +440,7 @@ export default function FluxoCaixaPage() {
     : null;
 
   return (
+    <PageAccessGuard permission="financial-entry.view">
     <AppShell workspaceLabel="Financeiro">
       <ListPageLayout
         header={
@@ -766,6 +768,7 @@ export default function FluxoCaixaPage() {
         )}
       </ListPageLayout>
     </AppShell>
+    </PageAccessGuard>
   );
 }
 

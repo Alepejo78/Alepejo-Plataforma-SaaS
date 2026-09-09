@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { OsShell } from "@/components";
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { SimpleCrudPanel } from "@/components/products/SimpleCrudPanel";
 
 import { warehouseService } from "@/services/inventory.service";
@@ -23,6 +24,7 @@ const adaptedService = {
 
 export default function DepositosPage() {
   return (
+    <PageAccessGuard permission="warehouse.view">
     <OsShell workspaceLabel="Depósitos">
       <div className="space-y-6">
         <header>
@@ -70,5 +72,6 @@ export default function DepositosPage() {
         </div>
       </div>
     </OsShell>
+    </PageAccessGuard>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
 
+import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import {
   employeeService,
   SALARY_TYPE_LABELS,
@@ -32,7 +33,7 @@ function money(value: string | number | null | undefined) {
   });
 }
 
-export default function EtiquetaCtpsImpressaoPage() {
+function EtiquetaCtpsImpressaoPageInner() {
   const params = useParams<{ employeeId: string }>();
   const router = useRouter();
 
@@ -177,5 +178,13 @@ export default function EtiquetaCtpsImpressaoPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function EtiquetaCtpsImpressaoPage() {
+  return (
+    <PageAccessGuard permission="employee.view">
+      <EtiquetaCtpsImpressaoPageInner />
+    </PageAccessGuard>
   );
 }
