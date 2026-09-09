@@ -16,15 +16,28 @@ import { ChromaKeyVideo } from "./ChromaKeyVideo";
  */
 const PAGINAS_COM_MASCOTE = ["/institucional", "/planos", "/checkout"];
 
-const VIDEO_PADRAO = "/videos/pejo-idle.mp4";
-const VIDEOS_CLIQUE = ["/videos/pejo-click.mp4", "/videos/pejo-click2.mp4"];
-const VIDEO_OCIOSO = "/videos/pejo-nudge.mp4";
+const VIDEO_PADRAO = "/videos/pejo-idle.webm";
+
+/**
+ * Mesmo conjunto de reações serve pros dois gatilhos (ociosidade E
+ * clique) — escolhe uma ao acaso, toca uma vez, e volta sozinha pro
+ * vídeo padrão quando termina (`aoTerminarReacao`).
+ */
+const VIDEOS_REACAO = [
+  "/videos/pejo-reaction-2.webm",
+  "/videos/pejo-reaction-4.webm",
+];
 
 /** Espera sem interação até o Pejo "chamar atenção" com uma reação sozinho. */
 const OCIOSO_MS = 10_000;
 
 /** Só acima disso conta como arrastar — abaixo é considerado clique (dedo/mouse tremeu um pouco). */
 const LIMIAR_ARRASTO_PX = 6;
+
+/** `w-56` do balão (224px) + uma folga — usado só pra decidir de que lado ele cabe. */
+const LARGURA_BALAO_PX = 240;
+/** Altura estimada do balão (texto + botão) — generosa de propósito, é só heurística de posicionamento. */
+const ALTURA_BALAO_PX = 190;
 
 interface EstadoArrasto {
   pointerId: number;
@@ -38,11 +51,11 @@ interface EstadoArrasto {
 /**
  * Pejo fixo no canto inferior esquerdo, mas pode ser arrastado pra
  * qualquer lugar da tela (fica preso ali até recarregar a página).
- * Três estados de vídeo:
+ * Dois estados de vídeo:
  * - padrão: em loop, o tempo todo;
- * - ao clicar: toca uma reação aleatória uma vez e volta pro padrão;
- * - ocioso (10s sem clique): toca uma reação "chamando atenção" uma
- *   vez e volta pro padrão, repetindo enquanto ninguém interage.
+ * - reação (`VIDEOS_REACAO`, escolhida ao acaso): toca uma vez e volta
+ *   pro padrão sozinha — disparada tanto por clique quanto por 10s
+ *   de ociosidade (`reiniciarOcioso`), mesmo pool pros dois casos.
  */
 export function MascoteFlutuante() {
   const pathname = usePathname();
@@ -62,6 +75,41 @@ export function MascoteFlutuante() {
   // ignora o clique nativo que o navegador dispara logo depois do
   // pointerup (senão todo arrasto também abriria o balão de fala).
   const arrastouRef = useRef(false);
+
+  // Lado onde o balão cabe de verdade, recalculado toda vez que abre
+  // (ou o robô muda de posição com ele já aberto) — sem isso, arrastar
+  // o robô pro canto direito deixaria o balão sempre nascendo pra
+  // direita, cortado pela borda da tela.
+  const [ladoBalao, setLadoBalao] = useState<{
+    horizontal: "esquerda" | "direita";
+    vertical: "cima" | "baixo";
+  }>({ horizontal: "direita", vertical: "cima" });
+
+  useEffect(() => {
+    if (!aberto) {
+      return;
+    }
+
+    const raiz = raizRef.current;
+    if (!raiz) {
+      return;
+    }
+
+    const rect = raiz.getBoundingClientRect();
+    const espacoDireita = window.innerWidth - rect.right;
+    const espacoEsquerda = rect.left;
+    const horizontal =
+      espacoDireita >= LARGURA_BALAO_PX || espacoDireita >= espacoEsquerda
+        ? "direita"
+        : "esquerda";
+
+    // "cima" = balão cresce pra cima a partir da base do robô (visual
+    // de balão de fala clássico); só inverte se não couber (robô
+    // arrastado quase no topo da tela).
+    const vertical = rect.top >= ALTURA_BALAO_PX ? "cima" : "baixo";
+
+    setLadoBalao({ horizontal, vertical });
+  }, [aberto, posicao]);
 
   function aoPointerDown(event: React.PointerEvent) {
     const raiz = raizRef.current;
@@ -93,7 +141,14 @@ export function MascoteFlutuante() {
       }
 
       estado.arrastando = true;
-      raiz.setPointerCapture(event.pointerId);
+
+      try {
+        raiz.setPointerCapture(event.pointerId);
+      } catch {
+        // Sem captura o arrasto ainda funciona (só fica sujeito a
+        // perder o pointer se o cursor sair muito rápido da área) —
+        // não é motivo pra travar a interação.
+      }
     }
 
     const largura = raiz.offsetWidth;
@@ -113,7 +168,12 @@ export function MascoteFlutuante() {
 
     if (estado.arrastando) {
       arrastouRef.current = true;
-      raizRef.current?.releasePointerCapture(event.pointerId);
+
+      try {
+        raizRef.current?.releasePointerCapture(event.pointerId);
+      } catch {
+        // Idem aoPointerDown — sem captura ativa não há o que liberar.
+      }
     }
 
     arrastoRef.current = null;
@@ -125,7 +185,9 @@ export function MascoteFlutuante() {
     }
 
     ociosoTimer.current = setTimeout(() => {
-      setVideo(VIDEO_OCIOSO);
+      setVideo(
+        VIDEOS_REACAO[Math.floor(Math.random() * VIDEOS_REACAO.length)]
+      );
     }, OCIOSO_MS);
   }, []);
 
@@ -168,7 +230,7 @@ export function MascoteFlutuante() {
 
     setAberto(!aberto);
     const escolhido =
-      VIDEOS_CLIQUE[Math.floor(Math.random() * VIDEOS_CLIQUE.length)];
+      VIDEOS_REACAO[Math.floor(Math.random() * VIDEOS_REACAO.length)];
     setVideo(escolhido);
     reiniciarOcioso();
   }
@@ -195,47 +257,57 @@ export function MascoteFlutuante() {
           ? { left: posicao.left, top: posicao.top, bottom: "auto" }
           : undefined
       }
-      className={`pointer-events-none fixed z-30 flex items-end gap-2 print:hidden ${
+      className={`pointer-events-none fixed z-30 print:hidden ${
         posicao ? "" : "bottom-12 left-3 sm:left-5"
       }`}
     >
-      <ChromaKeyVideo
-        src={video}
-        loop={video === VIDEO_PADRAO}
-        onEnded={aoTerminarReacao}
-        onClick={aoClicar}
-        className="pointer-events-auto h-[110px] w-[160px] cursor-pointer touch-none select-none object-contain drop-shadow-lg sm:h-[135px] sm:w-[195px]"
-      />
+      <div className="relative">
+        <ChromaKeyVideo
+          src={video}
+          loop={video === VIDEO_PADRAO}
+          onEnded={aoTerminarReacao}
+          onClick={aoClicar}
+          className="pointer-events-auto h-[110px] w-[160px] cursor-pointer touch-none select-none object-contain drop-shadow-lg sm:h-[135px] sm:w-[195px]"
+        />
 
-      {aberto && (
-        <div className="pointer-events-auto relative mb-6 w-56 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
-          <button
-            type="button"
-            onClick={() => setAberto(false)}
-            aria-label="Fechar"
-            className="absolute right-2 top-2 rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        {aberto && (
+          <div
+            className={`pointer-events-auto absolute w-56 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl ${
+              ladoBalao.horizontal === "direita"
+                ? "left-full ml-2"
+                : "right-full mr-2"
+            } ${
+              ladoBalao.vertical === "cima" ? "bottom-0" : "top-0"
+            }`}
           >
-            <X size={14} />
-          </button>
+            <button
+              type="button"
+              onClick={() => setAberto(false)}
+              aria-label="Fechar"
+              className="absolute right-2 top-2 rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            >
+              <X size={14} />
+            </button>
 
-          <p className="text-sm font-semibold text-[var(--text-primary)]">
-            Oi! Eu sou o Pejo.
-          </p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              Oi! Eu sou o Pejo.
+            </p>
 
-          <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
-            Posso te mostrar o sistema funcionando, módulo por módulo,
-            explicando cada um em voz alta.
-          </p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
+              Posso te mostrar o sistema funcionando, módulo por
+              módulo, explicando cada um em voz alta.
+            </p>
 
-          <Link
-            href="/institucional#demonstracao"
-            onClick={() => setAberto(false)}
-            className="mt-3 block rounded-xl bg-[var(--primary)] px-3 py-2 text-center text-xs font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-          >
-            Ver a demonstração
-          </Link>
-        </div>
-      )}
+            <Link
+              href="/institucional#demonstracao"
+              onClick={() => setAberto(false)}
+              className="mt-3 block rounded-xl bg-[var(--primary)] px-3 py-2 text-center text-xs font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+            >
+              Ver a demonstração
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -8,7 +8,7 @@ export function BrandFooter() {
       className="pointer-events-none fixed bottom-4 right-6 z-20 select-none text-right leading-tight text-[var(--text-muted)] opacity-80 print:hidden"
     >
       <p className="text-[11px] font-medium tracking-wide">
-        AlePejo ERP Cloud
+        AlePejo ERP Cloud - V 1.0
       </p>
 
       <p className="text-[9px]">Gestão inteligente para empresas</p>

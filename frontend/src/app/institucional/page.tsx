@@ -1405,12 +1405,19 @@ function useSpeechVoices() {
  * sem o visitante clicar antes, e som automático espantaria mais gente
  * do que convenceria.
  */
+// Robô "falando" (gesticulando) — toca uma vez ao lado da legenda
+// quando o tour começa, depois descansa no vídeo padrão em loop pro
+// resto do tour, sem ficar repetindo o mesmo gesto o tempo todo.
+const VIDEO_APRESENTANDO = "/videos/pejo-demo-preview.webm";
+const VIDEO_IDLE = "/videos/pejo-idle.webm";
+
 function DemoTour() {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(true);
   const [started, setStarted] = useState(false);
   const [canSpeak, setCanSpeak] = useState(false);
+  const [videoMiniatura, setVideoMiniatura] = useState(VIDEO_APRESENTANDO);
 
   const step = demoTabs[index];
   const voices = useSpeechVoices();
@@ -1552,11 +1559,6 @@ function DemoTour() {
               onClick={play}
               className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-[color:rgb(9_13_25_/_0.55)] backdrop-blur-[2px] transition-colors hover:bg-[color:rgb(9_13_25_/_0.62)]"
             >
-              <ChromaKeyVideo
-                src="/videos/pejo-idle.mp4"
-                className="w-[220px] object-contain sm:w-[280px]"
-              />
-
               <span className="aurora-banner flex h-16 w-16 items-center justify-center rounded-full text-white shadow-2xl">
                 <Play size={26} className="ml-1" fill="currentColor" />
               </span>
@@ -1594,7 +1596,9 @@ function DemoTour() {
           <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
             <div className="flex shrink-0 flex-col items-center">
               <ChromaKeyVideo
-                src="/videos/pejo-apresentacao.mp4"
+                src={videoMiniatura}
+                loop={videoMiniatura === VIDEO_IDLE}
+                onEnded={() => setVideoMiniatura(VIDEO_IDLE)}
                 className="h-auto w-[110px] sm:w-[125px]"
               />
             </div>

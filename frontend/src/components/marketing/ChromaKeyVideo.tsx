@@ -3,26 +3,15 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Vídeo com o fundo removido de verdade (canal alfa), não pintado de
- * branco — os vídeos do Pejo vêm de estúdio, com fundo preto ou
- * cinza-claro (nunca branco de verdade, nem transparente). Pintar de
- * branco (tentativa anterior) deixa uma caixa branca visível sempre
- * que o vídeo é colocado sobre qualquer fundo que não seja branco —
- * exatamente o problema reportado.
- *
- * O vídeo toca escondido, cada quadro é desenhado num `<canvas>`: os
- * pixels na cor do fundo (amostrada em cantos do próprio vídeo —
- * funciona pra fundo preto ou cinza-claro sem configurar por vídeo)
- * viram 100% transparentes; uma faixa curta de "pena" na borda só
- * reduz a OPACIDADE, nunca mexe na cor do pixel — o robô precisa ficar
- * sólido (cor sempre igual ao vídeo original). Uma versão anterior
- * tentava também "descontaminar" a cor da borda (mistura estúdio)
- * dividindo pela opacidade — mata do robô em opacidades baixas: perto
- * de alfa=0 qualquer resíduo de cor é amplificado várias vezes e
- * estourado pro branco, dando o efeito "lavado"/fantasma reportado.
- * Sem essa divisão, a única sobra possível é uma leve franja na cor do
- * fundo do estúdio num anel fino de poucos pixels — bem menos visível
- * que o robô inteiro ficando translúcido.
+ * Vídeo com fundo transparente de verdade — os arquivos em
+ * `/public/videos/*.webm` já vêm com canal alfa (VP9 dentro de WebM,
+ * fundo removido por segmentação de IA, não por chroma-key de cor).
+ * `object-fit`/CSS transparency não funcionam num `<video>` puro pra
+ * expor esse alfa na página (o elemento sempre pinta um retângulo
+ * opaco) — por isso o vídeo toca escondido e cada quadro é desenhado
+ * num `<canvas>` via `drawImage`, que preserva o alfa do vídeo
+ * corretamente. Sem manipulação de pixel nenhuma: a cor do robô nunca
+ * é tocada, só repassada como está no arquivo.
  */
 export function ChromaKeyVideo({
   src,
@@ -39,11 +28,8 @@ export function ChromaKeyVideo({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const keyColorRef = useRef<[number, number, number] | null>(null);
 
   useEffect(() => {
-    keyColorRef.current = null;
-
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -51,54 +37,37 @@ export function ChromaKeyVideo({
       return;
     }
 
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const ctx = canvas.getContext("2d");
 
     if (!ctx) {
       return;
     }
+
+    let raf = 0;
+    let cancelled = false;
 
     // Trocar o `src` (ex.: idle -> reação de clique) não recarrega
     // sozinho em todo navegador — força carregar e tocar do zero.
     video.load();
     void video.play().catch(() => {});
 
-    let raf = 0;
-    let cancelled = false;
-
-    function sampleKeyColor(
-      width: number,
-      height: number,
-      data: Uint8ClampedArray,
-    ): [number, number, number] {
-      // Média de um bloco 5x5 em cada canto (não só 1 pixel) — reduz o
-      // efeito de ruído de compressão/uma leve vinheta do estúdio na
-      // cor amostrada, que faria sobrar "névoa" de fundo perto do meio
-      // das bordas do quadro.
-      const patch = 5;
-      const startsX = [0, Math.max(0, width - patch)];
-      const startsY = [0, Math.max(0, height - patch)];
-
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      let n = 0;
-
-      for (const sx of startsX) {
-        for (const sy of startsY) {
-          for (let dy = 0; dy < patch && sy + dy < height; dy++) {
-            for (let dx = 0; dx < patch && sx + dx < width; dx++) {
-              const i = ((sy + dy) * width + (sx + dx)) * 4;
-              r += data[i];
-              g += data[i + 1];
-              b += data[i + 2];
-              n++;
-            }
-          }
-        }
+    // O navegador pausa sozinho um `<video>` que nasce fora da área
+    // visível da tela (economia de recursos) — como ele fica com
+    // `display:none` (só o canvas aparece), o vídeo nunca "volta a
+    // ficar visível" pra retomar por conta própria, e o canvas trava
+    // no primeiro quadro pra sempre. Sem essa reação ao evento
+    // `pause`, o robô da demonstração (mais abaixo na página, fora da
+    // tela ao carregar) ficava parado, parecendo quebrado.
+    function aoPausar() {
+      // `video.ended` distingue as duas causas de pausa: fim natural
+      // (sem loop, ex.: reação ou apresentação) não deve retomar —
+      // quem trata isso é o `onEnded` de quem usa o componente.
+      if (!cancelled && video && !video.ended) {
+        void video.play().catch(() => {});
       }
-
-      return [r / n, g / n, b / n];
     }
+
+    video.addEventListener("pause", aoPausar);
 
     function draw() {
       if (cancelled || !video || !canvas || !ctx) {
@@ -111,51 +80,8 @@ export function ChromaKeyVideo({
           canvas.height = video.videoHeight;
         }
 
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(video, 0, 0);
-
-        const frame = ctx.getImageData(
-          0,
-          0,
-          canvas.width,
-          canvas.height,
-        );
-        const data = frame.data;
-
-        if (!keyColorRef.current) {
-          keyColorRef.current = sampleKeyColor(
-            canvas.width,
-            canvas.height,
-            data,
-          );
-        }
-
-        const [kr, kg, kb] = keyColorRef.current;
-        // Faixa de transição curta (só 12 de distância) — o bastante
-        // pra suavizar o serrilhado da borda sem alcançar pixel
-        // nenhum que já seja claramente parte do robô.
-        const threshold = 34;
-        const feather = 46;
-        const range = feather - threshold;
-
-        for (let i = 0; i < data.length; i += 4) {
-          const dr = data[i] - kr;
-          const dg = data[i + 1] - kg;
-          const db = data[i + 2] - kb;
-          const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-
-          if (dist <= threshold) {
-            data[i + 3] = 0;
-          } else if (dist < feather) {
-            // Só a opacidade muda — a cor do pixel NUNCA é tocada, pra
-            // não "lavar"/fantasmar o robô (ver comentário do componente).
-            data[i + 3] = Math.round(
-              (255 * (dist - threshold)) / range,
-            );
-          }
-          // dist >= feather: já é o robô — cor e opacidade originais, intactas.
-        }
-
-        ctx.putImageData(frame, 0, 0);
       }
 
       raf = requestAnimationFrame(draw);
@@ -166,6 +92,7 @@ export function ChromaKeyVideo({
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf);
+      video.removeEventListener("pause", aoPausar);
     };
   }, [src]);
 
@@ -174,7 +101,9 @@ export function ChromaKeyVideo({
     // quem preserva a proporção de verdade é o canvas em si (abaixo),
     // já que `object-fit` não é respeitado de forma confiável nesse
     // elemento; sem isso, fixar largura E altura na caixa esticava/
-    // achatava o robô.
+    // achatava o robô. Todos os vídeos em `/public/videos` são
+    // normalizados pro robô ocupar a mesma fração do quadro — trocar
+    // de vídeo nunca muda o tamanho aparente dele.
     <div className={`flex items-center justify-center ${className ?? ""}`}>
       <video
         ref={videoRef}
