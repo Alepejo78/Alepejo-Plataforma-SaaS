@@ -254,6 +254,8 @@ export function FinancialEntriesScreen({
   const [items, setItems] = useState<ItemRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  /** Espelha `form.discountValue` de forma síncrona pra `handleDiscountChange` — ver comentário lá. */
+  const discountValueRef = useRef(0);
 
   const [settleTarget, setSettleTarget] =
     useState<FinancialEntry | null>(null);
@@ -458,10 +460,70 @@ export function FinancialEntriesScreen({
   const itemsTotal = items.reduce((sum, it) => sum + it.amount, 0);
   const isMultiItem = items.length > 1;
 
+  /**
+   * Editar o Desconto abate a diferença do total sozinho — pra quando
+   * o cliente pede desconto depois do título já gerado (decisão do
+   * usuário, 09-09-2026). Com itens (peça/serviço compondo o título),
+   * a redução é rateada proporcionalmente entre eles, mesmo critério
+   * já usado no backend (`splitItemsForAmount`) — sem itens, mexe
+   * direto no Valor. Parcelado fica de fora: não dá pra saber sozinho
+   * qual parcela absorve o desconto, o usuário ajusta na mão.
+   *
+   * `discountValueRef` (não `form.discountValue`) é a fonte da
+   * diferença — um updater de `setState` que chama outro `setState`
+   * dentro (setItems dentro do updater do setForm) é reexecutado pelo
+   * StrictMode em desenvolvimento pra detectar efeito colateral, e
+   * cada reexecução disparava o `setItems` de novo, aplicando a
+   * redução em dobro. Ref é síncrono e não tem esse problema.
+   */
+  function handleDiscountChange(newValue: number) {
+    const delta = newValue - discountValueRef.current;
+    discountValueRef.current = newValue;
+
+    if (delta !== 0 && !isParceled) {
+      if (isMultiItem) {
+        setItems((prevItems) => {
+          const currentTotal = prevItems.reduce(
+            (sum, it) => sum + it.amount,
+            0
+          );
+
+          if (currentTotal <= 0) return prevItems;
+
+          const targetTotal = Math.max(currentTotal - delta, 0);
+          let allocated = 0;
+
+          return prevItems.map((it, index) => {
+            const isLast = index === prevItems.length - 1;
+            const amount = isLast
+              ? Math.round((targetTotal - allocated) * 100) / 100
+              : Math.round(
+                  ((it.amount * targetTotal) / currentTotal) * 100
+                ) / 100;
+
+            allocated += amount;
+            return { ...it, amount: Math.max(amount, 0) };
+          });
+        });
+      } else {
+        setForm((f) => ({
+          ...f,
+          amount: Math.max(
+            Math.round((f.amount - delta) * 100) / 100,
+            0
+          ),
+        }));
+      }
+    }
+
+    setForm((f) => ({ ...f, discountValue: newValue }));
+  }
+
   function openCreate() {
     setViewOnly(false);
     setEditingId(null);
     setForm(emptyForm());
+    discountValueRef.current = 0;
     setInstallments([]);
     setItems([]);
     setFormError("");
@@ -508,6 +570,7 @@ export function FinancialEntriesScreen({
       paymentMethod: entry.paymentMethod ?? "",
       observation: entry.observation ?? "",
     });
+    discountValueRef.current = num(entry.discountValue ?? 0);
     setInstallments([]);
     setItems(
       entry.items && entry.items.length > 1
@@ -1697,12 +1760,15 @@ export function FinancialEntriesScreen({
                     className={fieldClass}
                     value={form.discountValue || ""}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        discountValue: Number(e.target.value) || 0,
-                      })
+                      handleDiscountChange(Number(e.target.value) || 0)
                     }
                   />
+
+                  {isParceled && (
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Parcelado: ajuste o valor das parcelas na mão.
+                    </p>
+                  )}
                 </div>
               </div>
 

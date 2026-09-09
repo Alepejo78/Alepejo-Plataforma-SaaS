@@ -3,8 +3,32 @@ import { Injectable } from '@nestjs/common';
 import { PaymentMethod } from '@prisma/client';
 
 const MONEY_PATTERN = /\d{1,3}(?:\.\d{3})*,\d{2}/;
+/// Mesmo formato de valor, mas ignora o número quando ele é, na
+/// verdade, um percentual de desconto ("10,00%") — alguns orçamentos
+/// trazem uma coluna "% Desconto" entre Bruto e Líquido, e sem esse
+/// filtro esse número entraria na conta como se fosse mais um valor.
+const MONEY_NOT_PERCENT_PATTERN = /\d{1,3}(?:\.\d{3})*,\d{2}(?!\s*%)/g;
 const PART_QTY_PATTERN = /^\d+,\d{3}$/;
 const CODE_FIELD_PATTERN = /^\d{4,8}$/;
+
+/**
+ * Bruto e líquido de uma linha, buscados por MAGNITUDE (maior =
+ * bruto, menor/igual = líquido) em vez de posição — a ordem em que
+ * `pdf-parse` devolve essas duas colunas varia de um modelo de
+ * orçamento pra outro (já vimos as duas ordens em exports reais da
+ * Fazam Car), então a posição não é confiável; o valor sempre é
+ * (bruto ≥ líquido é a única invariante certa aqui — desconto só
+ * reduz, nunca aumenta).
+ */
+function extractGrossAndNet(text: string): { gross: number; net: number } | null {
+  const values = [...text.matchAll(MONEY_NOT_PERCENT_PATTERN)].map((m) =>
+    toNumber(m[0]),
+  );
+
+  if (values.length === 0) return null;
+
+  return { gross: Math.max(...values), net: Math.min(...values) };
+}
 
 export interface ParsedWorkshopQuoteItem {
   kind: 'PART' | 'SERVICE';
@@ -47,11 +71,14 @@ function toNumber(raw: string): number {
 }
 
 /// Linha de cabeçalho da tabela ("Código"/"Descrição" entre os campos
-/// da própria planilha) — a ordem das colunas nesse cabeçalho varia
-/// conforme o export, então não dá pra checar por prefixo fixo; basta
-/// conferir se os dois rótulos aparecem como campo inteiro.
+/// da própria planilha) — a ordem E o agrupamento das colunas nesse
+/// cabeçalho variam conforme o export (às vezes "Descrição" vem
+/// colada com outra palavra no mesmo campo de TAB), então não dá pra
+/// checar por campo inteiro nem por prefixo fixo; basta conferir se
+/// os rótulos aparecem em algum lugar da linha.
 function isTableHeaderRow(fields: string[]): boolean {
-  return fields.includes('Código') && fields.includes('Descrição');
+  const joined = fields.join(' ');
+  return /Código/i.test(joined) && /(Descrição|Líquido|Bruto)/i.test(joined);
 }
 
 function findLine(
@@ -307,20 +334,25 @@ export class WorkshopQuotePdfParserService {
 
   /**
    * Linha de item de peça, já extraída do `pdf-parse` — campos
-   * separados por TAB, nessa ordem real (conferida linha a linha
-   * contra a saída do `pdf-parse` pro export da Fazam Car):
-   * `<LÍQUIDO>\t<BRUTO>\t<UNIDADE>\t<CÓDIGO>\t<ITEM DESCRIÇÃO QUANTIDADE,000>`
-   * — ex.: "100,00\t100,00\tUN\t001183\t1 ADITIVO P/ RADIADOR 2,000".
-   * Extrai valor e unidade varrendo os campos ANTES do código (em vez
-   * de posição fixa), pra não quebrar se um export vier com essas
-   * duas colunas na ordem trocada entre si.
+   * separados por TAB, com bruto/líquido/unidade tanto em campos
+   * próprios quanto colados num só, dependendo do modelo do
+   * orçamento (dois formatos reais já vistos nos exports da Fazam
+   * Car). Por isso bruto/líquido são extraídos por MAGNITUDE, não por
+   * posição (ver `extractGrossAndNet`), e a unidade por token isolado
+   * de 1-6 letras maiúsculas em vez de campo inteiro.
    */
   private parsePartItems(
     lines: string[],
     warnings: string[],
   ): ParsedWorkshopQuoteItem[] {
     const start = lines.findIndex((l) => l === 'Peças');
-    const end = lines.findIndex((l) => l === 'Serviços');
+    // "Serviços" só existe quando o orçamento tem serviço também — sem
+    // ele, parar em "Total de Peças" evita varrer até o rodapé da
+    // página (paginação etc.) atrás de mais linhas de item.
+    const end = lines.findIndex(
+      (l, i) =>
+        i > start && (l === 'Serviços' || /Total de Peças/i.test(l)),
+    );
 
     if (start === -1) return [];
 
@@ -353,25 +385,18 @@ export class WorkshopQuotePdfParserService {
       const itemDescQtyField =
         fields[codeFieldIndex + 1] ?? fields[fields.length - 1];
 
+      const tokensBeforeCode = fieldsBeforeCode.join(' ').split(/\s+/);
       const unit =
-        fieldsBeforeCode.find((f) => /^[A-ZÀ-Ú]{1,6}$/.test(f)) ?? 'UN';
+        tokensBeforeCode.find((t) => /^[A-ZÀ-Ú]{1,6}$/.test(t)) ?? 'UN';
 
-      const moneyMatches = fieldsBeforeCode.flatMap((f) => [
-        ...f.matchAll(new RegExp(MONEY_PATTERN, 'g')),
-      ]);
+      const values = extractGrossAndNet(fieldsBeforeCode.join(' '));
 
-      if (moneyMatches.length === 0) {
+      if (!values) {
         warnings.push(`Não achei o valor da peça "${fields[codeFieldIndex]}".`);
         continue;
       }
 
-      // Campos vêm na ordem Líquido, Bruto — cada um em seu próprio
-      // campo de TAB (não colados), então o primeiro valor achado é
-      // sempre o líquido.
-      const netValue = toNumber(moneyMatches[0][0]);
-      const grossValue = toNumber(
-        moneyMatches[1]?.[0] ?? moneyMatches[0][0],
-      );
+      const { gross: grossValue, net: netValue } = values;
 
       const { code, itemNumber: _itemNumber } = splitCodeAndItemNumber(
         fields[codeFieldIndex],
@@ -450,24 +475,31 @@ export class WorkshopQuotePdfParserService {
 
       const code = codeMatch[1];
 
+      // Full match (não substring) pra não confundir um "10,00%" de
+      // desconto com valor de verdade, se um dia aparecer nessa
+      // tabela também.
       const numberTokens = firstField
         .slice(codeMatch[0].length)
         .trim()
         .split(/\s+/)
-        .filter((token) => MONEY_PATTERN.test(token));
+        .filter((token) => /^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(token));
 
       if (numberTokens.length === 0) {
         warnings.push(`Não achei o valor do serviço "${code}".`);
         continue;
       }
 
-      // Bruto e líquido são sempre os dois últimos números; quantidade
-      // (não usada nessa tabela) vem antes deles, se houver.
-      const netValue = toNumber(numberTokens[numberTokens.length - 1]);
-      const grossValue =
+      // Bruto e líquido são sempre os dois últimos números — por
+      // magnitude, não por posição entre os dois (bruto ≥ líquido é a
+      // única ordem confiável). Quantidade (não usada nessa tabela)
+      // vem antes deles, se houver.
+      const last = toNumber(numberTokens[numberTokens.length - 1]);
+      const secondLast =
         numberTokens.length >= 2
           ? toNumber(numberTokens[numberTokens.length - 2])
-          : netValue;
+          : last;
+      const grossValue = Math.max(last, secondLast);
+      const netValue = Math.min(last, secondLast);
       // Tempo é o terceiro número a partir do fim (quando presente).
       const tempo =
         numberTokens.length >= 3
