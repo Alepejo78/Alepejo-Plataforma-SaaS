@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, KeyRound, MessageCircle } from "lucide-react";
+import { Bell, FileEdit, KeyRound, MessageCircle } from "lucide-react";
 
 import { OsCardLink, OsShell } from "@/components";
 import { useAuth } from "@/providers/AuthProvider";
@@ -32,6 +32,14 @@ export default function OsApisPage() {
       icon: Bell,
       iconAnim: "bell",
       visible: can("scheduled-notifications.manage"),
+    },
+    {
+      title: "Alteração de template",
+      description: "Cabeçalho, rodapé e template completo dos PDFs gerados pelo sistema",
+      href: "/erp/configuracoes/alteracao-template",
+      icon: FileEdit,
+      iconAnim: "fileedit",
+      visible: can("email.manage"),
     },
   ].filter((card) => card.visible);
 
