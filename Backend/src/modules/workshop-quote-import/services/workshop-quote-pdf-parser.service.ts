@@ -430,13 +430,20 @@ export class WorkshopQuotePdfParserService {
   }
 
   /**
-   * Linha de item de serviço, já extraída do `pdf-parse` — dois campos
-   * separados por TAB: o primeiro traz código e todos os números
-   * colados por espaço (não por TAB), o segundo é a descrição pura.
-   * Ordem real dos números depois do código: quantidade (sempre
-   * "0,00", não usada nessa tabela), tempo, bruto, líquido — ex.:
-   * "000227 0,00 1,00 300,00 300,00\tPLAINA DO CABECOTE". Sem coluna
-   * de unidade — usa sempre "UN" e a quantidade do item é o "Tempo".
+   * Linha de item de serviço, já extraída do `pdf-parse` — campos
+   * separados por TAB, mas a posição de código/descrição/números já
+   * mudou entre exports reais da própria Fazam Car (às vezes código
+   * cola com a descrição num campo só e os números ficam cada um no
+   * seu campo; às vezes código cola com os números e a descrição fica
+   * sozinha). Por isso: acha o código procurando um campo que combine
+   * "dígitos + texto de verdade" (com letra) em qualquer posição; se
+   * não achar assim, cai pro formato onde código cola com números
+   * (extrai os dígitos do início de qualquer campo, descrição é o
+   * campo que sobra sem número na frente). Bruto/líquido/tempo saem
+   * por MAGNITUDE do que sobrar (ver comentário de `extractGrossAndNet`
+   * — mesmo raciocínio: os dois maiores números são bruto/líquido,
+   * quantidade nessa tabela é sempre "0,00"/não usada, então o
+   * primeiro número não-zero que sobra é o tempo).
    */
   private parseServiceItems(
     lines: string[],
@@ -463,53 +470,75 @@ export class WorkshopQuotePdfParserService {
       const fields = line.split('\t').map((f) => f.trim());
       if (isTableHeaderRow(fields)) continue;
 
-      const firstField = fields[0];
-      const description = fields[fields.length - 1];
+      let code: string | null = null;
+      let description = '';
+      const numberSources: string[] = [];
 
-      const codeMatch = firstField.match(/^(\d{4,8})\b/);
+      for (const field of fields) {
+        const codeDescMatch = field.match(/^(\d{4,8})\s+(.+)$/);
 
-      if (!codeMatch) {
+        if (!code && codeDescMatch && /[A-Za-zÀ-ÿ]/.test(codeDescMatch[2])) {
+          code = codeDescMatch[1];
+          description = codeDescMatch[2].trim();
+        } else {
+          numberSources.push(field);
+        }
+      }
+
+      if (!code) {
+        // Código colado com os números — descrição é o campo com
+        // letra que não começa com dígito.
+        const descField = fields.find(
+          (f) => /[A-Za-zÀ-ÿ]/.test(f) && !/^\d/.test(f),
+        );
+        const leadCodeMatch = fields
+          .map((f) => f.match(/^(\d{4,8})\b/))
+          .find((m): m is RegExpMatchArray => !!m);
+
+        if (descField && leadCodeMatch) {
+          code = leadCodeMatch[1];
+          description = descField;
+          numberSources.length = 0;
+
+          for (const field of fields) {
+            if (field === descField) continue;
+            numberSources.push(
+              field.startsWith(leadCodeMatch[0])
+                ? field.slice(leadCodeMatch[0].length)
+                : field,
+            );
+          }
+        }
+      }
+
+      if (!code) {
         warnings.push(`Não entendi esta linha de serviço: "${line}".`);
         continue;
       }
 
-      const code = codeMatch[1];
-
       // Full match (não substring) pra não confundir um "10,00%" de
       // desconto com valor de verdade, se um dia aparecer nessa
       // tabela também.
-      const numberTokens = firstField
-        .slice(codeMatch[0].length)
-        .trim()
+      const numberTokens = numberSources
+        .join(' ')
         .split(/\s+/)
-        .filter((token) => /^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(token));
+        .filter((token) => /^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(token))
+        .map(toNumber)
+        .sort((a, b) => b - a);
 
       if (numberTokens.length === 0) {
         warnings.push(`Não achei o valor do serviço "${code}".`);
         continue;
       }
 
-      // Bruto e líquido são sempre os dois últimos números — por
-      // magnitude, não por posição entre os dois (bruto ≥ líquido é a
-      // única ordem confiável). Quantidade (não usada nessa tabela)
-      // vem antes deles, se houver.
-      const last = toNumber(numberTokens[numberTokens.length - 1]);
-      const secondLast =
-        numberTokens.length >= 2
-          ? toNumber(numberTokens[numberTokens.length - 2])
-          : last;
-      const grossValue = Math.max(last, secondLast);
-      const netValue = Math.min(last, secondLast);
-      // Tempo é o terceiro número a partir do fim (quando presente).
-      const tempo =
-        numberTokens.length >= 3
-          ? toNumber(numberTokens[numberTokens.length - 3])
-          : 1;
+      const grossValue = numberTokens[0];
+      const netValue = numberTokens.length >= 2 ? numberTokens[1] : grossValue;
+      const tempo = numberTokens.slice(2).find((v) => v > 0) ?? 1;
 
       items.push({
         kind: 'SERVICE',
         code,
-        description: description || firstField,
+        description: description || code,
         unit: 'UN',
         quantity: tempo > 0 ? tempo : 1,
         grossValue,
