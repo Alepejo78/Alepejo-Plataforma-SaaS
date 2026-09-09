@@ -34,8 +34,6 @@ export interface AuthCompany {
   brandingThemeToggleEnabled: boolean;
   sidebarLayout: SidebarLayout;
   maxOpenTabs: number;
-  /** Ids de item de menu (`MenuItem.id`/`MenuGroup.id`) escondidos da sidebar por preferência da empresa. */
-  hiddenMenuItemIds: string[];
 }
 
 /**
@@ -56,6 +54,8 @@ export interface AuthUser {
   maxOpenTabs: number | null;
   permissions: AuthPermission[];
   modules: AuthModule[];
+  /** Ids de item de menu escondidos da sidebar — interseção de todos os perfis do usuário. */
+  hiddenMenuItemIds: string[];
   company: AuthCompany;
 }
 

@@ -106,6 +106,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       })),
     );
 
+    // Item de menu só some se TODOS os perfis do usuário escondem ele
+    // (interseção) — assim quem acumula um perfil "geral" (ex.:
+    // Administrador, sem nada escondido) nunca perde item nenhum só
+    // por também ter um perfil mais restrito.
+    const roleHiddenLists = user.roles.map(
+      (userRole) => userRole.role.hiddenMenuItemIds,
+    );
+    const hiddenMenuItemIds =
+      roleHiddenLists.length === 0
+        ? []
+        : roleHiddenLists.reduce((acc, list) =>
+            acc.filter((id) => list.includes(id)),
+          );
+
     const licensedModules = new Map<
       string,
       {
@@ -201,6 +215,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       maxOpenTabs: user.maxOpenTabs,
       permissions,
       modules: [...licensedModules.values()],
+      hiddenMenuItemIds,
       company: {
         id: user.company.id,
         code: user.company.code,
@@ -222,7 +237,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           user.company.brandingThemeToggleEnabled,
         sidebarLayout: user.company.sidebarLayout,
         maxOpenTabs: user.company.maxOpenTabs,
-        hiddenMenuItemIds: user.company.hiddenMenuItemIds,
       },
     };
   }

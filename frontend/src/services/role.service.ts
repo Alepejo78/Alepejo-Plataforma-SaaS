@@ -23,6 +23,8 @@ export interface Role {
   description?: string | null;
   isSystem: boolean;
   active: boolean;
+  /** Ids de item de menu escondidos da sidebar pra quem tem este perfil — ver `frontend/src/hooks/useMenu.ts`. */
+  hiddenMenuItemIds: string[];
 }
 
 export type RolePayload = {
@@ -30,6 +32,7 @@ export type RolePayload = {
   name: string;
   description?: string;
   active?: boolean;
+  hiddenMenuItemIds?: string[];
 };
 
 export const roleService = {

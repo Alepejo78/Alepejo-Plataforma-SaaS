@@ -1,7 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsArray,
   IsBoolean,
   IsEmail,
   IsInt,
@@ -122,14 +121,4 @@ export class UpdateCompanyDto extends PartialType(CreateCompanyDto) {
   @Min(1)
   @Max(15)
   maxOpenTabs?: number;
-
-  @ApiPropertyOptional({
-    type: [String],
-    description:
-      'Ids de item de menu escondidos da sidebar (preferência visual — não tira permissão de ninguém).',
-  })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  hiddenMenuItemIds?: string[];
 }

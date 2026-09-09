@@ -4,6 +4,7 @@ import {
   } from '@nestjs/swagger';
   
   import {
+    IsArray,
     IsBoolean,
     IsNotEmpty,
     IsOptional,
@@ -43,4 +44,14 @@ import {
     @IsOptional()
     @IsBoolean()
     active?: boolean = true;
+
+    @ApiPropertyOptional({
+      type: [String],
+      description:
+        'Ids de item de menu escondidos da sidebar pra quem tem este perfil (preferência visual — não tira permissão de ninguém).',
+    })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    hiddenMenuItemIds?: string[];
   }

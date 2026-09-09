@@ -26,11 +26,12 @@ import {
  * grupo pode ter parte licenciada e parte bloqueada ao mesmo tempo,
  * ex.: Recursos Humanos com módulo HR liberado e LABOR não).
  *
- * "Ocultar" (`company.hiddenMenuItemIds`, configurado em Configurações
- * > Menu visível) é diferente dos dois de cima: puramente preferência
- * visual da empresa pra reduzir o menu, nunca tira permissão nem
- * bloqueia por módulo — some incondicionalmente, mesmo pra quem tem
- * acesso total (a rota continua acessível direto pela URL).
+ * "Ocultar" (`user.hiddenMenuItemIds`, configurado por PERFIL dentro
+ * de Perfis de acesso > Configurar permissões) é diferente dos dois
+ * de cima: puramente preferência visual pra reduzir o menu de quem
+ * tem aquele perfil, nunca tira permissão nem bloqueia por módulo —
+ * some incondicionalmente pra quem só tem perfis que escondem aquele
+ * item (a rota continua acessível direto pela URL).
  *
  * Isto é conveniência de UI, não segurança: esconder ou bloquear o
  * item não protege nada. A autorização real acontece no backend, que
@@ -45,7 +46,7 @@ export function useMenu(): MenuEntry[] {
       return [];
     }
 
-    const hiddenIds = new Set(user.company.hiddenMenuItemIds);
+    const hiddenIds = new Set(user.hiddenMenuItemIds);
 
     const hasPermission = (entry: { permission?: string | string[] }) =>
       !entry.permission ||

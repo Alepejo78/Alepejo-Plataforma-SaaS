@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, EyeOff, Lock } from "lucide-react";
 
 import { OsShell } from "@/components";
 import { ListPageLayout } from "@/components/layout/ListPageLayout";
+import { menu } from "@/components/layout/Sidebar/menu";
+import { isMenuGroup } from "@/components/layout/Sidebar/Sidebar.types";
 import { useAuth } from "@/providers/AuthProvider";
 import { useShowLockedModules } from "@/providers/ShowLockedModulesProvider";
 
@@ -206,6 +208,41 @@ function moduleOf(row: GroupRow): string | null {
   return GROUP_MODULE[row.groupCode] ?? null;
 }
 
+interface MenuRow {
+  id: string;
+  title: string;
+  isGroup: boolean;
+}
+
+/**
+ * "Visão geral" (Home) nunca aparece aqui — é a página que abre
+ * sozinha ao entrar no sistema, não faz sentido deixar escondível.
+ */
+const HOME_MENU_ID = "visao-geral";
+
+/** Achata `menu.ts` (grupos + itens soltos) numa lista pra exibir em tabela. */
+function buildMenuRows(): MenuRow[] {
+  const rows: MenuRow[] = [];
+
+  for (const entry of menu) {
+    if (entry.id === HOME_MENU_ID) {
+      continue;
+    }
+
+    if (isMenuGroup(entry)) {
+      rows.push({ id: entry.id, title: entry.title, isGroup: true });
+
+      for (const child of entry.children) {
+        rows.push({ id: child.id, title: child.title, isGroup: false });
+      }
+    } else {
+      rows.push({ id: entry.id, title: entry.title, isGroup: false });
+    }
+  }
+
+  return rows;
+}
+
 export default function ConfigurarPerfilPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -226,6 +263,14 @@ export default function ConfigurarPerfilPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const menuRows = useMemo(buildMenuRows, []);
+  const [hiddenMenuItems, setHiddenMenuItems] = useState<Set<string>>(
+    new Set()
+  );
+  const [menuItemSaving, setMenuItemSaving] = useState<string | null>(
+    null
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -241,6 +286,7 @@ export default function ConfigurarPerfilPage() {
       setRole(roleData);
       setRoleName(roleData.name);
       setPermissions(allPermissions);
+      setHiddenMenuItems(new Set(roleData.hiddenMenuItemIds));
 
       const map = new Map<string, string>();
 
@@ -449,6 +495,39 @@ export default function ConfigurarPerfilPage() {
         extractMessage(err, "Não foi possível renomear o perfil.")
       );
       setRoleName(role.name);
+    }
+  }
+
+  async function toggleMenuItemHidden(id: string) {
+    const previous = hiddenMenuItems;
+    const next = new Set(previous);
+
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+
+    setHiddenMenuItems(next);
+    setMenuItemSaving(id);
+    setError("");
+
+    try {
+      const updated = await roleService.update(roleId, {
+        hiddenMenuItemIds: [...next],
+      });
+
+      setRole(updated);
+    } catch (err) {
+      setHiddenMenuItems(previous);
+      setError(
+        extractMessage(
+          err,
+          "Não foi possível salvar o menu deste perfil."
+        )
+      );
+    } finally {
+      setMenuItemSaving(null);
     }
   }
 
@@ -716,6 +795,68 @@ export default function ConfigurarPerfilPage() {
                 )}
               </tbody>
           </table>
+        )}
+
+        {!loading && (
+          <div className="mt-8 border-t border-[var(--border)] px-4 pt-6">
+            <h2 className="flex items-center gap-2 text-base font-bold text-[var(--text-primary)]">
+              <EyeOff size={18} />
+              Menu visível para este perfil
+            </h2>
+
+            <p className="mt-1 max-w-2xl text-sm text-[var(--text-muted)]">
+              Marque "Ocultar" pra reduzir o menu lateral de quem tem
+              este perfil — ninguém perde acesso: a tela continua
+              existindo, só some da navegação. Um perfil mais amplo
+              (ex.: Administrador) nunca perde item por causa de outro
+              perfil mais restrito que a mesma pessoa também tenha.
+            </p>
+
+            <div className="mt-4 max-w-xl overflow-hidden rounded-2xl border border-[var(--border)]">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
+                  <tr>
+                    <th className="px-4 py-2.5 font-semibold">
+                      Item do menu
+                    </th>
+                    <th className="px-4 py-2.5 text-right font-semibold">
+                      Ocultar
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {menuRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-t border-[var(--border)]"
+                    >
+                      <td
+                        className={`px-4 py-2 ${
+                          row.isGroup
+                            ? "font-semibold text-[var(--text-primary)]"
+                            : "pl-8 text-[var(--text-secondary)]"
+                        }`}
+                      >
+                        {row.title}
+                      </td>
+
+                      <td className="px-4 py-2 text-right">
+                        <input
+                          type="checkbox"
+                          checked={hiddenMenuItems.has(row.id)}
+                          disabled={menuItemSaving === row.id}
+                          onChange={() =>
+                            void toggleMenuItemHidden(row.id)
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </ListPageLayout>
     </OsShell>

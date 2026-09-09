@@ -151,6 +151,9 @@ import {
         name: dto.name,
         description: dto.description,
         active: dto.active,
+        ...(dto.hiddenMenuItemIds !== undefined && {
+          hiddenMenuItemIds: dto.hiddenMenuItemIds,
+        }),
       });
     }
 
