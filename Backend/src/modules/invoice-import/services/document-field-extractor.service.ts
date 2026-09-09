@@ -88,9 +88,51 @@ const DOCUMENT_NUMBER_VALUE_PATTERN = /[\d][\d./-]{4,}/;
 const CNPJ_PATTERN = /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/;
 const CPF_PATTERN = /\d{3}\.\d{3}\.\d{3}-\d{2}/;
 
-/** Linha digitável de boleto bancário: 5 blocos de dígitos (com ou sem os pontos/espaços de exibição). Não cobre código de barras de convênio/arrecadação (DAS, tributos, contas de consumo com "código de barras" de 44 dígitos em 4 blocos) — layout diferente, fica pra uma próxima. */
+/** CEP ("86183-334" ou "86183334") — usado só pra reconhecer e pular linha de endereço em `guessPartyName`, não precisa capturar nada. */
+const CEP_PATTERN = /\d{5}-?\d{3}/;
+
+/** Prefixo comum de logradouro — outra pista de "isto é endereço, não nome" pra `guessPartyName` (ex.: "Avenida Jaime Reis, 495" ou "R Jose Izidoro Biazetto, 158"). */
+const STREET_PREFIX_PATTERN =
+  /^(av\.?|avenida|r\.?|rua|rod\.?|rodovia|al\.?|alameda|travessa|trav\.?|pra[çc]a|pça\.?)\s/i;
+
+/** Linha digitável de boleto bancário: 5 blocos de dígitos (com ou sem os pontos/espaços de exibição). */
 const DIGITABLE_LINE_PATTERN =
   /\d{5}[.\s]?\d{5}[.\s]?\d{5}[.\s]?\d{6}[.\s]?\d{5}[.\s]?\d{6}[.\s]?\d{1}[.\s]?\d{14}/;
+
+/**
+ * Linha digitável de convênio/arrecadação (conta de água, luz,
+ * telefone/internet, tributos): 4 blocos de 11 dígitos + 1 dígito
+ * verificador, com ou sem traço antes do último dígito de cada bloco
+ * (ex.: "82680000001-8 65710109202-8 60909212381-7 80082026219-7" na
+ * Sanepar, ou "836800000009 810901110009 ..." sem traço na Copel) —
+ * layout diferente do boleto bancário padrão acima, por isso testado
+ * como alternativa (ver `extractFields`).
+ */
+const ARRECADACAO_LINE_PATTERN =
+  /\d{11}-?\d(?:\s+\d{11}-?\d){3}/;
+
+/**
+ * Concessionárias cujo CNPJ, nessas contas, vem só no cabeçalho —
+ * junto do logotipo, renderizado como imagem, não como texto (por
+ * isso `CNPJ_PATTERN` nunca acha nada nelas: não é o regex que falha,
+ * é que o dado simplesmente não está na camada de texto do PDF).
+ * Reconhece pelo nome, que aparece em algum lugar do rodapé/corpo em
+ * texto de verdade (ex.: "ACESSE O SITE DA SANEPAR..."). CNPJ de
+ * concessionária estadual é único e público — sem risco de trocar de
+ * empresa entre contas do mesmo cliente. Acrescente aqui outras
+ * concessionárias com o mesmo problema conforme aparecerem.
+ */
+const KNOWN_ISSUER_FALLBACKS: {
+  keyword: RegExp;
+  document: string;
+  legalName: string;
+}[] = [
+  {
+    keyword: /sanepar/i,
+    document: '76484013000145',
+    legalName: 'Companhia de Saneamento do Paraná - SANEPAR',
+  },
+];
 
 /**
  * Acha a primeira ocorrência de qualquer um dos rótulos e, dentro de
@@ -122,10 +164,47 @@ function findNear(
   return null;
 }
 
+/**
+ * Mesma ideia de `findNear`, só que pra trás: procura o último trecho
+ * no formato `valuePattern` dentro de uma janela de texto ANTES de
+ * `anchorIndex`. Usado como último recurso pro valor/vencimento de
+ * conta de consumo (água, luz, telefone) — nessas contas o rótulo
+ * "Vencimento"/"Total a pagar" às vezes não fica perto do valor no
+ * texto corrido (a extração de PDF lineariza uma tabela e quebra a
+ * ordem visual), mas o valor e o vencimento quase sempre aparecem
+ * juntos bem antes da linha digitável, tanto no boleto padrão quanto
+ * no de convênio/arrecadação — confirmado em Sanepar, Copel e Claro.
+ * Pega o ÚLTIMO match (o mais perto da âncora), não o primeiro: é o
+ * que normalmente é o valor/data de verdade, não algum número de
+ * referência ou leitura anterior que apareça mais cedo na mesma janela.
+ */
+function findBefore(
+  text: string,
+  anchorIndex: number,
+  valuePattern: RegExp,
+  windowChars = 200,
+): string | null {
+  const start = Math.max(0, anchorIndex - windowChars);
+  const window = text.slice(start, anchorIndex);
+  const global = new RegExp(
+    valuePattern.source,
+    valuePattern.flags.includes('g')
+      ? valuePattern.flags
+      : `${valuePattern.flags}g`,
+  );
+  const matches = window.match(global);
+
+  return matches && matches.length > 0 ? matches[matches.length - 1] : null;
+}
+
 function guessDocumentType(text: string): FinancialDocumentType {
   const lower = text.toLowerCase();
 
-  if (DIGITABLE_LINE_PATTERN.test(text) || lower.includes('boleto')) {
+  if (
+    DIGITABLE_LINE_PATTERN.test(text) ||
+    ARRECADACAO_LINE_PATTERN.test(text) ||
+    lower.includes('boleto')
+  ) {
     return FinancialDocumentType.BOLETO;
   }
 
@@ -163,7 +242,12 @@ function guessPartyName(text: string, documentIndex: number): string {
       .replace(CPF_PATTERN, '')
       .trim();
 
-    if (candidate && !LABEL_ONLY_LINE_PATTERN.test(candidate)) {
+    if (
+      candidate &&
+      !LABEL_ONLY_LINE_PATTERN.test(candidate) &&
+      !CEP_PATTERN.test(candidate) &&
+      !STREET_PREFIX_PATTERN.test(candidate)
+    ) {
       return candidate.slice(0, 150);
     }
   }
@@ -187,23 +271,58 @@ export class DocumentFieldExtractorService {
   extractFields(rawText: string): ParsedInvoice {
     const warnings: string[] = [];
 
+    // Padrão de boleto bancário primeiro; conta de consumo (convênio/
+    // arrecadação) só como alternativa, testado apenas se o primeiro
+    // não achar nada — evita casar os dois em cima do mesmo trecho.
+    const digitableLineMatch =
+      rawText.match(DIGITABLE_LINE_PATTERN) ??
+      rawText.match(ARRECADACAO_LINE_PATTERN);
+    const digitableLine = digitableLineMatch
+      ? digitableLineMatch[0].replace(/\s+/g, ' ').trim()
+      : null;
+
     const totalAmountRaw = findNear(
       rawText,
       VALUE_LABEL_PATTERNS,
       BRL_NUMBER_PATTERN,
     );
-    const totalAmount = totalAmountRaw ? parseMoney(totalAmountRaw) : null;
-
-    if (totalAmount == null) {
-      warnings.push('Não encontrei o valor — confira e preencha na mão.');
-    }
+    let totalAmount = totalAmountRaw ? parseMoney(totalAmountRaw) : null;
 
     const dueDateRaw = findNear(
       rawText,
       DUE_DATE_LABEL_PATTERNS,
       DATE_BR_PATTERN,
     );
-    const dueDate = dueDateRaw ? parseBrDate(dueDateRaw) : null;
+    let dueDate = dueDateRaw ? parseBrDate(dueDateRaw) : null;
+
+    // Nenhum rótulo perto do valor/vencimento — conta de consumo típica
+    // (água, luz, telefone) costuma imprimir os dois bem antes da
+    // linha digitável, mesmo sem um rótulo "Vencimento"/"Total a
+    // pagar" que o texto extraído do PDF preserve perto (ver
+    // `findBefore`). Só tenta se achou alguma linha digitável.
+    if (digitableLineMatch?.index != null) {
+      if (totalAmount == null) {
+        const fallbackAmount = findBefore(
+          rawText,
+          digitableLineMatch.index,
+          BRL_NUMBER_PATTERN,
+        );
+        totalAmount = fallbackAmount ? parseMoney(fallbackAmount) : null;
+      }
+
+      if (!dueDate) {
+        const fallbackDueDate = findBefore(
+          rawText,
+          digitableLineMatch.index,
+          DATE_BR_PATTERN,
+        );
+        dueDate = fallbackDueDate ? parseBrDate(fallbackDueDate) : null;
+      }
+    }
+
+    if (totalAmount == null) {
+      warnings.push('Não encontrei o valor — confira e preencha na mão.');
+    }
 
     if (!dueDate) {
       warnings.push('Não encontrei o vencimento — confira e preencha na mão.');
@@ -222,11 +341,6 @@ export class DocumentFieldExtractorService {
       DOCUMENT_NUMBER_VALUE_PATTERN,
       30,
     );
-
-    const digitableLineMatch = rawText.match(DIGITABLE_LINE_PATTERN);
-    const digitableLine = digitableLineMatch
-      ? digitableLineMatch[0].replace(/\s+/g, ' ').trim()
-      : null;
 
     const documentMatch =
       rawText.match(CNPJ_PATTERN) ?? rawText.match(CPF_PATTERN);
@@ -248,9 +362,29 @@ export class DocumentFieldExtractorService {
         state: null,
       };
     } else {
-      warnings.push(
-        'Não encontrei o CNPJ/CPF do emissor — selecione o parceiro na mão.',
+      const knownIssuer = KNOWN_ISSUER_FALLBACKS.find((issuer) =>
+        issuer.keyword.test(rawText),
       );
+
+      if (knownIssuer) {
+        party = {
+          document: knownIssuer.document,
+          legalName: knownIssuer.legalName,
+          tradeName: null,
+          email: null,
+          zipCode: null,
+          street: null,
+          number: null,
+          complement: null,
+          district: null,
+          city: null,
+          state: null,
+        };
+      } else {
+        warnings.push(
+          'Não encontrei o CNPJ/CPF do emissor — selecione o parceiro na mão.',
+        );
+      }
     }
 
     return {

@@ -168,6 +168,14 @@ export function InvoiceImportModal({
   const [mode, setMode] = useState<Mode>(
     expenseOnly ? "EXPENSE" : "ORDER"
   );
+
+  // Boleto/fatura/conta de consumo (água, luz, telefone) é sempre
+  // despesa de serviço, nunca vira Pedido de Compra/Venda — então o
+  // seletor de arquivo só libera PDF/foto quando o lançamento vai
+  // direto pra Contas a Pagar/Receber, mesmo dentro do modal aberto
+  // por Compras/Vendas (que também tem a aba "Lançar direto em Contas
+  // a Pagar"/"a Receber", não só o `expenseOnly` fixo do Financeiro).
+  const acceptsAnyDocument = expenseOnly || mode === "EXPENSE";
   const [partner, setPartner] = useState<PartnerState>(emptyPartner);
   const [warehouseId, setWarehouseId] = useState("");
   const [chartOfAccountId, setChartOfAccountId] = useState("");
@@ -1068,10 +1076,10 @@ export function InvoiceImportModal({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-[var(--text-primary)]">
-                  {expenseOnly ? "Documento (opcional)" : "Arquivo XML da nota (opcional)"}
+                  {acceptsAnyDocument ? "Documento (opcional)" : "Arquivo XML da nota (opcional)"}
                 </p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {expenseOnly
+                  {acceptsAnyDocument
                     ? "XML de nota, PDF ou foto de boleto, fatura, conta ou cupom fiscal — leitura automática por texto/OCR, sempre confira os dados antes de confirmar."
                     : "NF-e lê certinho. NF-e de serviço (NFS-e) é melhor esforço — confira os campos antes de confirmar."}
                 </p>
@@ -1090,7 +1098,7 @@ export function InvoiceImportModal({
                 )}
                 {parsing
                   ? "Lendo..."
-                  : expenseOnly
+                  : acceptsAnyDocument
                     ? "Escolher arquivo"
                     : "Escolher XML"}
               </button>
@@ -1099,7 +1107,7 @@ export function InvoiceImportModal({
                 ref={fileInputRef}
                 type="file"
                 accept={
-                  expenseOnly
+                  acceptsAnyDocument
                     ? ".xml,text/xml,.pdf,application/pdf,.jpg,.jpeg,.png,image/jpeg,image/png"
                     : ".xml,text/xml"
                 }
