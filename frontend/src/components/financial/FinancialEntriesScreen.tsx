@@ -202,9 +202,23 @@ export function FinancialEntriesScreen({
   const exportTableRef = useRef<HTMLTableElement>(null);
   const [entries, setEntries] = useState<FinancialEntry[]>([]);
 
-  const [viewMode, setViewMode] = useState<"simple" | "detailed">(
-    "detailed"
+  const viewModeStorageKey = `financial-entries-view-mode-${type}`;
+  const [viewMode, setViewModeState] = useState<"simple" | "detailed">(
+    "simple"
   );
+
+  useEffect(() => {
+    const stored = localStorage.getItem(viewModeStorageKey);
+
+    if (stored === "simple" || stored === "detailed") {
+      setViewModeState(stored);
+    }
+  }, [viewModeStorageKey]);
+
+  function setViewMode(mode: "simple" | "detailed") {
+    setViewModeState(mode);
+    localStorage.setItem(viewModeStorageKey, mode);
+  }
   const [statusFilter, setStatusFilter] = useState("OPEN");
   const [search, setSearch] = useState("");
   const [overdueOnly, setOverdueOnly] = useState(false);
