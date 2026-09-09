@@ -146,6 +146,78 @@ export class CompanyDeletionService {
   }
 
   /**
+   * Exclusão de uma empresa do PRÓPRIO grupo (filial cadastrada em
+   * "Empresa > Cadastrar empresa") — quem pede é o admin do cliente
+   * (`company.delete`, permissão de tenant normal, sem trava de
+   * e-mail), não o dono da plataforma. Por isso o alvo só pode ser uma
+   * filial (`rootCompanyId` preenchido) da MESMA raiz do chamador —
+   * nunca a própria raiz (encerrar a conta inteira é outra operação,
+   * fora de escopo aqui) nem empresa de outro cliente.
+   *
+   * Sem envolver o Asaas: filial nasce sem assinatura própria
+   * (`CompanyOnboardingService.copyLicense` só copia o plano/módulos
+   * localmente, nunca cria assinatura nova) — a cobrança do grupo
+   * inteiro fica só na empresa raiz.
+   */
+  async deleteGroupCompany(
+    requesterCompanyId: string,
+    targetId: string,
+    confirmDocument: string,
+    actor: { id: string; email: string; name: string },
+  ): Promise<{ success: true }> {
+    const requester = await this.prisma.company.findUnique({
+      where: { id: requesterCompanyId },
+    });
+
+    if (!requester) {
+      throw new NotFoundException('Empresa não encontrada.');
+    }
+
+    const requesterRootId = requester.rootCompanyId ?? requester.id;
+
+    const target = await this.prisma.company.findUnique({
+      where: { id: targetId },
+    });
+
+    if (!target) {
+      throw new NotFoundException('Empresa não encontrada.');
+    }
+
+    if (target.rootCompanyId !== requesterRootId) {
+      throw new ForbiddenException(
+        'Esta empresa não pertence ao seu grupo.',
+      );
+    }
+
+    const onlyDigits = (value: string) => value.replace(/\D/g, '');
+
+    if (onlyDigits(confirmDocument) !== onlyDigits(target.document)) {
+      throw new BadRequestException(
+        'O CNPJ/CPF informado não confere com o da empresa — confirme antes de excluir.',
+      );
+    }
+
+    await this.assertNoMovement(targetId);
+    await this.assertNoSharedLogin(targetId);
+
+    this.logger.warn(
+      `Iniciando exclusão de empresa do grupo: ${target.legalName} (documento ${target.document}, id ${target.id}) — solicitada por ${actor.email} (${actor.name}, id ${actor.id}) em ${new Date().toISOString()}.`,
+    );
+
+    await this.prisma.$transaction([
+      this.prisma.pendingCheckout.deleteMany({ where: { companyId: targetId } }),
+      this.prisma.user.deleteMany({ where: { companyId: targetId } }),
+      this.prisma.company.delete({ where: { id: targetId } }),
+    ]);
+
+    this.logger.warn(
+      `Exclusão de empresa do grupo concluída: ${target.legalName} (documento ${target.document}, id ${target.id}) — executada por ${actor.email} (${actor.name}, id ${actor.id}) em ${new Date().toISOString()}.`,
+    );
+
+    return { success: true };
+  }
+
+  /**
    * `User.companyId` é só a empresa ATIVA da sessão no momento (troca
    * com `AuthService.switchCompany`), não necessariamente a empresa
    * "dona" do login — em `createAdditional` (empresa filial do mesmo

@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   Building2,
+  Loader2,
   Pencil,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -530,16 +532,148 @@ function EditCompanyModal({
   );
 }
 
+/**
+ * Modal de confirmação para excluir uma FILIAL do meu grupo — nunca a
+ * empresa raiz (essa opção não aparece pra ela, ver `CompanyTable`).
+ * Mesma trava do backend: confirmar o CNPJ/CPF da filial e não ter
+ * nenhuma movimentação.
+ */
+function DeleteGroupCompanyModal({
+  company,
+  onClose,
+  onDeleted,
+}: {
+  company: Company;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [confirmDocument, setConfirmDocument] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleDelete() {
+    setDeleting(true);
+    setError("");
+
+    try {
+      await companyService.removeGroupCompany(company.id, confirmDocument);
+      onDeleted();
+      onClose();
+    } catch (err) {
+      setError(
+        extractMessage(err, "Não foi possível excluir a empresa.")
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+      <div className="my-8 w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">
+            Excluir empresa
+          </h2>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="mb-1 text-sm font-medium text-[var(--text-secondary)]">
+              Empresa
+            </p>
+            <p className="text-sm text-[var(--text-primary)]">
+              {company.legalName}
+            </p>
+          </div>
+
+          <div>
+            <p className="mb-1 text-sm font-medium text-[var(--text-secondary)]">
+              CNPJ/CPF
+            </p>
+            <p className="text-sm text-[var(--text-primary)]">
+              {maskDocument(company.document)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+          Atenção: essa exclusão é permanente e não pode ser desfeita.
+          Todos os dados desta empresa são apagados. Só é permitido
+          excluir empresa sem nenhuma movimentação.
+        </div>
+
+        <div className="mt-5">
+          <label
+            htmlFor="confirmGroupDocument"
+            className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+          >
+            Para confirmar, digite o CNPJ/CPF da empresa (
+            {maskDocument(company.document)})
+          </label>
+
+          <input
+            id="confirmGroupDocument"
+            type="text"
+            value={confirmDocument}
+            onChange={(e) => setConfirmDocument(e.target.value)}
+            placeholder="Digite o CNPJ/CPF para confirmar"
+            className={fieldClass}
+          />
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            disabled={deleting || confirmDocument.trim().length === 0}
+            onClick={() => void handleDelete()}
+            className="flex items-center gap-2 rounded-xl bg-[var(--danger)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+          >
+            {deleting && <Loader2 size={16} className="animate-spin" />}
+            Excluir permanentemente
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Tabela reutilizada tanto pra empresa raiz quanto pras empresas do grupo. */
 function CompanyTable({
   companies,
   onEdit,
   onToggleActive,
+  onDelete,
   busyId,
 }: {
   companies: Company[];
   onEdit: (company: Company) => void;
   onToggleActive: (company: Company) => void;
+  /** Só passado pra tabela de filiais — a raiz nunca pode ser excluída por aqui. */
+  onDelete?: (company: Company) => void;
   busyId: string;
 }) {
   return (
@@ -616,6 +750,20 @@ function CompanyTable({
                   >
                     {company.active ? "Desativar" : "Ativar"}
                   </button>
+
+                  {onDelete && (
+                    <Can permission="company.delete">
+                      <button
+                        type="button"
+                        onClick={() => onDelete(company)}
+                        aria-label="Excluir"
+                        title="Excluir empresa"
+                        className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </Can>
+                  )}
                 </div>
               </td>
             </tr>
@@ -639,6 +787,7 @@ function CompaniesSection({ refreshKey }: { refreshKey: number }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Company | null>(null);
+  const [deleting, setDeleting] = useState<Company | null>(null);
   const [busyId, setBusyId] = useState("");
 
   function load() {
@@ -728,6 +877,7 @@ function CompaniesSection({ refreshKey }: { refreshKey: number }) {
             companies={groupCompanies}
             onEdit={setEditing}
             onToggleActive={(c) => void toggleActive(c)}
+            onDelete={setDeleting}
             busyId={busyId}
           />
         </section>
@@ -742,6 +892,14 @@ function CompaniesSection({ refreshKey }: { refreshKey: number }) {
               load();
             }
           }}
+        />
+      )}
+
+      {deleting && (
+        <DeleteGroupCompanyModal
+          company={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={load}
         />
       )}
     </div>

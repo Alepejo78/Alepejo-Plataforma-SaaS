@@ -318,6 +318,44 @@ export class CompanyController {
   }
 
   /**
+   * Exclusão de uma FILIAL do meu próprio grupo (nunca a raiz) — o
+   * admin do cliente usa isso, sem precisar do dono da plataforma.
+   * Só permitida sem nenhuma movimentação
+   * (CompanyDeletionService.assertNoMovement) e exige confirmar o
+   * CNPJ/CPF da filial via `confirmDocument`.
+   */
+  @Delete('group/:id')
+  @Permissions('company.delete')
+  @ApiOperation({
+    summary: 'Excluir uma filial do meu grupo (só sem movimentação)',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'CNPJ/CPF de confirmação não confere com o da empresa.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'A empresa não pertence ao seu grupo.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'A empresa tem movimentação — exclusão bloqueada.',
+  })
+  deleteGroupCompany(
+    @CurrentUser('companyId') companyId: string,
+    @Param('id') id: string,
+    @Query() dto: DeleteCompanyDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.deletionService.deleteGroupCompany(
+      companyId,
+      id,
+      dto.confirmDocument,
+      { id: user.id, email: user.email, name: user.name },
+    );
+  }
+
+  /**
    * Exclusão FÍSICA de empresa — restrita ao dono da plataforma
    * (`platform.company.delete`, mesma trava de e-mail de
    * `platform.license.manage` — ver PermissionsGuard). Só permitida

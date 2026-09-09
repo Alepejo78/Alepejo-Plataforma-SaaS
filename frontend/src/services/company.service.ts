@@ -102,4 +102,20 @@ export const companyService = {
       { params: { confirmDocument } }
     );
   },
+
+  /**
+   * Exclusão de uma filial do meu próprio grupo (`company.delete`,
+   * permissão de tenant normal — nunca a empresa raiz). Mesma
+   * confirmação por CNPJ/CPF e mesma checagem de nenhuma movimentação
+   * do `remove` acima, só que escopado ao grupo do usuário logado.
+   */
+  async removeGroupCompany(
+    id: string,
+    confirmDocument: string
+  ): Promise<void> {
+    await api.delete<ApiEnvelope<null>>(
+      `/companies/group/${id}`,
+      { params: { confirmDocument } }
+    );
+  },
 };
