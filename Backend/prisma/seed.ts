@@ -933,24 +933,14 @@ async function main() {
         "HR",
       ],
     },
-    {
-      code: "COMPLETO",
-      name: "Completo",
-      description: "Profissional + Produção e Ponto/Folha de Pagamento.",
-      sortOrder: 3,
-      highlighted: false,
-      moduleCodes: [
-        "BPS",
-        "PRODUCTS",
-        "INVENTORY",
-        "SALES",
-        "FINANCE",
-        "PURCHASE",
-        "HR",
-        "PRODUCTION",
-        "LABOR",
-      ],
-    },
+    // "Completo" tirado do catálogo — decisão do usuário (09-09-2026):
+    // não é mais um plano vendido. Removido daqui de propósito, não só
+    // desativado: com o código presente aqui, mesmo com o upsert
+    // virando "só cria", o plano voltava sozinho toda vez que alguém
+    // excluía ele em produção (deletar faz `findUnique` não achar
+    // nada, e aí o próximo seed recriava do zero). Se um dia voltar a
+    // vender, recriar como um plano NOVO na tela de administração —
+    // não reaproveitar o code COMPLETO.
     {
       // Mesma composição de add-billing-catalog.ts — se mudar aqui, mudar lá também.
       code: "CUSTOM",

@@ -45,24 +45,8 @@ const PLANS: {
       'HR',
     ],
   },
-  {
-    code: 'COMPLETO',
-    name: 'Completo',
-    description: 'Profissional + Produção e Ponto/Folha de Pagamento.',
-    sortOrder: 3,
-    highlighted: false,
-    moduleCodes: [
-      'BPS',
-      'PRODUCTS',
-      'INVENTORY',
-      'SALES',
-      'FINANCE',
-      'PURCHASE',
-      'HR',
-      'PRODUCTION',
-      'LABOR',
-    ],
-  },
+  // "Completo" tirado do catálogo — decisão do usuário (09-09-2026),
+  // ver o mesmo comentário em seed.ts.
   {
     // Sem planModules de propósito: o acesso vem inteiramente dos
     // CompanyModule que o cliente escolheu no montador
