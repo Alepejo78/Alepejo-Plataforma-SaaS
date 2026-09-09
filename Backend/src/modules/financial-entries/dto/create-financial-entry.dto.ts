@@ -125,6 +125,15 @@ export class CreateFinancialEntryDto {
   @IsEnum(PaymentMethod, { message: 'Informe a forma de pagamento.' })
   paymentMethod: PaymentMethod;
 
+  /// Diferença entre bruto e líquido, quando a origem do título traz
+  /// os dois valores (ex.: importação de orçamento de oficina) — só
+  /// informativo, não entra na conta de `amount`.
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  discountValue?: number;
+
   @IsOptional()
   @IsString()
   @MaxLength(500)

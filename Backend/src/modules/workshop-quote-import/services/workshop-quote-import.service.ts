@@ -188,6 +188,15 @@ export class WorkshopQuoteImportService {
       0,
     );
 
+    // Bruto ≠ líquido nalgum item quer dizer que a oficina deu
+    // desconto nele — a soma dessas diferenças vira o desconto do
+    // título inteiro, só pra registro (o valor cobrado já é o
+    // líquido, em `totalAmount`).
+    const discountValue = resolvedItems.reduce(
+      (sum, item) => sum + Math.max(item.grossValue - item.netValue, 0),
+      0,
+    );
+
     const installments = buildAutoInstallments(
       new Date(`${dto.issueDate}T00:00:00Z`),
       dto.termDays,
@@ -213,6 +222,7 @@ export class WorkshopQuoteImportService {
         paymentMethod: dto.paymentMethod,
         documentNumber: dto.documentNumber,
         documentType: FinancialDocumentType.ORDEM_SERVICO,
+        discountValue,
         observation: 'Importado do orçamento de oficina.',
         installments: installments.map((i) => ({
           dueDate: i.dueDate.toISOString(),

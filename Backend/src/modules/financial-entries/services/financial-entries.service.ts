@@ -117,6 +117,7 @@ export class FinancialEntriesService {
             documentNumber: dto.documentNumber,
             documentType: dto.documentType,
             documentKey: dto.documentKey,
+            discountValue: dto.discountValue,
             observation: dto.observation,
             installments: dto.installments!.map((installment) => ({
               dueDate: new Date(installment.dueDate),
@@ -155,6 +156,7 @@ export class FinancialEntriesService {
       documentType: dto.documentType,
       documentKey: dto.documentKey,
       amount: hasItems ? itemsTotal! : dto.amount!,
+      discountValue: dto.discountValue ?? 0,
       paymentMethod: dto.paymentMethod,
       observation: dto.observation,
       createdById: userId,
@@ -440,6 +442,7 @@ export class FinancialEntriesService {
       documentNumber: dto.documentNumber ?? entry.documentNumber ?? undefined,
       documentType: dto.documentType ?? entry.documentType ?? undefined,
       documentKey: dto.documentKey ?? entry.documentKey ?? undefined,
+      discountValue: dto.discountValue ?? entry.discountValue ?? undefined,
       paymentMethod: dto.paymentMethod ?? entry.paymentMethod ?? undefined,
       observation: dto.observation ?? entry.observation ?? undefined,
     };
@@ -696,6 +699,9 @@ export class FinancialEntriesService {
       vacationGrantId?: string;
       salaryAdvanceId?: string;
       observation?: string;
+      /// Diferença entre bruto e líquido do documento de origem, só
+      /// informativa — replicada igual em cada parcela.
+      discountValue?: number;
       /** Mais de um produto/serviço no documento — ver `FinancialEntryItem`. */
       items?: {
         productId?: string;
@@ -735,6 +741,7 @@ export class FinancialEntriesService {
           documentNumber: params.documentNumber ?? undefined,
           documentKey: params.documentKey ?? undefined,
           documentType: params.documentType ?? undefined,
+          discountValue: params.discountValue ?? 0,
           chartOfAccountId: chartOfAccountId ?? undefined,
           productId: productId ?? undefined,
           purchaseId: params.purchaseId,

@@ -2091,6 +2091,11 @@ model FinancialEntry {
   amount     Decimal @db.Decimal(18, 2)
   paidAmount Decimal @default(0) @db.Decimal(18, 2)
 
+  /// Diferença entre bruto e líquido, quando a origem do título traz
+  /// os dois valores (ex.: importação de orçamento de oficina com
+  /// desconto por item) — só informativo, `amount` já é o líquido.
+  discountValue Decimal @default(0) @db.Decimal(18, 2)
+
   paymentDate   DateTime?
   paymentMethod PaymentMethod?
 

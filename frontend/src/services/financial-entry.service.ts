@@ -133,6 +133,8 @@ export interface FinancialEntry {
   documentType?: FinancialDocumentType | null;
   documentKey?: string | null;
   amount: string | number;
+  /** Diferença entre bruto e líquido, quando a origem do título traz os dois — só informativo. */
+  discountValue?: string | number | null;
   paidAmount: string | number;
   paymentDate?: string | null;
   paymentMethod?: PaymentMethod | null;
@@ -194,6 +196,8 @@ export interface FinancialEntryPayload {
   documentKey?: string;
   /** Obrigatório só quando não vier `installments` nem `items` (nesses casos é calculado). */
   amount?: number;
+  /** Diferença entre bruto e líquido, quando a origem do título traz os dois — só informativo. */
+  discountValue?: number;
   /** Parcelamento — cada parcela vira um título próprio, com vencimento e valor editáveis. */
   installments?: { dueDate: string; amount: number }[];
   /** Mais de um produto/serviço no mesmo título, cada um com sua própria conta contábil — ver `FinancialEntryItem`. */

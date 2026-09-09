@@ -46,6 +46,14 @@ function toNumber(raw: string): number {
   return Number(raw.replace(/\./g, '').replace(',', '.'));
 }
 
+/// Linha de cabeçalho da tabela ("Código"/"Descrição" entre os campos
+/// da própria planilha) — a ordem das colunas nesse cabeçalho varia
+/// conforme o export, então não dá pra checar por prefixo fixo; basta
+/// conferir se os dois rótulos aparecem como campo inteiro.
+function isTableHeaderRow(fields: string[]): boolean {
+  return fields.includes('Código') && fields.includes('Descrição');
+}
+
 function findLine(
   lines: string[],
   pattern: RegExp,
@@ -298,10 +306,14 @@ export class WorkshopQuotePdfParserService {
   }
 
   /**
-   * Linha de item de peça, já extraída do `pdf-parse` (colunas fora
-   * de ordem): `<UNIDADE> <BRUTO> <LÍQUIDO><CÓDIGO><ITEM> <DESCRIÇÃO>
-   * <QUANTIDADE,000>`, campos separados por TAB — ex.: "PC 100,00
-   * 100,00\t007185\t1 VARETA NIVEL OLEO MOTOR /NEVESCAR 1,000".
+   * Linha de item de peça, já extraída do `pdf-parse` — campos
+   * separados por TAB, nessa ordem real (conferida linha a linha
+   * contra a saída do `pdf-parse` pro export da Fazam Car):
+   * `<LÍQUIDO>\t<BRUTO>\t<UNIDADE>\t<CÓDIGO>\t<ITEM DESCRIÇÃO QUANTIDADE,000>`
+   * — ex.: "100,00\t100,00\tUN\t001183\t1 ADITIVO P/ RADIADOR 2,000".
+   * Extrai valor e unidade varrendo os campos ANTES do código (em vez
+   * de posição fixa), pra não quebrar se um export vier com essas
+   * duas colunas na ordem trocada entre si.
    */
   private parsePartItems(
     lines: string[],
@@ -321,12 +333,13 @@ export class WorkshopQuotePdfParserService {
 
     for (const line of section) {
       if (!line.includes('\t')) continue;
-      if (line.startsWith('Código')) continue;
       // "Total: 100,00" ou, com a ordem das colunas invertida,
       // "100,00\tTotal de Peças:" — não é linha de item nos dois casos.
       if (/\bTotal\b/i.test(line)) continue;
 
       const fields = line.split('\t').map((f) => f.trim());
+      if (isTableHeaderRow(fields)) continue;
+
       const codeFieldIndex = fields.findIndex((f) =>
         CODE_FIELD_PATTERN.test(f),
       );
@@ -336,26 +349,29 @@ export class WorkshopQuotePdfParserService {
         continue;
       }
 
-      const unitMoneyField = fields[codeFieldIndex - 1] ?? fields[0];
+      const fieldsBeforeCode = fields.slice(0, codeFieldIndex);
       const itemDescQtyField =
         fields[codeFieldIndex + 1] ?? fields[fields.length - 1];
 
-      const unitMatch = unitMoneyField.match(/^([A-ZÀ-Ú]{1,6})\s/);
-      const unit = unitMatch?.[1] ?? 'UN';
+      const unit =
+        fieldsBeforeCode.find((f) => /^[A-ZÀ-Ú]{1,6}$/.test(f)) ?? 'UN';
 
-      const moneyMatches = [
-        ...unitMoneyField.matchAll(new RegExp(MONEY_PATTERN, 'g')),
-      ];
+      const moneyMatches = fieldsBeforeCode.flatMap((f) => [
+        ...f.matchAll(new RegExp(MONEY_PATTERN, 'g')),
+      ]);
 
       if (moneyMatches.length === 0) {
         warnings.push(`Não achei o valor da peça "${fields[codeFieldIndex]}".`);
         continue;
       }
 
-      const netValue = toNumber(
-        moneyMatches[moneyMatches.length - 1][0],
+      // Campos vêm na ordem Líquido, Bruto — cada um em seu próprio
+      // campo de TAB (não colados), então o primeiro valor achado é
+      // sempre o líquido.
+      const netValue = toNumber(moneyMatches[0][0]);
+      const grossValue = toNumber(
+        moneyMatches[1]?.[0] ?? moneyMatches[0][0],
       );
-      const grossValue = toNumber(moneyMatches[0][0]);
 
       const { code, itemNumber: _itemNumber } = splitCodeAndItemNumber(
         fields[codeFieldIndex],
@@ -389,12 +405,13 @@ export class WorkshopQuotePdfParserService {
   }
 
   /**
-   * Linha de item de serviço, já extraída do `pdf-parse`: `<LÍQUIDO>
-   * [<%DESCONTO>] <BRUTO> <TEMPO> <QUANTIDADE> <CÓDIGO> <DESCRIÇÃO>`,
-   * campos separados por TAB, código e descrição sempre juntos no
-   * último campo — ex.: "125,00\t125,00\t1,00\t0,00\t000129 TROCA DA
-   * VARETA DE OLEO DO MOTOR". Sem coluna de unidade nessa tabela — usa
-   * sempre "UN" e a quantidade é o campo "Tempo" (penúltimo número).
+   * Linha de item de serviço, já extraída do `pdf-parse` — dois campos
+   * separados por TAB: o primeiro traz código e todos os números
+   * colados por espaço (não por TAB), o segundo é a descrição pura.
+   * Ordem real dos números depois do código: quantidade (sempre
+   * "0,00", não usada nessa tabela), tempo, bruto, líquido — ex.:
+   * "000227 0,00 1,00 300,00 300,00\tPLAINA DO CABECOTE". Sem coluna
+   * de unidade — usa sempre "UN" e a quantidade do item é o "Tempo".
    */
   private parseServiceItems(
     lines: string[],
@@ -414,47 +431,53 @@ export class WorkshopQuotePdfParserService {
 
     for (const line of section) {
       if (!line.includes('\t')) continue;
-      if (line.startsWith('Código')) continue;
       // "Total: 100,00" ou, com a ordem das colunas invertida,
       // "100,00\tTotal de Peças:" — não é linha de item nos dois casos.
       if (/\bTotal\b/i.test(line)) continue;
 
       const fields = line.split('\t').map((f) => f.trim());
-      const lastField = fields[fields.length - 1];
+      if (isTableHeaderRow(fields)) continue;
 
-      const codeDescMatch = lastField.match(/^(\d{4,8})\s+(.+)$/);
+      const firstField = fields[0];
+      const description = fields[fields.length - 1];
 
-      if (!codeDescMatch) {
+      const codeMatch = firstField.match(/^(\d{4,8})\b/);
+
+      if (!codeMatch) {
         warnings.push(`Não entendi esta linha de serviço: "${line}".`);
         continue;
       }
 
-      const [, code, description] = codeDescMatch;
+      const code = codeMatch[1];
 
-      const numericFields = fields
-        .slice(0, -1)
-        .filter((f) => MONEY_PATTERN.test(f));
+      const numberTokens = firstField
+        .slice(codeMatch[0].length)
+        .trim()
+        .split(/\s+/)
+        .filter((token) => MONEY_PATTERN.test(token));
 
-      if (numericFields.length === 0) {
+      if (numberTokens.length === 0) {
         warnings.push(`Não achei o valor do serviço "${code}".`);
         continue;
       }
 
-      const netValue = toNumber(numericFields[0]);
-      const grossValue = toNumber(
-        numericFields[1] ?? numericFields[0],
-      );
-      // Tempo é sempre o penúltimo número (o último é "Quantidade",
-      // que a oficina não usa nesta tabela — fica sempre 0,00).
+      // Bruto e líquido são sempre os dois últimos números; quantidade
+      // (não usada nessa tabela) vem antes deles, se houver.
+      const netValue = toNumber(numberTokens[numberTokens.length - 1]);
+      const grossValue =
+        numberTokens.length >= 2
+          ? toNumber(numberTokens[numberTokens.length - 2])
+          : netValue;
+      // Tempo é o terceiro número a partir do fim (quando presente).
       const tempo =
-        numericFields.length >= 2
-          ? toNumber(numericFields[numericFields.length - 2])
+        numberTokens.length >= 3
+          ? toNumber(numberTokens[numberTokens.length - 3])
           : 1;
 
       items.push({
         kind: 'SERVICE',
         code,
-        description: description.trim(),
+        description: description || firstField,
         unit: 'UN',
         quantity: tempo > 0 ? tempo : 1,
         grossValue,

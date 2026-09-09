@@ -139,6 +139,8 @@ interface Form {
   documentKey: string;
   documentType: FinancialDocumentType | "";
   amount: number;
+  /** Diferença entre bruto e líquido (desconto), quando a origem do título traz os dois — só informativo. */
+  discountValue: number;
   paymentMethod: PaymentMethod | "";
   observation: string;
 }
@@ -177,6 +179,7 @@ function emptyForm(): Form {
     documentKey: "",
     documentType: "",
     amount: 0,
+    discountValue: 0,
     paymentMethod: "",
     observation: "",
   };
@@ -487,6 +490,7 @@ export function FinancialEntriesScreen({
       documentKey: entry.documentKey ?? "",
       documentType: entry.documentType ?? "",
       amount: num(entry.amount),
+      discountValue: num(entry.discountValue ?? 0),
       paymentMethod: entry.paymentMethod ?? "",
       observation: entry.observation ?? "",
     });
@@ -707,6 +711,7 @@ export function FinancialEntriesScreen({
         documentKey: form.documentKey || undefined,
         documentType: form.documentType || undefined,
         amount: isParceled || isMultiItem ? undefined : form.amount,
+        discountValue: form.discountValue || undefined,
         installments: isParceled ? validInstallments : undefined,
         paymentMethod: form.paymentMethod as PaymentMethod,
         observation: form.observation || undefined,
@@ -1598,7 +1603,7 @@ export function FinancialEntriesScreen({
                   )}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-4">
                 <div>
                   <label className={labelClass}>
                     Documento
@@ -1663,6 +1668,27 @@ export function FinancialEntriesScreen({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Desconto
+                  </label>
+
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    placeholder="0,00"
+                    className={fieldClass}
+                    value={form.discountValue || ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        discountValue: Number(e.target.value) || 0,
+                      })
+                    }
+                  />
                 </div>
               </div>
 
