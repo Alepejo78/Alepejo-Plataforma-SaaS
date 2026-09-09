@@ -23,8 +23,22 @@ const VIDEO_OCIOSO = "/videos/pejo-nudge.mp4";
 /** Espera sem interação até o Pejo "chamar atenção" com uma reação sozinho. */
 const OCIOSO_MS = 10_000;
 
+/** Só acima disso conta como arrastar — abaixo é considerado clique (dedo/mouse tremeu um pouco). */
+const LIMIAR_ARRASTO_PX = 6;
+
+interface EstadoArrasto {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  origemLeft: number;
+  origemTop: number;
+  arrastando: boolean;
+}
+
 /**
- * Pejo fixo no canto inferior esquerdo. Três estados de vídeo:
+ * Pejo fixo no canto inferior esquerdo, mas pode ser arrastado pra
+ * qualquer lugar da tela (fica preso ali até recarregar a página).
+ * Três estados de vídeo:
  * - padrão: em loop, o tempo todo;
  * - ao clicar: toca uma reação aleatória uma vez e volta pro padrão;
  * - ocioso (10s sem clique): toca uma reação "chamando atenção" uma
@@ -36,6 +50,74 @@ export function MascoteFlutuante() {
   const [visivel, setVisivel] = useState(false);
   const [video, setVideo] = useState(VIDEO_PADRAO);
   const ociosoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // `null` = posição padrão (CSS bottom/left); depois do 1º arrasto
+  // vira coordenada livre em pixels, sobrepondo o CSS.
+  const [posicao, setPosicao] = useState<{ left: number; top: number } | null>(
+    null
+  );
+  const raizRef = useRef<HTMLDivElement>(null);
+  const arrastoRef = useRef<EstadoArrasto | null>(null);
+  // Setado no fim de um arrasto de verdade — `aoClicar` confere e
+  // ignora o clique nativo que o navegador dispara logo depois do
+  // pointerup (senão todo arrasto também abriria o balão de fala).
+  const arrastouRef = useRef(false);
+
+  function aoPointerDown(event: React.PointerEvent) {
+    const raiz = raizRef.current;
+    if (!raiz) return;
+
+    const rect = raiz.getBoundingClientRect();
+
+    arrastoRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      origemLeft: rect.left,
+      origemTop: rect.top,
+      arrastando: false,
+    };
+  }
+
+  function aoPointerMove(event: React.PointerEvent) {
+    const estado = arrastoRef.current;
+    const raiz = raizRef.current;
+    if (!estado || !raiz || estado.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - estado.startX;
+    const dy = event.clientY - estado.startY;
+
+    if (!estado.arrastando) {
+      if (Math.hypot(dx, dy) < LIMIAR_ARRASTO_PX) {
+        return;
+      }
+
+      estado.arrastando = true;
+      raiz.setPointerCapture(event.pointerId);
+    }
+
+    const largura = raiz.offsetWidth;
+    const altura = raiz.offsetHeight;
+    const maxLeft = Math.max(window.innerWidth - largura, 0);
+    const maxTop = Math.max(window.innerHeight - altura, 0);
+
+    setPosicao({
+      left: Math.min(Math.max(estado.origemLeft + dx, 0), maxLeft),
+      top: Math.min(Math.max(estado.origemTop + dy, 0), maxTop),
+    });
+  }
+
+  function aoPointerUp(event: React.PointerEvent) {
+    const estado = arrastoRef.current;
+    if (estado?.pointerId !== event.pointerId) return;
+
+    if (estado.arrastando) {
+      arrastouRef.current = true;
+      raizRef.current?.releasePointerCapture(event.pointerId);
+    }
+
+    arrastoRef.current = null;
+  }
 
   const reiniciarOcioso = useCallback(() => {
     if (ociosoTimer.current) {
@@ -77,6 +159,13 @@ export function MascoteFlutuante() {
   }
 
   function aoClicar() {
+    if (arrastouRef.current) {
+      // Clique nativo disparado pelo navegador logo após um arrasto —
+      // não é uma intenção de abrir o balão de fala.
+      arrastouRef.current = false;
+      return;
+    }
+
     setAberto(!aberto);
     const escolhido =
       VIDEOS_CLIQUE[Math.floor(Math.random() * VIDEOS_CLIQUE.length)];
@@ -95,13 +184,27 @@ export function MascoteFlutuante() {
   }
 
   return (
-    <div className="pointer-events-none fixed bottom-12 left-3 z-30 flex items-end gap-2 print:hidden sm:left-5">
+    <div
+      ref={raizRef}
+      onPointerDown={aoPointerDown}
+      onPointerMove={aoPointerMove}
+      onPointerUp={aoPointerUp}
+      onPointerCancel={aoPointerUp}
+      style={
+        posicao
+          ? { left: posicao.left, top: posicao.top, bottom: "auto" }
+          : undefined
+      }
+      className={`pointer-events-none fixed z-30 flex items-end gap-2 print:hidden ${
+        posicao ? "" : "bottom-12 left-3 sm:left-5"
+      }`}
+    >
       <ChromaKeyVideo
         src={video}
         loop={video === VIDEO_PADRAO}
         onEnded={aoTerminarReacao}
         onClick={aoClicar}
-        className="pointer-events-auto h-[110px] w-[160px] cursor-pointer object-contain drop-shadow-lg sm:h-[135px] sm:w-[195px]"
+        className="pointer-events-auto h-[110px] w-[160px] cursor-pointer touch-none select-none object-contain drop-shadow-lg sm:h-[135px] sm:w-[195px]"
       />
 
       {aberto && (
