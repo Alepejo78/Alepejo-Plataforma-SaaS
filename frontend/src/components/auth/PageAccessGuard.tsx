@@ -16,7 +16,8 @@ export function PageAccessGuard({
   permission,
   children,
 }: {
-  permission: string;
+  /** Uma permissão, ou uma lista — lista libera com QUALQUER uma delas (ex.: página que mistura seções de módulos diferentes). */
+  permission: string | string[];
   children: ReactNode;
 }) {
   const { can, loading } = useAuth();
@@ -25,7 +26,11 @@ export function PageAccessGuard({
     return null;
   }
 
-  if (!can(permission)) {
+  const allowed = Array.isArray(permission)
+    ? permission.some((p) => can(p))
+    : can(permission);
+
+  if (!allowed) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-8">
         <div className="flex max-w-md flex-col items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center">

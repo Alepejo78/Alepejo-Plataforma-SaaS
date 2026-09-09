@@ -10,6 +10,11 @@ import type { EmailSummaryPaymentTerms } from '../../../core/utils/email-documen
 
 import { ServiceOrderRepository } from '../repositories/service-order.repository';
 import { ServiceOrderService } from './service-order.service';
+import { DocumentTemplateSettingsService } from '../../document-template-settings/services/document-template-settings.service';
+import {
+  drawPdfFooter,
+  drawPdfHeader,
+} from '../../document-template-settings/utils/pdf-header-footer.util';
 
 type ServiceOrderWithRelations = Awaited<
   ReturnType<ServiceOrderRepository['create']>
@@ -53,13 +58,28 @@ function serviceOrderNumberOf(order: { number: number }): string {
 export class ServiceOrderPdfService {
   private readonly logger = new Logger(ServiceOrderPdfService.name);
 
-  constructor(private readonly serviceOrderService: ServiceOrderService) {}
+  constructor(
+    private readonly serviceOrderService: ServiceOrderService,
+    private readonly documentTemplateSettingsService: DocumentTemplateSettingsService,
+  ) {}
 
   async generate(
     order: ServiceOrderWithRelations,
     company: Company | null,
   ): Promise<Buffer> {
-    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    const templateSettings = company
+      ? await this.documentTemplateSettingsService.getSettings(company.id)
+      : null;
+
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: {
+        top: templateSettings?.pdfHeader ? 64 : 40,
+        bottom: templateSettings?.pdfFooter ? 56 : 40,
+        left: 40,
+        right: 40,
+      },
+    });
 
     const chunks: Buffer[] = [];
 
@@ -70,7 +90,11 @@ export class ServiceOrderPdfService {
       doc.on('error', reject);
     });
 
+    drawPdfHeader(doc, templateSettings?.pdfHeader);
+
     await this.render(doc, order, company);
+
+    drawPdfFooter(doc, templateSettings?.pdfFooter);
 
     doc.end();
 

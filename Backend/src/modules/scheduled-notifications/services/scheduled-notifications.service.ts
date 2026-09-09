@@ -13,6 +13,13 @@ import { EmailNotificationsService } from '../../notifications/services/email-no
 import { WhatsappNotificationsService } from '../../notifications/services/whatsapp-notifications.service';
 import { InAppNotificationsService } from '../../in-app-notifications/services/in-app-notifications.service';
 import { EntryChargeService } from '../../entry-charges/services/entry-charge.service';
+import { ScheduledNotificationSettingsService } from '../../scheduled-notification-settings/services/scheduled-notification-settings.service';
+import {
+  renderTemplate,
+  wrapHtml,
+  wrapPlainText,
+} from '../../scheduled-notification-settings/utils/render-template.util';
+import type { ScheduledNotificationSettings } from '@prisma/client';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const FIXED_EXAM_REMINDER_DAYS = 3;
@@ -47,7 +54,24 @@ export class ScheduledNotificationsService {
     private readonly whatsappNotifications: WhatsappNotificationsService,
     private readonly inAppNotifications: InAppNotificationsService,
     private readonly entryChargeService: EntryChargeService,
+    private readonly notificationSettingsService: ScheduledNotificationSettingsService,
   ) {}
+
+  /** Uma query só pra todas as empresas envolvidas no laço — mesmo padrão já usado pra `payrollSettings`/`paymentReminderSettings` aqui. */
+  private async settingsByCompany(
+    companyIds: string[],
+  ): Promise<Map<string, ScheduledNotificationSettings>> {
+    if (companyIds.length === 0) {
+      return new Map();
+    }
+
+    const list =
+      await this.notificationSettingsService.findManyByCompanyIds(
+        companyIds,
+      );
+
+    return new Map(list.map((s) => [s.companyId, s]));
+  }
 
   @Cron('0 8 * * *', { timeZone: 'America/Sao_Paulo' })
   async runDailyNotifications() {
@@ -98,6 +122,9 @@ export class ScheduledNotificationsService {
     });
 
     const todayUtc = utcMidnight(new Date());
+    const settingsByCompany = await this.settingsByCompany([
+      ...new Set(employees.map((e) => e.companyId)),
+    ]);
 
     for (const employee of employees) {
       if (!employee.email && !employee.mobile) {
@@ -129,13 +156,23 @@ export class ScheduledNotificationsService {
         { timeZone: 'UTC' },
       );
 
-      const message =
-        daysUntil === 0
+      const settings = settingsByCompany.get(employee.companyId);
+      const vars = {
+        nome: employee.name,
+        empresa: companyName,
+        data: examDateLabel,
+        dias: String(daysUntil),
+      };
+
+      const message = settings?.examReminderMessage
+        ? renderTemplate(settings.examReminderMessage, vars)
+        : daysUntil === 0
           ? `Olá, ${employee.name}! Você tem exame ocupacional hoje (${examDateLabel}). Não esqueça!`
           : `Olá, ${employee.name}! Seu exame ocupacional está marcado para ${examDateLabel} (em ${daysUntil} dia${daysUntil === 1 ? '' : 's'}). Não esqueça!`;
 
-      const subject =
-        daysUntil === 0
+      const subject = settings?.examReminderSubject
+        ? renderTemplate(settings.examReminderSubject, vars)
+        : daysUntil === 0
           ? `Você tem exame hoje — ${companyName}`
           : `Lembrete de exame ocupacional — ${companyName}`;
 
@@ -144,7 +181,11 @@ export class ScheduledNotificationsService {
           employee.companyId,
           employee.email,
           subject,
-          `<p>${message}</p>`,
+          wrapHtml(
+            `<p>${message}</p>`,
+            settings?.announcementHeader,
+            settings?.announcementFooter,
+          ),
         );
       }
 
@@ -152,7 +193,11 @@ export class ScheduledNotificationsService {
         void this.whatsappNotifications.send(
           employee.companyId,
           employee.mobile,
-          message,
+          wrapPlainText(
+            message,
+            settings?.announcementHeader,
+            settings?.announcementFooter,
+          ),
         );
       }
     }
@@ -169,6 +214,9 @@ export class ScheduledNotificationsService {
     });
 
     const today = new Date();
+    const settingsByCompany = await this.settingsByCompany([
+      ...new Set(employees.map((e) => e.companyId)),
+    ]);
 
     for (const employee of employees) {
       const birth = employee.birthDate!;
@@ -187,14 +235,28 @@ export class ScheduledNotificationsService {
       const companyName =
         employee.company.tradeName ||
         employee.company.legalName;
-      const message = `Feliz aniversário, ${employee.name}! 🎉 Toda a equipe da ${companyName} deseja um ótimo dia!`;
+
+      const settings = settingsByCompany.get(employee.companyId);
+      const vars = { nome: employee.name, empresa: companyName };
+
+      const message = settings?.birthdayMessage
+        ? renderTemplate(settings.birthdayMessage, vars)
+        : `Feliz aniversário, ${employee.name}! 🎉 Toda a equipe da ${companyName} deseja um ótimo dia!`;
+
+      const subject = settings?.birthdaySubject
+        ? renderTemplate(settings.birthdaySubject, vars)
+        : 'Feliz aniversário! 🎉';
 
       if (employee.email) {
         void this.emailNotifications.send(
           employee.companyId,
           employee.email,
-          'Feliz aniversário! 🎉',
-          `<p>${message}</p>`,
+          subject,
+          wrapHtml(
+            `<p>${message}</p>`,
+            settings?.announcementHeader,
+            settings?.announcementFooter,
+          ),
         );
       }
 
@@ -202,7 +264,11 @@ export class ScheduledNotificationsService {
         void this.whatsappNotifications.send(
           employee.companyId,
           employee.mobile,
-          message,
+          wrapPlainText(
+            message,
+            settings?.announcementHeader,
+            settings?.announcementFooter,
+          ),
         );
       }
     }
@@ -237,6 +303,8 @@ export class ScheduledNotificationsService {
     const settingsByCompany = new Map(
       settingsList.map((s) => [s.companyId, s]),
     );
+    const notificationSettingsByCompany =
+      await this.settingsByCompany(companyIds);
 
     const todayUtc = utcMidnight(new Date());
     const todayStr = new Date(todayUtc).toISOString().slice(0, 10);
@@ -266,17 +334,36 @@ export class ScheduledNotificationsService {
         { timeZone: 'UTC' },
       );
 
-      const message =
-        daysUntil === 0
+      const notificationSettings = notificationSettingsByCompany.get(
+        employee.companyId,
+      );
+      const vars = {
+        nome: employee.name,
+        empresa: companyName,
+        data: closingLabel,
+        dias: String(daysUntil),
+      };
+
+      const message = notificationSettings?.hourBankClosingMessage
+        ? renderTemplate(notificationSettings.hourBankClosingMessage, vars)
+        : daysUntil === 0
           ? `Olá, ${employee.name}! Hoje (${closingLabel}) fecha o seu banco de horas.`
           : `Olá, ${employee.name}! Seu banco de horas fecha em ${closingLabel} (em ${daysUntil} dia${daysUntil === 1 ? '' : 's'}).`;
+
+      const subject = notificationSettings?.hourBankClosingSubject
+        ? renderTemplate(notificationSettings.hourBankClosingSubject, vars)
+        : `Fechamento do banco de horas — ${companyName}`;
 
       if (employee.email) {
         void this.emailNotifications.send(
           employee.companyId,
           employee.email,
-          `Fechamento do banco de horas — ${companyName}`,
-          `<p>${message}</p>`,
+          subject,
+          wrapHtml(
+            `<p>${message}</p>`,
+            notificationSettings?.announcementHeader,
+            notificationSettings?.announcementFooter,
+          ),
         );
       }
 
@@ -284,7 +371,11 @@ export class ScheduledNotificationsService {
         void this.whatsappNotifications.send(
           employee.companyId,
           employee.mobile,
-          message,
+          wrapPlainText(
+            message,
+            notificationSettings?.announcementHeader,
+            notificationSettings?.announcementFooter,
+          ),
         );
       }
 
@@ -344,6 +435,8 @@ export class ScheduledNotificationsService {
     const companiesWithPayroll = new Set(
       payrolls.map((p) => p.companyId),
     );
+    const notificationSettingsByCompany =
+      await this.settingsByCompany(companyIds);
 
     const todayStr = new Date(utcMidnight(now)).toISOString().slice(0, 10);
 
@@ -366,14 +459,30 @@ export class ScheduledNotificationsService {
 
       const companyName =
         employee.company.tradeName || employee.company.legalName;
-      const message = `Olá, ${employee.name}! O mês de ponto está fechando — regularize suas batidas antes do fechamento.`;
+
+      const notificationSettings = notificationSettingsByCompany.get(
+        employee.companyId,
+      );
+      const vars = { nome: employee.name, empresa: companyName };
+
+      const message = notificationSettings?.pointClosingMessage
+        ? renderTemplate(notificationSettings.pointClosingMessage, vars)
+        : `Olá, ${employee.name}! O mês de ponto está fechando — regularize suas batidas antes do fechamento.`;
+
+      const subject = notificationSettings?.pointClosingSubject
+        ? renderTemplate(notificationSettings.pointClosingSubject, vars)
+        : `Regularize seu ponto — ${companyName}`;
 
       if (employee.email) {
         void this.emailNotifications.send(
           employee.companyId,
           employee.email,
-          `Regularize seu ponto — ${companyName}`,
-          `<p>${message}</p>`,
+          subject,
+          wrapHtml(
+            `<p>${message}</p>`,
+            notificationSettings?.announcementHeader,
+            notificationSettings?.announcementFooter,
+          ),
         );
       }
 
@@ -381,7 +490,11 @@ export class ScheduledNotificationsService {
         void this.whatsappNotifications.send(
           employee.companyId,
           employee.mobile,
-          message,
+          wrapPlainText(
+            message,
+            notificationSettings?.announcementHeader,
+            notificationSettings?.announcementFooter,
+          ),
         );
       }
 
@@ -433,6 +546,8 @@ export class ScheduledNotificationsService {
     const settingsByCompany = new Map(
       settingsList.map((s) => [s.companyId, s]),
     );
+    const notificationSettingsByCompany =
+      await this.settingsByCompany(companyIds);
 
     const todayUtc = utcMidnight(new Date());
 
@@ -463,13 +578,35 @@ export class ScheduledNotificationsService {
         currency: 'BRL',
       });
 
-      const message = isOverdueTrigger
-        ? `Olá, ${partnerName}! Sua conta de ${amountLabel} com ${companyName} venceu em ${dueLabel} e ainda está em aberto.`
-        : `Olá, ${partnerName}! Sua conta de ${amountLabel} com ${companyName} vence em ${dueLabel} (em ${daysUntil} dia${daysUntil === 1 ? '' : 's'}).`;
+      const notificationSettings = notificationSettingsByCompany.get(
+        entry.companyId,
+      );
+      const vars = {
+        nome: partnerName,
+        empresa: companyName,
+        valor: amountLabel,
+        data: dueLabel,
+        dias: String(Math.abs(daysUntil)),
+      };
 
-      const subject = isOverdueTrigger
-        ? `Conta em atraso — ${companyName}`
-        : `Lembrete de vencimento — ${companyName}`;
+      const customMessage = isOverdueTrigger
+        ? notificationSettings?.paymentReminderOverdueMessage
+        : notificationSettings?.paymentReminderBeforeMessage;
+      const customSubject = isOverdueTrigger
+        ? notificationSettings?.paymentReminderOverdueSubject
+        : notificationSettings?.paymentReminderBeforeSubject;
+
+      const message = customMessage
+        ? renderTemplate(customMessage, vars)
+        : isOverdueTrigger
+          ? `Olá, ${partnerName}! Sua conta de ${amountLabel} com ${companyName} venceu em ${dueLabel} e ainda está em aberto.`
+          : `Olá, ${partnerName}! Sua conta de ${amountLabel} com ${companyName} vence em ${dueLabel} (em ${daysUntil} dia${daysUntil === 1 ? '' : 's'}).`;
+
+      const subject = customSubject
+        ? renderTemplate(customSubject, vars)
+        : isOverdueTrigger
+          ? `Conta em atraso — ${companyName}`
+          : `Lembrete de vencimento — ${companyName}`;
 
       // Reenvia junto o mesmo meio de pagamento (boleto/PIX/cartão/
       // transferência) já gerado pro título — gera na primeira vez se
@@ -482,7 +619,11 @@ export class ScheduledNotificationsService {
           entry.companyId,
           partner.email,
           subject,
-          `<p>${message}</p>${paymentInstructions?.html ?? ''}`,
+          wrapHtml(
+            `<p>${message}</p>${paymentInstructions?.html ?? ''}`,
+            notificationSettings?.announcementHeader,
+            notificationSettings?.announcementFooter,
+          ),
           paymentInstructions?.attachments,
         );
       }
@@ -491,9 +632,13 @@ export class ScheduledNotificationsService {
         void this.whatsappNotifications.send(
           entry.companyId,
           partner.mobile,
-          paymentInstructions?.text
-            ? `${message}\n${paymentInstructions.text}`
-            : message,
+          wrapPlainText(
+            paymentInstructions?.text
+              ? `${message}\n${paymentInstructions.text}`
+              : message,
+            notificationSettings?.announcementHeader,
+            notificationSettings?.announcementFooter,
+          ),
         );
       }
     }

@@ -6,6 +6,11 @@ import type { Company } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 
 import { DATA_DIR } from '../../../core/storage/data-dir';
+import { DocumentTemplateSettingsService } from '../../document-template-settings/services/document-template-settings.service';
+import {
+  drawPdfFooter,
+  drawPdfHeader,
+} from '../../document-template-settings/utils/pdf-header-footer.util';
 
 const EMBEDDABLE_LOGO_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg']);
 
@@ -94,8 +99,24 @@ function formatMoney(value: unknown): string {
 export class PayslipPdfService {
   private readonly logger = new Logger(PayslipPdfService.name);
 
+  constructor(
+    private readonly documentTemplateSettingsService: DocumentTemplateSettingsService,
+  ) {}
+
   async generate(input: PayslipPdfInput, company: Company | null): Promise<Buffer> {
-    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    const templateSettings = company
+      ? await this.documentTemplateSettingsService.getSettings(company.id)
+      : null;
+
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: {
+        top: templateSettings?.pdfHeader ? 64 : 40,
+        bottom: templateSettings?.pdfFooter ? 56 : 40,
+        left: 40,
+        right: 40,
+      },
+    });
 
     const chunks: Buffer[] = [];
 
@@ -106,7 +127,11 @@ export class PayslipPdfService {
       doc.on('error', reject);
     });
 
+    drawPdfHeader(doc, templateSettings?.pdfHeader);
+
     this.render(doc, input, company);
+
+    drawPdfFooter(doc, templateSettings?.pdfFooter);
 
     doc.end();
 
@@ -114,7 +139,19 @@ export class PayslipPdfService {
   }
 
   async generateTimeReport(input: TimeReportInput, company: Company | null): Promise<Buffer> {
-    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    const templateSettings = company
+      ? await this.documentTemplateSettingsService.getSettings(company.id)
+      : null;
+
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: {
+        top: templateSettings?.pdfHeader ? 64 : 40,
+        bottom: templateSettings?.pdfFooter ? 56 : 40,
+        left: 40,
+        right: 40,
+      },
+    });
 
     const chunks: Buffer[] = [];
 
@@ -125,7 +162,11 @@ export class PayslipPdfService {
       doc.on('error', reject);
     });
 
+    drawPdfHeader(doc, templateSettings?.pdfHeader);
+
     this.renderTimeReport(doc, input, company);
+
+    drawPdfFooter(doc, templateSettings?.pdfFooter);
 
     doc.end();
 

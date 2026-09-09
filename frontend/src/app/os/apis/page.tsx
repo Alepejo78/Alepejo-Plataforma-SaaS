@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, MessageCircle } from "lucide-react";
+import { Bell, KeyRound, MessageCircle } from "lucide-react";
 
 import { OsCardLink, OsShell } from "@/components";
 import { useAuth } from "@/providers/AuthProvider";
@@ -24,6 +24,14 @@ export default function OsApisPage() {
       icon: KeyRound,
       iconAnim: "keyround",
       visible: hasModule("LABOR") && can("time-clock.manage-api-key"),
+    },
+    {
+      title: "Avisos automáticos",
+      description: "Texto, cabeçalho e rodapé dos avisos que o sistema dispara sozinho",
+      href: "/erp/configuracoes/avisos-automaticos",
+      icon: Bell,
+      iconAnim: "bell",
+      visible: can("scheduled-notifications.manage"),
     },
   ].filter((card) => card.visible);
 

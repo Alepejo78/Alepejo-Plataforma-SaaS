@@ -33,6 +33,8 @@ import { ServiceOrdersModule } from './modules/service-orders/service-orders.mod
 import { SalesSettingsModule } from './modules/sales-settings/sales-settings.module';
 import { PaymentReminderSettingsModule } from './modules/payment-reminder-settings/payment-reminder-settings.module';
 import { PaymentMethodSettingsModule } from './modules/payment-method-settings/payment-method-settings.module';
+import { ScheduledNotificationSettingsModule } from './modules/scheduled-notification-settings/scheduled-notification-settings.module';
+import { DocumentTemplateSettingsModule } from './modules/document-template-settings/document-template-settings.module';
 import { QuotationsModule } from './modules/quotations/quotations.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
@@ -96,6 +98,8 @@ import { WorkshopQuoteImportModule } from './modules/workshop-quote-import/works
     SalesSettingsModule,
     PaymentReminderSettingsModule,
     PaymentMethodSettingsModule,
+    ScheduledNotificationSettingsModule,
+    DocumentTemplateSettingsModule,
     QuotationsModule,
     PayrollModule,
     PurchaseOrdersModule,

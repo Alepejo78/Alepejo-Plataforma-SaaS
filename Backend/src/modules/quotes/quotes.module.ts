@@ -9,6 +9,7 @@ import { InAppNotificationsModule } from '../in-app-notifications/in-app-notific
 import { SalesOrdersModule } from '../sales-orders/sales-orders.module';
 import { SalesSettingsModule } from '../sales-settings/sales-settings.module';
 import { PaymentMethodSettingsModule } from '../payment-method-settings/payment-method-settings.module';
+import { DocumentTemplateSettingsModule } from '../document-template-settings/document-template-settings.module';
 
 import { QuoteController } from './controllers/quote.controller';
 import { QuoteRepository } from './repositories/quote.repository';
@@ -27,6 +28,7 @@ import { QuoteConfirmationService } from './services/quote-confirmation.service'
     SalesOrdersModule,
     SalesSettingsModule,
     PaymentMethodSettingsModule,
+    DocumentTemplateSettingsModule,
   ],
 
   controllers: [QuoteController],

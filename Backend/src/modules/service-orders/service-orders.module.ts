@@ -8,6 +8,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { InAppNotificationsModule } from '../in-app-notifications/in-app-notifications.module';
 import { SalesOrdersModule } from '../sales-orders/sales-orders.module';
 import { PaymentMethodSettingsModule } from '../payment-method-settings/payment-method-settings.module';
+import { DocumentTemplateSettingsModule } from '../document-template-settings/document-template-settings.module';
 
 import { ServiceOrderController } from './controllers/service-order.controller';
 import { ServiceOrderRepository } from './repositories/service-order.repository';
@@ -25,6 +26,7 @@ import { ServiceOrderConfirmationService } from './services/service-order-confir
     InAppNotificationsModule,
     SalesOrdersModule,
     PaymentMethodSettingsModule,
+    DocumentTemplateSettingsModule,
   ],
 
   controllers: [ServiceOrderController],

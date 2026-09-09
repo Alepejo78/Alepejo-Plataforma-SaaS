@@ -8,6 +8,11 @@ import PDFDocument from 'pdfkit';
 import { DATA_DIR } from '../../../core/storage/data-dir';
 
 import { QuoteRepository } from '../repositories/quote.repository';
+import { DocumentTemplateSettingsService } from '../../document-template-settings/services/document-template-settings.service';
+import {
+  drawPdfFooter,
+  drawPdfHeader,
+} from '../../document-template-settings/utils/pdf-header-footer.util';
 
 type QuoteWithRelations = Awaited<ReturnType<QuoteRepository['create']>>;
 
@@ -64,11 +69,27 @@ function quoteNumberOf(quote: { number: number }): string {
 export class QuotePdfService {
   private readonly logger = new Logger(QuotePdfService.name);
 
+  constructor(
+    private readonly documentTemplateSettingsService: DocumentTemplateSettingsService,
+  ) {}
+
   async generate(
     quote: QuoteWithRelations,
     company: Company | null,
   ): Promise<Buffer> {
-    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    const templateSettings = company
+      ? await this.documentTemplateSettingsService.getSettings(company.id)
+      : null;
+
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: {
+        top: templateSettings?.pdfHeader ? 64 : 40,
+        bottom: templateSettings?.pdfFooter ? 56 : 40,
+        left: 40,
+        right: 40,
+      },
+    });
 
     const chunks: Buffer[] = [];
 
@@ -79,7 +100,11 @@ export class QuotePdfService {
       doc.on('error', reject);
     });
 
+    drawPdfHeader(doc, templateSettings?.pdfHeader);
+
     this.render(doc, quote, company);
+
+    drawPdfFooter(doc, templateSettings?.pdfFooter);
 
     doc.end();
 

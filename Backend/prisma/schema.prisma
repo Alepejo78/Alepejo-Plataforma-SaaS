@@ -214,6 +214,8 @@ model Company {
   salesSettings           SalesSettings?
   paymentReminderSettings PaymentReminderSettings?
   paymentMethodSettings   PaymentMethodSettings?
+  scheduledNotificationSettings ScheduledNotificationSettings?
+  documentTemplateSettings      DocumentTemplateSettings?
 
   timeEntries          TimeEntry[]
   timeSheetApprovals   TimeSheetApproval[]
@@ -1579,6 +1581,62 @@ model PaymentReminderSettings {
   updatedAt DateTime @updatedAt
 
   @@map("payment_reminder_settings")
+}
+
+/// Texto configurável dos "Avisos Automáticos" (ScheduledNotificationsService
+/// — exame ocupacional, aniversário, fechamento de banco de horas,
+/// fechamento de ponto, lembrete de vencimento) e o cabeçalho/rodapé
+/// aplicado em cima de qualquer um deles. Cada campo de mensagem é
+/// opcional — `null`/vazio usa o texto padrão do sistema (ver
+/// `NotificationTemplateService`); aceita placeholders tipo `{{nome}}`
+/// (documentados na tela de configuração).
+model ScheduledNotificationSettings {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  announcementHeader String? @db.Text
+  announcementFooter String? @db.Text
+
+  examReminderSubject String? @db.VarChar(200)
+  examReminderMessage String? @db.Text
+
+  birthdaySubject String? @db.VarChar(200)
+  birthdayMessage String? @db.Text
+
+  hourBankClosingSubject String? @db.VarChar(200)
+  hourBankClosingMessage String? @db.Text
+
+  pointClosingSubject String? @db.VarChar(200)
+  pointClosingMessage String? @db.Text
+
+  paymentReminderBeforeSubject String? @db.VarChar(200)
+  paymentReminderBeforeMessage String? @db.Text
+
+  paymentReminderOverdueSubject String? @db.VarChar(200)
+  paymentReminderOverdueMessage String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("scheduled_notification_settings")
+}
+
+/// Cabeçalho/rodapé aplicado nos PDFs gerados pelo sistema (orçamento,
+/// holerite, ordem de serviço — ver `QuotePdfService`/`PayslipPdfService`/
+/// `ServiceOrderPdfService`). `null`/vazio não desenha nada extra.
+model DocumentTemplateSettings {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  pdfHeader String? @db.Text
+  pdfFooter String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("document_template_settings")
 }
 
 model QuoteItem {

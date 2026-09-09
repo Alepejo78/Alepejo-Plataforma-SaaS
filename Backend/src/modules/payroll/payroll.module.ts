@@ -7,6 +7,7 @@ import { FinancialEntriesModule } from '../financial-entries/financial-entries.m
 import { EmployeesModule } from '../employees/employees.module';
 import { DocumentSequenceModule } from '../../core/document-sequence/document-sequence.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { DocumentTemplateSettingsModule } from '../document-template-settings/document-template-settings.module';
 
 import { PayrollTaxTableController } from './controllers/payroll-tax-table.controller';
 import { PayrollSettingsController } from './controllers/payroll-settings.controller';
@@ -49,6 +50,7 @@ import { SalaryAdvanceConfirmationService } from './services/salary-advance-conf
     DocumentSequenceModule,
     NotificationsModule,
     EmployeesModule,
+    DocumentTemplateSettingsModule,
   ],
 
   controllers: [
