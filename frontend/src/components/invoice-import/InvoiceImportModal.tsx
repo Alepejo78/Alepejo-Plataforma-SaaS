@@ -82,6 +82,22 @@ function formatDateBr(isoDate: string) {
   return `${d}-${m}-${y}`;
 }
 
+/** "AAAA-MM-DD" de hoje, no fuso do navegador — usado quando a nota não trouxe data de emissão. */
+function todayIsoDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** "MM-AAAA" de hoje — usado como nº da nota quando não achou nenhum no documento (só pra não ficar em branco, não é um número de verdade). */
+function todayMonthYearLabel() {
+  const now = new Date();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  return `${m}-${now.getFullYear()}`;
+}
+
 interface ItemRow {
   productId: string;
   productLabel: string;
@@ -536,9 +552,17 @@ export function InvoiceImportModal({
   async function applyParsed(parsed: ParsedInvoice) {
     setParseWarnings(parsed.warnings);
 
-    setInvoiceNumber(parsed.invoiceNumber ?? "");
-    setInvoiceKey(parsed.invoiceKey ?? "");
-    setInvoiceIssueDate(toDateInput(parsed.invoiceIssueDate));
+    // Nº da nota e data de emissão não achados: em vez de deixar em
+    // branco (aí fica fácil esquecer de preencher na revisão), chuta
+    // um valor de referência — mês-ano de hoje pro número, data de
+    // hoje pra emissão. Sempre editável, é só um ponto de partida.
+    setInvoiceNumber(parsed.invoiceNumber ?? todayMonthYearLabel());
+    setInvoiceKey((parsed.invoiceKey ?? "").replace(/\D/g, ""));
+    setInvoiceIssueDate(
+      parsed.invoiceIssueDate
+        ? toDateInput(parsed.invoiceIssueDate)
+        : todayIsoDate()
+    );
     if (parsed.kind !== "DOCUMENT" && parsed.invoiceKey) {
       setDocumentType("NOTA_FISCAL");
     } else if (parsed.suggestedDocumentType) {
@@ -1229,9 +1253,16 @@ export function InvoiceImportModal({
               <label className={labelClass}>Chave de acesso</label>
               <input
                 className={fieldClass}
+                inputMode="numeric"
+                maxLength={50}
                 value={invoiceKey}
-                onChange={(e) => setInvoiceKey(e.target.value)}
+                onChange={(e) =>
+                  setInvoiceKey(e.target.value.replace(/\D/g, ""))
+                }
               />
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Só números — sem ponto, espaço ou traço.
+              </p>
             </div>
 
             <div>

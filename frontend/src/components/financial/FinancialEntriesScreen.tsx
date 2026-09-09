@@ -136,6 +136,7 @@ interface Form {
   termDays: string;
   dueDate: string;
   documentNumber: string;
+  documentKey: string;
   documentType: FinancialDocumentType | "";
   amount: number;
   paymentMethod: PaymentMethod | "";
@@ -173,6 +174,7 @@ function emptyForm(): Form {
     termDays: "",
     dueDate: today,
     documentNumber: "",
+    documentKey: "",
     documentType: "",
     amount: 0,
     paymentMethod: "",
@@ -482,6 +484,7 @@ export function FinancialEntriesScreen({
       termDays: entry.termDays ? String(entry.termDays) : "",
       dueDate: entry.dueDate.slice(0, 10),
       documentNumber: entry.documentNumber ?? "",
+      documentKey: entry.documentKey ?? "",
       documentType: entry.documentType ?? "",
       amount: num(entry.amount),
       paymentMethod: entry.paymentMethod ?? "",
@@ -701,6 +704,7 @@ export function FinancialEntriesScreen({
           : undefined,
         dueDate: isParceled ? undefined : form.dueDate,
         documentNumber: form.documentNumber || undefined,
+        documentKey: form.documentKey || undefined,
         documentType: form.documentType || undefined,
         amount: isParceled || isMultiItem ? undefined : form.amount,
         installments: isParceled ? validInstallments : undefined,
@@ -1594,7 +1598,7 @@ export function FinancialEntriesScreen({
                   )}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>
                     Documento
@@ -1608,6 +1612,26 @@ export function FinancialEntriesScreen({
                       setForm({
                         ...form,
                         documentNumber: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Chave de acesso
+                  </label>
+
+                  <input
+                    placeholder="Só números"
+                    inputMode="numeric"
+                    maxLength={50}
+                    className={fieldClass}
+                    value={form.documentKey}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        documentKey: e.target.value.replace(/\D/g, ""),
                       })
                     }
                   />

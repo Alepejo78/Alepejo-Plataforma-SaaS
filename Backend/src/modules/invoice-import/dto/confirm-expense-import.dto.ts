@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -53,6 +54,7 @@ export class ConfirmExpenseImportDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
+  @Matches(/^\d*$/, { message: 'Chave de acesso deve conter só números.' })
   documentKey?: string;
 
   @ApiProperty({ required: false, enum: FinancialDocumentType })

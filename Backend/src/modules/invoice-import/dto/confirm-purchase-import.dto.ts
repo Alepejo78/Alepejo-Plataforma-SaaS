@@ -8,6 +8,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   Min,
   ValidateNested,
@@ -54,6 +55,7 @@ export class ConfirmPurchaseImportDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
+  @Matches(/^\d*$/, { message: 'Chave de acesso deve conter só números.' })
   invoiceKey?: string;
 
   @ApiProperty({ required: false })

@@ -268,8 +268,13 @@ export class DocumentFieldExtractorService {
     const digitableLineMatch =
       rawText.match(DIGITABLE_LINE_PATTERN) ??
       rawText.match(ARRECADACAO_LINE_PATTERN);
+    // Só dígitos — chave de acesso de verdade (NF-e) não tem separador
+    // nenhum, e a linha digitável (boleto ou arrecadação) só usa
+    // ponto/traço/espaço pra facilitar leitura visual, não faz parte
+    // do número. Também é o que garante caber no limite de 50
+    // caracteres do campo (44-48 dígitos nos casos reais).
     const digitableLine = digitableLineMatch
-      ? digitableLineMatch[0].replace(/\s+/g, ' ').trim()
+      ? digitableLineMatch[0].replace(/\D/g, '')
       : null;
 
     const totalAmountRaw = findNear(
