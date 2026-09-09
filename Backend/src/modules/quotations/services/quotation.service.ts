@@ -438,6 +438,31 @@ export class QuotationService {
         // verdade (ou mantido, se a nota não trouxer número).
         const purchaseOrderDocumentNumber = `PC-${String(number).padStart(6, '0')}`;
 
+        // Mais de um produto/serviço: cada item mantém sua própria
+        // conta contábil — `QuotationOfferItem` não tem quantidade
+        // própria (só a `QuotationItem` da cotação tem), por isso o
+        // cruzamento por productId. Com items, `dto.productId`
+        // (escolha manual) deixa de valer — o resumo de nível
+        // superior passa a vir do item de maior valor.
+        const items =
+          offer.items.length > 1
+            ? offer.items.map((item) => ({
+                productId: item.productId,
+                chartOfAccountId:
+                  item.product?.chartOfAccountId ??
+                  dto.chartOfAccountId ??
+                  undefined,
+                description: item.product?.description,
+                quantity: (() => {
+                  const match = quotation.items.find(
+                    (qi) => qi.productId === item.productId,
+                  );
+                  return match ? Number(match.quantity) : undefined;
+                })(),
+                amount: Number(item.totalPrice),
+              }))
+            : undefined;
+
         await this.financialEntriesService.createFromDocument(
           tx,
           {
@@ -454,6 +479,7 @@ export class QuotationService {
             quotationId: quotation.id,
             documentNumber: purchaseOrderDocumentNumber,
             observation: `Pagamento antecipado — Pedido de Compra ${purchaseOrderDocumentNumber}`,
+            items,
           },
           userId,
         );

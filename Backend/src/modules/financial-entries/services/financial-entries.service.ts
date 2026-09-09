@@ -175,12 +175,44 @@ export class FinancialEntriesService {
   }
 
   /**
+   * Divide os itens do documento proporcionalmente a um valor-alvo —
+   * ex.: item de R$100 num documento de R$225 rateado numa parcela de
+   * R$112,50 vira R$50 nela (a última entrada absorve o resto do
+   * arredondamento, mesmo padrão de `buildAutoInstallments`). Função
+   * pura (sem banco) — quem grava é cada chamador, conforme o
+   * contexto (dentro ou fora de uma transaction já aberta).
+   */
+  private splitItemsForAmount<
+    T extends {
+      productId?: string;
+      chartOfAccountId?: string;
+      description?: string;
+      quantity?: number;
+      amount: number;
+    },
+  >(items: T[], targetAmount: number, totalAmount: number): T[] {
+    const fraction = targetAmount / totalAmount;
+    let allocated = 0;
+
+    return items.map((item, index) => {
+      const isLast = index === items.length - 1;
+      const amount = isLast
+        ? Math.round((targetAmount - allocated) * 100) / 100
+        : Math.round(item.amount * fraction * 100) / 100;
+
+      allocated += amount;
+
+      return { ...item, amount };
+    });
+  }
+
+  /**
    * Divide os itens do documento entre as parcelas geradas,
-   * proporcionalmente ao valor de cada uma — ex.: item de R$100 num
-   * documento de R$225 parcelado em 2x (R$112,50 cada) vira R$50 na
-   * parcela 1 e R$50 na parcela 2 (a última parcela de cada item
-   * absorve o resto do arredondamento, mesmo padrão de
-   * `buildAutoInstallments`).
+   * proporcionalmente ao valor de cada uma, e já GRAVA (fora de
+   * qualquer `tx` — só usado depois que a transaction que criou as
+   * parcelas já comitou, ver `create()`/`update()`). Pra gravar
+   * DENTRO de uma `tx` ainda aberta, ver `createInstallments` (que já
+   * cuida disso sozinho) e `replaceItemsInTx`.
    */
   private async attachItemsProportionally(
     entries: FinancialEntry[],
@@ -194,22 +226,55 @@ export class FinancialEntriesService {
     totalAmount: number,
   ) {
     for (const entry of entries) {
-      const fraction = Number(entry.amount) / totalAmount;
-      let allocated = 0;
-
-      const entryItems = items.map((item, index) => {
-        const isLast = index === items.length - 1;
-        const amount = isLast
-          ? Math.round((Number(entry.amount) - allocated) * 100) / 100
-          : Math.round(item.amount * fraction * 100) / 100;
-
-        allocated += amount;
-
-        return { ...item, amount };
-      });
+      const entryItems = this.splitItemsForAmount(
+        items,
+        Number(entry.amount),
+        totalAmount,
+      );
 
       await this.repository.replaceItems(entry.id, entryItems);
     }
+  }
+
+  /**
+   * Substitui os itens de um título DENTRO de uma transaction já
+   * aberta pelo chamador — usado quando o título é atualizado via
+   * `tx` direto, fora do fluxo normal de `create()`/`update()`/
+   * `createInstallments` (ex.: `PurchaseService.receive()` reaproveita
+   * o título de adiantamento gerado pela Cotação com um `tx.financialEntry.update`
+   * cru). Usar `repository.replaceItems` aqui seria errado: aquele
+   * método abre a PRÓPRIA transaction, que rodaria em paralelo à do
+   * chamador — se o título ainda não foi commitado, a FK falha.
+   */
+  async replaceItemsInTx(
+    tx: Prisma.TransactionClient,
+    financialEntryId: string,
+    items: {
+      productId?: string;
+      chartOfAccountId?: string;
+      description?: string;
+      quantity?: number;
+      amount: number;
+    }[],
+  ) {
+    await tx.financialEntryItem.deleteMany({
+      where: { financialEntryId },
+    });
+
+    if (items.length === 0) {
+      return;
+    }
+
+    await tx.financialEntryItem.createMany({
+      data: items.map((item) => ({
+        financialEntryId,
+        productId: item.productId,
+        chartOfAccountId: item.chartOfAccountId,
+        description: item.description,
+        quantity: item.quantity,
+        amount: item.amount,
+      })),
+    });
   }
 
   private async assertEmployee(companyId: string, employeeId: string) {
@@ -570,6 +635,14 @@ export class FinancialEntriesService {
       vacationGrantId?: string;
       salaryAdvanceId?: string;
       observation?: string;
+      /** Mais de um produto/serviço no documento — ver `FinancialEntryItem`. */
+      items?: {
+        productId?: string;
+        chartOfAccountId?: string;
+        description?: string;
+        quantity?: number;
+        amount: number;
+      }[];
     },
     userId: string,
   ) {
@@ -623,9 +696,28 @@ export class FinancialEntriesService {
       vacationGrantId?: string;
       salaryAdvanceId?: string;
       observation?: string;
+      /** Mais de um produto/serviço no documento — ver `FinancialEntryItem`. */
+      items?: {
+        productId?: string;
+        chartOfAccountId?: string;
+        description?: string;
+        quantity?: number;
+        amount: number;
+      }[];
     },
     userId: string,
   ) {
+    const hasItems = !!params.items && params.items.length > 0;
+    // Igual a `create()`: com itens, o campo de resumo (produto/conta
+    // de nível superior) segue o item de maior valor.
+    const mainItem = hasItems ? this.pickMainItem(params.items!) : null;
+    const chartOfAccountId =
+      mainItem?.chartOfAccountId ?? params.chartOfAccountId;
+    const productId = mainItem?.productId ?? params.productId;
+    const itemsTotal = hasItems
+      ? params.items!.reduce((sum, item) => sum + item.amount, 0)
+      : undefined;
+
     const entries: FinancialEntry[] = [];
 
     for (const installment of params.installments) {
@@ -643,8 +735,8 @@ export class FinancialEntriesService {
           documentNumber: params.documentNumber ?? undefined,
           documentKey: params.documentKey ?? undefined,
           documentType: params.documentType ?? undefined,
-          chartOfAccountId: params.chartOfAccountId ?? undefined,
-          productId: params.productId ?? undefined,
+          chartOfAccountId: chartOfAccountId ?? undefined,
+          productId: productId ?? undefined,
           purchaseId: params.purchaseId,
           purchaseOrderId: params.purchaseOrderId,
           quotationId: params.quotationId,
@@ -659,6 +751,30 @@ export class FinancialEntriesService {
         },
         include: { partner: true },
       });
+
+      if (hasItems) {
+        // Grava direto na MESMA `tx` recebida — nunca via
+        // `repository.replaceItems`/`replaceItemsInTx` aqui, que
+        // abririam uma transaction própria enquanto esta (do
+        // chamador) ainda está aberta, e o título recém-criado ainda
+        // não existe pra quem está fora dela.
+        const entryItems = this.splitItemsForAmount(
+          params.items!,
+          Number(entry.amount),
+          itemsTotal!,
+        );
+
+        await tx.financialEntryItem.createMany({
+          data: entryItems.map((item) => ({
+            financialEntryId: entry.id,
+            productId: item.productId,
+            chartOfAccountId: item.chartOfAccountId,
+            description: item.description,
+            quantity: item.quantity,
+            amount: item.amount,
+          })),
+        });
+      }
 
       entries.push(entry);
     }

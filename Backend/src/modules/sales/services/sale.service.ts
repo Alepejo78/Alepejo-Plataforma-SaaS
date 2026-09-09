@@ -951,6 +951,28 @@ export class SaleService {
     // Contas a receber depois para completar vencimento/forma de
     // pagamento. Com parcelas explícitas, gera uma FinancialEntry por
     // parcela em vez de uma só.
+    // Mais de um produto/serviço: cada item mantém sua própria conta
+    // contábil (do cadastro do produto, lado venda, com o header como
+    // reserva) — o resumo de nível superior é derivado do item de
+    // maior valor dentro de `createInstallments`/`createFromDocument`.
+    // Com acréscimo por forma de pagamento, a fração de cada parcela
+    // (valor da parcela ÷ soma dos itens) já escala os itens
+    // proporcionalmente ao total com acréscimo — não precisa tratar
+    // separado.
+    const items =
+      sale.items.length > 1
+        ? sale.items.map((item) => ({
+            productId: item.productId,
+            chartOfAccountId:
+              item.product.saleChartOfAccountId ??
+              sale.chartOfAccountId ??
+              undefined,
+            description: item.product.description,
+            quantity: Number(item.quantity),
+            amount: Number(item.totalPrice),
+          }))
+        : undefined;
+
     const commonEntryData = {
       companyId,
       type: FinancialEntryType.RECEIVABLE,
@@ -965,6 +987,7 @@ export class SaleService {
       productId: pickPrimaryProductId(sale.items),
       saleId: sale.id,
       observation: `Venda ${sale.id}`,
+      items,
     };
 
     if (effectiveInstallments.length) {

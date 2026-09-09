@@ -844,6 +844,26 @@ export class PurchaseService {
         // para completar vencimento/forma de pagamento. Com parcelas
         // explícitas, gera uma FinancialEntry por parcela em vez de
         // uma só.
+        // Mais de um produto/serviço: cada item mantém sua própria
+        // conta contábil (do cadastro do produto, com o header como
+        // reserva) — o resumo de nível superior (chartOfAccountId/
+        // productId) é derivado do item de maior valor dentro de
+        // `createInstallments`. Com só 1 item, não manda `items` —
+        // fica exatamente como já era, sem linha extra.
+        const items =
+          purchase.items.length > 1
+            ? purchase.items.map((item) => ({
+                productId: item.productId,
+                chartOfAccountId:
+                  item.product.chartOfAccountId ??
+                  purchase.chartOfAccountId ??
+                  undefined,
+                description: item.product.description,
+                quantity: Number(item.quantity),
+                amount: Number(item.totalPrice),
+              }))
+            : undefined;
+
         const commonEntryData = {
           companyId,
           type: FinancialEntryType.PAYABLE,
@@ -863,6 +883,7 @@ export class PurchaseService {
           purchaseId: purchase.id,
           quotationId: purchase.quotationId ?? undefined,
           observation: `Compra ${purchase.id}`,
+          items,
         };
 
         // Parcelas finais desta compra, seja qual for a origem
@@ -910,6 +931,17 @@ export class PurchaseService {
               updatedById: userId,
             },
           });
+
+          // O adiantamento nasceu na Cotação com os itens da oferta —
+          // agora que a Compra em si já tem seus próprios itens
+          // (podem ter mudado no recebimento), refaz do zero com eles.
+          if (items) {
+            await this.financialEntriesService.replaceItemsInTx(
+              tx,
+              advanceEntry.id,
+              items,
+            );
+          }
         } else {
           if (advanceEntry) {
             // Virou parcelado no recebimento — o título antecipado
