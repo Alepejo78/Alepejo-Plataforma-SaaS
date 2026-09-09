@@ -177,6 +177,12 @@ export function InvoiceImportModal({
   // a Pagar"/"a Receber", não só o `expenseOnly` fixo do Financeiro).
   const acceptsAnyDocument = expenseOnly || mode === "EXPENSE";
   const [partner, setPartner] = useState<PartnerState>(emptyPartner);
+  // Mais de um parceiro já cadastrado bate com o nome reconhecido no
+  // documento sem CNPJ (ver `applyParsed`) — mostra pra pessoa escolher
+  // qual é, em vez de chutar um dos dois.
+  const [partnerCandidates, setPartnerCandidates] = useState<
+    BusinessPartner[]
+  >([]);
   const [warehouseId, setWarehouseId] = useState("");
   const [chartOfAccountId, setChartOfAccountId] = useState("");
   const [chartOfAccountLabel, setChartOfAccountLabel] = useState("");
@@ -468,6 +474,11 @@ export function InvoiceImportModal({
     });
   }
 
+  function chooseCandidate(p: BusinessPartner) {
+    applyPartner(p);
+    setPartnerCandidates([]);
+  }
+
   // "Criar {nome}" no campo Razão social/nome — não cadastra nada
   // ainda (só na confirmação, se não achar por CPF/CNPJ), só usa o
   // texto digitado como razão social de um parceiro novo. CPF/CNPJ é
@@ -570,6 +581,42 @@ export function InvoiceImportModal({
           city: parsed.party.city ?? "",
           state: parsed.party.state ?? "",
         });
+      }
+    } else if (parsed.suggestedPartnerName) {
+      // Sem CNPJ/CPF no texto (comum em conta de consumo com cabeçalho
+      // em imagem) — busca entre os parceiros já cadastrados só pelo
+      // nome reconhecido. Achou 1: aplica direto. Achou vários: deixa
+      // a pessoa escolher (nome + cidade). Não achou nenhum: só deixa
+      // o nome preenchido, o resto é cadastro novo na mão.
+      try {
+        const found = await partnerService.list({
+          role: partnerRole,
+          search: parsed.suggestedPartnerName,
+          limit: 10,
+        });
+
+        if (found.data.length === 1) {
+          applyPartner(found.data[0]);
+        } else if (found.data.length > 1) {
+          setPartnerCandidates(found.data);
+          setPartner((prev) => ({
+            ...emptyPartner,
+            document: prev.document,
+            legalName: parsed.suggestedPartnerName as string,
+          }));
+        } else {
+          setPartner((prev) => ({
+            ...emptyPartner,
+            document: prev.document,
+            legalName: parsed.suggestedPartnerName as string,
+          }));
+        }
+      } catch {
+        setPartner((prev) => ({
+          ...emptyPartner,
+          document: prev.document,
+          legalName: parsed.suggestedPartnerName as string,
+        }));
       }
     }
 
@@ -1658,6 +1705,55 @@ export function InvoiceImportModal({
         </div>
       </div>
     </div>
+
+    {partnerCandidates.length > 0 && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-lg rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-base font-bold text-[var(--text-primary)]">
+              Qual {partnerNoun.toLowerCase()} é esse?
+            </h3>
+
+            <button
+              type="button"
+              onClick={() => setPartnerCandidates([])}
+              aria-label="Fechar"
+              className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <p className="mb-3 text-sm text-[var(--text-secondary)]">
+            O documento não trouxe CNPJ/CPF, só o nome — e mais de um{" "}
+            {partnerNoun.toLowerCase()} cadastrado bate com{" "}
+            {partner.legalName || "esse nome"}. Escolha o certo (ou
+            feche e cadastre um novo).
+          </p>
+
+          <ul className="max-h-72 space-y-2 overflow-y-auto text-sm">
+            {partnerCandidates.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onClick={() => chooseCandidate(p)}
+                  className="w-full rounded-xl border border-[var(--border)] p-3 text-left transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
+                >
+                  <p className="font-medium text-[var(--text-primary)]">
+                    {p.tradeName || p.legalName}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {[p.city, p.state].filter(Boolean).join(" - ") ||
+                      "Cidade não cadastrada"}{" "}
+                    · {p.document}
+                  </p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )}
 
     {auditIssues.length > 0 && (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">

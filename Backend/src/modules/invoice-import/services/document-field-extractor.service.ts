@@ -112,27 +112,18 @@ const ARRECADACAO_LINE_PATTERN =
   /\d{11}-?\d(?:\s+\d{11}-?\d){3}/;
 
 /**
- * Concessionárias cujo CNPJ, nessas contas, vem só no cabeçalho —
- * junto do logotipo, renderizado como imagem, não como texto (por
- * isso `CNPJ_PATTERN` nunca acha nada nelas: não é o regex que falha,
- * é que o dado simplesmente não está na camada de texto do PDF).
- * Reconhece pelo nome, que aparece em algum lugar do rodapé/corpo em
- * texto de verdade (ex.: "ACESSE O SITE DA SANEPAR..."). CNPJ de
- * concessionária estadual é único e público — sem risco de trocar de
- * empresa entre contas do mesmo cliente. Acrescente aqui outras
- * concessionárias com o mesmo problema conforme aparecerem.
+ * Site do emitente citado no texto (ex.: "www.sanepar.com.br",
+ * "minhaclaro.claro.com.br") — pista genérica de nome pra quando não
+ * achou CNPJ/CPF nenhum (comum em conta de consumo cujo cabeçalho é
+ * logotipo em imagem, sem CNPJ selecionável: o nome não está perto de
+ * nenhum documento pra `guessPartyName` ancorar, mas o site quase
+ * sempre aparece em texto de verdade em algum "acesse o site..."). Não
+ * é uma lista fixa de empresas conhecidas — funciona pra qualquer
+ * emitente que cite o próprio site, e ainda assim só vira uma busca
+ * por nome entre os parceiros já cadastrados (ver
+ * `suggestedPartnerName` em `ParsedInvoice`), nunca um CNPJ inventado.
  */
-const KNOWN_ISSUER_FALLBACKS: {
-  keyword: RegExp;
-  document: string;
-  legalName: string;
-}[] = [
-  {
-    keyword: /sanepar/i,
-    document: '76484013000145',
-    legalName: 'Companhia de Saneamento do Paraná - SANEPAR',
-  },
-];
+const WEBSITE_DOMAIN_PATTERN = /([a-z0-9-]+)\.(?:com|net|org)\.br\b/i;
 
 /**
  * Acha a primeira ocorrência de qualquer um dos rótulos e, dentro de
@@ -346,6 +337,7 @@ export class DocumentFieldExtractorService {
       rawText.match(CNPJ_PATTERN) ?? rawText.match(CPF_PATTERN);
 
     let party: ParsedInvoice['party'] = null;
+    let suggestedPartnerName: string | null = null;
 
     if (documentMatch) {
       party = {
@@ -362,24 +354,10 @@ export class DocumentFieldExtractorService {
         state: null,
       };
     } else {
-      const knownIssuer = KNOWN_ISSUER_FALLBACKS.find((issuer) =>
-        issuer.keyword.test(rawText),
-      );
+      const domainMatch = rawText.match(WEBSITE_DOMAIN_PATTERN);
 
-      if (knownIssuer) {
-        party = {
-          document: knownIssuer.document,
-          legalName: knownIssuer.legalName,
-          tradeName: null,
-          email: null,
-          zipCode: null,
-          street: null,
-          number: null,
-          complement: null,
-          district: null,
-          city: null,
-          state: null,
-        };
+      if (domainMatch) {
+        suggestedPartnerName = domainMatch[1];
       } else {
         warnings.push(
           'Não encontrei o CNPJ/CPF do emissor — selecione o parceiro na mão.',
@@ -390,6 +368,7 @@ export class DocumentFieldExtractorService {
     return {
       kind: 'DOCUMENT',
       party,
+      suggestedPartnerName,
       invoiceNumber: documentNumber,
       invoiceKey: digitableLine,
       invoiceIssueDate: issueDate,

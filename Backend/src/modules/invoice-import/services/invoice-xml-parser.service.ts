@@ -39,6 +39,15 @@ export interface ParsedInvoice {
   kind: 'NFE' | 'NFSE' | 'DOCUMENT';
   /** Fornecedor (compra) ou cliente (venda) — quem está "do outro lado". */
   party: ParsedInvoiceParty | null;
+  /**
+   * Só quando `party` é `null` (não achou CNPJ/CPF no texto — comum em
+   * conta de consumo cujo cabeçalho é logotipo em imagem, sem CNPJ
+   * selecionável): nome/palavra-chave do emitente reconhecido no texto
+   * mesmo assim (ex.: pelo site "www.sanepar.com.br" no rodapé), pra
+   * tela buscar entre os parceiros já cadastrados por esse nome — não
+   * é uma identidade confirmada como `party`, só uma pista de busca.
+   */
+  suggestedPartnerName?: string | null;
   invoiceNumber: string | null;
   invoiceKey: string | null;
   invoiceIssueDate: string | null;

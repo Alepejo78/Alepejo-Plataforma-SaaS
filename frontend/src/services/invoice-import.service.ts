@@ -45,6 +45,8 @@ export interface ParsedInvoice {
   /** `DOCUMENT` = PDF/imagem (boleto, fatura, conta, cupom fiscal) lido por texto/OCR. */
   kind: "NFE" | "NFSE" | "DOCUMENT";
   party: ParsedInvoiceParty | null;
+  /** Só quando `party` é `null` — nome/palavra-chave reconhecido mesmo sem CNPJ/CPF (ex.: pelo site citado no rodapé), pra buscar entre os parceiros já cadastrados por nome. */
+  suggestedPartnerName?: string | null;
   invoiceNumber: string | null;
   invoiceKey: string | null;
   invoiceIssueDate: string | null;
