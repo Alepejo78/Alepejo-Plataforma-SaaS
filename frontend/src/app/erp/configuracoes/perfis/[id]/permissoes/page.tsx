@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Lock } from "lucide-react";
 
@@ -193,6 +193,107 @@ const GROUP_MODULE: Record<string, string> = {
   COMPANY_BRANDING: "BRANDING",
 };
 
+/**
+ * Grupo de permissão -> bloco visual dentro da seção APP/ERP — só pra
+ * organizar a tabela (agrupar linhas do mesmo assunto, ex.: Compras +
+ * Cotações + Pedidos de Compra debaixo de "Compras"), não tem relação
+ * com licenciamento. Grupo sem entrada aqui vira um bloco sozinho com
+ * o próprio nome (fallback em `blockOf`), então nada some da tabela
+ * por falta de mapeamento — só fica sem agrupar com mais ninguém.
+ */
+const GROUP_BLOCK: Record<string, string> = {
+  USER: "Segurança",
+  ROLE: "Segurança",
+  PERMISSION: "Segurança",
+  ROLE_PERMISSION: "Segurança",
+  USER_ROLE: "Segurança",
+
+  COMPANY: "Empresa",
+  LICENSE: "Licenciamento",
+  COMPANY_BRANDING: "Personalização",
+
+  WHATSAPP: "Comunicação",
+  EMAIL: "Comunicação",
+  SCHEDULED_NOTIFICATIONS: "Comunicação",
+
+  SYSTEM: "Sistema",
+
+  PRODUCT_CATEGORY: "Cadastros de apoio",
+  BRAND: "Cadastros de apoio",
+  UNIT_OF_MEASURE: "Cadastros de apoio",
+  WAREHOUSE: "Cadastros de apoio",
+  CHART_OF_ACCOUNT: "Cadastros de apoio",
+  CHART_OF_ACCOUNT_CLASSIFICATION: "Cadastros de apoio",
+  SECTOR: "Cadastros de apoio",
+  WORK_SCHEDULE: "Cadastros de apoio",
+  PPE_TYPE: "Cadastros de apoio",
+  JOB_FUNCTION: "Cadastros de apoio",
+
+  PARTNER: "Parceiros",
+  PRODUCT: "Produtos",
+
+  INVENTORY: "Estoque",
+  STOCK_MOVEMENT: "Estoque",
+  INVENTORY_COUNT: "Estoque",
+  INVENTORY_COUNT_TRACKING: "Estoque",
+
+  PURCHASE: "Compras",
+  QUOTATION: "Compras",
+  PURCHASE_ORDER: "Compras",
+
+  SALES: "Vendas",
+  QUOTE: "Vendas",
+  SALES_ORDER: "Vendas",
+  SERVICE_ORDER: "Vendas",
+  SALES_SETTINGS: "Vendas",
+  CRM: "Vendas",
+
+  FINANCIAL: "Financeiro",
+  FINANCIAL_ENTRY: "Financeiro",
+  PAYMENT_REMINDER_SETTINGS: "Financeiro",
+  PAYMENT_METHOD_SETTINGS: "Financeiro",
+  BUDGET: "Financeiro",
+  BANK_ACCOUNT: "Financeiro",
+
+  EMPLOYEE: "Recursos Humanos",
+  PPE_DELIVERY: "Recursos Humanos",
+  BENEFIT: "Recursos Humanos",
+
+  PAYROLL: "Folha e encargos",
+  PAYROLL_SETTINGS: "Folha e encargos",
+  PAYROLL_TAX_TABLE: "Folha e encargos",
+  THIRTEENTH_SALARY: "Folha e encargos",
+  VACATION: "Folha e encargos",
+  SALARY_ADVANCE: "Folha e encargos",
+
+  TIME_ENTRY: "Ponto",
+  ABSENCE_RECORD: "Ponto",
+
+  PRODUCTION: "Produção",
+  PRODUCTION_SETTINGS: "Produção",
+};
+
+/** Ordem de exibição dos blocos — os que não estiverem aqui vão pro fim, em ordem alfabética. */
+const BLOCK_ORDER = [
+  "Segurança",
+  "Empresa",
+  "Licenciamento",
+  "Personalização",
+  "Comunicação",
+  "Cadastros de apoio",
+  "Sistema",
+  "Parceiros",
+  "Produtos",
+  "Estoque",
+  "Compras",
+  "Vendas",
+  "Financeiro",
+  "Recursos Humanos",
+  "Folha e encargos",
+  "Ponto",
+  "Produção",
+];
+
 interface GroupRow {
   groupId: string;
   groupCode: string;
@@ -206,6 +307,44 @@ function scopeOf(row: GroupRow): "APP" | "ERP" {
 
 function moduleOf(row: GroupRow): string | null {
   return GROUP_MODULE[row.groupCode] ?? null;
+}
+
+function blockOf(row: GroupRow): string {
+  return GROUP_BLOCK[row.groupCode] ?? row.groupName;
+}
+
+interface Block {
+  name: string;
+  rows: GroupRow[];
+}
+
+/** Agrupa linhas já filtradas/ordenadas em blocos, na ordem de `BLOCK_ORDER` (resto em ordem alfabética no fim). */
+function groupIntoBlocks(sectionRows: GroupRow[]): Block[] {
+  const map = new Map<string, GroupRow[]>();
+
+  for (const row of sectionRows) {
+    const block = blockOf(row);
+    const list = map.get(block);
+
+    if (list) {
+      list.push(row);
+    } else {
+      map.set(block, [row]);
+    }
+  }
+
+  return Array.from(map.entries())
+    .map(([name, rows]) => ({ name, rows }))
+    .sort((a, b) => {
+      const ia = BLOCK_ORDER.indexOf(a.name);
+      const ib = BLOCK_ORDER.indexOf(b.name);
+
+      if (ia === -1 && ib === -1) return a.name.localeCompare(b.name);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+
+      return ia - ib;
+    });
 }
 
 /**
@@ -341,7 +480,7 @@ export default function ConfigurarPerfilPage() {
     return Boolean(requiredModule && !hasModule(requiredModule));
   }
 
-  const rows: GroupRow[] = useMemo(() => {
+  const baseRows: GroupRow[] = useMemo(() => {
     const byGroup = new Map<string, GroupRow>();
 
     permissions.forEach((permission) => {
@@ -360,13 +499,34 @@ export default function ConfigurarPerfilPage() {
     });
 
     return Array.from(byGroup.values())
-      .filter((row) =>
-        row.groupName.toLowerCase().includes(search.toLowerCase())
-      )
       .filter((row) => showLocked || !isLocked(row))
       .sort((a, b) => a.groupName.localeCompare(b.groupName));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [permissions, search, showLocked, hasModule]);
+  }, [permissions, showLocked, hasModule]);
+
+  // Busca acha o BLOCO inteiro (ex.: digitar "compras" traz Compras +
+  // Cotações + Pedidos de Compra juntos), não só a linha cujo nome
+  // bate — mais fácil de achar tudo de um assunto sem lembrar o nome
+  // exato de cada linha.
+  const rows: GroupRow[] = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) {
+      return baseRows;
+    }
+
+    const matchingBlocks = new Set(
+      baseRows
+        .filter(
+          (row) =>
+            row.groupName.toLowerCase().includes(term) ||
+            blockOf(row).toLowerCase().includes(term)
+        )
+        .map((row) => blockOf(row))
+    );
+
+    return baseRows.filter((row) => matchingBlocks.has(blockOf(row)));
+  }, [baseRows, search]);
 
   const appRows = useMemo(
     () => rows.filter((row) => scopeOf(row) === "APP"),
@@ -377,6 +537,9 @@ export default function ConfigurarPerfilPage() {
     () => rows.filter((row) => scopeOf(row) === "ERP"),
     [rows]
   );
+
+  const appBlocks = useMemo(() => groupIntoBlocks(appRows), [appRows]);
+  const erpBlocks = useMemo(() => groupIntoBlocks(erpRows), [erpRows]);
 
   const adminPermission = useMemo(
     () =>
@@ -671,6 +834,45 @@ export default function ConfigurarPerfilPage() {
     );
   }
 
+  function renderBlockHeader(scope: "APP" | "ERP", block: Block) {
+    // União das permissões de TODAS as linhas do bloco (só as
+    // desbloqueadas — módulo travado não entra na conta) — mesma ideia
+    // do "Marcar tudo" por linha, só que pro bloco inteiro.
+    const ids = new Set<string>();
+
+    block.rows.forEach((row) => {
+      if (isLocked(row)) return;
+      getRowPermissionIds(row).forEach((id) => ids.add(id));
+    });
+
+    const blockIds = Array.from(ids);
+    const allChecked =
+      blockIds.length > 0 && blockIds.every((id) => grants.has(id));
+    const isPending = blockIds.some((id) => pending.has(id));
+
+    return (
+      <tr key={`block-${scope}-${block.name}`}>
+        <td
+          colSpan={totalColumns}
+          className="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-2"
+        >
+          <label className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+            {blockIds.length > 0 && (
+              <input
+                type="checkbox"
+                checked={allChecked}
+                disabled={isPending}
+                title="Marcar/desmarcar todas as caixas deste bloco"
+                onChange={() => void toggle(blockIds)}
+              />
+            )}
+            {block.name}
+          </label>
+        </td>
+      </tr>
+    );
+  }
+
   function renderCell(
     key: string,
     permission: Permission | Permission[] | null,
@@ -844,14 +1046,24 @@ export default function ConfigurarPerfilPage() {
                 {appRows.length > 0 && (
                   <>
                     {renderSectionHeader("APP")}
-                    {appRows.map(renderGroupRow)}
+                    {appBlocks.map((block) => (
+                      <Fragment key={block.name}>
+                        {renderBlockHeader("APP", block)}
+                        {block.rows.map(renderGroupRow)}
+                      </Fragment>
+                    ))}
                   </>
                 )}
 
                 {erpRows.length > 0 && (
                   <>
                     {renderSectionHeader("ERP")}
-                    {erpRows.map(renderGroupRow)}
+                    {erpBlocks.map((block) => (
+                      <Fragment key={block.name}>
+                        {renderBlockHeader("ERP", block)}
+                        {block.rows.map(renderGroupRow)}
+                      </Fragment>
+                    ))}
                   </>
                 )}
               </tbody>
