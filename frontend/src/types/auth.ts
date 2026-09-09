@@ -34,6 +34,8 @@ export interface AuthCompany {
   brandingThemeToggleEnabled: boolean;
   sidebarLayout: SidebarLayout;
   maxOpenTabs: number;
+  /** Ids de item de menu (`MenuItem.id`/`MenuGroup.id`) escondidos da sidebar por preferência da empresa. */
+  hiddenMenuItemIds: string[];
 }
 
 /**

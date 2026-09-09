@@ -222,6 +222,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           user.company.brandingThemeToggleEnabled,
         sidebarLayout: user.company.sidebarLayout,
         maxOpenTabs: user.company.maxOpenTabs,
+        hiddenMenuItemIds: user.company.hiddenMenuItemIds,
       },
     };
   }

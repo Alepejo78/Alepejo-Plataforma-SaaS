@@ -136,6 +136,13 @@ model Company {
   /// depende de módulo licenciado.
   maxOpenTabs Int @default(6)
 
+  /// Ids de item de menu (`MenuItem.id`/`MenuGroup.id` em
+  /// `frontend/src/components/layout/Sidebar/menu.ts`) escondidos da
+  /// sidebar por preferência da empresa — só reduz o menu visualmente,
+  /// nunca tira permissão/acesso de ninguém (a rota continua acessível
+  /// direto pela URL).
+  hiddenMenuItemIds String[] @default([])
+
   timezone String @default("America/Sao_Paulo") @db.VarChar(60)
 
   language String @default("pt-BR") @db.VarChar(10)

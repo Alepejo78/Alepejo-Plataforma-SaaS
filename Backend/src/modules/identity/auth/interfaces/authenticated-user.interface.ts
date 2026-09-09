@@ -31,6 +31,8 @@ export interface AuthenticatedCompany {
   sidebarLayout: string;
   /** Quantas guias de 2º nível podem ficar abertas ao mesmo tempo em cada app (ERP/OS). */
   maxOpenTabs: number;
+  /** Ids de item de menu (`MenuItem.id`/`MenuGroup.id`) escondidos da sidebar por preferência da empresa. */
+  hiddenMenuItemIds: string[];
 }
 
 export interface AuthenticatedUser {

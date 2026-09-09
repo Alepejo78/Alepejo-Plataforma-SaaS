@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck, Users } from "lucide-react";
+import { EyeOff, ShieldCheck, Users } from "lucide-react";
 
 import { OsCardLink, OsShell } from "@/components";
 import { useAuth } from "@/providers/AuthProvider";
@@ -24,6 +24,14 @@ export default function OsSegurancaPage() {
       icon: ShieldCheck,
       iconAnim: "shieldcheck",
       visible: can("role.view"),
+    },
+    {
+      title: "Menu visível",
+      description: "Oculta itens do menu lateral, sem tirar acesso",
+      href: "/erp/configuracoes/menu-visivel",
+      icon: EyeOff,
+      iconAnim: "eyeoff",
+      visible: can("company.update"),
     },
   ].filter((card) => card.visible);
 

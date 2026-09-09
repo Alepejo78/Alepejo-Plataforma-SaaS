@@ -39,6 +39,7 @@ export type CompanyUpdatePayload = Partial<{
   state: string;
   active: boolean;
   maxOpenTabs: number;
+  hiddenMenuItemIds: string[];
 }>;
 
 export const companyService = {
