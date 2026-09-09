@@ -11,12 +11,18 @@ import { useEffect, useRef } from "react";
  * exatamente o problema reportado.
  *
  * O vídeo toca escondido, cada quadro é desenhado num `<canvas>`: os
- * pixels na cor do fundo (amostrada nos 4 cantos do próprio vídeo —
+ * pixels na cor do fundo (amostrada em cantos do próprio vídeo —
  * funciona pra fundo preto ou cinza-claro sem configurar por vídeo)
- * viram 100% transparentes; os da borda (faixa de "pena") ganham alfa
- * intermediário COM remoção de contaminação da cor do fundo (o pixel
- * observado é uma mistura do robô com o fundo — sem essa remoção, a
- * borda fica com uma auréola na cor do fundo antigo).
+ * viram 100% transparentes; uma faixa curta de "pena" na borda só
+ * reduz a OPACIDADE, nunca mexe na cor do pixel — o robô precisa ficar
+ * sólido (cor sempre igual ao vídeo original). Uma versão anterior
+ * tentava também "descontaminar" a cor da borda (mistura estúdio)
+ * dividindo pela opacidade — mata do robô em opacidades baixas: perto
+ * de alfa=0 qualquer resíduo de cor é amplificado várias vezes e
+ * estourado pro branco, dando o efeito "lavado"/fantasma reportado.
+ * Sem essa divisão, a única sobra possível é uma leve franja na cor do
+ * fundo do estúdio num anel fino de poucos pixels — bem menos visível
+ * que o robô inteiro ficando translúcido.
  */
 export function ChromaKeyVideo({
   src,
@@ -64,24 +70,34 @@ export function ChromaKeyVideo({
       height: number,
       data: Uint8ClampedArray,
     ): [number, number, number] {
-      const corners = [
-        0,
-        (width - 1) * 4,
-        (height - 1) * width * 4,
-        ((height - 1) * width + (width - 1)) * 4,
-      ];
+      // Média de um bloco 5x5 em cada canto (não só 1 pixel) — reduz o
+      // efeito de ruído de compressão/uma leve vinheta do estúdio na
+      // cor amostrada, que faria sobrar "névoa" de fundo perto do meio
+      // das bordas do quadro.
+      const patch = 5;
+      const startsX = [0, Math.max(0, width - patch)];
+      const startsY = [0, Math.max(0, height - patch)];
 
       let r = 0;
       let g = 0;
       let b = 0;
+      let n = 0;
 
-      for (const i of corners) {
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
+      for (const sx of startsX) {
+        for (const sy of startsY) {
+          for (let dy = 0; dy < patch && sy + dy < height; dy++) {
+            for (let dx = 0; dx < patch && sx + dx < width; dx++) {
+              const i = ((sy + dy) * width + (sx + dx)) * 4;
+              r += data[i];
+              g += data[i + 1];
+              b += data[i + 2];
+              n++;
+            }
+          }
+        }
       }
 
-      return [r / 4, g / 4, b / 4];
+      return [r / n, g / n, b / n];
     }
 
     function draw() {
@@ -114,8 +130,11 @@ export function ChromaKeyVideo({
         }
 
         const [kr, kg, kb] = keyColorRef.current;
+        // Faixa de transição curta (só 12 de distância) — o bastante
+        // pra suavizar o serrilhado da borda sem alcançar pixel
+        // nenhum que já seja claramente parte do robô.
         const threshold = 34;
-        const feather = 60;
+        const feather = 46;
         const range = feather - threshold;
 
         for (let i = 0; i < data.length; i += 4) {
@@ -126,25 +145,14 @@ export function ChromaKeyVideo({
 
           if (dist <= threshold) {
             data[i + 3] = 0;
-            continue;
+          } else if (dist < feather) {
+            // Só a opacidade muda — a cor do pixel NUNCA é tocada, pra
+            // não "lavar"/fantasmar o robô (ver comentário do componente).
+            data[i + 3] = Math.round(
+              (255 * (dist - threshold)) / range,
+            );
           }
-
-          if (dist >= feather) {
-            // Já é o robô — mantém a cor original e opacidade total.
-            continue;
-          }
-
-          const alpha = (dist - threshold) / range;
-
-          // Remove a contaminação da cor de fundo do pixel de borda
-          // antes de reduzir a opacidade: o pixel observado é
-          // `alpha*cor_real + (1-alpha)*cor_fundo` (mistura de estúdio),
-          // então isolar `cor_real` evita a auréola que apareceria se
-          // só a opacidade fosse reduzida mantendo a cor misturada.
-          data[i] = clamp255((data[i] - (1 - alpha) * kr) / alpha);
-          data[i + 1] = clamp255((data[i + 1] - (1 - alpha) * kg) / alpha);
-          data[i + 2] = clamp255((data[i + 2] - (1 - alpha) * kb) / alpha);
-          data[i + 3] = Math.round(255 * alpha);
+          // dist >= feather: já é o robô — cor e opacidade originais, intactas.
         }
 
         ctx.putImageData(frame, 0, 0);
@@ -186,10 +194,4 @@ export function ChromaKeyVideo({
       />
     </div>
   );
-}
-
-function clamp255(value: number): number {
-  if (value < 0) return 0;
-  if (value > 255) return 255;
-  return value;
 }
