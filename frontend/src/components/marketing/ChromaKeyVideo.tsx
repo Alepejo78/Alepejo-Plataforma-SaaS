@@ -3,19 +3,20 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Vídeo com o fundo trocado por branco sólido — os vídeos do Pejo vêm
- * de estúdio, com fundo preto ou cinza-claro (nunca branco de
- * verdade, nem transparente). `mix-blend-mode` no `<video>` não
- * funciona de forma confiável (o navegador compõe vídeo numa camada
- * própria que ignora blend mode) e remoção com transparência de
- * verdade deixa uma auréola/halo visível nas bordas — pintar de
- * branco em vez de vazado fica mais limpo e previsível em qualquer
- * fundo de página.
+ * Vídeo com o fundo removido de verdade (canal alfa), não pintado de
+ * branco — os vídeos do Pejo vêm de estúdio, com fundo preto ou
+ * cinza-claro (nunca branco de verdade, nem transparente). Pintar de
+ * branco (tentativa anterior) deixa uma caixa branca visível sempre
+ * que o vídeo é colocado sobre qualquer fundo que não seja branco —
+ * exatamente o problema reportado.
  *
- * O vídeo toca escondido, cada quadro é desenhado num `<canvas>` e os
- * pixels próximos da cor do fundo (amostrada nos 4 cantos do próprio
- * vídeo — funciona pra fundo preto ou cinza-claro sem configurar por
- * vídeo) viram branco.
+ * O vídeo toca escondido, cada quadro é desenhado num `<canvas>`: os
+ * pixels na cor do fundo (amostrada nos 4 cantos do próprio vídeo —
+ * funciona pra fundo preto ou cinza-claro sem configurar por vídeo)
+ * viram 100% transparentes; os da borda (faixa de "pena") ganham alfa
+ * intermediário COM remoção de contaminação da cor do fundo (o pixel
+ * observado é uma mistura do robô com o fundo — sem essa remoção, a
+ * borda fica com uma auréola na cor do fundo antigo).
  */
 export function ChromaKeyVideo({
   src,
@@ -123,19 +124,27 @@ export function ChromaKeyVideo({
           const db = data[i + 2] - kb;
           const dist = Math.sqrt(dr * dr + dg * dg + db * db);
 
-          if (dist < threshold) {
-            data[i] = 255;
-            data[i + 1] = 255;
-            data[i + 2] = 255;
-          } else if (dist < feather) {
-            // Mistura suave pixel-real -> branco, sem nunca abrir mão
-            // da opacidade (evita halo/auréola no contorno do robô).
-            const t = (dist - threshold) / range;
-
-            data[i] = Math.round(255 * (1 - t) + data[i] * t);
-            data[i + 1] = Math.round(255 * (1 - t) + data[i + 1] * t);
-            data[i + 2] = Math.round(255 * (1 - t) + data[i + 2] * t);
+          if (dist <= threshold) {
+            data[i + 3] = 0;
+            continue;
           }
+
+          if (dist >= feather) {
+            // Já é o robô — mantém a cor original e opacidade total.
+            continue;
+          }
+
+          const alpha = (dist - threshold) / range;
+
+          // Remove a contaminação da cor de fundo do pixel de borda
+          // antes de reduzir a opacidade: o pixel observado é
+          // `alpha*cor_real + (1-alpha)*cor_fundo` (mistura de estúdio),
+          // então isolar `cor_real` evita a auréola que apareceria se
+          // só a opacidade fosse reduzida mantendo a cor misturada.
+          data[i] = clamp255((data[i] - (1 - alpha) * kr) / alpha);
+          data[i + 1] = clamp255((data[i + 1] - (1 - alpha) * kg) / alpha);
+          data[i + 2] = clamp255((data[i + 2] - (1 - alpha) * kb) / alpha);
+          data[i + 3] = Math.round(255 * alpha);
         }
 
         ctx.putImageData(frame, 0, 0);
@@ -153,7 +162,12 @@ export function ChromaKeyVideo({
   }, [src]);
 
   return (
-    <>
+    // A caixa (tamanho vem do `className` do chamador) só centraliza —
+    // quem preserva a proporção de verdade é o canvas em si (abaixo),
+    // já que `object-fit` não é respeitado de forma confiável nesse
+    // elemento; sem isso, fixar largura E altura na caixa esticava/
+    // achatava o robô.
+    <div className={`flex items-center justify-center ${className ?? ""}`}>
       <video
         ref={videoRef}
         src={src}
@@ -168,8 +182,14 @@ export function ChromaKeyVideo({
       <canvas
         ref={canvasRef}
         onClick={onClick}
-        className={className}
+        className={`max-h-full max-w-full ${onClick ? "cursor-pointer" : ""}`}
       />
-    </>
+    </div>
   );
+}
+
+function clamp255(value: number): number {
+  if (value < 0) return 0;
+  if (value > 255) return 255;
+  return value;
 }
