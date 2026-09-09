@@ -123,6 +123,8 @@ export function WorkshopQuoteImportModal({ onClose, onSaved }: Props) {
   }
 
   const total = items.reduce((sum, it) => sum + it.netValue, 0);
+  const grossTotal = items.reduce((sum, it) => sum + it.grossValue, 0);
+  const discountTotal = Math.max(grossTotal - total, 0);
 
   async function handleSubmit() {
     setFormError("");
@@ -503,8 +505,16 @@ export function WorkshopQuoteImportModal({ onClose, onSaved }: Props) {
                     ))}
                   </div>
 
-                  <div className="mt-3 flex justify-end text-sm font-semibold text-[var(--text-primary)]">
-                    Total: {money(total)}
+                  <div className="mt-3 flex flex-col items-end gap-1 text-sm">
+                    <span className="text-[var(--text-muted)]">
+                      Valor total: {money(grossTotal)}
+                    </span>
+                    <span className="text-[var(--text-muted)]">
+                      Desconto: {money(discountTotal)}
+                    </span>
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      Valor a pagar: {money(total)}
+                    </span>
                   </div>
                 </div>
 

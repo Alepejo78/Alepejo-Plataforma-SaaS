@@ -788,7 +788,11 @@ export function FinancialEntriesScreen({
         documentKey: form.documentKey || undefined,
         documentType: form.documentType || undefined,
         amount: isParceled || isMultiItem ? undefined : form.amount,
-        discountValue: form.discountValue || undefined,
+        // Nunca `|| undefined` aqui: 0 é um valor válido (tirar um
+        // desconto que já existia) e precisa ser enviado de verdade,
+        // senão o backend entende "não mexe nesse campo" e mantém o
+        // desconto antigo salvo.
+        discountValue: form.discountValue,
         installments: isParceled ? validInstallments : undefined,
         paymentMethod: form.paymentMethod as PaymentMethod,
         observation: form.observation || undefined,
