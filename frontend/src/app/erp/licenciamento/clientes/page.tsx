@@ -433,6 +433,36 @@ export default function ClientesFaturamentoPage() {
               </thead>
 
               <tbody>
+                <tr className="border-t border-[var(--border)] bg-[var(--surface-hover)] font-semibold">
+                  <td className="sticky left-0 z-10 whitespace-nowrap bg-[var(--surface-hover)] px-4 py-3 text-[var(--text-primary)]">
+                    Total do mês
+                  </td>
+
+                  <td className="px-4 py-3" colSpan={4} />
+
+                  {MONTH_LABELS.map((label, i) => {
+                    const monthTotal = rows.reduce(
+                      (sum, row) => sum + (row.months[i]?.value ?? 0),
+                      0
+                    );
+
+                    return (
+                      <td
+                        key={label}
+                        className="whitespace-nowrap px-3 py-3 text-right text-[var(--text-primary)]"
+                      >
+                        {money(monthTotal)}
+                      </td>
+                    );
+                  })}
+
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-[var(--text-primary)]">
+                    {money(yearTotal)}
+                  </td>
+
+                  <td className="px-4 py-3" />
+                </tr>
+
                 {rows.map((row) => (
                   <tr
                     key={row.companyId}
