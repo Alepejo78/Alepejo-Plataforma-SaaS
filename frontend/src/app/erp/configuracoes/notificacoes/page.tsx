@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Trash2, Upload } from "lucide-react";
 
 import { OsShell } from "@/components";
 import { Can } from "@/components/auth/Can";
@@ -8,6 +9,7 @@ import { PageAccessGuard } from "@/components/auth/PageAccessGuard";
 import { WhatsappSettingsTab } from "@/components/settings/WhatsappSettingsTab";
 
 import {
+  documentTemplateAssetUrl,
   documentTemplateSettingsService,
   type DocumentTemplateSettings,
 } from "@/services/document-template-settings.service";
@@ -43,6 +45,126 @@ const textareaClass = `
 
 const labelClass =
   "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
+
+function TemplateImageUploader({
+  currentPath,
+  onChanged,
+}: {
+  currentPath: string | null;
+  onChanged: (settings: DocumentTemplateSettings) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleFile(file: File) {
+    setBusy(true);
+    setError("");
+
+    try {
+      const updated =
+        await documentTemplateSettingsService.uploadTemplateImage(file);
+      onChanged(updated);
+    } catch (err) {
+      setError(extractMessage(err, "Não foi possível enviar o template."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove() {
+    setBusy(true);
+    setError("");
+
+    try {
+      const updated =
+        await documentTemplateSettingsService.removeTemplateImage();
+      onChanged(updated);
+    } catch (err) {
+      setError(extractMessage(err, "Não foi possível remover o template."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-start gap-4">
+        <div className="flex h-32 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--border)] bg-white">
+          {currentPath ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={documentTemplateAssetUrl(currentPath) ?? undefined}
+              alt="Template completo"
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : (
+            <span className="px-1 text-center text-[10px] text-[var(--text-muted)]">
+              Sem template
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+
+              if (file) {
+                void handleFile(file);
+              }
+
+              e.target.value = "";
+            }}
+          />
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+              className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] disabled:opacity-60"
+            >
+              <Upload size={16} />
+              {busy
+                ? "Enviando..."
+                : currentPath
+                  ? "Trocar template"
+                  : "Importar template"}
+            </button>
+
+            {currentPath && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void handleRemove()}
+                className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--danger)] transition-colors hover:bg-[var(--danger-soft)] disabled:opacity-60"
+              >
+                <Trash2 size={16} />
+                Remover
+              </button>
+            )}
+          </div>
+
+          <p className="max-w-md text-xs text-[var(--text-muted)]">
+            Imagem PNG ou JPG de página inteira (A4), com o cabeçalho e
+            o rodapé já desenhados — vira o fundo de todo PDF gerado,
+            atrás do conteúdo. Deixe uma faixa em branco no meio da
+            página pra não sobrepor o conteúdo.
+          </p>
+
+          {error && (
+            <p className="text-xs text-[var(--danger)]">{error}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PdfTemplateSection() {
   const [settings, setSettings] = useState<DocumentTemplateSettings | null>(
@@ -122,10 +244,21 @@ function PdfTemplateSection() {
           {loadError}
         </div>
       ) : (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 space-y-6">
+          <div>
+            <p className={labelClass}>Template completo (opcional)</p>
+            <TemplateImageUploader
+              currentPath={settings.templateImagePath}
+              onChanged={(updated) => {
+                setSettings(updated);
+                setSaved(false);
+              }}
+            />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>Cabeçalho</label>
+              <label className={labelClass}>Cabeçalho (texto)</label>
               <textarea
                 rows={3}
                 className={textareaClass}
@@ -138,7 +271,7 @@ function PdfTemplateSection() {
             </div>
 
             <div>
-              <label className={labelClass}>Rodapé</label>
+              <label className={labelClass}>Rodapé (texto)</label>
               <textarea
                 rows={3}
                 className={textareaClass}

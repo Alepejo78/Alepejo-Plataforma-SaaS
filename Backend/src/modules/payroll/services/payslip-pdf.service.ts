@@ -8,8 +8,10 @@ import PDFDocument from 'pdfkit';
 import { DATA_DIR } from '../../../core/storage/data-dir';
 import { DocumentTemplateSettingsService } from '../../document-template-settings/services/document-template-settings.service';
 import {
+  computePdfMargins,
   drawPdfFooter,
   drawPdfHeader,
+  drawPdfTemplateBackground,
 } from '../../document-template-settings/utils/pdf-header-footer.util';
 
 const EMBEDDABLE_LOGO_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg']);
@@ -110,12 +112,7 @@ export class PayslipPdfService {
 
     const doc = new PDFDocument({
       size: 'A4',
-      margins: {
-        top: templateSettings?.pdfHeader ? 64 : 40,
-        bottom: templateSettings?.pdfFooter ? 56 : 40,
-        left: 40,
-        right: 40,
-      },
+      margins: computePdfMargins(templateSettings),
     });
 
     const chunks: Buffer[] = [];
@@ -127,6 +124,7 @@ export class PayslipPdfService {
       doc.on('error', reject);
     });
 
+    drawPdfTemplateBackground(doc, templateSettings?.templateImagePath);
     drawPdfHeader(doc, templateSettings?.pdfHeader);
 
     this.render(doc, input, company);
@@ -145,12 +143,7 @@ export class PayslipPdfService {
 
     const doc = new PDFDocument({
       size: 'A4',
-      margins: {
-        top: templateSettings?.pdfHeader ? 64 : 40,
-        bottom: templateSettings?.pdfFooter ? 56 : 40,
-        left: 40,
-        right: 40,
-      },
+      margins: computePdfMargins(templateSettings),
     });
 
     const chunks: Buffer[] = [];
@@ -162,6 +155,7 @@ export class PayslipPdfService {
       doc.on('error', reject);
     });
 
+    drawPdfTemplateBackground(doc, templateSettings?.templateImagePath);
     drawPdfHeader(doc, templateSettings?.pdfHeader);
 
     this.renderTimeReport(doc, input, company);

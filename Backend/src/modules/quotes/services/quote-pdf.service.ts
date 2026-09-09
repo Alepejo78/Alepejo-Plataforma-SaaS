@@ -10,8 +10,10 @@ import { DATA_DIR } from '../../../core/storage/data-dir';
 import { QuoteRepository } from '../repositories/quote.repository';
 import { DocumentTemplateSettingsService } from '../../document-template-settings/services/document-template-settings.service';
 import {
+  computePdfMargins,
   drawPdfFooter,
   drawPdfHeader,
+  drawPdfTemplateBackground,
 } from '../../document-template-settings/utils/pdf-header-footer.util';
 
 type QuoteWithRelations = Awaited<ReturnType<QuoteRepository['create']>>;
@@ -83,12 +85,7 @@ export class QuotePdfService {
 
     const doc = new PDFDocument({
       size: 'A4',
-      margins: {
-        top: templateSettings?.pdfHeader ? 64 : 40,
-        bottom: templateSettings?.pdfFooter ? 56 : 40,
-        left: 40,
-        right: 40,
-      },
+      margins: computePdfMargins(templateSettings),
     });
 
     const chunks: Buffer[] = [];
@@ -100,6 +97,7 @@ export class QuotePdfService {
       doc.on('error', reject);
     });
 
+    drawPdfTemplateBackground(doc, templateSettings?.templateImagePath);
     drawPdfHeader(doc, templateSettings?.pdfHeader);
 
     this.render(doc, quote, company);

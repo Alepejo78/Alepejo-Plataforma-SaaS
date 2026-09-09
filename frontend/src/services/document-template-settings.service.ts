@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { env } from "@/lib/env";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -6,11 +7,22 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
+export function documentTemplateAssetUrl(
+  path: string | null | undefined
+): string | null {
+  if (!path) {
+    return null;
+  }
+
+  return path.startsWith("http") ? path : `${env.apiOrigin}${path}`;
+}
+
 export interface DocumentTemplateSettings {
   id: string;
   companyId: string;
   pdfHeader: string | null;
   pdfFooter: string | null;
+  templateImagePath: string | null;
 }
 
 export interface DocumentTemplateSettingsPayload {
@@ -34,6 +46,30 @@ export const documentTemplateSettingsService = {
       "/document-template-settings",
       payload
     );
+
+    return data.data;
+  },
+
+  async uploadTemplateImage(
+    file: File
+  ): Promise<DocumentTemplateSettings> {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const { data } = await api.post<
+      ApiEnvelope<DocumentTemplateSettings>
+    >("/document-template-settings/template-image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    return data.data;
+  },
+
+  async removeTemplateImage(): Promise<DocumentTemplateSettings> {
+    const { data } = await api.delete<
+      ApiEnvelope<DocumentTemplateSettings>
+    >("/document-template-settings/template-image");
 
     return data.data;
   },

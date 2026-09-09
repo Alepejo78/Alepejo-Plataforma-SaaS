@@ -1633,6 +1633,12 @@ model DocumentTemplateSettings {
   pdfHeader String? @db.Text
   pdfFooter String? @db.Text
 
+  /// Template completo (imagem com cabeçalho + rodapé já desenhados,
+  /// ex.: letterhead exportado do Canva) — desenhado como fundo da
+  /// página inteira, atrás do conteúdo, em todo PDF gerado. Caminho
+  /// público (/uploads/...), mesmo padrão de Company.logo.
+  templateImagePath String? @db.VarChar(255)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

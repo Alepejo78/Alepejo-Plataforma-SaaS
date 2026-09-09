@@ -1,10 +1,26 @@
-import { Body, Controller, Get, Put } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Put,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 
-import { DocumentTemplateSettingsService } from '../services/document-template-settings.service';
+import {
+  DocumentTemplateSettingsService,
+  templateImageDestination,
+  templateImageFileFilter,
+  templateImageFilename,
+} from '../services/document-template-settings.service';
 
 import { UpsertDocumentTemplateSettingsDto } from '../dto/upsert-document-template-settings.dto';
 
@@ -31,5 +47,35 @@ export class DocumentTemplateSettingsController {
     @Body() dto: UpsertDocumentTemplateSettingsDto,
   ) {
     return this.service.updateSettings(companyId, dto);
+  }
+
+  @Post('template-image')
+  @Permissions('email.manage')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Enviar template completo (imagem de fundo com cabeçalho + rodapé)',
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: templateImageDestination,
+        filename: templateImageFilename,
+      }),
+      fileFilter: templateImageFileFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  uploadTemplateImage(
+    @CurrentUser('companyId') companyId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.service.uploadTemplateImage(companyId, file);
+  }
+
+  @Delete('template-image')
+  @Permissions('email.manage')
+  @ApiOperation({ summary: 'Remover o template completo' })
+  removeTemplateImage(@CurrentUser('companyId') companyId: string) {
+    return this.service.removeTemplateImage(companyId);
   }
 }

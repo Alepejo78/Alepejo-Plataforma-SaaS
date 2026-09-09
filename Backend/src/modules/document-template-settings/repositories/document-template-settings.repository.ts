@@ -48,4 +48,12 @@ export class DocumentTemplateSettingsRepository {
       create: { companyId, ...data },
     });
   }
+
+  async setTemplateImagePath(companyId: string, publicPath: string | null) {
+    return this.prisma.documentTemplateSettings.upsert({
+      where: { companyId },
+      update: { templateImagePath: publicPath },
+      create: { companyId, templateImagePath: publicPath },
+    });
+  }
 }
