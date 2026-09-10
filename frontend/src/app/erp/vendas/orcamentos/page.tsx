@@ -22,6 +22,7 @@ import { ListPageLayout } from "@/components/layout/ListPageLayout";
 import { ExportButton } from "@/components/ui/ExportButton";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DiscountInput } from "@/components/ui/DiscountInput";
 import {
   InstallmentsEditor,
   buildInstallmentRows,
@@ -1661,10 +1662,11 @@ export default function OrcamentosPage() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label className={labelClass}>
-                    Desconto (R$)
+                    Desconto
                   </label>
 
-                  <CurrencyInput
+                  <DiscountInput
+                    baseAmount={itemsTotal}
                     className={fieldClass}
                     value={form.discountValue}
                     onChange={(value) =>

@@ -29,6 +29,7 @@ import { buildExportMenuItems } from "@/lib/exportMenuItems";
 import { buildInstallmentsPreview } from "@/lib/dueDate";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DiscountInput } from "@/components/ui/DiscountInput";
 import { InvoiceImportModal } from "@/components/invoice-import/InvoiceImportModal";
 import { WorkshopQuoteImportModal } from "@/components/workshop-quote-import/WorkshopQuoteImportModal";
 import { FinancialEntryImportModal } from "@/components/financial-entry-import/FinancialEntryImportModal";
@@ -1748,16 +1749,14 @@ export function FinancialEntriesScreen({
                     Desconto
                   </label>
 
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    placeholder="0,00"
-                    className={fieldClass}
-                    value={form.discountValue || ""}
-                    onChange={(e) =>
-                      handleDiscountChange(Number(e.target.value) || 0)
+                  <DiscountInput
+                    baseAmount={
+                      (isMultiItem ? itemsTotal : form.amount) +
+                      form.discountValue
                     }
+                    className={fieldClass}
+                    value={form.discountValue}
+                    onChange={handleDiscountChange}
                   />
 
                   {isParceled && (
