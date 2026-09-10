@@ -34,6 +34,19 @@ import { ConfirmWorkshopQuoteImportDto } from '../dto/confirm-workshop-quote-imp
 const PART_CHART_ACCOUNT_CODE = '09.01.02';
 const SERVICE_CHART_ACCOUNT_CODE = '09.01.01';
 
+/// Corta um texto extraído do PDF pro tamanho máximo da coluna do
+/// banco — `resolvePartner` chama `BusinessPartnersService.create`
+/// direto (sem passar pelo `ValidationPipe` do controller, que só
+/// roda em requisição HTTP), então nada valida o tamanho desses
+/// campos antes do Prisma; sem esse corte, um endereço/nome mais
+/// comprido do que o normal no PDF vira um erro 500 cru em vez de um
+/// aviso — melhor truncar (parceiro criado, revisável depois) do que
+/// travar a importação inteira por causa de um campo secundário.
+function truncate(value: string | null | undefined, max: number): string | undefined {
+  if (!value) return undefined;
+  return value.slice(0, max);
+}
+
 @Injectable()
 export class WorkshopQuoteImportService {
   constructor(
@@ -273,16 +286,16 @@ export class WorkshopQuoteImportService {
       {
         roles: [BusinessPartnerRole.CUSTOMER],
         personType: isCpf ? PersonType.INDIVIDUAL : PersonType.COMPANY,
-        document,
-        legalName: partner.legalName,
-        phone: partner.phone,
-        mobile: partner.mobile,
-        zipCode: partner.zipCode,
-        street: partner.street,
-        number: partner.number,
-        complement: partner.complement,
-        city: partner.city,
-        state: partner.state,
+        document: truncate(document, 20)!,
+        legalName: truncate(partner.legalName, 200)!,
+        phone: truncate(partner.phone, 30),
+        mobile: truncate(partner.mobile, 30),
+        zipCode: truncate(partner.zipCode, 15),
+        street: truncate(partner.street, 150),
+        number: truncate(partner.number, 20),
+        complement: truncate(partner.complement, 100),
+        city: truncate(partner.city, 100),
+        state: truncate(partner.state, 2),
       },
       userId,
     );
@@ -312,8 +325,8 @@ export class WorkshopQuoteImportService {
     const created = await this.productsService.create(
       rootCompanyId,
       {
-        code: item.code,
-        description: item.description,
+        code: truncate(item.code, 30)!,
+        description: truncate(item.description, 200)!,
         type:
           item.kind === 'PART' ? ProductType.PRODUCT : ProductType.SERVICE,
         inventoryControl: InventoryControl.NONE,
