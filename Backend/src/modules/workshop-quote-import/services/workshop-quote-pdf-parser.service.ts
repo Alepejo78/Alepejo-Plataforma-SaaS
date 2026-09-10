@@ -10,6 +10,31 @@ const MONEY_PATTERN = /\d{1,3}(?:\.\d{3})*,\d{2}/;
 const MONEY_NOT_PERCENT_PATTERN = /\d{1,3}(?:\.\d{3})*,\d{2}(?!\s*%)/g;
 const PART_QTY_PATTERN = /^\d+,\d{3}$/;
 const CODE_FIELD_PATTERN = /^\d{4,8}$/;
+/// Unidades de medida realmente usadas nos exports da Fazam Car —
+/// lista fechada de propósito: um token curto e maiúsculo dentro da
+/// descrição (ex.: "JOGO" em "JOGO DE CABOS") tem a MESMA forma de
+/// uma unidade de verdade ("JG"), então só um whitelist evita
+/// confundir os dois quando os dois campos vêm colados.
+const KNOWN_UNIT_CODES = new Set([
+  'UN',
+  'PC',
+  'JG',
+  'KG',
+  'LT',
+  'L',
+  'CX',
+  'PAR',
+  'MT',
+  'M',
+  'CM',
+  'M2',
+  'M3',
+  'RL',
+  'FR',
+  'CJ',
+  'GL',
+  'DZ',
+]);
 
 /**
  * Bruto e líquido de uma linha, buscados por MAGNITUDE (maior =
@@ -78,7 +103,10 @@ function toNumber(raw: string): number {
 /// os rótulos aparecem em algum lugar da linha.
 function isTableHeaderRow(fields: string[]): boolean {
   const joined = fields.join(' ');
-  return /Código/i.test(joined) && /(Descrição|Líquido|Bruto)/i.test(joined);
+  return (
+    /(Código|Interno)/i.test(joined) &&
+    /(Descrição|Líquido|Bruto)/i.test(joined)
+  );
 }
 
 function findLine(
@@ -169,16 +197,22 @@ export class WorkshopQuotePdfParserService {
     const lines = rawText.split(/\r?\n/).map((l) => l.trim());
     const warnings: string[] = [];
 
-    const documentNumberMatch = findLine(lines, /ORÇAMENTO\s+(\S+)/i);
+    // "ORÇAMENTO 011134" (orçamento ainda aberto) ou "FECHAMENTO
+    // FINANCEIRO: 011130" (nota final, depois que a OS já foi
+    // fechada) — os dois viram o mesmo tipo de título no sistema.
+    const documentNumberMatch =
+      findLine(lines, /ORÇAMENTO\s+(\S+)/i) ??
+      findLine(lines, /FECHAMENTO FINANCEIRO:\s*(\S+)/i);
     const documentNumber = documentNumberMatch?.[1] ?? null;
     if (!documentNumber) {
       warnings.push('Não encontrei o número do orçamento.');
     }
 
-    const issueDateMatch = findLine(
-      lines,
-      /Abertura:\s*(\d{2}\/\d{2}\/\d{4})/i,
-    );
+    // "Abertura:" no orçamento, "Data do Fechamento:" no fechamento
+    // financeiro.
+    const issueDateMatch =
+      findLine(lines, /Abertura:\s*(\d{2}\/\d{2}\/\d{4})/i) ??
+      findLine(lines, /Data do Fechamento:\s*(\d{2}\/\d{2}\/\d{4})/i);
     const issueDate = issueDateMatch
       ? parseBrDateToIso(issueDateMatch[1])
       : null;
@@ -377,7 +411,14 @@ export class WorkshopQuotePdfParserService {
       );
 
       if (codeFieldIndex === -1) {
-        warnings.push(`Não entendi esta linha de peça: "${line}".`);
+        const fallbackItem = this.parsePartItemGlued(fields);
+
+        if (!fallbackItem) {
+          warnings.push(`Não entendi esta linha de peça: "${line}".`);
+          continue;
+        }
+
+        items.push(fallbackItem);
         continue;
       }
 
@@ -427,6 +468,72 @@ export class WorkshopQuotePdfParserService {
     }
 
     return items;
+  }
+
+  /**
+   * Formato onde nenhum campo de TAB é só o código — ele vem colado
+   * com a quantidade (ex.: "004299 1,000"), e unidade/descrição/
+   * valores ficam todos juntos no(s) outro(s) campo(s) (ex.: "JOGO DE
+   * CABOS DE VELAS JG 170,00 1,16% 168,03"). Acha o código pelo
+   * prefixo numérico de qualquer campo, tokeniza o resto inteiro
+   * (sem separar por campo) e classifica cada pedaço pela FORMA:
+   * quantidade (dígitos + vírgula + 3 casas), % de desconto
+   * (ignorado), valor (vírgula + 2 casas), unidade (só as do
+   * whitelist, pra não confundir com uma palavra da descrição do
+   * tamanho de "JOGO") — o que sobra é descrição.
+   */
+  private parsePartItemGlued(
+    fields: string[],
+  ): ParsedWorkshopQuoteItem | null {
+    const codeFieldIndex = fields.findIndex((f) => /^\d{4,8}\b/.test(f));
+
+    if (codeFieldIndex === -1) return null;
+
+    const codeMatch = fields[codeFieldIndex].match(/^(\d{4,8})\b/)!;
+    const code = codeMatch[1];
+    const restOfCodeField = fields[codeFieldIndex]
+      .slice(codeMatch[0].length)
+      .trim();
+
+    const tokens = [
+      restOfCodeField,
+      ...fields.filter((_, i) => i !== codeFieldIndex),
+    ]
+      .join(' ')
+      .split(/\s+/)
+      .filter(Boolean);
+
+    let quantity = 1;
+    let unit = 'UN';
+    const moneyValues: number[] = [];
+    const descTokens: string[] = [];
+
+    for (const token of tokens) {
+      if (PART_QTY_PATTERN.test(token)) {
+        quantity = toNumber(token);
+      } else if (/^\d{1,3}(?:\.\d{3})*,\d{2}%$/.test(token)) {
+        // % de desconto — só informativo, já embutido no líquido.
+      } else if (/^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(token)) {
+        moneyValues.push(toNumber(token));
+      } else if (KNOWN_UNIT_CODES.has(token.toUpperCase())) {
+        unit = token.toUpperCase();
+      } else if (/[A-Za-zÀ-ÿ]/.test(token)) {
+        descTokens.push(token);
+      }
+      // Sobra tipo "*" (marcador solto) — descartado, não é dado.
+    }
+
+    if (moneyValues.length === 0) return null;
+
+    return {
+      kind: 'PART',
+      code,
+      description: descTokens.join(' ').trim() || code,
+      unit,
+      quantity,
+      grossValue: Math.max(...moneyValues),
+      netValue: Math.min(...moneyValues),
+    };
   }
 
   /**
