@@ -1,8 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Plus, ShieldOff, Star, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Plus,
+  ShieldOff,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { OsShell } from "@/components";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
@@ -12,6 +21,7 @@ import {
   licenseService,
   type LicenseModule,
   type LicensePlan,
+  type ModuleFeatureLine,
 } from "@/services/license.service";
 
 function num(value: string | number | null | undefined) {
@@ -91,6 +101,17 @@ export default function PlanosAdminPage() {
 
   const [moduleSaving, setModuleSaving] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const [expandedModuleId, setExpandedModuleId] = useState<string | null>(
+    null
+  );
+  const [featureLinesByModule, setFeatureLinesByModule] = useState<
+    Record<string, ModuleFeatureLine[]>
+  >({});
+  const [featureLinesLoading, setFeatureLinesLoading] = useState<
+    string | null
+  >(null);
+  const [newLineText, setNewLineText] = useState<Record<string, string>>({});
 
   const [trialDays, setTrialDays] = useState("");
   const [trialDaysSaving, setTrialDaysSaving] = useState(false);
@@ -320,6 +341,124 @@ export default function PlanosAdminPage() {
       );
     } finally {
       setModuleSaving(null);
+    }
+  }
+
+  /**
+   * Só carrega as linhas do módulo na primeira vez que expande —
+   * depois fica em cache local (`featureLinesByModule`), atualizado
+   * direto pelas próprias ações de criar/editar/remover.
+   */
+  async function toggleModuleExpanded(moduleId: string) {
+    if (expandedModuleId === moduleId) {
+      setExpandedModuleId(null);
+      return;
+    }
+
+    setExpandedModuleId(moduleId);
+
+    if (featureLinesByModule[moduleId]) {
+      return;
+    }
+
+    setFeatureLinesLoading(moduleId);
+
+    try {
+      const lines = await licenseService.listFeatureLines(moduleId);
+      setFeatureLinesByModule((prev) => ({ ...prev, [moduleId]: lines }));
+    } catch (err) {
+      setListError(
+        extractMessage(
+          err,
+          "Não foi possível carregar as linhas de detalhamento."
+        )
+      );
+    } finally {
+      setFeatureLinesLoading(null);
+    }
+  }
+
+  function editFeatureLine(
+    moduleId: string,
+    lineId: string,
+    field: "monthlyPrice" | "yearlyPrice" | "description",
+    value: number | string
+  ) {
+    setFeatureLinesByModule((prev) => ({
+      ...prev,
+      [moduleId]: (prev[moduleId] ?? []).map((line) =>
+        line.id === lineId ? { ...line, [field]: value } : line
+      ),
+    }));
+  }
+
+  async function saveFeatureLine(
+    moduleId: string,
+    lineId: string,
+    field: "monthlyPrice" | "yearlyPrice" | "description"
+  ) {
+    const line = featureLinesByModule[moduleId]?.find(
+      (l) => l.id === lineId
+    );
+
+    if (!line) return;
+
+    try {
+      const value =
+        field === "description" ? line.description : num(line[field]);
+
+      const updated = await licenseService.updateFeatureLine(lineId, {
+        [field]: value,
+      });
+
+      setFeatureLinesByModule((prev) => ({
+        ...prev,
+        [moduleId]: (prev[moduleId] ?? []).map((l) =>
+          l.id === lineId ? updated : l
+        ),
+      }));
+    } catch (err) {
+      setListError(
+        extractMessage(err, "Não foi possível salvar a linha.")
+      );
+    }
+  }
+
+  async function addFeatureLine(moduleId: string) {
+    const description = (newLineText[moduleId] ?? "").trim();
+
+    if (!description) return;
+
+    try {
+      const created = await licenseService.createFeatureLine(moduleId, {
+        description,
+        sortOrder: featureLinesByModule[moduleId]?.length ?? 0,
+      });
+
+      setFeatureLinesByModule((prev) => ({
+        ...prev,
+        [moduleId]: [...(prev[moduleId] ?? []), created],
+      }));
+      setNewLineText((prev) => ({ ...prev, [moduleId]: "" }));
+    } catch (err) {
+      setListError(
+        extractMessage(err, "Não foi possível adicionar a linha.")
+      );
+    }
+  }
+
+  async function removeFeatureLineRow(moduleId: string, lineId: string) {
+    try {
+      await licenseService.removeFeatureLine(lineId);
+
+      setFeatureLinesByModule((prev) => ({
+        ...prev,
+        [moduleId]: (prev[moduleId] ?? []).filter((l) => l.id !== lineId),
+      }));
+    } catch (err) {
+      setListError(
+        extractMessage(err, "Não foi possível remover a linha.")
+      );
     }
   }
 
@@ -586,6 +725,12 @@ export default function PlanosAdminPage() {
             ex.: Personalização (marca própria).
           </p>
 
+          <p className="mb-3 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-xs text-[var(--text-muted)]">
+            "Detalhamento" é só anotação/planejamento — o valor de cada
+            linha NÃO soma no preço cobrado do cliente. Quem é cobrado
+            de verdade é sempre o preço do módulo (Mensal/Anual acima).
+          </p>
+
           <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
@@ -593,48 +738,194 @@ export default function PlanosAdminPage() {
                   <th className="px-4 py-3 font-semibold">Módulo</th>
                   <th className="px-4 py-3 font-semibold">Mensal</th>
                   <th className="px-4 py-3 font-semibold">Anual</th>
+                  <th className="px-4 py-3 font-semibold" />
                 </tr>
               </thead>
 
               <tbody>
-                {modules.map((mod) => (
-                  <tr
-                    key={mod.id}
-                    className="border-t border-[var(--border)]"
-                  >
-                    <td className="px-4 py-3 font-medium text-[var(--text-primary)]">
-                      {mod.name}
-                    </td>
+                {modules.map((mod) => {
+                  const isExpanded = expandedModuleId === mod.id;
+                  const lines = featureLinesByModule[mod.id] ?? [];
 
-                    <td className="px-4 py-3">
-                      <CurrencyInput
-                        className={`${fieldClass} h-9 max-w-40`}
-                        value={num(mod.monthlyPrice)}
-                        disabled={moduleSaving === mod.id}
-                        onChange={(value) =>
-                          editModulePrice(mod.id, "monthlyPrice", value)
-                        }
-                        onBlur={() =>
-                          void saveModulePrice(mod.id, "monthlyPrice")
-                        }
-                      />
-                    </td>
+                  return (
+                    <Fragment key={mod.id}>
+                      <tr className="border-t border-[var(--border)]">
+                        <td className="px-4 py-3 font-medium text-[var(--text-primary)]">
+                          {mod.name}
+                        </td>
 
-                    <td className="px-4 py-3">
-                      <CurrencyInput
-                        className={`${fieldClass} h-9 max-w-40`}
-                        value={num(mod.yearlyPrice)}
-                        disabled={moduleSaving === mod.id}
-                        onChange={(value) =>
-                          editModulePrice(mod.id, "yearlyPrice", value)
-                        }
-                        onBlur={() =>
-                          void saveModulePrice(mod.id, "yearlyPrice")
-                        }
-                      />
-                    </td>
-                  </tr>
-                ))}
+                        <td className="px-4 py-3">
+                          <CurrencyInput
+                            className={`${fieldClass} h-9 max-w-40`}
+                            value={num(mod.monthlyPrice)}
+                            disabled={moduleSaving === mod.id}
+                            onChange={(value) =>
+                              editModulePrice(mod.id, "monthlyPrice", value)
+                            }
+                            onBlur={() =>
+                              void saveModulePrice(mod.id, "monthlyPrice")
+                            }
+                          />
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <CurrencyInput
+                            className={`${fieldClass} h-9 max-w-40`}
+                            value={num(mod.yearlyPrice)}
+                            disabled={moduleSaving === mod.id}
+                            onChange={(value) =>
+                              editModulePrice(mod.id, "yearlyPrice", value)
+                            }
+                            onBlur={() =>
+                              void saveModulePrice(mod.id, "yearlyPrice")
+                            }
+                          />
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => void toggleModuleExpanded(mod.id)}
+                            className="flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                          >
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform ${
+                                isExpanded ? "rotate-180" : ""
+                              }`}
+                            />
+                            Detalhamento
+                          </button>
+                        </td>
+                      </tr>
+
+                      {isExpanded && (
+                        <tr
+                          key={`${mod.id}-detail`}
+                          className="border-t border-[var(--border)] bg-[var(--surface-hover)]"
+                        >
+                          <td colSpan={4} className="px-4 py-3">
+                            {featureLinesLoading === mod.id ? (
+                              <p className="text-xs text-[var(--text-muted)]">
+                                Carregando...
+                              </p>
+                            ) : (
+                              <div className="space-y-2">
+                                {lines.map((line) => (
+                                  <div
+                                    key={line.id}
+                                    className="flex flex-wrap items-center gap-2"
+                                  >
+                                    <input
+                                      className={`${fieldClass} h-9 flex-1`}
+                                      value={line.description}
+                                      onChange={(e) =>
+                                        editFeatureLine(
+                                          mod.id,
+                                          line.id,
+                                          "description",
+                                          e.target.value
+                                        )
+                                      }
+                                      onBlur={() =>
+                                        void saveFeatureLine(
+                                          mod.id,
+                                          line.id,
+                                          "description"
+                                        )
+                                      }
+                                    />
+
+                                    <CurrencyInput
+                                      className={`${fieldClass} h-9 max-w-36`}
+                                      value={num(line.monthlyPrice)}
+                                      onChange={(value) =>
+                                        editFeatureLine(
+                                          mod.id,
+                                          line.id,
+                                          "monthlyPrice",
+                                          value
+                                        )
+                                      }
+                                      onBlur={() =>
+                                        void saveFeatureLine(
+                                          mod.id,
+                                          line.id,
+                                          "monthlyPrice"
+                                        )
+                                      }
+                                    />
+
+                                    <CurrencyInput
+                                      className={`${fieldClass} h-9 max-w-36`}
+                                      value={num(line.yearlyPrice)}
+                                      onChange={(value) =>
+                                        editFeatureLine(
+                                          mod.id,
+                                          line.id,
+                                          "yearlyPrice",
+                                          value
+                                        )
+                                      }
+                                      onBlur={() =>
+                                        void saveFeatureLine(
+                                          mod.id,
+                                          line.id,
+                                          "yearlyPrice"
+                                        )
+                                      }
+                                    />
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void removeFeatureLineRow(
+                                          mod.id,
+                                          line.id
+                                        )
+                                      }
+                                      className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                ))}
+
+                                <div className="flex items-center gap-2 pt-1">
+                                  <input
+                                    placeholder="Nova linha (ex.: Cadastro de produtos)"
+                                    className={`${fieldClass} h-9 flex-1`}
+                                    value={newLineText[mod.id] ?? ""}
+                                    onChange={(e) =>
+                                      setNewLineText((prev) => ({
+                                        ...prev,
+                                        [mod.id]: e.target.value,
+                                      }))
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        void addFeatureLine(mod.id);
+                                      }
+                                    }}
+                                  />
+
+                                  <button
+                                    type="button"
+                                    onClick={() => void addFeatureLine(mod.id)}
+                                    className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)]"
+                                  >
+                                    <Plus size={14} />
+                                    Adicionar linha
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

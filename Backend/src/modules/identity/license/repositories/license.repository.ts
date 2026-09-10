@@ -62,6 +62,17 @@ export class LicenseRepository {
       orderBy: {
         sortOrder: 'asc',
       },
+      include: {
+        // Só descrição — preço da linha é anotação interna do admin,
+        // nunca aparece pro cliente (nem na tela pública, nem aqui,
+        // que é a mesma consulta usada pelas duas telas). O preço de
+        // cada linha é lido à parte (findFeatureLinesByModule), só
+        // quando o admin expande a linha em Administrar Planos.
+        featureLines: {
+          orderBy: { sortOrder: 'asc' },
+          select: { id: true, description: true, sortOrder: true },
+        },
+      },
     });
   }
 
@@ -270,6 +281,53 @@ export class LicenseRepository {
 
   removeModule(id: string) {
     return this.prisma.module.delete({
+      where: { id },
+    });
+  }
+
+  // ==========================
+  // Linhas de detalhamento do módulo (ModuleFeatureLine) — só
+  // anotação/planejamento do admin, nunca entram no preço cobrado.
+  // ==========================
+
+  findFeatureLinesByModule(moduleId: string) {
+    return this.prisma.moduleFeatureLine.findMany({
+      where: { moduleId },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  createFeatureLine(
+    moduleId: string,
+    data: {
+      description: string;
+      monthlyPrice?: number;
+      yearlyPrice?: number;
+      sortOrder?: number;
+    },
+  ) {
+    return this.prisma.moduleFeatureLine.create({
+      data: { ...data, moduleId },
+    });
+  }
+
+  updateFeatureLine(
+    id: string,
+    data: {
+      description?: string;
+      monthlyPrice?: number;
+      yearlyPrice?: number;
+      sortOrder?: number;
+    },
+  ) {
+    return this.prisma.moduleFeatureLine.update({
+      where: { id },
+      data,
+    });
+  }
+
+  removeFeatureLine(id: string) {
+    return this.prisma.moduleFeatureLine.delete({
       where: { id },
     });
   }

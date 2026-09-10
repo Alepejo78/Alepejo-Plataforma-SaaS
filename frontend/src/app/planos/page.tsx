@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Sliders,
@@ -32,6 +33,32 @@ function money(value: string | number | null | undefined) {
   });
 }
 
+/**
+ * Marcar um destes módulos marca (e cobra) o dependido junto — a
+ * funcionalidade não faz sentido sem ele. Mesmo mapa do backend
+ * (`module-dependencies.util.ts`); duplicado aqui só pra travar a
+ * tela sem round-trip — o backend sempre reforça isso de novo antes
+ * de cobrar/liberar (ver `expandModuleIdsWithDependencies`).
+ */
+const MODULE_DEPENDENCIES: Record<string, string[]> = {
+  PURCHASE: ["INVENTORY"],
+  SALES: ["INVENTORY"],
+  FINANCE: ["INVENTORY"],
+  INVENTORY_COUNT: ["INVENTORY"],
+};
+
+/** Ordem fixa da "visão do plano" — os demais módulos do catálogo entram depois, na ordem que já vêm. */
+const FEATURED_MODULE_CODES = [
+  "INVENTORY",
+  "INVENTORY_COUNT",
+  "PURCHASE",
+  "SALES",
+  "FINANCE",
+  "LABOR",
+  "WHATSAPP",
+  "EMAIL",
+];
+
 function CustomPlanModal({
   customPlanId,
   billingCycle,
@@ -47,6 +74,7 @@ function CustomPlanModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     companyOnboardingService
@@ -56,7 +84,20 @@ function CustomPlanModal({
       .finally(() => setLoading(false));
   }, []);
 
+  /** Módulos que dependem de `mod` e estão marcados agora — enquanto essa lista não for vazia, `mod` não pode ser desmarcado sozinho. */
+  function dependents(mod: PublicModule): PublicModule[] {
+    return modules.filter((other) => {
+      if (other.id === mod.id || !selected.has(other.id)) return false;
+      return MODULE_DEPENDENCIES[other.code]?.includes(mod.code) ?? false;
+    });
+  }
+
   function toggle(mod: PublicModule) {
+    if (selected.has(mod.id) && dependents(mod).length > 0) {
+      // Travado enquanto outro módulo marcado depender dele.
+      return;
+    }
+
     setSelected((previous) => {
       const next = new Set(previous);
 
@@ -64,6 +105,25 @@ function CustomPlanModal({
         next.delete(mod.id);
       } else {
         next.add(mod.id);
+
+        for (const depCode of MODULE_DEPENDENCIES[mod.code] ?? []) {
+          const depModule = modules.find((m) => m.code === depCode);
+          if (depModule) next.add(depModule.id);
+        }
+      }
+
+      return next;
+    });
+  }
+
+  function toggleExpanded(moduleId: string) {
+    setExpanded((previous) => {
+      const next = new Set(previous);
+
+      if (next.has(moduleId)) {
+        next.delete(moduleId);
+      } else {
+        next.add(moduleId);
       }
 
       return next;
@@ -102,6 +162,17 @@ function CustomPlanModal({
 
     router.push(`/cadastro-empresa?${query.toString()}`);
   }
+
+  // Ordem fixa (Estoque, Inventário, Compras, Vendas, Financeiro,
+  // Ponto e Folha, WhatsApp, Email) primeiro, o resto do catálogo
+  // depois na ordem que já vem do backend.
+  const featured = FEATURED_MODULE_CODES.map((code) =>
+    modules.find((m) => m.code === code)
+  ).filter((m): m is PublicModule => Boolean(m));
+  const others = modules.filter(
+    (m) => !FEATURED_MODULE_CODES.includes(m.code)
+  );
+  const orderedModules = [...featured, ...others];
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
@@ -146,38 +217,144 @@ function CustomPlanModal({
 
         {!loading && !error && (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {modules.map((mod) => {
+            <div className="rounded-2xl border border-[var(--border)] p-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Visão do plano
+              </p>
+
+              <div className="divide-y divide-[var(--border)]">
+                {orderedModules.map((mod) => {
+                  const checked = selected.has(mod.id);
+
+                  return (
+                    <div
+                      key={mod.id}
+                      className="flex items-center justify-between gap-3 py-1.5 text-sm"
+                    >
+                      <span
+                        className={
+                          checked
+                            ? "font-semibold text-[var(--text-primary)]"
+                            : "text-[var(--text-muted)]"
+                        }
+                      >
+                        {mod.name}
+                      </span>
+
+                      <span
+                        className={
+                          checked
+                            ? "font-semibold text-[var(--text-primary)]"
+                            : "text-[var(--text-muted)]"
+                        }
+                      >
+                        {checked
+                          ? num(mod.monthlyPrice) > 0
+                            ? `${money(mod.monthlyPrice)}/mês`
+                            : "Incluso"
+                          : "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Escolha os módulos
+              </p>
+
+              {orderedModules.map((mod) => {
                 const checked = selected.has(mod.id);
+                const locked = checked && dependents(mod).length > 0;
+                const lockedBy = locked
+                  ? dependents(mod)
+                      .map((d) => d.name)
+                      .join(", ")
+                  : "";
+                const hasFeatureLines =
+                  (mod.featureLines?.length ?? 0) > 0;
+                const isExpanded = expanded.has(mod.id);
 
                 return (
-                  <label
+                  <div
                     key={mod.id}
-                    className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-4 transition-colors hover:border-[var(--border-strong)] ${
+                    className={`rounded-xl border transition-colors ${
                       checked
                         ? "border-[var(--primary)]"
                         : "border-[var(--border)]"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggle(mod)}
-                        className="h-4 w-4 accent-[var(--primary)]"
-                      />
+                    <label
+                      className={`flex items-center justify-between gap-3 p-4 ${
+                        locked ? "cursor-not-allowed opacity-80" : "cursor-pointer"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={locked}
+                          onChange={() => toggle(mod)}
+                          className="h-4 w-4 accent-[var(--primary)] disabled:cursor-not-allowed"
+                        />
 
-                      <p className="text-sm font-medium text-[var(--text-primary)]">
-                        {mod.name}
-                      </p>
-                    </div>
+                        <div>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">
+                            {mod.name}
+                          </p>
 
-                    <span className="shrink-0 text-sm font-semibold text-[var(--text-primary)]">
-                      {num(mod.monthlyPrice) > 0
-                        ? `+ ${money(mod.monthlyPrice)}/mês`
-                        : "Incluso"}
-                    </span>
-                  </label>
+                          {locked && (
+                            <p className="text-xs text-[var(--text-muted)]">
+                              Necessário para {lockedBy}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <span className="shrink-0 text-sm font-semibold text-[var(--text-primary)]">
+                        {num(mod.monthlyPrice) > 0
+                          ? `+ ${money(mod.monthlyPrice)}/mês`
+                          : "Incluso"}
+                      </span>
+                    </label>
+
+                    {hasFeatureLines && (
+                      <div className="border-t border-[var(--border)] px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleExpanded(mod.id)}
+                          className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                        >
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${
+                              isExpanded ? "rotate-180" : ""
+                            }`}
+                          />
+                          O que está incluído
+                        </button>
+
+                        {isExpanded && (
+                          <ul className="mt-2 space-y-1 pl-1">
+                            {mod.featureLines!.map((line) => (
+                              <li
+                                key={line.id}
+                                className="flex items-start gap-2 text-xs text-[var(--text-muted)]"
+                              >
+                                <Check
+                                  size={13}
+                                  className="mt-0.5 shrink-0 text-[var(--success)]"
+                                />
+                                {line.description}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

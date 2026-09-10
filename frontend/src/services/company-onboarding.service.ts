@@ -77,6 +77,8 @@ export interface PublicModule {
   description?: string | null;
   monthlyPrice?: string | number | null;
   yearlyPrice?: string | number | null;
+  /** Linhas de "o que tem incluído" — só texto, sem preço (isso fica só na administração). */
+  featureLines?: { id: string; description: string; sortOrder: number }[];
 }
 
 /** Compra feita em /planos que ainda não virou empresa — cliente pagou e não voltou pra terminar o cadastro. */

@@ -2969,10 +2969,35 @@ model Module {
   planModules    PlanModule[]
   companyModules CompanyModule[]
   licenseHistory LicenseHistory[]
+  /// Linhas de detalhamento mostradas (ocultas/expansíveis) no
+  /// montador de plano customizado — ver `ModuleFeatureLine`.
+  featureLines   ModuleFeatureLine[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
   @@map("modules")
+}
+
+/// Linha de detalhamento de um módulo, mostrada oculta/expansível
+/// pro cliente no montador de plano customizado (ex.: dentro de
+/// "Estoque": "Cadastro de produtos", "Movimentação de estoque") —
+/// só texto descritivo pro cliente, nunca aparece com valor lá.
+/// `monthlyPrice`/`yearlyPrice` existem só pra anotação/planejamento
+/// do admin em Configurações > Administrar Planos — NUNCA somam no
+/// preço cobrado (isso continua sendo só `Module.monthlyPrice/yearlyPrice`).
+model ModuleFeatureLine {
+  id           String   @id @default(cuid())
+  moduleId     String
+  module       Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  description  String   @db.VarChar(200)
+  monthlyPrice Decimal  @default(0) @db.Decimal(18, 2)
+  yearlyPrice  Decimal  @default(0) @db.Decimal(18, 2)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([moduleId])
+  @@map("module_feature_lines")
 }
 
 model Plan {

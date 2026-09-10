@@ -20,6 +20,7 @@ import { AsaasService } from './asaas.service';
 import type { BillingTypeValue } from '../dto/subscribe.dto';
 import type { CreateCheckoutDto } from '../dto/create-checkout.dto';
 import { CUSTOM_PLAN_CODE } from '../../identity/license/constants/custom-plan.constants';
+import { expandModuleIdsWithDependencies } from '../../identity/license/utils/module-dependencies.util';
 
 /** Tolerância após o vencimento antes de bloquear — decisão do usuário. */
 const GRACE_DAYS = 7;
@@ -146,12 +147,21 @@ export class BillingService {
       return 0;
     }
 
-    const addOnModules = await this.prisma.module.findMany({
-      where: {
-        id: { in: moduleIds },
-        active: true,
-      },
+    // Todos os ativos (não só os escolhidos) pra dar pra resolver a
+    // dependência (ex.: Compras exige Estoque) mesmo que quem chamou
+    // não tenha mandado o dependido junto.
+    const allActiveModules = await this.prisma.module.findMany({
+      where: { active: true },
     });
+
+    const expandedIds = expandModuleIdsWithDependencies(
+      moduleIds,
+      allActiveModules,
+    );
+
+    const addOnModules = allActiveModules.filter((m) =>
+      expandedIds.includes(m.id),
+    );
 
     return addOnModules.reduce((sum, mod) => {
       const price =
@@ -739,7 +749,17 @@ export class BillingService {
       );
     }
 
-    const moduleIds = dto.moduleIds ?? [];
+    // Já expandido com dependência (ex.: Compras traz Estoque junto)
+    // ANTES de calcular preço e de gravar — senão o cliente pagaria
+    // pelo módulo dependido mas não receberia ele no cadastro (o
+    // `PendingCheckout.moduleIds` é o que vira `CompanyModule` depois).
+    const moduleIds =
+      plan.code === CUSTOM_PLAN_CODE
+        ? expandModuleIdsWithDependencies(
+            dto.moduleIds ?? [],
+            await this.prisma.module.findMany({ where: { active: true } }),
+          )
+        : (dto.moduleIds ?? []);
 
     const price =
       plan.code === CUSTOM_PLAN_CODE

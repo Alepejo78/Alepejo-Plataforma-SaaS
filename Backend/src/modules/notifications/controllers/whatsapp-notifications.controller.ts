@@ -12,6 +12,14 @@ import { SendTestWhatsappDto } from '../dto/send-test-whatsapp.dto';
  * POR EMPRESA (mesmo padrão do SMTP em Configurações: cliente novo
  * nasce sem nada pareado). Só admins com `whatsapp.manage` conseguem
  * conectar/desconectar; `whatsapp.view` só consulta o status.
+ *
+ * Sem `@Module()` de propósito — ver decisão do usuário (10-09-2026):
+ * WhatsApp vira item vendável no catálogo/preço do plano customizado,
+ * mas SEM travar acesso de verdade nesta entrega, porque toda empresa
+ * que já usa WhatsApp hoje (sem módulo nenhum) perderia acesso de
+ * uma hora pra outra até alguém conceder o módulo manualmente. Se um
+ * dia quiser travar de verdade, precisa antes conceder `WHATSAPP` como
+ * `CompanyModule` pra toda empresa que já usa a funcionalidade.
  */
 @ApiTags('Notifications - WhatsApp')
 @Controller('notifications/whatsapp')

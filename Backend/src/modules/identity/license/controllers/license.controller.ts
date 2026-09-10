@@ -26,6 +26,8 @@ import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { CreateModuleDto } from '../dto/create-module.dto';
 import { UpdateModuleDto } from '../dto/update-module.dto';
+import { CreateModuleFeatureLineDto } from '../dto/create-module-feature-line.dto';
+import { UpdateModuleFeatureLineDto } from '../dto/update-module-feature-line.dto';
 import { UpdatePlatformSettingsDto } from '../dto/update-platform-settings.dto';
 
 /**
@@ -198,6 +200,46 @@ export class LicenseController {
   @ApiOperation({ summary: 'Excluir módulo' })
   removeModule(@Param('id') id: string) {
     return this.service.removeModule(id);
+  }
+
+  // ==========================
+  // Linhas de detalhamento do módulo (ModuleFeatureLine) — só
+  // anotação/planejamento do admin, nunca somam no preço cobrado do
+  // cliente (ver `ModuleFeatureLine` no schema).
+  // ==========================
+
+  @Get('modules/:moduleId/feature-lines')
+  @Permissions('platform.license.manage')
+  @ApiOperation({ summary: 'Listar linhas de detalhamento de um módulo' })
+  getFeatureLines(@Param('moduleId') moduleId: string) {
+    return this.service.getFeatureLines(moduleId);
+  }
+
+  @Post('modules/:moduleId/feature-lines')
+  @Permissions('platform.license.manage')
+  @ApiOperation({ summary: 'Criar linha de detalhamento de um módulo' })
+  createFeatureLine(
+    @Param('moduleId') moduleId: string,
+    @Body() dto: CreateModuleFeatureLineDto,
+  ) {
+    return this.service.createFeatureLine(moduleId, dto);
+  }
+
+  @Patch('feature-lines/:id')
+  @Permissions('platform.license.manage')
+  @ApiOperation({ summary: 'Atualizar linha de detalhamento' })
+  updateFeatureLine(
+    @Param('id') id: string,
+    @Body() dto: UpdateModuleFeatureLineDto,
+  ) {
+    return this.service.updateFeatureLine(id, dto);
+  }
+
+  @Delete('feature-lines/:id')
+  @Permissions('platform.license.manage')
+  @ApiOperation({ summary: 'Excluir linha de detalhamento' })
+  removeFeatureLine(@Param('id') id: string) {
+    return this.service.removeFeatureLine(id);
   }
 
   // ==========================

@@ -133,6 +133,28 @@ export interface PlatformSettings {
   trialDays: number;
 }
 
+/**
+ * Linha de "o que tem incluído" dentro de um módulo, mostrada oculta/
+ * expansível pro cliente no montador de plano — o valor aqui é só
+ * anotação/planejamento do admin, nunca soma no preço cobrado (quem
+ * cobra é sempre `Module.monthlyPrice/yearlyPrice`).
+ */
+export interface ModuleFeatureLine {
+  id: string;
+  moduleId: string;
+  description: string;
+  monthlyPrice: string | number;
+  yearlyPrice: string | number;
+  sortOrder: number;
+}
+
+export interface ModuleFeatureLinePayload {
+  description: string;
+  monthlyPrice?: number;
+  yearlyPrice?: number;
+  sortOrder?: number;
+}
+
 export const licenseService = {
   async getPlatformSettings(): Promise<PlatformSettings> {
     const { data } = await api.get<ApiEnvelope<PlatformSettings>>(
@@ -224,5 +246,44 @@ export const licenseService = {
     );
 
     return data.data;
+  },
+
+  // Linhas de detalhamento do módulo — só anotação do admin, ver
+  // `ModuleFeatureLine`.
+
+  async listFeatureLines(moduleId: string): Promise<ModuleFeatureLine[]> {
+    const { data } = await api.get<ApiEnvelope<ModuleFeatureLine[]>>(
+      `/identity/license/modules/${moduleId}/feature-lines`
+    );
+
+    return data.data ?? [];
+  },
+
+  async createFeatureLine(
+    moduleId: string,
+    payload: ModuleFeatureLinePayload
+  ): Promise<ModuleFeatureLine> {
+    const { data } = await api.post<ApiEnvelope<ModuleFeatureLine>>(
+      `/identity/license/modules/${moduleId}/feature-lines`,
+      payload
+    );
+
+    return data.data;
+  },
+
+  async updateFeatureLine(
+    id: string,
+    payload: Partial<ModuleFeatureLinePayload>
+  ): Promise<ModuleFeatureLine> {
+    const { data } = await api.patch<ApiEnvelope<ModuleFeatureLine>>(
+      `/identity/license/feature-lines/${id}`,
+      payload
+    );
+
+    return data.data;
+  },
+
+  async removeFeatureLine(id: string): Promise<void> {
+    await api.delete(`/identity/license/feature-lines/${id}`);
   },
 };

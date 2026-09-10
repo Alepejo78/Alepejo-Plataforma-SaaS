@@ -34,6 +34,8 @@ const erpModules: {
   { code: "HR", name: "Recursos Humanos", route: "/erp/rh", sortOrder: 9 },
   { code: "PRODUCTION", name: "Produção", route: "/erp/producao", sortOrder: 10 },
   { code: "LABOR", name: "Ponto e Folha de Pagamento", route: "/erp/rh/ponto", sortOrder: 11 },
+  { code: "WHATSAPP", name: "WhatsApp", route: "/erp/configuracoes/notificacoes", sortOrder: 12 },
+  { code: "EMAIL", name: "Avisos por E-mail", route: "/erp/configuracoes/avisos-automaticos", sortOrder: 13 },
 ];
 
 /**
@@ -41,7 +43,7 @@ const erpModules: {
  * vendidos à parte. Uma empresa nova só tem acesso a eles se forem
  * habilitados individualmente (ver CompanyModule mais abaixo).
  */
-const ADDON_MODULE_CODES = ["INVENTORY_COUNT", "BRANDING", "HR", "PRODUCTION", "LABOR"];
+const ADDON_MODULE_CODES = ["INVENTORY_COUNT", "BRANDING", "HR", "PRODUCTION", "LABOR", "WHATSAPP", "EMAIL"];
 
 /**
  * Plano de contas padrão — o mesmo usado pra toda empresa nova
@@ -852,6 +854,64 @@ async function main() {
         active: true,
       },
     });
+  }
+
+  // ==========================
+  // Linhas de detalhamento do montador de plano customizado — só
+  // texto pro cliente ver "o que tem dentro" de cada módulo (ver
+  // `ModuleFeatureLine`); nunca tem preço pro cliente, e o valor que
+  // o admin eventualmente anotar em cada linha é só planejamento
+  // interno, não soma no preço cobrado. Create-only: se o módulo já
+  // tem linhas (ex.: admin editou/reordenou), não mexe.
+  // ==========================
+  const FEATURE_LINES_BY_MODULE_CODE: Record<string, string[]> = {
+    INVENTORY: [
+      "Perfis de acesso e permissões",
+      "Cadastro de produtos",
+      "Categorias, marcas, depósitos e unidades de medida",
+      "Movimentação de estoque",
+    ],
+    INVENTORY_COUNT: [
+      "Contagem de inventário",
+      "Acompanhamento de inventário",
+    ],
+    PURCHASE: ["Cotações de compra", "Pedidos de compra", "Compras"],
+    SALES: [
+      "Orçamentos",
+      "Pedidos de venda",
+      "Ordens de serviço",
+      "Vendas",
+    ],
+    FINANCE: [
+      "Contas a pagar e a receber",
+      "Contas bancárias",
+      "Formas de pagamento",
+      "Fluxo de caixa",
+    ],
+    LABOR: [
+      "Registro de ponto",
+      "Faltas e abonos",
+      "Folha de pagamento",
+      "13º salário",
+      "Férias",
+      "Adiantamento salarial",
+    ],
+  };
+
+  for (const [moduleCode, lines] of Object.entries(FEATURE_LINES_BY_MODULE_CODE)) {
+    const mod = await prisma.module.findUnique({ where: { code: moduleCode } });
+    if (!mod) continue;
+
+    const existingCount = await prisma.moduleFeatureLine.count({
+      where: { moduleId: mod.id },
+    });
+    if (existingCount > 0) continue;
+
+    for (const [index, description] of lines.entries()) {
+      await prisma.moduleFeatureLine.create({
+        data: { moduleId: mod.id, description, sortOrder: index },
+      });
+    }
   }
 
   const defaultPlan = await prisma.plan.upsert({

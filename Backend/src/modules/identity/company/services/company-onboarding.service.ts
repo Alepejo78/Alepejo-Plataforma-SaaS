@@ -12,6 +12,7 @@ import { DefaultAccountingService } from '../../../../core/default-accounting/de
 import { UsersService } from '../../users/services/users.service';
 import { LicenseService } from '../../license/services/license.service';
 import { CUSTOM_PLAN_CODE } from '../../license/constants/custom-plan.constants';
+import { expandModuleIdsWithDependencies } from '../../license/utils/module-dependencies.util';
 import { EmailNotificationsService } from '../../../notifications/services/email-notifications.service';
 import { WhatsappNotificationsService } from '../../../notifications/services/whatsapp-notifications.service';
 import { BillingService } from '../../../billing/services/billing.service';
@@ -380,10 +381,22 @@ export class CompanyOnboardingService {
     companyId: string,
     moduleIds: string[],
   ) {
-    const chosenModules = await this.prisma.module.findMany({
-      where: { id: { in: moduleIds }, active: true },
-      select: { id: true },
+    const allActiveModules = await this.prisma.module.findMany({
+      where: { active: true },
+      select: { id: true, code: true },
     });
+
+    // Quem manda `dto.moduleIds` direto (teste grátis sem passar por
+    // checkout) pode não ter mandado a dependência junto — expande
+    // aqui também, mesma trava de `LicenseService.setCustomModules`.
+    const expandedIds = expandModuleIdsWithDependencies(
+      moduleIds,
+      allActiveModules,
+    );
+
+    const chosenModules = allActiveModules.filter((m) =>
+      expandedIds.includes(m.id),
+    );
 
     for (const module of chosenModules) {
       await this.licenseService.enableModule(companyId, module.id);

@@ -10,7 +10,10 @@ import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { CreateModuleDto } from '../dto/create-module.dto';
 import { UpdateModuleDto } from '../dto/update-module.dto';
+import { CreateModuleFeatureLineDto } from '../dto/create-module-feature-line.dto';
+import { UpdateModuleFeatureLineDto } from '../dto/update-module-feature-line.dto';
 import { CUSTOM_PLAN_CODE } from '../constants/custom-plan.constants';
+import { expandModuleIdsWithDependencies } from '../utils/module-dependencies.util';
 
 @Injectable()
 export class LicenseService {
@@ -173,9 +176,17 @@ export class LicenseService {
 
     const allModules = await this.repository.findModules();
 
+    // Quem depende de outro módulo (ex.: Compras precisa de Estoque)
+    // vem com a dependência já incluída, mesmo que o chamador não
+    // tenha mandado — trava de verdade, não só a tela avisa.
+    const expandedIds = expandModuleIdsWithDependencies(
+      moduleIds,
+      allModules,
+    );
+
     const finalIds = new Set(
       allModules
-        .filter((m) => moduleIds.includes(m.id))
+        .filter((m) => expandedIds.includes(m.id))
         .map((m) => m.id),
     );
 
@@ -418,6 +429,22 @@ async updateModule(id: string, dto: UpdateModuleDto) {
 
 async removeModule(id: string) {
   return this.repository.removeModule(id);
+}
+
+async getFeatureLines(moduleId: string) {
+  return this.repository.findFeatureLinesByModule(moduleId);
+}
+
+async createFeatureLine(moduleId: string, dto: CreateModuleFeatureLineDto) {
+  return this.repository.createFeatureLine(moduleId, dto);
+}
+
+async updateFeatureLine(id: string, dto: UpdateModuleFeatureLineDto) {
+  return this.repository.updateFeatureLine(id, dto);
+}
+
+async removeFeatureLine(id: string) {
+  return this.repository.removeFeatureLine(id);
 }
 
 async history(companyId: string) {
