@@ -539,25 +539,38 @@ export class WorkshopQuotePdfParserService {
   /**
    * Linha de item de serviço, já extraída do `pdf-parse` — campos
    * separados por TAB, mas a posição de código/descrição/números já
-   * mudou entre exports reais da própria Fazam Car (às vezes código
-   * cola com a descrição num campo só e os números ficam cada um no
-   * seu campo; às vezes código cola com os números e a descrição fica
-   * sozinha). Por isso: acha o código procurando um campo que combine
-   * "dígitos + texto de verdade" (com letra) em qualquer posição; se
-   * não achar assim, cai pro formato onde código cola com números
-   * (extrai os dígitos do início de qualquer campo, descrição é o
-   * campo que sobra sem número na frente). Bruto/líquido/tempo saem
-   * por MAGNITUDE do que sobrar (ver comentário de `extractGrossAndNet`
-   * — mesmo raciocínio: os dois maiores números são bruto/líquido,
-   * quantidade nessa tabela é sempre "0,00"/não usada, então o
-   * primeiro número não-zero que sobra é o tempo).
+   * mudou entre exports reais da própria Fazam Car. Dois formatos:
+   *
+   * (a) Código colado com a descrição num campo só, números cada um
+   * no seu próprio campo de TAB — nesse caso a ordem entre os campos
+   * não é confiável (já vimos os dois sentidos), então bruto/líquido
+   * saem por MAGNITUDE (os dois maiores números) e tempo é o maior
+   * resto não-zero.
+   *
+   * (b) Código colado com números (quantidade/bruto/líquido, às vezes
+   * tempo também), descrição sozinha em outro campo — aqui a ordem
+   * DENTRO do campo do código é a ordem de leitura de verdade, então
+   * usa POSIÇÃO (últimos dois = bruto, líquido), não magnitude: já
+   * vimos serviço quase de graça (R$0,01) com 1h de mão de obra, onde
+   * o tempo (1,00) é MAIOR que o valor — magnitude erraria tempo por
+   * valor aí. Tempo às vezes sobra num campo isolado à parte (ver
+   * `parseServiceItemCodeWithNumbers`).
    */
   private parseServiceItems(
     lines: string[],
     warnings: string[],
   ): ParsedWorkshopQuoteItem[] {
     const start = lines.findIndex((l) => l === 'Serviços');
-    const end = lines.findIndex((l) => l.startsWith('Valor total de peças'));
+    // "Valor total de peças" só existe quando o orçamento tem peça
+    // também; "Total de Serviços" sempre vem logo depois dos itens,
+    // nos dois casos — sem um dos dois, a seção varreria até o
+    // rodapé da página atrás de mais linhas de item.
+    const end = lines.findIndex(
+      (l, i) =>
+        i > start &&
+        (l.startsWith('Valor total de peças') ||
+          /Total de Serviços/i.test(l)),
+    );
 
     if (start === -1) return [];
 
@@ -577,82 +590,150 @@ export class WorkshopQuotePdfParserService {
       const fields = line.split('\t').map((f) => f.trim());
       if (isTableHeaderRow(fields)) continue;
 
-      let code: string | null = null;
-      let description = '';
-      const numberSources: string[] = [];
+      // `undefined` = não é esse formato, tenta o outro; `null` =
+      // reconheceu o formato mas não achou valor (aviso já foi
+      // empurrado por quem tentou).
+      let result = this.parseServiceItemCodeWithDesc(fields, warnings);
 
-      for (const field of fields) {
-        const codeDescMatch = field.match(/^(\d{4,8})\s+(.+)$/);
-
-        if (!code && codeDescMatch && /[A-Za-zÀ-ÿ]/.test(codeDescMatch[2])) {
-          code = codeDescMatch[1];
-          description = codeDescMatch[2].trim();
-        } else {
-          numberSources.push(field);
-        }
+      if (result === undefined) {
+        result = this.parseServiceItemCodeWithNumbers(fields, warnings);
       }
 
-      if (!code) {
-        // Código colado com os números — descrição é o campo com
-        // letra que não começa com dígito.
-        const descField = fields.find(
-          (f) => /[A-Za-zÀ-ÿ]/.test(f) && !/^\d/.test(f),
-        );
-        const leadCodeMatch = fields
-          .map((f) => f.match(/^(\d{4,8})\b/))
-          .find((m): m is RegExpMatchArray => !!m);
-
-        if (descField && leadCodeMatch) {
-          code = leadCodeMatch[1];
-          description = descField;
-          numberSources.length = 0;
-
-          for (const field of fields) {
-            if (field === descField) continue;
-            numberSources.push(
-              field.startsWith(leadCodeMatch[0])
-                ? field.slice(leadCodeMatch[0].length)
-                : field,
-            );
-          }
-        }
-      }
-
-      if (!code) {
+      if (result === undefined) {
         warnings.push(`Não entendi esta linha de serviço: "${line}".`);
         continue;
       }
 
-      // Full match (não substring) pra não confundir um "10,00%" de
-      // desconto com valor de verdade, se um dia aparecer nessa
-      // tabela também.
-      const numberTokens = numberSources
-        .join(' ')
-        .split(/\s+/)
-        .filter((token) => /^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(token))
-        .map(toNumber)
-        .sort((a, b) => b - a);
+      if (result === null) continue;
 
-      if (numberTokens.length === 0) {
-        warnings.push(`Não achei o valor do serviço "${code}".`);
-        continue;
-      }
-
-      const grossValue = numberTokens[0];
-      const netValue = numberTokens.length >= 2 ? numberTokens[1] : grossValue;
-      const tempo = numberTokens.slice(2).find((v) => v > 0) ?? 1;
-
-      items.push({
-        kind: 'SERVICE',
-        code,
-        description: description || code,
-        unit: 'UN',
-        quantity: tempo > 0 ? tempo : 1,
-        grossValue,
-        netValue,
-      });
+      items.push(result);
     }
 
     return items;
+  }
+
+  /// Formato (a): campo com código + descrição colados, números nos
+  /// outros campos, extraídos por MAGNITUDE (ver comentário do
+  /// método chamador).
+  private parseServiceItemCodeWithDesc(
+    fields: string[],
+    warnings: string[],
+  ): ParsedWorkshopQuoteItem | null | undefined {
+    let code: string | null = null;
+    let description = '';
+    const numberSources: string[] = [];
+
+    for (const field of fields) {
+      const codeDescMatch = field.match(/^(\d{4,8})\s+(.+)$/);
+
+      if (!code && codeDescMatch && /[A-Za-zÀ-ÿ]/.test(codeDescMatch[2])) {
+        code = codeDescMatch[1];
+        description = codeDescMatch[2].trim();
+      } else {
+        numberSources.push(field);
+      }
+    }
+
+    if (!code) return undefined;
+
+    const numberTokens = numberSources
+      .join(' ')
+      .split(/\s+/)
+      .filter((token) => /^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(token))
+      .map(toNumber)
+      .sort((a, b) => b - a);
+
+    if (numberTokens.length === 0) {
+      warnings.push(`Não achei o valor do serviço "${code}".`);
+      return null;
+    }
+
+    const grossValue = numberTokens[0];
+    const netValue = numberTokens.length >= 2 ? numberTokens[1] : grossValue;
+    const tempo = numberTokens.slice(2).find((v) => v > 0) ?? 1;
+
+    return {
+      kind: 'SERVICE',
+      code,
+      description: description || code,
+      unit: 'UN',
+      quantity: tempo > 0 ? tempo : 1,
+      grossValue,
+      netValue,
+    };
+  }
+
+  /// Formato (b): código colado com os números, descrição sozinha em
+  /// outro campo. Bruto/líquido são sempre os DOIS ÚLTIMOS números
+  /// do campo do código, nessa ordem (bruto, líquido) — é a ordem de
+  /// leitura de verdade quando tudo vem colado no mesmo campo. Tempo:
+  /// se sobrar um campo isolado (só o número, sem letra nem o
+  /// código) fora do campo do código e da descrição, é ele — já visto
+  /// exportação onde "Tempo" vem separado dos outros 3 números
+  /// (Quantidade/Bruto/Líquido, esses sim colados com o código);
+  /// senão, é o terceiro número a partir do fim dentro do próprio
+  /// campo do código.
+  private parseServiceItemCodeWithNumbers(
+    fields: string[],
+    warnings: string[],
+  ): ParsedWorkshopQuoteItem | null | undefined {
+    const descField = fields.find(
+      (f) => /[A-Za-zÀ-ÿ]/.test(f) && !/^\d/.test(f),
+    );
+
+    let codeField: string | undefined;
+    let codeMatch: RegExpMatchArray | undefined;
+
+    for (const field of fields) {
+      const match = field.match(/^(\d{4,8})\b/);
+      if (match) {
+        codeField = field;
+        codeMatch = match;
+        break;
+      }
+    }
+
+    if (!descField || !codeField || !codeMatch) return undefined;
+
+    const code = codeMatch[1];
+    const codeFieldNumbers = codeField
+      .slice(codeMatch[0].length)
+      .trim()
+      .split(/\s+/)
+      .filter((token) => /^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(token))
+      .map(toNumber);
+
+    if (codeFieldNumbers.length === 0) {
+      warnings.push(`Não achei o valor do serviço "${code}".`);
+      return null;
+    }
+
+    const netValue = codeFieldNumbers[codeFieldNumbers.length - 1];
+    const grossValue =
+      codeFieldNumbers.length >= 2
+        ? codeFieldNumbers[codeFieldNumbers.length - 2]
+        : netValue;
+
+    const isolatedTempoField = fields.find(
+      (f) =>
+        f !== descField &&
+        f !== codeField &&
+        /^\d{1,3}(?:\.\d{3})*,\d{2}$/.test(f),
+    );
+    const tempo = isolatedTempoField
+      ? toNumber(isolatedTempoField)
+      : codeFieldNumbers.length >= 3
+        ? codeFieldNumbers[codeFieldNumbers.length - 3]
+        : 1;
+
+    return {
+      kind: 'SERVICE',
+      code,
+      description: descField,
+      unit: 'UN',
+      quantity: tempo > 0 ? tempo : 1,
+      grossValue,
+      netValue,
+    };
   }
 }
