@@ -174,6 +174,27 @@ export class AsaasService {
   }
 
   /**
+   * Atualiza o valor cobrado numa assinatura recorrente já existente
+   * — usado quando os módulos do Plano Customizado mudam pra uma
+   * empresa que já é assinante ativa (a cobrança já emitida não
+   * muda, só as próximas).
+   */
+  async updateSubscription(
+    subscriptionId: string,
+    params: { value: number },
+    credentials?: AsaasCredentials,
+  ): Promise<AsaasSubscription> {
+    return this.request<AsaasSubscription>(
+      `/subscriptions/${subscriptionId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(params),
+      },
+      credentials,
+    );
+  }
+
+  /**
    * Encerra a assinatura. As cobranças já emitidas continuam de pé —
    * o Asaas só para de gerar as próximas, que é o que se quer ao
    * trocar de ciclo.

@@ -14,11 +14,13 @@ import { CreateModuleFeatureLineDto } from '../dto/create-module-feature-line.dt
 import { UpdateModuleFeatureLineDto } from '../dto/update-module-feature-line.dto';
 import { CUSTOM_PLAN_CODE } from '../constants/custom-plan.constants';
 import { expandModuleIdsWithDependencies } from '../utils/module-dependencies.util';
+import { BillingService } from '../../../billing/services/billing.service';
 
 @Injectable()
 export class LicenseService {
   constructor(
     private readonly repository: LicenseRepository,
+    private readonly billing: BillingService,
   ) {}
 
   async getCompanyLicenses(companyId: string) {
@@ -196,6 +198,9 @@ export class LicenseService {
     // que entra agora nasce "a contratar" (`licensed: false`), porque
     // marcar aqui não paga nada — quem paga é o BillingService, e é o
     // webhook do pagamento que promove todo mundo pra contratado.
+    // Exceção: empresa que já é assinante ATIVA não pode ficar um mês
+    // travada esperando a próxima fatura — `syncActiveCustomModulesPricing`
+    // abaixo libera na hora e corrige o valor cobrado dali pra frente.
     const previous = new Map(
       company.companyModules.map((item) => [item.moduleId, item]),
     );
@@ -216,6 +221,8 @@ export class LicenseService {
         await this.disableModule(companyId, moduleId);
       }
     }
+
+    await this.billing.syncActiveCustomModulesPricing(companyId);
 
     return this.getCompanyLicenses(companyId);
   }

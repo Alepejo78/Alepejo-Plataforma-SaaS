@@ -315,6 +315,62 @@ export class BillingService {
   }
 
   /**
+   * Chamado pelo `LicenseService.setCustomModules` toda vez que uma
+   * empresa já ASSINANTE ATIVA ajusta os módulos do Plano
+   * Customizado. Sem isso, o módulo novo ficava preso em "a
+   * contratar" até a próxima fatura confirmar — mas quem já paga em
+   * dia não devia perder acesso por um mês inteiro. Decisão do
+   * usuário (11-09-2026): libera na hora e só ajusta o valor cobrado
+   * a partir da próxima fatura, sem cobrança avulsa agora.
+   *
+   * Best-effort: se a Asaas falhar (rede, chave, etc.), só loga —
+   * não pode derrubar a troca de módulo, que já foi salva antes desta
+   * chamada. Não faz nada fora do Plano Customizado ativo (trial,
+   * plano fixo, ou assinatura vencida/cancelada continuam com a regra
+   * de sempre).
+   */
+  async syncActiveCustomModulesPricing(companyId: string): Promise<void> {
+    const companyPlan = await this.prisma.companyPlan.findUnique({
+      where: { companyId },
+      include: { plan: true },
+    });
+
+    if (
+      !companyPlan ||
+      companyPlan.status !== 'ACTIVE' ||
+      companyPlan.plan.code !== CUSTOM_PLAN_CODE
+    ) {
+      return;
+    }
+
+    await this.prisma.companyModule.updateMany({
+      where: { companyId, enabled: true },
+      data: { licensed: true },
+    });
+
+    if (!companyPlan.asaasSubscriptionId) {
+      return;
+    }
+
+    try {
+      const price = await this.customPlanPrice(
+        companyId,
+        companyPlan.billingCycle,
+      );
+
+      await this.asaas.updateSubscription(companyPlan.asaasSubscriptionId, {
+        value: price,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Não consegui atualizar o valor da assinatura ${companyPlan.asaasSubscriptionId} (empresa ${companyId}) após troca de módulos: ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+    }
+  }
+
+  /**
    * Faturas da assinatura da empresa, pra tela de Cobranças.
    *
    * Antes de listar, reconsulta as cobranças da assinatura no Asaas e
