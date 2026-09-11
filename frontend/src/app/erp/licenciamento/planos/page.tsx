@@ -731,14 +731,14 @@ export default function PlanosAdminPage() {
             de verdade é sempre o preço do módulo (Mensal/Anual acima).
           </p>
 
-          <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+          <div className="max-w-2xl overflow-x-auto rounded-2xl border border-[var(--border)]">
             <table className="w-full text-left text-sm">
               <thead className="bg-[var(--surface-hover)] text-[var(--text-secondary)]">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Módulo</th>
-                  <th className="px-4 py-3 font-semibold">Mensal</th>
-                  <th className="px-4 py-3 font-semibold">Anual</th>
-                  <th className="px-4 py-3 font-semibold" />
+                  <th className="px-3 py-2 font-semibold">Módulo</th>
+                  <th className="px-3 py-2 font-semibold">Mensal</th>
+                  <th className="px-3 py-2 font-semibold">Anual</th>
+                  <th className="px-3 py-2 font-semibold" />
                 </tr>
               </thead>
 
@@ -750,13 +750,13 @@ export default function PlanosAdminPage() {
                   return (
                     <Fragment key={mod.id}>
                       <tr className="border-t border-[var(--border)]">
-                        <td className="px-4 py-3 font-medium text-[var(--text-primary)]">
+                        <td className="px-3 py-2 font-medium text-[var(--text-primary)]">
                           {mod.name}
                         </td>
 
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <CurrencyInput
-                            className={`${fieldClass} h-9 max-w-40`}
+                            className={`${fieldClass} h-9 max-w-28`}
                             value={num(mod.monthlyPrice)}
                             disabled={moduleSaving === mod.id}
                             onChange={(value) =>
@@ -768,9 +768,9 @@ export default function PlanosAdminPage() {
                           />
                         </td>
 
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <CurrencyInput
-                            className={`${fieldClass} h-9 max-w-40`}
+                            className={`${fieldClass} h-9 max-w-28`}
                             value={num(mod.yearlyPrice)}
                             disabled={moduleSaving === mod.id}
                             onChange={(value) =>
@@ -782,7 +782,7 @@ export default function PlanosAdminPage() {
                           />
                         </td>
 
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <button
                             type="button"
                             onClick={() => void toggleModuleExpanded(mod.id)}
@@ -804,7 +804,7 @@ export default function PlanosAdminPage() {
                           key={`${mod.id}-detail`}
                           className="border-t border-[var(--border)] bg-[var(--surface-hover)]"
                         >
-                          <td colSpan={4} className="px-4 py-3">
+                          <td colSpan={4} className="px-3 py-2">
                             {featureLinesLoading === mod.id ? (
                               <p className="text-xs text-[var(--text-muted)]">
                                 Carregando...
@@ -837,7 +837,7 @@ export default function PlanosAdminPage() {
                                     />
 
                                     <CurrencyInput
-                                      className={`${fieldClass} h-9 max-w-36`}
+                                      className={`${fieldClass} h-9 max-w-28`}
                                       value={num(line.monthlyPrice)}
                                       onChange={(value) =>
                                         editFeatureLine(
@@ -857,7 +857,7 @@ export default function PlanosAdminPage() {
                                     />
 
                                     <CurrencyInput
-                                      className={`${fieldClass} h-9 max-w-36`}
+                                      className={`${fieldClass} h-9 max-w-28`}
                                       value={num(line.yearlyPrice)}
                                       onChange={(value) =>
                                         editFeatureLine(

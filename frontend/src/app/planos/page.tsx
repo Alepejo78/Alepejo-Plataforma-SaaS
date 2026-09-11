@@ -38,26 +38,65 @@ function money(value: string | number | null | undefined) {
  * funcionalidade não faz sentido sem ele. Mesmo mapa do backend
  * (`module-dependencies.util.ts`); duplicado aqui só pra travar a
  * tela sem round-trip — o backend sempre reforça isso de novo antes
- * de cobrar/liberar (ver `expandModuleIdsWithDependencies`).
+ * de cobrar/liberar (ver `expandModuleIdsWithDependencies`). Cadeias
+ * são transitivas (ver `toggle`): quem depende só de INVENTORY já
+ * puxa PRODUCTS junto, porque INVENTORY também depende de PRODUCTS.
  */
 const MODULE_DEPENDENCIES: Record<string, string[]> = {
   PURCHASE: ["INVENTORY"],
   SALES: ["INVENTORY"],
   FINANCE: ["INVENTORY"],
+  INVENTORY: ["PRODUCTS"],
   INVENTORY_COUNT: ["INVENTORY"],
+  PRODUCTION: ["INVENTORY"],
 };
 
-/** Ordem fixa da "visão do plano" — os demais módulos do catálogo entram depois, na ordem que já vêm. */
-const FEATURED_MODULE_CODES = [
+/**
+ * Ordem e nomes fixos da "visão do plano" e da "escolha dos módulos"
+ * — só o rótulo mostrado aqui muda; `Module.name` (usado em menus,
+ * admin, notas etc.) continua o mesmo. Definido pelo usuário
+ * (10-09-2026), duas colunas.
+ */
+const COLUMN_ONE_CODES = [
   "INVENTORY",
   "INVENTORY_COUNT",
   "PURCHASE",
   "SALES",
   "FINANCE",
+  "HR",
   "LABOR",
-  "WHATSAPP",
-  "EMAIL",
 ];
+
+const COLUMN_TWO_CODES = [
+  "BRANDING",
+  "PRODUCTION",
+  "PRODUCTS",
+  "BPS",
+  "EMAIL",
+  "WHATSAPP",
+];
+
+const FEATURED_MODULE_CODES = [...COLUMN_ONE_CODES, ...COLUMN_TWO_CODES];
+
+const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+  INVENTORY: "Controle de Estoque",
+  INVENTORY_COUNT: "Inventários - Geral/Cíclico",
+  PURCHASE: "Gestão de Compras",
+  SALES: "Gestão de Vendas",
+  FINANCE: "Gestão Financeira + Fluxo de Caixa + Budget",
+  HR: "Gestão RH - Exames/EPI",
+  LABOR: "Folha de Pagto + Controle de Horas + Ponto",
+  BRANDING: "Personalização (Sua Marca + Tema Cores)",
+  PRODUCTION: "Controle de Produção",
+  PRODUCTS: "Produto",
+  BPS: "Cadastro Parceiros (Cliente/Fornecedores)",
+  EMAIL: "Avisos por E-mail + Confirmações",
+  WHATSAPP: "WhatsApp + Confirmações",
+};
+
+function displayName(mod: PublicModule): string {
+  return DISPLAY_NAME_OVERRIDES[mod.code] ?? mod.name;
+}
 
 function CustomPlanModal({
   customPlanId,
@@ -106,9 +145,17 @@ function CustomPlanModal({
       } else {
         next.add(mod.id);
 
-        for (const depCode of MODULE_DEPENDENCIES[mod.code] ?? []) {
+        // Cadeia transitiva: marcar Compras marca Estoque, que por sua
+        // vez marca Produtos — sem isso o front deixaria Estoque
+        // marcado sem o Produtos que ele exige.
+        const queue = [...(MODULE_DEPENDENCIES[mod.code] ?? [])];
+        while (queue.length > 0) {
+          const depCode = queue.shift()!;
           const depModule = modules.find((m) => m.code === depCode);
-          if (depModule) next.add(depModule.id);
+          if (depModule && !next.has(depModule.id)) {
+            next.add(depModule.id);
+            queue.push(...(MODULE_DEPENDENCIES[depCode] ?? []));
+          }
         }
       }
 
@@ -163,9 +210,9 @@ function CustomPlanModal({
     router.push(`/cadastro-empresa?${query.toString()}`);
   }
 
-  // Ordem fixa (Estoque, Inventário, Compras, Vendas, Financeiro,
-  // Ponto e Folha, WhatsApp, Email) primeiro, o resto do catálogo
-  // depois na ordem que já vem do backend.
+  // Ordem fixa definida pelo usuário (coluna 1 + coluna 2) primeiro,
+  // qualquer módulo novo que ainda não tenha entrado nessa lista
+  // aparece depois, no fim da coluna 2.
   const featured = FEATURED_MODULE_CODES.map((code) =>
     modules.find((m) => m.code === code)
   ).filter((m): m is PublicModule => Boolean(m));
@@ -174,10 +221,64 @@ function CustomPlanModal({
   );
   const orderedModules = [...featured, ...others];
 
+  // "Visão do plano" em duas colunas — segue exatamente as duas
+  // colunas definidas pelo usuário, não uma divisão automática da
+  // lista (senão a ordem visual não bateria com a planilha).
+  const colunaEsquerda = COLUMN_ONE_CODES.map((code) =>
+    modules.find((m) => m.code === code)
+  ).filter((m): m is PublicModule => Boolean(m));
+  const colunaDireita = [
+    ...COLUMN_TWO_CODES.map((code) => modules.find((m) => m.code === code)).filter(
+      (m): m is PublicModule => Boolean(m)
+    ),
+    ...others,
+  ];
+
+  function VisaoDoPlanoColuna({ itens }: { itens: PublicModule[] }) {
+    return (
+      <div className="divide-y divide-[var(--border)]">
+        {itens.map((mod) => {
+          const checked = selected.has(mod.id);
+
+          return (
+            <div
+              key={mod.id}
+              className="flex items-center justify-between gap-3 py-1.5 text-sm"
+            >
+              <span
+                className={
+                  checked
+                    ? "font-semibold text-[var(--text-primary)]"
+                    : "text-[var(--text-muted)]"
+                }
+              >
+                {displayName(mod)}
+              </span>
+
+              <span
+                className={
+                  checked
+                    ? "font-semibold text-[var(--text-primary)]"
+                    : "text-[var(--text-muted)]"
+                }
+              >
+                {checked
+                  ? num(mod.monthlyPrice) > 0
+                    ? `${money(mod.monthlyPrice)}/mês`
+                    : "Incluso"
+                  : "—"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-8 w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-lg">
-        <div className="mb-6 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-lg">
+        <div className="flex items-center justify-between p-6 pb-4">
           <div>
             <h2 className="text-lg font-bold text-[var(--text-primary)]">
               Monte seu plano
@@ -199,7 +300,7 @@ function CustomPlanModal({
         </div>
 
         {loading && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 px-6 pb-6 sm:grid-cols-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
@@ -210,57 +311,76 @@ function CustomPlanModal({
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+          <div className="mx-6 mb-6 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
             {error}
           </div>
         )}
 
         {!loading && !error && (
           <>
-            <div className="rounded-2xl border border-[var(--border)] p-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                Visão do plano
-              </p>
+            {/* Resumo + visão do plano ficam fora da área com rolagem
+                — assim o cliente sempre vê o total e o que já marcou
+                enquanto navega pela lista de módulos abaixo. */}
+            <div className="shrink-0 space-y-4 border-b border-[var(--border)] px-6 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5">
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {selected.size} módulo(s) escolhido(s)
+                  </p>
 
-              <div className="divide-y divide-[var(--border)]">
-                {orderedModules.map((mod) => {
-                  const checked = selected.has(mod.id);
+                  {billingCycle === "MONTHLY" && totalSavings > 0 && (
+                    <span className="mb-1 mt-1 inline-block rounded-full bg-[var(--warning-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--warning)]">
+                      Economize {money(totalSavings)} no plano anual
+                    </span>
+                  )}
 
-                  return (
-                    <div
-                      key={mod.id}
-                      className="flex items-center justify-between gap-3 py-1.5 text-sm"
-                    >
-                      <span
-                        className={
-                          checked
-                            ? "font-semibold text-[var(--text-primary)]"
-                            : "text-[var(--text-muted)]"
-                        }
-                      >
-                        {mod.name}
-                      </span>
+                  <p className="text-2xl font-bold text-[var(--text-primary)]">
+                    {money(displayTotal)}
+                    <span className="text-sm font-normal text-[var(--text-muted)]">
+                      {" "}
+                      /mês
+                    </span>
+                  </p>
 
-                      <span
-                        className={
-                          checked
-                            ? "font-semibold text-[var(--text-primary)]"
-                            : "text-[var(--text-muted)]"
-                        }
-                      >
-                        {checked
-                          ? num(mod.monthlyPrice) > 0
-                            ? `${money(mod.monthlyPrice)}/mês`
-                            : "Incluso"
-                          : "—"}
-                      </span>
-                    </div>
-                  );
-                })}
+                  {billingCycle === "YEARLY" && totalYearly > 0 && (
+                    <p className="text-sm text-[var(--text-muted)]">
+                      cobrado {money(totalYearly)}/ano
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleContinue(false)}
+                    className="rounded-xl bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                  >
+                    Continuar com {selected.size} módulo(s)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleContinue(true)}
+                    className="text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:underline"
+                  >
+                    Comprar agora
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--border)] p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  Visão do plano
+                </p>
+
+                <div className="grid gap-x-6 sm:grid-cols-2">
+                  <VisaoDoPlanoColuna itens={colunaEsquerda} />
+                  <VisaoDoPlanoColuna itens={colunaDireita} />
+                </div>
               </div>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="space-y-3 overflow-y-auto px-6 py-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 Escolha os módulos
               </p>
@@ -270,7 +390,7 @@ function CustomPlanModal({
                 const locked = checked && dependents(mod).length > 0;
                 const lockedBy = locked
                   ? dependents(mod)
-                      .map((d) => d.name)
+                      .map((d) => displayName(d))
                       .join(", ")
                   : "";
                 const hasFeatureLines =
@@ -302,7 +422,7 @@ function CustomPlanModal({
 
                         <div>
                           <p className="text-sm font-medium text-[var(--text-primary)]">
-                            {mod.name}
+                            {displayName(mod)}
                           </p>
 
                           {locked && (
@@ -357,52 +477,6 @@ function CustomPlanModal({
                   </div>
                 );
               })}
-            </div>
-
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5">
-              <div>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {selected.size} módulo(s) escolhido(s)
-                </p>
-
-                {billingCycle === "MONTHLY" && totalSavings > 0 && (
-                  <span className="mb-1 mt-1 inline-block rounded-full bg-[var(--warning-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--warning)]">
-                    Economize {money(totalSavings)} no plano anual
-                  </span>
-                )}
-
-                <p className="text-2xl font-bold text-[var(--text-primary)]">
-                  {money(displayTotal)}
-                  <span className="text-sm font-normal text-[var(--text-muted)]">
-                    {" "}
-                    /mês
-                  </span>
-                </p>
-
-                {billingCycle === "YEARLY" && totalYearly > 0 && (
-                  <p className="text-sm text-[var(--text-muted)]">
-                    cobrado {money(totalYearly)}/ano
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-col items-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleContinue(false)}
-                  className="rounded-xl bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-                >
-                  Continuar com {selected.size} módulo(s)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleContinue(true)}
-                  className="text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:underline"
-                >
-                  Comprar agora
-                </button>
-              </div>
             </div>
           </>
         )}
