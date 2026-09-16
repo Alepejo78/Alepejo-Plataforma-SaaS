@@ -66,7 +66,7 @@ export function middleware(request: NextRequest) {
     !hasSession
   ) {
     return NextResponse.rewrite(
-      new URL("/institucional", request.url)
+      new URL("/inicio", request.url)
     );
   }
 

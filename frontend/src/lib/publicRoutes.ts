@@ -15,6 +15,12 @@
  * - `/institucional`: página pública de apresentação do sistema
  *   (funcionalidades, demonstração e contato), porta de entrada antes
  *   de `/planos`.
+ * - `/inicio`: página inicial da AlePejo Assessoria e Prestação de
+ *   Serviços — é pra onde "/" é reescrito nos domínios de vitrine (ver
+ *   `MARKETING_HOSTNAMES`/`isMarketingHomepage` abaixo), com links pros
+ *   dois produtos (`/institucional` e `/servicos`).
+ * - `/servicos`: página pública de apresentação do AlePejo Serviços
+ *   (agendamento online), com link pra `/servicos/planos`.
  * - `/privacidade`: Política de Privacidade — precisa ser acessível sem
  *   login (é referenciada no cadastro, antes de qualquer conta existir).
  * - `/confirmar-epi`: link de confirmação de recebimento de EPI, enviado
@@ -54,6 +60,8 @@ export const PUBLIC_ROUTES = [
   "/planos",
   "/checkout",
   "/institucional",
+  "/inicio",
+  "/servicos",
   "/privacidade",
   "/confirmar-epi",
   "/confirmar-holerite",

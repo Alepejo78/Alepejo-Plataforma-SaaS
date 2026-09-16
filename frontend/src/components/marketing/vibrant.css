@@ -1,0 +1,59 @@
+/*
+ * Estilo "Vibrant" — só pras páginas do AlePejo Serviços (`/servicos`,
+ * `/servicos/planos`). Paleta diferente do "Aurora" do ERP (azul/roxo)
+ * de propósito: os dois produtos precisam ser reconhecíveis à
+ * distância mesmo tendo a mesma estrutura de página.
+ */
+
+@keyframes vibrant-drift {
+  0%,
+  100% {
+    background-position:
+      0% 0%,
+      100% 100%,
+      50% 50%;
+  }
+  50% {
+    background-position:
+      100% 50%,
+      0% 50%,
+      50% 0%;
+  }
+}
+
+.vibrant-bg {
+  background-image:
+    radial-gradient(circle at 12% 15%, rgba(219, 39, 119, 0.5), transparent 45%),
+    radial-gradient(circle at 88% 20%, rgba(234, 88, 12, 0.4), transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(13, 148, 136, 0.4), transparent 50%);
+  background-size: 200% 200%;
+  animation: vibrant-drift 16s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vibrant-bg {
+    animation: none;
+  }
+}
+
+.vibrant-banner {
+  background-image: linear-gradient(
+    120deg,
+    #db2777 0%,
+    #ea580c 45%,
+    #d97706 75%,
+    #0d9488 100%
+  );
+}
+
+.vibrant-text {
+  background-image: linear-gradient(90deg, #db2777, #ea580c, #0d9488);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.vibrant-icon-badge {
+  background-image: linear-gradient(135deg, #db2777, #ea580c);
+  color: #ffffff;
+}
