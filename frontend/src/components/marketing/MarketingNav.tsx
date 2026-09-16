@@ -22,8 +22,8 @@ export function MarketingNav({
   ctaHref?: string;
 }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2">
+    <header className="sticky top-0 z-20 border-b border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)]/85 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
         <Link href="/inicio" className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -31,25 +31,25 @@ export function MarketingNav({
             alt={systemConfig.company.name}
             width={101}
             height={64}
-            className="h-12 w-auto object-contain sm:h-16"
+            className="h-11 w-auto object-contain sm:h-14"
           />
 
           <div className="leading-tight">
-            <p className="text-sm font-bold text-[var(--text-primary)]">
+            <p className="font-display text-sm font-bold text-[var(--mkt-ink)]">
               {systemConfig.company.name} Assessoria
             </p>
-            <p className="text-[11px] text-[var(--text-muted)]">
+            <p className="text-[11px] text-[var(--mkt-muted)]">
               Prestação de Serviços
             </p>
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-medium text-[var(--text-secondary)] md:flex">
+        <nav className="hidden items-center gap-7 text-sm font-medium text-[var(--mkt-muted)] md:flex">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="hover:text-[var(--text-primary)]"
+              className="transition-colors hover:text-[var(--mkt-ink)]"
             >
               {link.label}
             </Link>
@@ -59,7 +59,7 @@ export function MarketingNav({
         {ctaLabel && ctaHref && (
           <Link
             href={ctaHref}
-            className="rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+            className="rounded-full bg-[var(--mkt-ink)] px-5 py-2.5 text-sm font-semibold text-[var(--mkt-bg)] transition-transform hover:scale-[1.04]"
           >
             {ctaLabel}
           </Link>

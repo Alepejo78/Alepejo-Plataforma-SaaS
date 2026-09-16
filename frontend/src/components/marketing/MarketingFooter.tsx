@@ -28,8 +28,8 @@ export function MarketingFooter({ page }: { page: string }) {
   const visits = useVisitCounter(page);
 
   return (
-    <footer className="border-t border-[var(--border)] py-8">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-[var(--text-muted)]">
+    <footer className="border-t border-[var(--mkt-border)] py-8">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-[var(--mkt-muted)]">
         <p>
           © {new Date().getFullYear()} AlePejo Assessoria e Prestação de
           Serviço Ltda.
@@ -44,8 +44,15 @@ export function MarketingFooter({ page }: { page: string }) {
           )}
 
           <Link
+            href="/trabalhe-conosco"
+            className="font-medium hover:text-[var(--mkt-ink)] hover:underline"
+          >
+            Trabalhe conosco
+          </Link>
+
+          <Link
             href="/privacidade"
-            className="font-medium hover:text-[var(--text-primary)] hover:underline"
+            className="font-medium hover:text-[var(--mkt-ink)] hover:underline"
           >
             Política de Privacidade
           </Link>

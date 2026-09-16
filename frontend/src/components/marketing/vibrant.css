@@ -5,6 +5,36 @@
  * distância mesmo tendo a mesma estrutura de página.
  */
 
+/* Tokens `--mkt-*` do tema Vibrant — ver aurora.css para o par Aurora
+   e marketing-shared.css pros componentes que leem esses tokens. */
+.theme-vibrant {
+  --mkt-bg: #fff4f2;
+  --mkt-bg-alt: #ffffff;
+  --mkt-surface: #ffffff;
+  --mkt-surface-2: #ffe4ef;
+  --mkt-ink: #2b0f1c;
+  --mkt-muted: #7c5468;
+  --mkt-border: #ffd6e6;
+  --mkt-accent: #db2777;
+  --mkt-accent-2: #ea580c;
+  --mkt-accent-3: #0d9488;
+  --mkt-contrast: #ffffff;
+}
+
+.dark .theme-vibrant {
+  --mkt-bg: #1c0f16;
+  --mkt-bg-alt: #24121a;
+  --mkt-surface: #2a1620;
+  --mkt-surface-2: #331a26;
+  --mkt-ink: #fdeef4;
+  --mkt-muted: #d9a8c0;
+  --mkt-border: #4a2334;
+  --mkt-accent: #f472b6;
+  --mkt-accent-2: #fb923c;
+  --mkt-accent-3: #2dd4bf;
+  --mkt-contrast: #1c0f16;
+}
+
 @keyframes vibrant-drift {
   0%,
   100% {

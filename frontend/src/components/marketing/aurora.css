@@ -5,6 +5,38 @@
  * sistema (login, ERP) usa. Import só nesses dois arquivos.
  */
 
+/* Tokens `--mkt-*` do tema Aurora — usados por marketing-shared.css e
+   por /inicio e /trabalhe-conosco (`.theme-aurora`). Paleta própria,
+   independente do azul neutro do ERP (`--primary` em globals.css),
+   pra essas páginas terem identidade visual de produto, não de painel. */
+.theme-aurora {
+  --mkt-bg: #f3f1ff;
+  --mkt-bg-alt: #ffffff;
+  --mkt-surface: #ffffff;
+  --mkt-surface-2: #ece7ff;
+  --mkt-ink: #150f3d;
+  --mkt-muted: #57517c;
+  --mkt-border: #ddd6fe;
+  --mkt-accent: #4338ca;
+  --mkt-accent-2: #7c3aed;
+  --mkt-accent-3: #0891b2;
+  --mkt-contrast: #ffffff;
+}
+
+.dark .theme-aurora {
+  --mkt-bg: #0e0b26;
+  --mkt-bg-alt: #14102f;
+  --mkt-surface: #181433;
+  --mkt-surface-2: #211a4a;
+  --mkt-ink: #f2f0ff;
+  --mkt-muted: #b4ade0;
+  --mkt-border: #2f2764;
+  --mkt-accent: #818cf8;
+  --mkt-accent-2: #a78bfa;
+  --mkt-accent-3: #22d3ee;
+  --mkt-contrast: #0e0b26;
+}
+
 @keyframes aurora-drift {
   0%,
   100% {

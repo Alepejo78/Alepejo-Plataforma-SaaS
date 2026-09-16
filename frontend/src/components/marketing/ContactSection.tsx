@@ -67,28 +67,30 @@ export function ContactSection({
   }
 
   const fieldClass = `
-    h-11 w-full rounded-xl border border-[var(--border)]
-    bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)]
+    h-11 w-full rounded-xl border border-[var(--mkt-border)]
+    bg-[var(--mkt-bg-alt)] px-3 text-sm text-[var(--mkt-ink)]
     outline-none transition-colors
-    focus:border-[var(--primary)]
+    focus:border-[var(--mkt-accent)]
   `;
 
-  const labelClass = "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
+  const labelClass = "mb-1 block text-sm font-medium text-[var(--mkt-muted)]";
 
   return (
-    <section id="contato" className="border-t border-[var(--border)] py-20">
+    <section id="contato" className="border-t border-[var(--mkt-border)] py-20">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 md:grid-cols-2">
         <div>
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">{title}</h2>
+          <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
+            {title}
+          </h2>
 
-          <p className="mt-3 text-[var(--text-muted)]">{description}</p>
+          <p className="mt-3 text-[var(--mkt-muted)]">{description}</p>
 
-          <div className="mt-8 space-y-4 text-sm text-[var(--text-secondary)]">
+          <div className="mt-8 space-y-4 text-sm text-[var(--mkt-ink)]">
             <a
               href="mailto:suporte@alepejo.com.br"
-              className="flex items-center gap-3 hover:text-[var(--text-primary)]"
+              className="flex items-center gap-3 transition-colors hover:text-[var(--mkt-accent)]"
             >
-              <Mail size={18} className="text-[var(--primary)]" />
+              <Mail size={18} className="text-[var(--mkt-accent)]" />
               suporte@alepejo.com.br
             </a>
 
@@ -96,25 +98,25 @@ export function ContactSection({
               href="https://wa.me/5543991544557"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 hover:text-[var(--text-primary)]"
+              className="flex items-center gap-3 transition-colors hover:text-[var(--mkt-accent)]"
             >
-              <MessageCircle size={18} className="text-[var(--primary)]" />
+              <MessageCircle size={18} className="text-[var(--mkt-accent)]" />
               (43) 9 9154-4557
             </a>
 
             <div className="flex items-center gap-3">
-              <MapPin size={18} className="text-[var(--primary)]" />
-              Atendimento remoto ou presencial para todo o Brasil
+              <MapPin size={18} className="text-[var(--mkt-accent)]" />
+              Atendimento remoto em todo o Brasil, presencial a negociar
             </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+        <div className="mkt-panel p-6">
           {done ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-              <CheckCircle2 size={32} className="text-[var(--success)]" />
-              <p className="font-medium text-[var(--text-primary)]">Mensagem enviada!</p>
-              <p className="text-sm text-[var(--text-muted)]">
+              <CheckCircle2 size={32} className="text-[var(--mkt-accent-3)]" />
+              <p className="font-medium text-[var(--mkt-ink)]">Mensagem enviada!</p>
+              <p className="text-sm text-[var(--mkt-muted)]">
                 Vamos responder em breve no e-mail informado.
               </p>
             </div>
@@ -177,7 +179,7 @@ export function ContactSection({
                   <textarea
                     id="mkt-message"
                     rows={4}
-                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
+                    className="w-full rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] p-3 text-sm text-[var(--mkt-ink)] outline-none transition-colors focus:border-[var(--mkt-accent)]"
                     value={form.message}
                     onChange={(e) => setField("message", e.target.value)}
                   />
@@ -194,7 +196,7 @@ export function ContactSection({
                 type="button"
                 disabled={loading}
                 onClick={() => void handleSubmit()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(120deg,var(--mkt-accent),var(--mkt-accent-2))] px-5 py-3 text-sm font-semibold text-[var(--mkt-contrast)] transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
               >
                 {loading && <Loader2 size={16} className="animate-spin" />}
                 {loading ? "Enviando..." : "Enviar mensagem"}

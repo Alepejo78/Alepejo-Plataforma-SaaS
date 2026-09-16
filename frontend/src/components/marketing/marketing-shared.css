@@ -1,0 +1,127 @@
+/*
+ * Mecânica compartilhada das páginas de marketing da Assessoria —
+ * independente de paleta (Aurora/Vibrant). Cada tema só precisa
+ * declarar os tokens `--mkt-*` (ver aurora.css/vibrant.css); tudo
+ * abaixo lê exclusivamente esses tokens, nunca as variáveis globais
+ * do ERP (`--primary`, `--surface`...), pra ficar visualmente isolado
+ * do resto do painel.
+ */
+
+.marketing-page {
+  background: var(--mkt-bg);
+  color: var(--mkt-ink);
+  font-family: var(--font-marketing-body), sans-serif;
+}
+
+.marketing-page .font-display {
+  font-family: var(--font-marketing-display), sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Textura de grade de pontos — nod discreto à origem "planilha" da
+   empresa, nunca mais que opacidade decorativa baixa. */
+.mkt-dotgrid {
+  background-image: radial-gradient(var(--mkt-border) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/* Revelação ao rolar — uma seção inteira por vez (ver useReveal.ts),
+   nunca aplicado card a card. */
+.mkt-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mkt-reveal[data-in="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkt-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Recorte tipo "ticket de agendamento" — duas mordidas circulares nas
+   laterais, cor igual ao fundo da seção onde o ticket está encostado
+   (por isso recebe a cor via prop inline `--mkt-ticket-punch`). */
+.mkt-ticket {
+  position: relative;
+  isolation: isolate;
+}
+
+.mkt-ticket::before,
+.mkt-ticket::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--mkt-ticket-punch, var(--mkt-bg));
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.mkt-ticket::before {
+  left: -10px;
+}
+
+.mkt-ticket::after {
+  right: -10px;
+}
+
+.mkt-ticket-divider {
+  border-top: 2px dashed var(--mkt-border);
+}
+
+/* Trilha vertical da linha do tempo (Sobre a AlePejo, /inicio). */
+.mkt-timeline {
+  position: relative;
+}
+
+.mkt-timeline::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--mkt-accent),
+    var(--mkt-accent-2),
+    var(--mkt-accent-3)
+  );
+  opacity: 0.4;
+}
+
+.mkt-timeline-marker {
+  font-family: var(--font-marketing-display), sans-serif;
+}
+
+/* Cartão base reutilizável — some da "SaaS card kit" (borda cinza +
+   sombra igual em tudo) trocando por elevação real no hover. */
+.mkt-panel {
+  background: var(--mkt-surface);
+  border: 1px solid var(--mkt-border);
+  border-radius: 20px;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+
+.mkt-panel-lift:hover {
+  transform: translateY(-6px);
+  border-color: color-mix(in srgb, var(--mkt-accent) 40%, var(--mkt-border));
+  box-shadow: 0 24px 48px -24px color-mix(in srgb, var(--mkt-accent) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkt-panel-lift:hover {
+    transform: none;
+  }
+}

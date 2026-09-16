@@ -1,228 +1,261 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  Boxes,
-  Building2,
-  CalendarClock,
-  HeartHandshake,
-  MapPin,
-  Sparkles,
-  Target,
-  Users,
-} from "lucide-react";
+import type { CSSProperties } from "react";
+import { ArrowRight, Boxes, CalendarClock, MapPin, Users } from "lucide-react";
 
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
-import { WorkWithUs } from "@/components/marketing/WorkWithUs";
+import { SERVICE_SEGMENTS } from "@/components/marketing/segments-data";
+import { marketingFontVars } from "@/components/marketing/fonts";
 import "@/components/marketing/aurora.css";
+import "@/components/marketing/marketing-shared.css";
+import { Reveal } from "@/components/marketing/Reveal";
 
 const NAV_LINKS = [
   { label: "Sobre", href: "/inicio#sobre" },
-  { label: "Serviços prestados", href: "/inicio#oferecemos" },
-  { label: "Trabalhe conosco", href: "/inicio#trabalhe-conosco" },
+  { label: "Nossos sistemas", href: "/inicio#sistemas" },
   { label: "Contato", href: "/inicio#contato" },
 ];
 
-const VALUES = [
+const TIMELINE = [
   {
-    icon: Target,
-    title: "Foco no resultado do cliente",
-    description:
-      "Cada módulo e cada tela existem pra resolver um problema real de quem gerencia um negócio no dia a dia.",
+    cell: "A1",
+    title: "Onde tudo começou",
+    text: "A AlePejo nasceu como assessoria: planilhas de Excel sob medida e aulas particulares, individuais, sempre indo direto no que cada aluno realmente precisava aprender — nada de curso engessado. Junto com isso vieram as primeiras consultorias de processos para pequenas empresas.",
   },
   {
-    icon: HeartHandshake,
-    title: "Suporte de verdade",
-    description:
-      "Atendimento próximo, em português, com gente que conhece o sistema — não um robô de FAQ.",
+    cell: "B1",
+    title: "Da planilha para a automação",
+    text: "Construir planilhas para controle financeiro, estoque, gestão de RH e outras rotinas mostrou de perto onde o Excel começava a travar. A resposta foi automatizar com VBA — as planilhas deixaram de ser um relatório à parte e passaram a fazer parte do trabalho.",
   },
   {
-    icon: Sparkles,
-    title: "Sempre evoluindo",
-    description:
-      "Novos recursos entram com frequência, ouvindo quem usa o sistema todos os dias.",
+    cell: "C1",
+    title: "Nasce o AlePejo ERP Cloud",
+    text: "Mesmo automatizada, a planilha tinha limite. Daí nasceu o AlePejo ERP Cloud: um sistema em nuvem que uniu estoque, compras, vendas, financeiro e RH num só lugar — feito pra ficar de fato no dia a dia do empresário, não guardado numa gaveta.",
+  },
+  {
+    cell: "D1",
+    title: "Agora, o AlePejo Serviços e Agendamentos",
+    text: "Com o ERP resolvendo a gestão interna, faltava quem vive de atender cliente marcando hora. Nasceu o AlePejo Serviços e Agendamentos, pra facilitar a agenda de quem atende nestes segmentos:",
   },
 ];
 
 export default function InicioPage() {
   return (
-    <div className="min-h-screen bg-[var(--background)]">
-      <MarketingNav links={NAV_LINKS} />
+    <div className={`${marketingFontVars} marketing-page theme-aurora`}>
+      <MarketingNav links={NAV_LINKS} ctaLabel="AlePejo Serviços" ctaHref="/servicos" />
 
       <section className="relative overflow-hidden">
+        <div aria-hidden className="mkt-dotgrid pointer-events-none absolute inset-0 opacity-40" />
         <div
           aria-hidden
-          className="aurora-bg pointer-events-none absolute inset-x-0 top-0 h-[520px] opacity-[0.12]"
+          className="aurora-bg pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-[0.14]"
         />
 
-        <div className="relative mx-auto max-w-5xl px-6 py-24 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-            <Building2 size={12} className="text-[var(--primary)]" />
-            AlePejo Assessoria e Prestação de Serviços
-          </span>
+        <div className="relative mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-28">
+          <div>
+            <h1 className="font-display text-4xl font-bold leading-[1.08] text-[var(--mkt-ink)] sm:text-5xl lg:text-[3.4rem]">
+              De uma planilha de Excel a dois sistemas que já cuidam do seu
+              negócio.
+            </h1>
 
-          <h1 className="mt-6 text-4xl font-bold leading-tight text-[var(--text-primary)] sm:text-5xl">
-            Tecnologia e assessoria para{" "}
-            <span className="aurora-text">pequenos e médios negócios</span>
-          </h1>
+            <p className="mt-6 max-w-xl text-lg text-[var(--mkt-muted)]">
+              Somos a AlePejo: consultoria que virou tecnologia. Hoje
+              mantemos um ERP completo para a gestão da empresa e o AlePejo
+              Serviços, para quem vive de atender e agendar clientes.
+            </p>
 
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-[var(--text-muted)]">
-            Somos uma empresa de assessoria e prestação de serviços que também
-            desenvolve os próprios sistemas: um ERP completo para gestão da
-            empresa e uma plataforma de agendamento para quem atende clientes
-            todos os dias.
-          </p>
+            <div className="mt-9 flex flex-wrap items-center gap-4">
+              <Link
+                href="/servicos"
+                className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(120deg,var(--mkt-accent),var(--mkt-accent-2))] px-6 py-3 text-sm font-semibold text-[var(--mkt-contrast)] shadow-lg shadow-[color:color-mix(in_srgb,var(--mkt-accent)_35%,transparent)] transition-transform hover:scale-[1.03]"
+              >
+                Ver o AlePejo Serviços
+                <ArrowRight size={16} />
+              </Link>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            <Link
-              href="/institucional"
-              className="group flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-left transition-colors hover:border-[var(--primary)]"
-            >
-              <div>
-                <p className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-                  <Boxes size={18} className="text-[var(--primary)]" />
-                  Produto ERP
-                </p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Estoque, compras, vendas, financeiro e RH num só sistema.
-                </p>
-              </div>
-
-              <ArrowRight
-                size={20}
-                className="shrink-0 text-[var(--text-muted)] transition-transform group-hover:translate-x-1"
-              />
-            </Link>
-
-            <Link
-              href="/servicos"
-              className="group flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 text-left transition-colors hover:border-[var(--primary)]"
-            >
-              <div>
-                <p className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-                  <CalendarClock size={18} className="text-[var(--primary)]" />
-                  Serviços
-                </p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Agendamento online e atendimento para o seu negócio.
-                </p>
-              </div>
-
-              <ArrowRight
-                size={20}
-                className="shrink-0 text-[var(--text-muted)] transition-transform group-hover:translate-x-1"
-              />
-            </Link>
+              <Link
+                href="/institucional"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] px-6 py-3 text-sm font-semibold text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-accent)]"
+              >
+                Conhecer o ERP completo
+              </Link>
+            </div>
           </div>
+
+          <Reveal className="relative h-[320px] sm:h-[380px]">
+            <div className="mkt-panel absolute left-0 top-2 w-[78%] -rotate-6 p-5 sm:top-6">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--mkt-surface-2)] text-[var(--mkt-accent)]">
+                <Boxes size={20} />
+              </span>
+              <p className="font-display mt-4 font-semibold text-[var(--mkt-ink)]">
+                AlePejo ERP Cloud
+              </p>
+              <div className="mt-4 space-y-2">
+                {[
+                  { label: "Estoque", value: 82 },
+                  { label: "Financeiro", value: 64 },
+                  { label: "RH", value: 45 },
+                ].map((row) => (
+                  <div key={row.label}>
+                    <div className="flex justify-between text-[11px] text-[var(--mkt-muted)]">
+                      <span>{row.label}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 rounded-full bg-[var(--mkt-surface-2)]">
+                      <div
+                        className="h-1.5 rounded-full bg-[linear-gradient(90deg,var(--mkt-accent),var(--mkt-accent-2))]"
+                        style={{ width: `${row.value}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mkt-panel absolute bottom-0 right-0 w-[74%] rotate-3 p-5 shadow-2xl">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--mkt-surface-2)] text-[var(--mkt-accent-3)]">
+                <CalendarClock size={20} />
+              </span>
+              <p className="font-display mt-4 font-semibold text-[var(--mkt-ink)]">
+                AlePejo Serviços — hoje
+              </p>
+              <div
+                className="mt-4 space-y-2 text-xs"
+                style={{ "--mkt-ticket-punch": "var(--mkt-surface)" } as CSSProperties}
+              >
+                {["09:00 · Corte masculino", "10:30 · Manicure", "14:00 · Banho e tosa"].map(
+                  (item) => (
+                    <div
+                      key={item}
+                      className="mkt-ticket flex items-center rounded-lg bg-[var(--mkt-surface-2)] px-3 py-2 font-medium text-[var(--mkt-ink)]"
+                    >
+                      {item}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      <section id="sobre" className="border-t border-[var(--border)] py-20">
-        <div className="mx-auto grid max-w-6xl gap-10 px-6 lg:grid-cols-2 lg:items-center">
-          <div>
-            <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-              Sobre a AlePejo
-            </h2>
+      <Reveal as="section" id="sobre" className="border-t border-[var(--mkt-border)] py-20">
+        <div className="mx-auto max-w-4xl px-6">
+          <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
+            Sobre a AlePejo
+          </h2>
 
-            <p className="mt-4 text-[var(--text-muted)]">
-              Nascemos prestando assessoria para pequenas e médias empresas e,
-              com o tempo, passamos a desenvolver nossos próprios sistemas
-              para resolver os mesmos problemas que via nos nossos clientes:
-              controle de estoque bagunçado, agenda de atendimento no papel,
-              financeiro sem visão clara do fluxo de caixa.
-            </p>
-
-            <p className="mt-4 text-[var(--text-muted)]">
-              Hoje somos uma empresa que une consultoria e tecnologia — o
-              suporte que dá pra sua empresa e os sistemas que constrói andam
-              juntos, sem depender de terceiros.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-1">
-            {VALUES.map((value) => (
-              <div
-                key={value.title}
-                className="flex items-start gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
-              >
-                <span className="aurora-icon-badge flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                  <value.icon size={18} />
+          <div className="mkt-timeline mt-12 space-y-10 pl-11">
+            {TIMELINE.map((step) => (
+              <div key={step.cell} className="relative">
+                <span className="mkt-timeline-marker absolute -left-11 top-0 flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mkt-surface)] text-xs font-bold text-[var(--mkt-accent)] ring-2 ring-[var(--mkt-border)]">
+                  {step.cell}
                 </span>
+                <h3 className="font-display text-lg font-semibold text-[var(--mkt-ink)]">
+                  {step.title}
+                </h3>
+                <p className="mt-2 max-w-2xl text-[var(--mkt-muted)]">{step.text}</p>
 
-                <div>
-                  <p className="font-semibold text-[var(--text-primary)]">
-                    {value.title}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    {value.description}
-                  </p>
-                </div>
+                {step.cell === "D1" && (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {SERVICE_SEGMENTS.map((segment) => (
+                      <span
+                        key={segment.label}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1.5 text-xs font-medium text-[var(--mkt-ink)]"
+                      >
+                        <segment.icon size={13} className="text-[var(--mkt-accent-2)]" />
+                        {segment.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
-      </section>
+      </Reveal>
 
-      <section
-        id="oferecemos"
-        className="border-t border-[var(--border)] bg-[var(--surface)] py-20"
+      <Reveal
+        as="section"
+        id="sistemas"
+        className="border-t border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] py-20"
       >
         <div className="mx-auto max-w-6xl px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-              Serviços prestados
-            </h2>
-            <p className="mt-3 text-[var(--text-muted)]">
-              Dois produtos, um só compromisso: simplificar a gestão do seu
-              negócio.
-            </p>
-          </div>
+          <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
+            Dois sistemas, um só compromisso
+          </h2>
+          <p className="mt-3 max-w-xl text-[var(--mkt-muted)]">
+            Simplificar a gestão do seu negócio — por dentro e no atendimento
+            ao cliente.
+          </p>
 
           <div className="mt-12 grid gap-6 md:grid-cols-2">
-            <div className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--background)] p-8">
-              <span className="aurora-icon-badge flex h-12 w-12 items-center justify-center rounded-xl">
+            <div className="mkt-panel mkt-panel-lift flex flex-col p-8">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--mkt-surface-2)] text-[var(--mkt-accent)]">
                 <Boxes size={22} />
               </span>
 
-              <h3 className="mt-5 text-xl font-bold text-[var(--text-primary)]">
+              <h3 className="font-display mt-5 text-xl font-bold text-[var(--mkt-ink)]">
                 AlePejo ERP Cloud
               </h3>
 
-              <p className="mt-2 flex-1 text-sm text-[var(--text-muted)]">
+              <p className="mt-2 flex-1 text-sm text-[var(--mkt-muted)]">
                 Gestão completa da empresa: estoque, compras, vendas,
                 financeiro com fluxo de caixa, RH com folha de pagamento e
-                ponto, produção e multiunidade — tudo online, sem limite de
-                usuários.
+                ponto, produção e multiunidade — tudo online.
               </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {["Estoque", "Financeiro", "RH e folha", "Multiunidade"].map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-[var(--mkt-surface-2)] px-3 py-1 text-xs font-medium text-[var(--mkt-ink)]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
 
               <Link
                 href="/institucional"
-                className="mt-6 inline-flex items-center gap-1.5 font-semibold text-[var(--primary)] hover:underline"
+                className="mt-6 inline-flex items-center gap-1.5 font-semibold text-[var(--mkt-accent)] hover:underline"
               >
                 Conhecer o ERP
                 <ArrowRight size={16} />
               </Link>
             </div>
 
-            <div className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--background)] p-8">
-              <span className="aurora-icon-badge flex h-12 w-12 items-center justify-center rounded-xl">
+            <div className="mkt-panel mkt-panel-lift flex flex-col p-8">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--mkt-surface-2)] text-[var(--mkt-accent-3)]">
                 <CalendarClock size={22} />
               </span>
 
-              <h3 className="mt-5 text-xl font-bold text-[var(--text-primary)]">
+              <h3 className="font-display mt-5 text-xl font-bold text-[var(--mkt-ink)]">
                 AlePejo Serviços
               </h3>
 
-              <p className="mt-2 flex-1 text-sm text-[var(--text-muted)]">
+              <p className="mt-2 flex-1 text-sm text-[var(--mkt-muted)]">
                 Agendamento online para salões, barbearias, clínicas,
-                petshops e outros negócios de atendimento — com link público
-                de agendamento, lembretes, fidelidade e histórico do cliente.
+                petshops e outros negócios de atendimento — link público,
+                lembretes, fidelidade e histórico do cliente.
               </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {["Agenda online", "Lembretes no WhatsApp", "Fidelidade", "Prontuário"].map(
+                  (tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-[var(--mkt-surface-2)] px-3 py-1 text-xs font-medium text-[var(--mkt-ink)]"
+                    >
+                      {tag}
+                    </span>
+                  )
+                )}
+              </div>
 
               <Link
                 href="/servicos"
-                className="mt-6 inline-flex items-center gap-1.5 font-semibold text-[var(--primary)] hover:underline"
+                className="mt-6 inline-flex items-center gap-1.5 font-semibold text-[var(--mkt-accent)] hover:underline"
               >
                 Conhecer o Serviços
                 <ArrowRight size={16} />
@@ -230,22 +263,20 @@ export default function InicioPage() {
             </div>
           </div>
         </div>
-      </section>
+      </Reveal>
 
-      <section className="border-t border-[var(--border)] py-16">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-6 text-sm text-[var(--text-muted)]">
+      <div className="border-t border-[var(--mkt-border)] py-14">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-6 text-sm text-[var(--mkt-muted)]">
           <span className="flex items-center gap-2">
-            <Users size={16} className="text-[var(--primary)]" />
+            <Users size={16} className="text-[var(--mkt-accent)]" />
             Suporte próximo, sem robô de atendimento
           </span>
           <span className="flex items-center gap-2">
-            <MapPin size={16} className="text-[var(--primary)]" />
-            Atendimento remoto ou presencial em todo o Brasil
+            <MapPin size={16} className="text-[var(--mkt-accent)]" />
+            Atendimento remoto em todo o Brasil, presencial a negociar
           </span>
         </div>
-      </section>
-
-      <WorkWithUs />
+      </div>
 
       <ContactSection />
 

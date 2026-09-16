@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ChangeEvent } from "react";
-import { Briefcase, CheckCircle2, FileUp, Loader2 } from "lucide-react";
+import { CheckCircle2, FileUp, Loader2 } from "lucide-react";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
@@ -95,34 +95,14 @@ export function WorkWithUs() {
   }
 
   return (
-    <section
-      id="trabalhe-conosco"
-      className="border-t border-[var(--border)] bg-[var(--surface)] py-20"
-    >
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 md:grid-cols-2 md:items-center">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-            <Briefcase size={12} className="text-[var(--primary)]" />
-            Vagas
-          </span>
-
-          <h2 className="mt-4 text-3xl font-bold text-[var(--text-primary)]">
-            Trabalhe conosco
-          </h2>
-
-          <p className="mt-3 text-[var(--text-muted)]">
-            Quer fazer parte do time da AlePejo? Deixe seu e-mail e seu
-            currículo — a gente guarda no banco de talentos e chama quando
-            surgir uma vaga com o seu perfil.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-6 shadow-sm">
+    <section className="bg-[var(--mkt-bg-alt)] py-16">
+      <div className="mx-auto max-w-md px-6">
+        <div className="mkt-panel p-6">
           {done ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-              <CheckCircle2 size={32} className="text-[var(--success)]" />
-              <p className="font-medium text-[var(--text-primary)]">Currículo enviado!</p>
-              <p className="text-sm text-[var(--text-muted)]">
+              <CheckCircle2 size={32} className="text-[var(--mkt-accent-3)]" />
+              <p className="font-medium text-[var(--mkt-ink)]">Currículo enviado!</p>
+              <p className="text-sm text-[var(--mkt-muted)]">
                 Obrigado pelo interesse — vamos guardar seu contato.
               </p>
             </div>
@@ -130,7 +110,7 @@ export function WorkWithUs() {
             <div className="space-y-4">
               <div>
                 <label
-                  className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+                  className="mb-1 block text-sm font-medium text-[var(--mkt-muted)]"
                   htmlFor="trabalhe-email"
                 >
                   Seu e-mail <span className="text-[var(--danger)]">*</span>
@@ -140,13 +120,13 @@ export function WorkWithUs() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
+                  className="h-11 w-full rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] px-3 text-sm text-[var(--mkt-ink)] outline-none transition-colors focus:border-[var(--mkt-accent)]"
                 />
               </div>
 
               <div>
                 <label
-                  className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+                  className="mb-1 block text-sm font-medium text-[var(--mkt-muted)]"
                   htmlFor="trabalhe-curriculo"
                 >
                   Currículo (PDF, DOC ou DOCX) <span className="text-[var(--danger)]">*</span>
@@ -154,9 +134,9 @@ export function WorkWithUs() {
 
                 <label
                   htmlFor="trabalhe-curriculo"
-                  className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--primary)]"
+                  className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] px-3 text-sm text-[var(--mkt-muted)] transition-colors hover:border-[var(--mkt-accent)]"
                 >
-                  <FileUp size={16} className="shrink-0 text-[var(--primary)]" />
+                  <FileUp size={16} className="shrink-0 text-[var(--mkt-accent)]" />
                   <span className="truncate">
                     {file ? file.name : "Escolher arquivo"}
                   </span>
@@ -181,7 +161,7 @@ export function WorkWithUs() {
                 type="button"
                 disabled={loading}
                 onClick={() => void handleSubmit()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(120deg,var(--mkt-accent),var(--mkt-accent-2))] px-5 py-3 text-sm font-semibold text-[var(--mkt-contrast)] transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
               >
                 {loading && <Loader2 size={16} className="animate-spin" />}
                 {loading ? "Enviando..." : "Enviar currículo"}

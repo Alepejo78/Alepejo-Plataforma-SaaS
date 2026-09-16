@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { ArrowLeft, Clock } from "lucide-react";
+import type { CSSProperties } from "react";
+import { ArrowLeft, Bell, Gift, LinkIcon, Sparkles } from "lucide-react";
 
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
+import { marketingFontVars } from "@/components/marketing/fonts";
+import { Reveal } from "@/components/marketing/Reveal";
 import "@/components/marketing/vibrant.css";
+import "@/components/marketing/marketing-shared.css";
 
 const NAV_LINKS = [
   { label: "Recursos", href: "/servicos#recursos" },
@@ -12,53 +16,89 @@ const NAV_LINKS = [
   { label: "Contato", href: "/servicos#contato" },
 ];
 
+const AVAILABLE_NOW = [
+  {
+    icon: LinkIcon,
+    title: "Link de agendamento",
+    description: "Sua página pública de horários, já funcionando hoje.",
+  },
+  {
+    icon: Bell,
+    title: "Lembretes no WhatsApp",
+    description: "Confirmação e lembrete automático antes do atendimento.",
+  },
+  {
+    icon: Gift,
+    title: "Fidelidade",
+    description: "Pontos por atendimento e resgate configurável.",
+  },
+];
+
 /**
  * Planos do AlePejo Serviços — vazio de propósito por enquanto. A
  * configuração de planos de verdade (preços, módulos) entra numa rodada
- * futura; até lá, essa tela só existe pra já ter o link funcionando e
- * pra deixar claro que "planos em breve" não é um erro de carregamento.
+ * futura; até lá, essa tela mostra o que já dá pra usar hoje em vez de
+ * ser um beco sem saída.
  */
 export default function ServicosPlanosPage() {
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className={`${marketingFontVars} marketing-page theme-vibrant`}>
       <MarketingNav links={NAV_LINKS} />
 
-      <div className="relative overflow-hidden">
+      <section className="relative overflow-hidden">
+        <div aria-hidden className="mkt-dotgrid pointer-events-none absolute inset-0 opacity-30" />
         <div
           aria-hidden
-          className="vibrant-bg pointer-events-none absolute inset-x-0 top-0 h-[400px] opacity-[0.12]"
+          className="vibrant-bg pointer-events-none absolute inset-x-0 top-0 h-[420px] opacity-[0.14]"
         />
 
-        <div className="relative mx-auto max-w-2xl px-6 py-24 text-center">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">
-            Planos <span className="vibrant-text">em breve</span>
+        <Reveal className="relative mx-auto max-w-2xl px-6 py-24 text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1 text-xs font-medium text-[var(--mkt-muted)]">
+            <Sparkles size={12} className="text-[var(--mkt-accent)]" />
+            Planos chegando em breve
+          </span>
+
+          <h1 className="font-display mt-5 text-3xl font-bold text-[var(--mkt-ink)] sm:text-4xl">
+            Estamos fechando o preço certo pro seu tamanho de agenda
           </h1>
 
-          <div className="mx-auto mt-8 flex max-w-md flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--surface)] p-8">
-            <span className="vibrant-icon-badge flex h-12 w-12 items-center justify-center rounded-xl">
-              <Clock size={22} />
-            </span>
+          <p className="mx-auto mt-4 max-w-md text-[var(--mkt-muted)]">
+            Em breve você escolhe o plano ideal aqui mesmo. Por enquanto, fale
+            com a gente que avaliamos junto o que seu negócio precisa.
+          </p>
 
-            <p className="font-semibold text-[var(--text-primary)]">
-              Estamos finalizando os planos do AlePejo Serviços
+          <div
+            className="mkt-ticket mkt-panel mx-auto mt-10 max-w-md p-8"
+            style={{ "--mkt-ticket-punch": "var(--mkt-bg)" } as CSSProperties}
+          >
+            <p className="font-display text-lg font-semibold text-[var(--mkt-ink)]">
+              Já dá pra usar hoje
             </p>
 
-            <p className="text-sm text-[var(--text-muted)]">
-              Em breve você vai poder escolher o plano ideal aqui mesmo. Por
-              enquanto, fale com a gente que avaliamos a necessidade do seu
-              negócio.
-            </p>
+            <div className="mkt-ticket-divider mt-4 space-y-4 pt-5 text-left">
+              {AVAILABLE_NOW.map((item) => (
+                <div key={item.title} className="flex items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[linear-gradient(135deg,var(--mkt-accent),var(--mkt-accent-2))] text-white">
+                    <item.icon size={16} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--mkt-ink)]">{item.title}</p>
+                    <p className="text-xs text-[var(--mkt-muted)]">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <Link
             href="/servicos"
-            className="mt-8 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="mt-10 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)]"
           >
             <ArrowLeft size={15} />
             Voltar para o AlePejo Serviços
           </Link>
-        </div>
-      </div>
+        </Reveal>
+      </section>
 
       <ContactSection
         title="Fale sobre os planos"

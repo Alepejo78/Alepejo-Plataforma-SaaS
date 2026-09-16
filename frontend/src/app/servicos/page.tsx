@@ -1,25 +1,25 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import {
   ArrowRight,
   Bell,
   CalendarCheck,
-  Car,
   Gift,
-  HeartPulse,
   MessageCircle,
-  Palette,
   PawPrint,
   Scissors,
-  Smile,
   Sparkles,
-  Stethoscope,
 } from "lucide-react";
 
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
 import { SegmentIconsBackground } from "@/components/marketing/SegmentIconsBackground";
+import { SERVICE_SEGMENTS } from "@/components/marketing/segments-data";
+import { marketingFontVars } from "@/components/marketing/fonts";
+import { Reveal } from "@/components/marketing/Reveal";
 import "@/components/marketing/vibrant.css";
+import "@/components/marketing/marketing-shared.css";
 
 const NAV_LINKS = [
   { label: "Recursos", href: "/servicos#recursos" },
@@ -27,17 +27,34 @@ const NAV_LINKS = [
   { label: "Contato", href: "/servicos#contato" },
 ];
 
-const SEGMENTS = [
-  { label: "Barbearia", icon: Scissors },
-  { label: "Salão de beleza / cabeleireiro", icon: Sparkles },
-  { label: "Manicure, pedicure e esmalteria", icon: Sparkles },
-  { label: "Maquiagem", icon: Palette },
-  { label: "Estética, depilação e sobrancelhas", icon: Sparkles },
-  { label: "Saúde e bem-estar", icon: HeartPulse },
-  { label: "Odontologia", icon: Smile },
-  { label: "Clínica de estética / saúde", icon: Stethoscope },
-  { label: "Pet shop, banho e tosa", icon: PawPrint },
-  { label: "Estética automotiva", icon: Car },
+const HERO_TICKETS: {
+  icon: typeof Scissors;
+  label: string;
+  time: string;
+  tone: string;
+  style: CSSProperties;
+}[] = [
+  {
+    icon: Scissors,
+    label: "Barbearia",
+    time: "14:00 · Corte + barba",
+    tone: "var(--mkt-accent)",
+    style: { top: 0, left: 0, transform: "rotate(-7deg)", zIndex: 3 },
+  },
+  {
+    icon: Sparkles,
+    label: "Salão",
+    time: "10:30 · Escova",
+    tone: "var(--mkt-accent-2)",
+    style: { top: "24%", right: 0, transform: "rotate(4deg)", zIndex: 2 },
+  },
+  {
+    icon: PawPrint,
+    label: "Petshop",
+    time: "16:15 · Banho e tosa",
+    tone: "var(--mkt-accent-3)",
+    style: { top: "50%", left: "12%", transform: "rotate(-3deg)", zIndex: 1 },
+  },
 ];
 
 const FEATURES = [
@@ -45,31 +62,29 @@ const FEATURES = [
     icon: CalendarCheck,
     title: "Link de agendamento próprio",
     description:
-      "Seu cliente escolhe serviço, profissional e horário sozinho, num link com a cara do seu negócio.",
+      "Seu cliente escolhe serviço, profissional e horário sozinho, num link com a cara do seu negócio — sem grupo de WhatsApp lotado nem caderninho.",
+    big: true,
   },
   {
     icon: Bell,
     title: "Lembretes automáticos",
-    description:
-      "Confirmação e lembrete por WhatsApp — menos falta, mais agenda cheia.",
+    description: "Confirmação e lembrete por WhatsApp — menos falta, mais agenda cheia.",
   },
   {
     icon: Gift,
     title: "Fidelidade",
-    description:
-      "Pontos por atendimento e recompensas configuráveis pra trazer o cliente de volta.",
+    description: "Pontos por atendimento e resgate configurável pra trazer o cliente de volta.",
   },
   {
     icon: MessageCircle,
     title: "Histórico do cliente",
-    description:
-      "Prontuário, cadastro e histórico de atendimentos guardados — inclusive carteira de vacina pra petshops.",
+    description: "Cadastro e histórico de atendimentos guardados — inclusive carteira de vacina pra petshops.",
   },
 ];
 
 export default function ServicosPage() {
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className={`${marketingFontVars} marketing-page theme-vibrant`}>
       <MarketingNav
         links={NAV_LINKS}
         ctaLabel="Ver planos"
@@ -77,125 +92,155 @@ export default function ServicosPage() {
       />
 
       <section className="relative z-0 overflow-hidden">
+        <div aria-hidden className="mkt-dotgrid pointer-events-none absolute inset-0 opacity-30" />
         <div
           aria-hidden
-          className="vibrant-bg pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-[0.18]"
+          className="vibrant-bg pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-[0.16]"
         />
 
         <SegmentIconsBackground />
 
-        <div className="relative mx-auto max-w-4xl px-6 py-24 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-            <CalendarCheck size={12} className="text-[#db2777]" />
-            AlePejo Serviços
-          </span>
+        <div className="relative mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-28">
+          <div>
+            <h1 className="font-display text-4xl font-bold leading-[1.08] text-[var(--mkt-ink)] sm:text-5xl lg:text-[3.3rem]">
+              Marcação de horário sem grupo de WhatsApp lotado, planilha ou
+              caderninho.
+            </h1>
 
-          <h1 className="mt-6 text-4xl font-bold leading-tight text-[var(--text-primary)] sm:text-5xl">
-            Agendamento online pra quem vive de{" "}
-            <span className="vibrant-text">atender bem</span>
-          </h1>
+            <p className="mt-6 max-w-xl text-lg text-[var(--mkt-muted)]">
+              Barbearias, salões, clínicas, petshops e outros negócios de
+              atendimento: o cliente escolhe o horário sozinho, você recebe
+              confirmação e lembrete automático no WhatsApp — e ainda ganha
+              fidelidade e histórico de cada cliente.
+            </p>
 
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-[var(--text-muted)]">
-            Barbearias, salões, clínicas, petshops e muito mais — seus
-            clientes agendam sozinhos, você recebe confirmação e lembrete
-            automático, e ainda ganha fidelidade e histórico de cada cliente.
-          </p>
+            <div className="mt-9 flex flex-wrap items-center gap-4">
+              <Link
+                href="/servicos/planos"
+                className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(120deg,var(--mkt-accent),var(--mkt-accent-2))] px-6 py-3 text-sm font-semibold text-[var(--mkt-contrast)] shadow-lg shadow-[color:color-mix(in_srgb,var(--mkt-accent)_35%,transparent)] transition-transform hover:scale-[1.03]"
+              >
+                Ver planos e preços
+                <ArrowRight size={16} />
+              </Link>
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/servicos/planos"
-              className="vibrant-banner inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[color:rgb(219_39_119_/_0.3)] transition-transform hover:scale-[1.03]"
-            >
-              Ver planos e preços
-              <ArrowRight size={16} />
-            </Link>
-
-            <Link
-              href="/servicos#contato"
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-6 py-3 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)]"
-            >
-              Falar com a gente
-            </Link>
+              <Link
+                href="/servicos#contato"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] px-6 py-3 text-sm font-semibold text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-accent)]"
+              >
+                Falar com a gente
+              </Link>
+            </div>
           </div>
+
+          <Reveal className="relative h-[320px] sm:h-[360px]">
+            {HERO_TICKETS.map((ticket) => (
+              <div
+                key={ticket.label}
+                className="mkt-ticket mkt-panel absolute w-[72%] p-5"
+                style={
+                  {
+                    ...ticket.style,
+                    "--mkt-ticket-punch": "var(--mkt-bg)",
+                  } as CSSProperties
+                }
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-white"
+                    style={{ background: ticket.tone }}
+                  >
+                    <ticket.icon size={17} />
+                  </span>
+                  <div>
+                    <p className="font-display text-sm font-semibold text-[var(--mkt-ink)]">
+                      {ticket.label}
+                    </p>
+                    <p className="text-xs text-[var(--mkt-muted)]">{ticket.time}</p>
+                  </div>
+                </div>
+                <div className="mkt-ticket-divider mt-3 pt-2 text-[11px] font-medium text-[var(--mkt-accent-3)]">
+                  Confirmado no WhatsApp
+                </div>
+              </div>
+            ))}
+          </Reveal>
         </div>
       </section>
 
-      <section id="segmentos" className="border-t border-[var(--border)] py-20">
+      <Reveal as="section" id="segmentos" className="border-t border-[var(--mkt-border)] py-20">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold text-[var(--text-primary)]">
+          <div className="max-w-2xl">
+            <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
               Feito para o seu segmento
             </h2>
-            <p className="mt-3 text-[var(--text-muted)]">
+            <p className="mt-3 text-[var(--mkt-muted)]">
               Cada segmento tem sua própria linguagem e customização — do
               vocabulário do link público à carteira de vacina do pet.
             </p>
           </div>
 
-          <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {SEGMENTS.map((segment) => (
+          <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {SERVICE_SEGMENTS.map((segment, index) => (
               <div
                 key={segment.label}
-                className="flex flex-col items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 text-center"
+                className="mkt-panel mkt-panel-lift flex flex-col items-center gap-3 p-5 text-center"
+                style={{ transform: index % 2 === 1 ? "translateY(14px)" : undefined }}
               >
-                <span className="vibrant-icon-badge flex h-11 w-11 items-center justify-center rounded-xl">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--mkt-accent),var(--mkt-accent-2))] text-white">
                   <segment.icon size={20} />
                 </span>
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  {segment.label}
-                </p>
+                <p className="text-sm font-medium text-[var(--mkt-ink)]">{segment.label}</p>
               </div>
             ))}
           </div>
         </div>
-      </section>
+      </Reveal>
 
-      <section
+      <Reveal
+        as="section"
         id="recursos"
-        className="border-t border-[var(--border)] bg-[var(--surface)] py-20"
+        className="border-t border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] py-20"
       >
         <div className="mx-auto max-w-6xl px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-              Tudo que a sua agenda precisa
-            </h2>
-          </div>
+          <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
+            Tudo que a sua agenda precisa
+          </h2>
 
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature) => (
               <div
                 key={feature.title}
-                className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-6"
+                className={`mkt-panel mkt-panel-lift p-7 ${
+                  feature.big ? "sm:col-span-2 lg:col-span-2 lg:row-span-2" : ""
+                }`}
               >
-                <span className="vibrant-icon-badge flex h-11 w-11 items-center justify-center rounded-xl">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--mkt-accent),var(--mkt-accent-2))] text-white">
                   <feature.icon size={20} />
                 </span>
 
-                <p className="mt-4 font-semibold text-[var(--text-primary)]">
+                <p className="font-display mt-4 font-semibold text-[var(--mkt-ink)]">
                   {feature.title}
                 </p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  {feature.description}
-                </p>
+                <p className="mt-1.5 text-sm text-[var(--mkt-muted)]">{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
-      </section>
+      </Reveal>
 
-      <section className="border-t border-[var(--border)] py-20 text-center">
+      <section className="border-t border-[var(--mkt-border)] py-20 text-center">
         <div className="mx-auto max-w-2xl px-6">
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
+          <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
             Pronto pra organizar sua agenda?
           </h2>
 
-          <p className="mt-3 text-[var(--text-muted)]">
+          <p className="mt-3 text-[var(--mkt-muted)]">
             Veja os planos disponíveis e comece a atender com um link só seu.
           </p>
 
           <Link
             href="/servicos/planos"
-            className="vibrant-banner mt-8 inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[color:rgb(219_39_119_/_0.3)] transition-transform hover:scale-[1.03]"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-[linear-gradient(120deg,var(--mkt-accent),var(--mkt-accent-2))] px-6 py-3 text-sm font-semibold text-[var(--mkt-contrast)] shadow-lg shadow-[color:color-mix(in_srgb,var(--mkt-accent)_35%,transparent)] transition-transform hover:scale-[1.03]"
           >
             Ver planos e preços
             <ArrowRight size={16} />
