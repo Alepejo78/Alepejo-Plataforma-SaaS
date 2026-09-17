@@ -115,13 +115,32 @@
 }
 
 .mkt-panel-lift:hover {
-  transform: translateY(-6px);
-  border-color: color-mix(in srgb, var(--mkt-accent) 40%, var(--mkt-border));
-  box-shadow: 0 24px 48px -24px color-mix(in srgb, var(--mkt-accent) 35%, transparent);
+  transform: translateY(-6px) scale(1.015);
+  border-color: color-mix(in srgb, var(--panel-accent, var(--mkt-accent)) 40%, var(--mkt-border));
+  box-shadow: 0 24px 48px -24px color-mix(in srgb, var(--panel-accent, var(--mkt-accent)) 35%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mkt-panel-lift:hover {
+    transform: none;
+  }
+}
+
+/* Chip/badge com hover animado — usado nos módulos do ERP (C1) e nos
+   segmentos do Serviços (D1), pra reagir ao mouse igual um botão. */
+.mkt-chip {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.mkt-chip:hover {
+  transform: translateY(-2px) scale(1.05);
+  border-color: color-mix(in srgb, var(--panel-accent, var(--mkt-accent)) 55%, var(--mkt-border));
+  background: color-mix(in srgb, var(--panel-accent, var(--mkt-accent)) 12%, var(--mkt-surface));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkt-chip:hover {
     transform: none;
   }
 }

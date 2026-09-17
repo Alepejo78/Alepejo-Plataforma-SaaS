@@ -1,15 +1,35 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowRight, Boxes, CalendarClock, MapPin, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Boxes,
+  Building2,
+  CalendarClock,
+  MapPin,
+  ShoppingCart,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
+import { SystemsStackedCards } from "@/components/marketing/SystemsStackedCards";
 import { SERVICE_SEGMENTS } from "@/components/marketing/segments-data";
 import { marketingFontVars } from "@/components/marketing/fonts";
 import "@/components/marketing/aurora.css";
 import "@/components/marketing/marketing-shared.css";
 import { Reveal } from "@/components/marketing/Reveal";
+
+const ERP_MODULES = [
+  { label: "Estoque", icon: Boxes },
+  { label: "Compras e vendas", icon: ShoppingCart },
+  { label: "Financeiro", icon: Wallet },
+  { label: "RH e folha", icon: Users },
+  { label: "Multiunidade", icon: Building2 },
+  { label: "Indicadores", icon: TrendingUp },
+];
 
 const NAV_LINKS = [
   { label: "Sobre", href: "/inicio#sobre" },
@@ -76,65 +96,16 @@ export default function InicioPage() {
 
               <Link
                 href="/institucional"
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] px-6 py-3 text-sm font-semibold text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-accent)]"
+                className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(120deg,var(--mkt-accent-2),var(--mkt-accent-3))] px-6 py-3 text-sm font-semibold text-[var(--mkt-contrast)] shadow-lg shadow-[color:color-mix(in_srgb,var(--mkt-accent-2)_35%,transparent)] transition-transform hover:scale-[1.03]"
               >
+                <Boxes size={16} />
                 Conhecer o ERP completo
               </Link>
             </div>
           </div>
 
-          <Reveal className="relative h-[320px] sm:h-[380px]">
-            <div className="mkt-panel absolute left-0 top-2 w-[78%] -rotate-6 p-5 sm:top-6">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--mkt-surface-2)] text-[var(--mkt-accent)]">
-                <Boxes size={20} />
-              </span>
-              <p className="font-display mt-4 font-semibold text-[var(--mkt-ink)]">
-                AlePejo ERP Cloud
-              </p>
-              <div className="mt-4 space-y-2">
-                {[
-                  { label: "Estoque", value: 82 },
-                  { label: "Financeiro", value: 64 },
-                  { label: "RH", value: 45 },
-                ].map((row) => (
-                  <div key={row.label}>
-                    <div className="flex justify-between text-[11px] text-[var(--mkt-muted)]">
-                      <span>{row.label}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 rounded-full bg-[var(--mkt-surface-2)]">
-                      <div
-                        className="h-1.5 rounded-full bg-[linear-gradient(90deg,var(--mkt-accent),var(--mkt-accent-2))]"
-                        style={{ width: `${row.value}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mkt-panel absolute bottom-0 right-0 w-[74%] rotate-3 p-5 shadow-2xl">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--mkt-surface-2)] text-[var(--mkt-accent-3)]">
-                <CalendarClock size={20} />
-              </span>
-              <p className="font-display mt-4 font-semibold text-[var(--mkt-ink)]">
-                AlePejo Serviços — hoje
-              </p>
-              <div
-                className="mt-4 space-y-2 text-xs"
-                style={{ "--mkt-ticket-punch": "var(--mkt-surface)" } as CSSProperties}
-              >
-                {["09:00 · Corte masculino", "10:30 · Manicure", "14:00 · Banho e tosa"].map(
-                  (item) => (
-                    <div
-                      key={item}
-                      className="mkt-ticket flex items-center rounded-lg bg-[var(--mkt-surface-2)] px-3 py-2 font-medium text-[var(--mkt-ink)]"
-                    >
-                      {item}
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
+          <Reveal>
+            <SystemsStackedCards />
           </Reveal>
         </div>
       </section>
@@ -156,12 +127,26 @@ export default function InicioPage() {
                 </h3>
                 <p className="mt-2 max-w-2xl text-[var(--mkt-muted)]">{step.text}</p>
 
+                {step.cell === "C1" && (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {ERP_MODULES.map((module) => (
+                      <span
+                        key={module.label}
+                        className="mkt-chip inline-flex cursor-default items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1.5 text-xs font-medium text-[var(--mkt-ink)]"
+                      >
+                        <module.icon size={13} className="text-[var(--mkt-accent)]" />
+                        {module.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {step.cell === "D1" && (
                   <div className="mt-5 flex flex-wrap gap-2">
                     {SERVICE_SEGMENTS.map((segment) => (
                       <span
                         key={segment.label}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1.5 text-xs font-medium text-[var(--mkt-ink)]"
+                        className="mkt-chip inline-flex cursor-default items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1.5 text-xs font-medium text-[var(--mkt-ink)]"
                       >
                         <segment.icon size={13} className="text-[var(--mkt-accent-2)]" />
                         {segment.label}
@@ -190,8 +175,17 @@ export default function InicioPage() {
           </p>
 
           <div className="mt-12 grid gap-6 md:grid-cols-2">
-            <div className="mkt-panel mkt-panel-lift flex flex-col p-8">
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--mkt-surface-2)] text-[var(--mkt-accent)]">
+            <div
+              className="mkt-panel mkt-panel-lift flex flex-col p-8"
+              style={
+                {
+                  "--panel-accent": "var(--mkt-accent)",
+                  background:
+                    "radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--mkt-accent) 10%, var(--mkt-surface)), var(--mkt-surface))",
+                } as CSSProperties
+              }
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--mkt-accent),var(--mkt-accent-2))] text-white">
                 <Boxes size={22} />
               </span>
 
@@ -199,11 +193,18 @@ export default function InicioPage() {
                 AlePejo ERP Cloud
               </h3>
 
-              <p className="mt-2 flex-1 text-sm text-[var(--mkt-muted)]">
+              <p className="mt-2 text-sm text-[var(--mkt-muted)]">
                 Gestão completa da empresa: estoque, compras, vendas,
                 financeiro com fluxo de caixa, RH com folha de pagamento e
                 ponto, produção e multiunidade — tudo online.
               </p>
+
+              <ul className="mt-3 flex-1 space-y-1.5 text-sm text-[var(--mkt-muted)]">
+                <li>• Controle de estoque com alerta de reposição</li>
+                <li>• Fluxo de caixa e contas a pagar/receber</li>
+                <li>• Ponto e folha de pagamento da equipe</li>
+                <li>• Multiunidade: matriz e filiais no mesmo lugar</li>
+              </ul>
 
               <div className="mt-5 flex flex-wrap gap-2">
                 {["Estoque", "Financeiro", "RH e folha", "Multiunidade"].map((tag) => (
@@ -225,8 +226,17 @@ export default function InicioPage() {
               </Link>
             </div>
 
-            <div className="mkt-panel mkt-panel-lift flex flex-col p-8">
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--mkt-surface-2)] text-[var(--mkt-accent-3)]">
+            <div
+              className="mkt-panel mkt-panel-lift flex flex-col p-8"
+              style={
+                {
+                  "--panel-accent": "#db2777",
+                  background:
+                    "radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, #db2777 10%, var(--mkt-surface)), var(--mkt-surface))",
+                } as CSSProperties
+              }
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#db2777,#ea580c)] text-white">
                 <CalendarClock size={22} />
               </span>
 
@@ -234,11 +244,18 @@ export default function InicioPage() {
                 AlePejo Serviços
               </h3>
 
-              <p className="mt-2 flex-1 text-sm text-[var(--mkt-muted)]">
+              <p className="mt-2 text-sm text-[var(--mkt-muted)]">
                 Agendamento online para salões, barbearias, clínicas,
                 petshops e outros negócios de atendimento — link público,
                 lembretes, fidelidade e histórico do cliente.
               </p>
+
+              <ul className="mt-3 flex-1 space-y-1.5 text-sm text-[var(--mkt-muted)]">
+                <li>• Link de agendamento com a cara do seu negócio</li>
+                <li>• Confirmação e lembrete automático no WhatsApp</li>
+                <li>• Prontuário e, pra petshop, carteira de vacina</li>
+                <li>• Pontos de fidelidade pra trazer o cliente de volta</li>
+              </ul>
 
               <div className="mt-5 flex flex-wrap gap-2">
                 {["Agenda online", "Lembretes no WhatsApp", "Fidelidade", "Prontuário"].map(
@@ -255,7 +272,7 @@ export default function InicioPage() {
 
               <Link
                 href="/servicos"
-                className="mt-6 inline-flex items-center gap-1.5 font-semibold text-[var(--mkt-accent)] hover:underline"
+                className="mt-6 inline-flex items-center gap-1.5 font-semibold text-[#db2777] hover:underline"
               >
                 Conhecer o Serviços
                 <ArrowRight size={16} />

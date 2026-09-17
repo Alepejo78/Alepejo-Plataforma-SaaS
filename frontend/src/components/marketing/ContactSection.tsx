@@ -84,6 +84,9 @@ export function ContactSection({
           </h2>
 
           <p className="mt-3 text-[var(--mkt-muted)]">{description}</p>
+          <p className="mt-1 text-sm text-[var(--mkt-muted)]">
+            Dúvidas sobre a empresa? Quer saber mais sobre os sistemas? Entre em contato.
+          </p>
 
           <div className="mt-8 space-y-4 text-sm text-[var(--mkt-ink)]">
             <a

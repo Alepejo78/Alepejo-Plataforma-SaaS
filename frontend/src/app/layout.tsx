@@ -9,6 +9,7 @@ import { ShowLockedModulesProvider } from "../providers/ShowLockedModulesProvide
 import { BrandFooter } from "../components/layout/BrandFooter";
 import { BrandColorStyle } from "../components/layout/BrandColorStyle";
 import { MascoteFlutuante } from "../components/marketing/MascoteFlutuante";
+import { WhatsappFloatingButton } from "../components/marketing/WhatsappFloatingButton";
 
 /*
  * Fira Sans no texto e Fira Code nos números/monoespaçado: é o par que
@@ -50,6 +51,7 @@ export default function RootLayout({
                 <BrandColorStyle />
                 {children}
                 <MascoteFlutuante />
+                <WhatsappFloatingButton />
                 <BrandFooter />
               </ThemeProvider>
             </TabsProvider>

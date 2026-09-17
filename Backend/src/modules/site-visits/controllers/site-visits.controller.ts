@@ -8,7 +8,7 @@ import { getClientIp } from '../../../core/utils/client-ip.util';
 import { SiteVisitsService } from '../services/site-visits.service';
 
 /** Páginas públicas com contador — lista fechada, evita criar linha pra qualquer string que chegar na rota. */
-const TRACKED_PAGES = ['institucional'];
+const TRACKED_PAGES = ['institucional', 'inicio', 'servicos', 'servicos-planos', 'trabalhe-conosco'];
 
 @ApiTags('Site Visits')
 @Controller('site-visits')

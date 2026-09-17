@@ -15,6 +15,7 @@ import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
 import { SegmentIconsBackground } from "@/components/marketing/SegmentIconsBackground";
+import { ServicosDemoTour } from "@/components/marketing/ServicosDemoTour";
 import { SERVICE_SEGMENTS } from "@/components/marketing/segments-data";
 import { marketingFontVars } from "@/components/marketing/fonts";
 import { Reveal } from "@/components/marketing/Reveal";
@@ -192,6 +193,26 @@ export default function ServicosPage() {
                 <p className="text-sm font-medium text-[var(--mkt-ink)]">{segment.label}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </Reveal>
+
+      <Reveal as="section" className="border-t border-[var(--mkt-border)] py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] px-3 py-1 text-xs font-semibold text-[var(--mkt-accent)]">
+              Veja por dentro
+            </span>
+            <h2 className="font-display mt-4 text-3xl font-bold text-[var(--mkt-ink)]">
+              Como fica na prática
+            </h2>
+            <p className="mt-3 text-[var(--mkt-muted)]">
+              Do prontuário do cliente ao link que ele usa pra marcar sozinho.
+            </p>
+          </div>
+
+          <div className="mt-12">
+            <ServicosDemoTour />
           </div>
         </div>
       </Reveal>
