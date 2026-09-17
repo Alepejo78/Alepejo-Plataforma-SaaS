@@ -63,7 +63,13 @@ const TIMELINE = [
 export default function InicioPage() {
   return (
     <div className={`${marketingFontVars} marketing-page theme-aurora`}>
-      <MarketingNav links={NAV_LINKS} ctaLabel="AlePejo Serviços" ctaHref="/servicos" />
+      <MarketingNav
+        links={NAV_LINKS}
+        ctaLabel="AlePejo Serviços"
+        ctaHref="/servicos"
+        secondaryCtaLabel="AlePejo ERP"
+        secondaryCtaHref="/institucional"
+      />
 
       <section className="relative overflow-hidden">
         <div aria-hidden className="mkt-dotgrid pointer-events-none absolute inset-0 opacity-40" />

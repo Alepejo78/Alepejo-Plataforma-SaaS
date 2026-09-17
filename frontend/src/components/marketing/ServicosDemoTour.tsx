@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Link as LinkIcon, PlayCircle, Syringe } from "lucide-react";
+import { FileText, Link as LinkIcon, Smartphone } from "lucide-react";
 
 import { ChromaKeyVideo } from "./ChromaKeyVideo";
 
@@ -24,6 +24,14 @@ const ABAS = [
     titulo: "Seu cliente agenda sozinho, no seu link",
     narracao:
       "O cliente entra no link com a cara do seu negócio, escolhe serviço, profissional e horário livre, e recebe confirmação na hora. Sem grupo de WhatsApp lotado nem ida e volta de mensagem — e ele também acompanha ali os próprios pontos de fidelidade.",
+  },
+  {
+    id: "app",
+    label: "App do profissional",
+    icon: Smartphone,
+    titulo: "Cada profissional com a própria agenda no celular",
+    narracao:
+      "Direto do celular, o profissional vê sua agenda do dia, faz check-in e conclui o atendimento, e acompanha o próprio faturamento — dia, semana ou mês, com comissão quando for o caso. Sem precisar abrir o sistema completo.",
   },
 ] as const;
 
@@ -81,7 +89,7 @@ export function ServicosDemoTour() {
           />
           <div className="flex items-center gap-2">
             <span className="vibrant-icon-badge flex h-7 w-7 items-center justify-center rounded-lg">
-              {aba.id === "sistema" ? <Syringe size={15} /> : <PlayCircle size={15} />}
+              <aba.icon size={15} />
             </span>
             <p className="text-sm font-semibold text-[var(--mkt-ink)]">{aba.titulo}</p>
           </div>

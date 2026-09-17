@@ -8,6 +8,7 @@ import {
   MessageCircle,
   PawPrint,
   Scissors,
+  Smartphone,
   Sparkles,
 } from "lucide-react";
 
@@ -64,7 +65,6 @@ const FEATURES = [
     title: "Link de agendamento próprio",
     description:
       "Seu cliente escolhe serviço, profissional e horário sozinho, num link com a cara do seu negócio — sem grupo de WhatsApp lotado nem caderninho.",
-    big: true,
   },
   {
     icon: Bell,
@@ -80,6 +80,12 @@ const FEATURES = [
     icon: MessageCircle,
     title: "Histórico do cliente",
     description: "Cadastro e histórico de atendimentos guardados — inclusive carteira de vacina pra petshops.",
+  },
+  {
+    icon: Smartphone,
+    title: "App do profissional",
+    description:
+      "Pelo celular, cada profissional acompanha a própria agenda e o faturamento — sem precisar abrir o sistema completo.",
   },
 ];
 
@@ -229,12 +235,7 @@ export default function ServicosPage() {
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature) => (
-              <div
-                key={feature.title}
-                className={`mkt-panel mkt-panel-lift p-7 ${
-                  feature.big ? "sm:col-span-2 lg:col-span-2 lg:row-span-2" : ""
-                }`}
-              >
+              <div key={feature.title} className="mkt-panel mkt-panel-lift p-7">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--mkt-accent),var(--mkt-accent-2))] text-white">
                   <feature.icon size={20} />
                 </span>

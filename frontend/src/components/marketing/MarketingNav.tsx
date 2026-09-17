@@ -16,10 +16,14 @@ export function MarketingNav({
   links,
   ctaLabel,
   ctaHref,
+  secondaryCtaLabel,
+  secondaryCtaHref,
 }: {
   links: NavLink[];
   ctaLabel?: string;
   ctaHref?: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaHref?: string;
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)]/85 backdrop-blur-md">
@@ -56,14 +60,25 @@ export function MarketingNav({
           ))}
         </nav>
 
-        {ctaLabel && ctaHref && (
-          <Link
-            href={ctaHref}
-            className="rounded-full bg-[var(--mkt-ink)] px-5 py-2.5 text-sm font-semibold text-[var(--mkt-bg)] transition-transform hover:scale-[1.04]"
-          >
-            {ctaLabel}
-          </Link>
-        )}
+        <div className="flex items-center gap-2.5">
+          {secondaryCtaLabel && secondaryCtaHref && (
+            <Link
+              href={secondaryCtaHref}
+              className="hidden rounded-full border border-[var(--mkt-border)] px-4 py-2.5 text-sm font-semibold text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-accent)] hover:text-[var(--mkt-accent)] sm:inline-flex"
+            >
+              {secondaryCtaLabel}
+            </Link>
+          )}
+
+          {ctaLabel && ctaHref && (
+            <Link
+              href={ctaHref}
+              className="rounded-full bg-[var(--mkt-ink)] px-5 py-2.5 text-sm font-semibold text-[var(--mkt-bg)] transition-transform hover:scale-[1.04]"
+            >
+              {ctaLabel}
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );
