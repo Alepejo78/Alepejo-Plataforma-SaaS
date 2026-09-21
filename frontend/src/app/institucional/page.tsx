@@ -12,51 +12,31 @@ import {
   YAxis,
 } from "recharts";
 import {
+  ArrowRight,
   BadgeCheck,
-  Banknote,
-  Bell,
-  Boxes,
   BarChart3,
-  Building2,
-  CalendarClock,
   CheckCircle2,
-  ClipboardCheck,
   Clock,
-  Cloud,
-  Eye,
-  Factory,
-  GraduationCap,
-  KeyRound,
+  Cpu,
+  Database,
+  Globe,
   LayoutDashboard,
-  LayoutGrid,
-  Layers,
-  List,
   Loader2,
   Mail,
   MapPin,
   MessageCircle,
-  Moon,
-  Package,
-  Palette,
-  Pause,
-  PiggyBank,
   Play,
-  PlayCircle,
-  Plug,
   Plus,
   Search,
-  Settings2,
   ShieldCheck,
   ShoppingCart,
+  Smartphone,
   Sparkles,
   Store,
+  TrendingUp,
   Truck,
-  UserCog,
   Users,
-  Volume2,
-  VolumeX,
-  Wallet,
-  Workflow,
+  Zap,
 } from "lucide-react";
 
 import { systemConfig } from "@/config/system";
@@ -69,7 +49,6 @@ import { ChromaKeyVideo } from "@/components/marketing/ChromaKeyVideo";
 import { pickVoice, stepDuration, useSpeechVoices } from "@/components/marketing/guided-narration";
 import "@/components/marketing/aurora.css";
 
-/** Dias de teste grátis vigente (Administrar planos) — usado nos textos de chamada pra ação abaixo. */
 function useTrialDays() {
   const [trialDays, setTrialDays] = useState(14);
 
@@ -83,12 +62,6 @@ function useTrialDays() {
   return trialDays;
 }
 
-/**
- * Contador de visitas do rodapé — soma 1 no carregamento da página e
- * mostra o total (vindo do backend). Guarda com `useRef` pra não
- * contar duas vezes no StrictMode do React em desenvolvimento (o
- * efeito roda duas vezes só em dev, nunca em produção).
- */
 function useVisitCounter() {
   const [count, setCount] = useState<number | null>(null);
   const fired = useRef(false);
@@ -155,23 +128,6 @@ const BADGE_CLASS: Record<BadgeTone, string> = {
   neutral: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
 };
 
-/**
- * Mesmos módulos/telas de verdade do sistema — nome da tela, colunas
- * da tabela e o botão de ação são iguais aos das telas reais (ver
- * `app/erp/parceiros/page.tsx`, `CrudToolbar.tsx`): cabeçalho com
- * título e botão "Novo", busca, tabela com cabeçalho fixo e badge de
- * situação. Nada de cartões de indicador — as telas reais não têm.
- */
-/**
- * Roteiro da demonstração guiada (ver `DemoTour`): cada item é uma
- * parada do tour — a tela simulada daquele módulo mais a narração que
- * o navegador lê em voz alta. A ordem segue o fluxo real da empresa
- * (cadastra → compra → estoca → vende → recebe), que é justamente o
- * argumento de venda: uma etapa alimenta a próxima.
- *
- * `narration` é texto puro de propósito: é o que a voz lê e o que
- * aparece na legenda, então nada de abreviação que a leitura estrague.
- */
 const demoTabs = [
   {
     id: "cadastros",
@@ -191,187 +147,149 @@ const demoTabs = [
   },
   {
     id: "produtos",
-    icon: Package,
+    icon: Store,
     label: "Produtos",
     pageTitle: "Produtos",
     subtitle: "Categoria, marca e unidade de medida.",
     newLabel: "Novo produto",
     narration:
-      "Em produtos você organiza o que a empresa vende ou fabrica, com categoria, marca e unidade de medida. É esse cadastro que alimenta o estoque, as compras e as vendas.",
-    columns: ["Produto", "Categoria", "Unidade", "Preço de venda"],
+      "No módulo de produtos você define a categoria, a marca e a unidade de medida. Quando você vende, o sistema dá baixa automática no estoque e já gera o título financeiro.",
+    columns: ["Produto", "Categoria", "Estoque", "Preço"],
     rows: [
-      ["Cabo elétrico 2,5mm", "Elétrica", "Metro", "R$ 4,90"],
-      ["Disjuntor 20A", "Elétrica", "Unidade", "R$ 28,50"],
-      ["Luminária LED 40W", "Iluminação", "Unidade", "R$ 89,00"],
+      ["Notebook Dell Latitude", "Informática", "12 un", "R$ 4.500,00"],
+      ["Cadeira Giratória", "Móveis", "8 un", "R$ 650,00"],
+      ["Monitor 27\"", "Informática", "15 un", "R$ 890,00"],
     ],
   },
   {
     id: "compras",
-    icon: Truck,
+    icon: ShoppingCart,
     label: "Compras",
-    pageTitle: "Pedidos de compra",
-    subtitle: "Da cotação ao recebimento do fornecedor.",
-    newLabel: "Novo pedido",
+    pageTitle: "Compras",
+    subtitle: "Cotações, pedidos e recebimento.",
+    newLabel: "Nova compra",
     narration:
-      "No módulo de compras você faz a cotação, gera o pedido e registra o recebimento. Assim que o material é recebido, ele entra no estoque automaticamente e o valor vira uma conta a pagar no financeiro.",
-    columns: ["Pedido", "Fornecedor", "Data", "Valor", "Situação"],
+      "Gere cotações com fornecedores, converta em pedido de compra e receba os produtos. O sistema atualiza o estoque e os custos automaticamente.",
+    columns: ["Pedido", "Fornecedor", "Valor", "Situação"],
     rows: [
-      ["#308", "Distribuidora Norte", "14/08", "R$ 6.480,00", { label: "Recebido", tone: "success" as BadgeTone }],
-      ["#307", "Elétrica Sul", "11/08", "R$ 2.115,00", { label: "Em cotação", tone: "warning" as BadgeTone }],
-      ["#306", "Distribuidora Norte", "05/08", "R$ 4.020,00", { label: "Recebido", tone: "success" as BadgeTone }],
+      ["PC-001", "Distribuidora Norte", "R$ 12.500,00", { label: "Recebido", tone: "success" as BadgeTone }],
+      ["PC-002", "Tech Supply", "R$ 8.200,00", { label: "Em andamento", tone: "warning" as BadgeTone }],
     ],
   },
   {
     id: "estoque",
-    icon: Boxes,
+    icon: Database,
     label: "Estoque",
     pageTitle: "Estoque",
-    subtitle: "Saldo por depósito, sempre atualizado.",
+    subtitle: "Depósitos, inventário e movimentações.",
     newLabel: "Nova movimentação",
     narration:
-      "O estoque se move sozinho. Comprou e recebeu, o produto entra. Confirmou a venda, o produto sai. E quando o saldo fica abaixo do mínimo, o sistema avisa antes de faltar material para atender o cliente.",
-    columns: ["Produto", "Depósito", "Saldo", "Situação"],
+      "Controle vários depósitos, faça inventário periódico e acompanhe todas as movimentações de entrada e saída.",
+    columns: ["Produto", "Depósito", "Quantidade", "Tipo"],
     rows: [
-      ["Cabo elétrico 2,5mm", "Depósito Central", "420 m", { label: "OK", tone: "success" as BadgeTone }],
-      ["Disjuntor 20A", "Depósito Central", "8 un", { label: "Abaixo do mínimo", tone: "danger" as BadgeTone }],
-      ["Luminária LED 40W", "Filial Norte", "132 un", { label: "OK", tone: "success" as BadgeTone }],
-    ],
-  },
-  {
-    id: "vendas",
-    icon: ShoppingCart,
-    label: "Vendas",
-    pageTitle: "Vendas",
-    subtitle: "Orçamentos, pedidos e vendas da sua empresa.",
-    newLabel: "Novo pedido",
-    narration:
-      "Nas vendas o orçamento vira pedido e o pedido vira venda, sem redigitar nada. Ao confirmar, o material sai do estoque e o título a receber é criado no financeiro na mesma hora.",
-    columns: ["Pedido", "Cliente", "Data", "Valor", "Situação"],
-    rows: [
-      ["#1042", "Comércio Silva Ltda", "12/08", "R$ 3.240,00", { label: "Faturado", tone: "success" as BadgeTone }],
-      ["#1041", "Construtora Alfa", "10/08", "R$ 1.890,00", { label: "Em aberto", tone: "warning" as BadgeTone }],
-      ["#1040", "Mercado Central", "08/08", "R$ 970,00", { label: "Faturado", tone: "success" as BadgeTone }],
+      ["Notebook Dell Latitude", "Matriz", "12 un", "Entrada"],
+      ["Cadeira Giratória", "Filial", "5 un", "Saída"],
     ],
   },
   {
     id: "financeiro",
-    icon: Banknote,
+    icon: BarChart3,
     label: "Financeiro",
-    pageTitle: "Contas a pagar e a receber",
-    subtitle: "Lançamentos financeiros da sua empresa.",
+    pageTitle: "Financeiro",
+    subtitle: "Fluxo de caixa e gestão financeira.",
     newLabel: "Novo lançamento",
-    narration:
-      "O financeiro recebe tudo pronto: os títulos a pagar e a receber nascem das compras e das vendas, com o vencimento em dia. E o gráfico de fluxo de caixa mostra receita e despesa mês a mês, para você enxergar o resultado sem montar planilha.",
-    columns: ["Descrição", "Vencimento", "Valor", "Situação"],
-    rows: [
-      ["Recebimento — Comércio Silva", "22/08", "R$ 2.100,00", { label: "A vencer", tone: "warning" as BadgeTone }],
-      ["Pagamento — Distribuidora Norte", "24/08", "R$ 3.400,00", { label: "A vencer", tone: "warning" as BadgeTone }],
-      ["Recebimento — Mercado Central", "10/08", "R$ 1.560,00", { label: "Pago", tone: "success" as BadgeTone }],
-    ],
     hasDashboard: true,
-  },
-  {
-    id: "producao",
-    icon: Factory,
-    label: "Produção",
-    pageTitle: "Ordens de produção",
-    subtitle: "Acompanhamento do que está sendo produzido.",
-    newLabel: "Nova ordem",
     narration:
-      "Para quem fabrica, o módulo de produção abre a ordem, consome o material do estoque e acompanha cada etapa até o produto ficar pronto para a venda.",
-    columns: ["Ordem", "Produto", "Quantidade", "Situação"],
+      "Acompanhe o fluxo de caixa em tempo real, gerencie contas a pagar e receber, e visualize gráficos de receita versus despesa.",
+    columns: ["Data", "Descrição", "Valor", "Tipo"],
     rows: [
-      ["OP-215", "Luminária LED 40W", "150 un", { label: "Em produção", tone: "warning" as BadgeTone }],
-      ["OP-214", "Chicote elétrico", "80 un", { label: "Concluída", tone: "success" as BadgeTone }],
-      ["OP-213", "Painel de comando", "12 un", { label: "Concluída", tone: "success" as BadgeTone }],
+      ["15/08", "Venda PC-001", "R$ 12.500,00", "Receita"],
+      ["15/08", "Compra PC-002", "R$ 8.200,00", "Despesa"],
     ],
   },
   {
-    id: "rh",
-    icon: UserCog,
-    label: "Recursos Humanos",
-    pageTitle: "Colaboradores",
-    subtitle: "Cadastro e situação de cada colaborador.",
-    newLabel: "Novo colaborador",
+    id: "vendas",
+    icon: TrendingUp,
+    label: "Vendas",
+    pageTitle: "Vendas",
+    subtitle: "Pedidos, orçamentos e ordens de serviço.",
+    newLabel: "Nova venda",
     narration:
-      "O módulo de recursos humanos guarda função, cargo, salário, horário e setor de cada colaborador. Também controla exames médicos, entrega de equipamento de proteção, férias e até os aniversariantes do mês.",
-    columns: ["Colaborador", "Cargo", "Setor", "Situação"],
+      "Gere pedidos de venda, crie orçamentos e transforme em ordens de serviço. O sistema integra tudo com estoque e financeiro.",
+    columns: ["Pedido", "Cliente", "Valor", "Situação"],
     rows: [
-      ["Ana Ribeiro", "Vendedora", "Comercial", { label: "Ativo", tone: "success" as BadgeTone }],
-      ["Carlos Menezes", "Analista Financeiro", "Financeiro", { label: "Férias", tone: "neutral" as BadgeTone }],
-      ["Juliana Prado", "Auxiliar de Estoque", "Logística", { label: "Experiência", tone: "warning" as BadgeTone }],
-    ],
-  },
-  {
-    id: "folha",
-    icon: Clock,
-    label: "Ponto e Folha",
-    pageTitle: "Ponto e folha de pagamento",
-    subtitle: "Marcações, banco de horas e holerite.",
-    newLabel: "Calcular folha",
-    narration:
-      "Ponto e folha é o diferencial do AlePejo. O sistema controla as marcações, soma as horas positivas e negativas do mês e leva o saldo direto para o cálculo da folha. O que não foi compensado entra como hora extra, e o holerite sai pronto.",
-    columns: ["Colaborador", "Horas no mês", "Saldo", "Situação"],
-    rows: [
-      ["Ana Ribeiro", "176h", "+ 4h20", { label: "Hora extra", tone: "warning" as BadgeTone }],
-      ["Carlos Menezes", "176h", "0h00", { label: "Em dia", tone: "success" as BadgeTone }],
-      ["Juliana Prado", "168h", "- 2h10", { label: "A compensar", tone: "neutral" as BadgeTone }],
-    ],
-  },
-  {
-    id: "administracao",
-    icon: ShieldCheck,
-    label: "Administração",
-    pageTitle: "Usuários e perfis de acesso",
-    subtitle: "Quem entra no sistema e o que cada um pode fazer.",
-    newLabel: "Novo usuário",
-    narration:
-      "Por fim, a administração fica com você. Usuários ilimitados, cada um com um perfil que define exatamente o que pode ver e fazer. E na personalização você coloca a sua logo, o nome da sua empresa e escolhe o tema — o sistema fica com a cara do seu negócio.",
-    columns: ["Usuário", "Perfil de acesso", "Situação"],
-    rows: [
-      ["Ana Ribeiro", "Vendas", { label: "Ativo", tone: "success" as BadgeTone }],
-      ["Carlos Menezes", "Financeiro", { label: "Ativo", tone: "success" as BadgeTone }],
-      ["Juliana Prado", "Estoque", { label: "Ativo", tone: "success" as BadgeTone }],
+      ["PV-001", "Comércio Silva Ltda", "R$ 15.300,00", { label: "Faturado", tone: "success" as BadgeTone }],
+      ["PV-002", "Indústria Tech", "R$ 8.900,00", { label: "Orçamento", tone: "warning" as BadgeTone }],
     ],
   },
 ];
 
-/**
- * Réplica fiel da tela real: sidebar com ícone + nome do módulo
- * (Sidebar.styles.ts) e o conteúdo no mesmo formato de lista das
- * telas de cadastro (cabeçalho + botão "Novo" + busca + tabela com
- * badge de situação, ver `app/erp/parceiros/page.tsx`). Sem cartões
- * de indicador — as telas de cadastro do sistema não têm.
- */
-function FinanceiroDashboard() {
+function Badge({ label, tone }: { label: string; tone: BadgeTone }) {
+  return (
+    <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${BADGE_CLASS[tone]}`}>
+      {label}
+    </span>
+  );
+}
+
+function KpiCardsMock({ cards }: { cards: { label: string; value: string; sub?: string }[] }) {
+  return (
+    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {cards.map((c) => (
+        <div key={c.label} className="rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] p-3.5">
+          <p className="text-xs font-medium text-[var(--text-muted)]">{c.label}</p>
+          <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">{c.value}</p>
+          {c.sub && <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">{c.sub}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ListMock({ columns, rows }: { columns: string[]; rows: (string | { label: string; tone: BadgeTone })[] }) {
+  return (
+    <>
+      <div className="mt-4 flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-3 text-xs text-[var(--text-muted)]">
+        <Search size={13} />
+        Pesquisar...
+      </div>
+      <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--border)]">
+        <div className="min-w-[440px]">
+          <div className="flex bg-[var(--surface-hover)] px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">
+            {columns.map((col, i) => (
+              <span key={col} className={i === 0 ? "flex-1" : "w-28 shrink-0 text-right"}>
+                {col}
+              </span>
+            ))}
+          </div>
+          {rows.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex items-center border-t border-[var(--border)] px-4 py-3 text-sm">
+              {row.map((cell, cellIndex) => (
+                <span
+                  key={cellIndex}
+                  className={cellIndex === 0 ? "flex-1 truncate text-[var(--text-primary)]" : "w-28 shrink-0 text-right text-[var(--text-muted)]"}
+                >
+                  {typeof cell === "object" ? <Badge label={cell.label} tone={cell.tone} /> : cell}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function FinanceChartMock() {
   return (
     <div className="mt-4 rounded-xl border border-[var(--border)] p-4">
-      <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-        Receita x despesa por mês
-      </p>
-
-      <div style={{ height: 260 }}>
+      <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Receita realizada x despesa</p>
+      <div style={{ height: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={financeiroChartData}
-            margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="var(--border)"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="month"
-              stroke="var(--text-muted)"
-              fontSize={12}
-            />
-            <YAxis
-              stroke="var(--text-muted)"
-              fontSize={12}
-              tickFormatter={(v) => chartMoney(Number(v))}
-              width={72}
-            />
+          <BarChart data={financeiroChartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={12} />
+            <YAxis stroke="var(--text-muted)" fontSize={12} tickFormatter={(v) => chartMoney(Number(v))} width={48} />
             <Tooltip
               contentStyle={{
                 background: "var(--surface)",
@@ -379,21 +297,10 @@ function FinanceiroDashboard() {
                 borderRadius: 8,
                 fontSize: 12,
               }}
-              cursor={{ fill: "var(--surface-hover)" }}
               formatter={(v) => chartMoney(Number(v))}
             />
-            <Bar
-              dataKey="receita"
-              name="Receita"
-              fill="var(--success)"
-              radius={[4, 4, 0, 0]}
-            />
-            <Bar
-              dataKey="despesa"
-              name="Despesa"
-              fill="var(--danger)"
-              radius={[4, 4, 0, 0]}
-            />
+            <Bar dataKey="receita" name="Receita" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="despesa" name="Despesa" fill="var(--text-muted)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -401,14 +308,6 @@ function FinanceiroDashboard() {
   );
 }
 
-/**
- * Réplica fiel da tela real: sidebar com ícone + nome do módulo
- * (Sidebar.styles.ts) e o conteúdo no mesmo formato de lista das
- * telas de cadastro (cabeçalho + botão "Novo" + busca + tabela com
- * badge de situação, ver `app/erp/parceiros/page.tsx`). Financeiro
- * também tem o sub-menu Dashboard, com o mesmo gráfico (recharts) da
- * tela real (`app/erp/financeiro/graficos-fluxo-caixa/page.tsx`).
- */
 function AppPreview({
   activeId,
   onSelect,
@@ -427,18 +326,13 @@ function AppPreview({
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-lg">
+    <div className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
       <div className="flex">
         <div className="hidden w-52 shrink-0 flex-col gap-1 border-r border-[var(--border)] p-3 md:flex">
           <div className="mb-2 flex items-center gap-2 px-2 py-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={systemConfig.company.logo}
-              alt={systemConfig.company.name}
-              width={35}
-              height={22}
-              className="h-[22px] w-auto object-contain"
-            />
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
+              <LayoutDashboard size={14} />
+            </span>
             <span className="text-sm font-bold text-[var(--text-primary)]">
               {systemConfig.company.name}
             </span>
@@ -455,7 +349,7 @@ function AppPreview({
                 onClick={() => interactive && selectModule(mod.id)}
                 className={`flex h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
                     : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
                 } ${interactive ? "cursor-pointer" : "cursor-default"}`}
               >
@@ -477,7 +371,7 @@ function AppPreview({
               </p>
             </div>
 
-            <span className="flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-[var(--primary-contrast)]">
+            <span className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-3 py-2 text-xs font-semibold text-white">
               <Plus size={13} />
               {tab.newLabel}
             </span>
@@ -490,257 +384,33 @@ function AppPreview({
                 onClick={() => interactive && setView("list")}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   view === "list"
-                    ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
                     : "border border-[var(--border)] text-[var(--text-secondary)]"
                 }`}
               >
                 <List size={13} />
                 Lançamentos
               </button>
-
               <button
                 type="button"
                 onClick={() => interactive && setView("dashboard")}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   view === "dashboard"
-                    ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
                     : "border border-[var(--border)] text-[var(--text-secondary)]"
                 }`}
               >
-                <LayoutDashboard size={13} />
+                <BarChart3 size={13} />
                 Dashboard
               </button>
             </div>
           )}
 
-          {tab.hasDashboard && view === "dashboard" ? (
-            <FinanceiroDashboard />
+          {view === "dashboard" && tab.hasDashboard ? (
+            <FinanceChartMock />
           ) : (
-            <>
-              <div className="mt-4 flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-xs text-[var(--text-muted)]">
-                <Search size={13} />
-                Pesquisar...
-              </div>
-
-              <div className="mt-4 overflow-x-auto rounded-xl border border-[var(--border)]">
-                <div className="min-w-[480px]">
-                  <div className="flex bg-[var(--surface-hover)] px-4 py-2.5 text-xs font-semibold text-[var(--text-secondary)]">
-                    {tab.columns.map((col, i) => (
-                      <span
-                        key={col}
-                        className={i === 0 ? "flex-1" : "w-28 shrink-0 text-right"}
-                      >
-                        {col}
-                      </span>
-                    ))}
-                  </div>
-
-                  {tab.rows.map((row, rowIndex) => (
-                    <div
-                      key={rowIndex}
-                      className="flex items-center border-t border-[var(--border)] px-4 py-3 text-sm"
-                    >
-                      {row.map((cell, cellIndex) => {
-                        const isFirst = cellIndex === 0;
-
-                        if (typeof cell === "object") {
-                          return (
-                            <span
-                              key={cellIndex}
-                              className={`w-28 shrink-0 text-right`}
-                            >
-                              <span
-                                className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${BADGE_CLASS[cell.tone]}`}
-                              >
-                                {cell.label}
-                              </span>
-                            </span>
-                          );
-                        }
-
-                        return (
-                          <span
-                            key={cellIndex}
-                            className={`truncate ${
-                              isFirst
-                                ? "flex-1 font-medium text-[var(--text-primary)]"
-                                : "w-28 shrink-0 text-right text-[var(--text-secondary)]"
-                            }`}
-                          >
-                            {cell}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
+            tab.columns && tab.rows && <ListMock columns={tab.columns} rows={tab.rows} />
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const dashboardSidebarGroups = [
-  { label: "Cadastros", icon: Users },
-  { label: "Colaboradores", icon: UserCog },
-  { label: "Compras", icon: Truck },
-  { label: "Comercial", icon: ShoppingCart },
-  { label: "Estoque", icon: Boxes },
-  { label: "Financeiro", icon: Banknote },
-  { label: "Produção", icon: Factory },
-];
-
-const dashboardStatCards = [
-  { label: "Parceiros", value: "128", icon: Users },
-  { label: "Produtos", value: "312", icon: Package },
-  { label: "Itens em estoque", value: "1.284", icon: Boxes },
-  { label: "Colaboradores", value: "47", icon: UserCog },
-];
-
-/**
- * Réplica da tela real de abertura do sistema (Visão geral,
- * `app/page.tsx`) — barra superior, sidebar com os módulos e os
- * cartões/painéis do painel inicial, não um recorte de uma tela
- * interna. É a primeira imagem que quem visita o site vê do produto.
- */
-function DashboardPreview() {
-  return (
-    <div className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-lg">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={systemConfig.company.logo}
-            alt={systemConfig.company.name}
-            width={35}
-            height={22}
-            className="h-[22px] w-auto object-contain"
-          />
-          <div className="leading-tight">
-            <p className="text-xs font-bold text-[var(--text-primary)]">
-              {systemConfig.company.name}
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">
-              {systemConfig.systemName}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 text-[var(--text-secondary)]">
-          <LayoutGrid size={14} />
-          <Bell size={14} />
-          <Moon size={14} />
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--surface-hover)] text-[10px] font-semibold">
-            {systemConfig.company.name.slice(0, 2).toUpperCase()}
-          </span>
-        </div>
-      </div>
-
-      <div className="flex">
-        <div className="hidden w-40 shrink-0 flex-col gap-0.5 border-r border-[var(--border)] p-2.5 md:flex">
-          <div className="flex h-9 items-center gap-2 rounded-lg bg-[var(--primary)] px-2.5 text-xs font-medium text-[var(--primary-contrast)]">
-            <LayoutDashboard size={14} className="shrink-0" />
-            Visão geral
-          </div>
-
-          {dashboardSidebarGroups.map((group) => (
-            <div
-              key={group.label}
-              className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs text-[var(--text-secondary)]"
-            >
-              <group.icon size={13} className="shrink-0" />
-              <span className="truncate">{group.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="min-w-0 flex-1 p-4 sm:p-5">
-          <p className="text-base font-bold text-[var(--text-primary)]">
-            Bom dia 👋
-          </p>
-          <p className="mb-4 text-xs text-[var(--text-muted)]">
-            Bem-vindo ao {systemConfig.company.name} {systemConfig.systemName}
-            .
-          </p>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            {dashboardStatCards.map((card) => (
-              <div
-                key={card.label}
-                className="rounded-xl border border-[var(--border)] p-3"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    {card.label}
-                  </p>
-                  <card.icon size={14} className="text-[var(--text-muted)]" />
-                </div>
-                <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">
-                  {card.value}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-            <div className="rounded-xl border border-[var(--border)] p-3">
-              <div className="mb-2 flex items-center gap-1.5">
-                <Wallet size={13} className="text-[var(--text-secondary)]" />
-                <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  A pagar/receber
-                </p>
-              </div>
-
-              {[
-                { label: "A receber", value: "R$ 41.200" },
-                { label: "A pagar", value: "R$ 18.750" },
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center justify-between border-t border-[var(--border)] py-1.5 text-[11px]"
-                >
-                  <span className="text-[var(--text-muted)]">
-                    {row.label}
-                  </span>
-                  <span className="font-medium text-[var(--text-primary)]">
-                    {row.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-xl border border-[var(--border)] p-3">
-              <div className="mb-2 flex items-center gap-1.5">
-                <PiggyBank
-                  size={13}
-                  className="text-[var(--text-secondary)]"
-                />
-                <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  Fluxo de caixa
-                </p>
-              </div>
-
-              {[
-                { label: "Recebido", value: "R$ 38.500" },
-                { label: "Pago", value: "R$ 20.100" },
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center justify-between border-t border-[var(--border)] py-1.5 text-[11px]"
-                >
-                  <span className="text-[var(--text-muted)]">
-                    {row.label}
-                  </span>
-                  <span className="font-medium text-[var(--text-primary)]">
-                    {row.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -751,66 +421,88 @@ function Hero() {
   const trialDays = useTrialDays();
 
   return (
-    <section className="relative overflow-hidden">
-      <div
-        aria-hidden
-        className="aurora-bg pointer-events-none absolute inset-x-0 -top-1/3 h-[140%] opacity-[0.16]"
-      />
+    <section className="relative z-0 overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.15),transparent_50%)]" />
+      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(6,182,212,0.15),transparent_50%)]" />
 
-      <div className="relative mx-auto grid max-w-6xl gap-12 px-6 pb-20 pt-16 lg:grid-cols-2 lg:items-center lg:pt-24">
-        <div>
-          <span className="glass-panel inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-[var(--text-secondary)] shadow-sm">
-            <Sparkles size={12} className="text-[var(--primary)]" />
-            Feito para pequenas empresas
-          </span>
+      <div className="relative mx-auto max-w-7xl px-6 py-24 lg:py-32">
+        <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
+          <div className="space-y-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2">
+              <Sparkles size={16} className="text-cyan-400" />
+              <span className="text-sm font-semibold text-cyan-300">
+                ERP completo para sua empresa
+              </span>
+            </div>
 
-          <h1 className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight text-[var(--text-primary)] md:text-6xl">
-            Sua empresa organizada,{" "}
-            <span className="aurora-text">num só sistema</span>
-          </h1>
+            <h1 className="font-display text-5xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl">
+              Sistema ERP
+              <br />
+              <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                na nuvem
+              </span>
+            </h1>
 
-          <p className="mt-5 max-w-lg text-lg text-[var(--text-muted)]">
-            Cadastros, vendas, compras, estoque, financeiro, produção e RH —
-            tudo integrado, na nuvem. Comece em minutos, com {trialDays} dia
-            {trialDays === 1 ? "" : "s"} grátis.
-          </p>
+            <p className="max-w-2xl text-xl text-blue-100/80 leading-relaxed">
+              Gerencie toda sua empresa em um só lugar: compras, estoque, financeiro,
+              vendas, RH e produção. Simples, completo e acessível.
+            </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Link
-              href="/planos"
-              className="aurora-banner rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[color:rgb(37_99_235_/_0.35)] transition-transform hover:scale-[1.03]"
-            >
-              Começar teste grátis de {trialDays} dia
-              {trialDays === 1 ? "" : "s"}
-            </Link>
+            <div className="flex flex-wrap items-center gap-4">
+              <Link
+                href="/planos"
+                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/50"
+              >
+                Começar agora
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
 
-            <a
-              href="#demonstracao"
-              className="glass-panel rounded-xl px-6 py-3 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-white/70"
-            >
-              Ver demonstração
-            </a>
+              <Link
+                href="#demonstracao"
+                className="inline-flex items-center gap-2 rounded-full border-2 border-cyan-400/30 px-8 py-4 text-sm font-semibold text-cyan-300 transition-all hover:border-cyan-400 hover:text-white"
+              >
+                Ver demonstração
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-6 pt-4">
+              <div className="flex items-center gap-2 text-cyan-300">
+                <CheckCircle2 size={20} />
+                <span className="text-sm">{trialDays} dias grátis</span>
+              </div>
+              <div className="flex items-center gap-2 text-cyan-300">
+                <CheckCircle2 size={20} />
+                <span className="text-sm">Sem cartão de crédito</span>
+              </div>
+              <div className="flex items-center gap-2 text-cyan-300">
+                <CheckCircle2 size={20} />
+                <span className="text-sm">Setup em minutos</span>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--text-secondary)]">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={15} className="text-[var(--success)]" />
-              Sem cartão de crédito
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={15} className="text-[var(--success)]" />
-              Suporte em português
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={15} className="text-[var(--success)]" />
-              Implantação assistida
-            </span>
-          </div>
-        </div>
-
-        <div className="lg:pl-4">
-          <div className="rounded-3xl shadow-2xl shadow-[color:rgb(37_99_235_/_0.25)]">
-            <DashboardPreview />
+          <div className="relative hidden lg:block">
+            <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-3xl blur-3xl" />
+            <div className="relative glass-card rounded-3xl p-6 bg-white/10 backdrop-blur-xl border border-white/20">
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { icon: ShoppingCart, label: "Compras", value: "2.5k" },
+                  { icon: Database, label: "Estoque", value: "15k" },
+                  { icon: BarChart3, label: "Financeiro", value: "R$ 8M" },
+                  { icon: TrendingUp, label: "Vendas", value: "+45%" },
+                ].map((stat) => (
+                  <div key={stat.label} className="flex items-center gap-3 p-4 rounded-xl bg-white/5">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white">
+                      <stat.icon size={20} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-white">{stat.value}</p>
+                      <p className="text-xs text-cyan-200">{stat.label}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -818,263 +510,193 @@ function Hero() {
   );
 }
 
-const spotlightFeatures = [
-  {
-    icon: Workflow,
-    title: "Um fluxo só, do pedido ao caixa",
-    description:
-      "Venda gera saída de estoque, gera conta a receber — sem digitar a mesma informação três vezes em telas diferentes.",
-  },
-  {
-    icon: Layers,
-    title: "Cresce junto com sua empresa",
-    description:
-      "Comece só com o essencial e adicione Produção, RH ou Folha de Pagamento quando precisar, sem trocar de sistema.",
-  },
-];
+function ValueProps() {
+  const props = [
+    {
+      icon: LayoutDashboard,
+      title: "Tudo integrado",
+      description: "Módulos conectados: compras alimenta estoque, vendas gera financeiro, tudo sincronizado.",
+    },
+    {
+      icon: Smartphone,
+      title: "Acesso móvel",
+      description: "Acesse de qualquer lugar pelo celular ou tablet. Sua empresa no seu bolso.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Segurança total",
+      description: "Dados criptografados, backups automáticos e controle de acesso por perfil.",
+    },
+    {
+      icon: Zap,
+      title: "Implantação rápida",
+      description: "Setup em minutos, sem instalação complexa. Comece a usar hoje mesmo.",
+    },
+  ];
 
-/** Um card por módulo, com a lista de telas/recursos de verdade dele — igual ao que existe no sistema. */
-const moduleGroups = [
-  {
-    icon: Users,
-    title: "Cadastros",
-    items: [
-      "Clientes, fornecedores e transportadoras",
-      "Representantes — tudo em um só lugar",
-    ],
-  },
-  {
-    icon: Package,
-    title: "Produtos",
-    items: [
-      "Cadastro de categoria",
-      "Marca",
-      "Unidade de medida",
-      "Produto",
-    ],
-  },
-  {
-    icon: UserCog,
-    title: "Recursos Humanos",
-    items: [
-      "Cadastro de funções e cargos",
-      "Setores e horários",
-      "EPI",
-      "Colaboradores com função, salário e horário de trabalho",
-      "Controle de exames médicos e acompanhamento",
-      "Avisos de aniversariantes do mês",
-      "Ponto, com acompanhamento de horas positivas e negativas",
-      "Faltas e abonos",
-      "Folha de pagamento e 13º salário",
-      "Programação de férias",
-      "Dashboard de RH",
-    ],
-  },
-  {
-    icon: Truck,
-    title: "Compras",
-    items: ["Cotações", "Pedidos", "Compras", "Recebimento"],
-  },
-  {
-    icon: ShoppingCart,
-    title: "Vendas",
-    items: ["Orçamento", "Pedido", "Vendas"],
-  },
-  {
-    icon: Boxes,
-    title: "Estoque",
-    items: ["Movimentações", "Saldo em estoque"],
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Inventário",
-    items: [
-      "Contagem de inventário, com recontagem em rodadas",
-      "Acompanhamento de inventário",
-      "Dashboard do último inventário",
-    ],
-  },
-  {
-    icon: Banknote,
-    title: "Financeiro",
-    items: [
-      "Contas a receber",
-      "Contas a pagar",
-      "Fluxo de caixa",
-      "Orçamento mês a mês",
-    ],
-  },
-  {
-    icon: Factory,
-    title: "Produção",
-    items: ["Ordem de produção", "Acompanhamento de produção"],
-  },
-  {
-    icon: BarChart3,
-    title: "Dashboard e relatórios",
-    items: [
-      "Gráficos de colaboradores",
-      "Gráfico de fluxo de caixa",
-      "Relatórios para todos os módulos",
-    ],
-  },
-];
+  return (
+    <section className="py-24 bg-white dark:bg-slate-900">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
+            <Sparkles size={16} className="text-cyan-600 dark:text-cyan-400" />
+            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+              Por que escolher
+            </span>
+          </span>
+          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
+            Benefícios que transformam sua gestão
+          </h2>
+        </div>
 
-/** Configurações que ficam sob controle do administrador da empresa — não são "módulos" de operação, mas de gestão do próprio sistema. */
-const adminGroups = [
-  {
-    icon: ShieldCheck,
-    title: "Segurança",
-    items: ["Cadastro de usuários com acesso ao sistema", "Perfis de acesso"],
-  },
-  {
-    icon: Plug,
-    title: "APIs",
-    items: ["Opcionalidade para configurar avisos automáticos no WhatsApp"],
-  },
-  {
-    icon: Building2,
-    title: "Empresa",
-    items: [
-      "Alteração de dados da empresa",
-      "Cadastro de empresas do grupo — filiais ou outra empresa raiz",
-    ],
-  },
-  {
-    icon: Settings2,
-    title: "Configurações",
-    items: ["Manutenção das bases de apoio de cada módulo"],
-  },
-  {
-    icon: Palette,
-    title: "Personalização",
-    items: [
-      "Tema escuro",
-      "Sua própria logo e marca",
-      "Nome da sua empresa",
-      "Forma de visão do menu inicial",
-    ],
-  },
-  {
-    icon: KeyRound,
-    title: "Licenciamento",
-    items: ["Plano atual, com possibilidade de incluir novos módulos"],
-  },
-];
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          {props.map((prop) => (
+            <div
+              key={prop.title}
+              className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-8 border border-slate-200 dark:border-slate-700 transition-all hover:shadow-2xl hover:scale-[1.02]"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform" />
 
-/** Quem essa página tenta convencer — pequenas empresas ainda em planilha, e comércio/indústria em geral. */
-const audienceItems = [
-  {
-    icon: Store,
-    title: "Quem está começando",
-    description:
-      "Pequenas empresas que ainda controlam tudo em planilha e precisam migrar pra um sistema de verdade.",
-  },
-  {
-    icon: Factory,
-    title: "Comércio, indústria e muito mais",
-    description:
-      "Comércio em geral, fábricas e outros negócios que precisam de cadastros, estoque, vendas, compras e financeiro integrados.",
-  },
-];
+              <div className="relative">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-xl group-hover:scale-110 transition-transform">
+                  <prop.icon size={28} />
+                </div>
 
-const valueProps = [
-  {
-    icon: Palette,
-    title: "Configure com a sua marca",
-    description: "Logo, nome e cores da sua empresa — o sistema fica com a sua cara.",
-  },
-  {
-    icon: Cloud,
-    title: "100% online",
-    description: "Nada fica instalado no computador — acesse de onde estiver.",
-  },
-  {
-    icon: Users,
-    title: "Usuários ilimitados",
-    description: "Sem taxa por usuário — cadastre quantos precisar.",
-  },
-];
+                <p className="font-display mt-6 text-xl font-bold text-slate-900 dark:text-white">
+                  {prop.title}
+                </p>
+                <p className="mt-3 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {prop.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-const demoBullets = [
-  { icon: LayoutDashboard, label: "Veja o sistema funcionando na prática" },
-  { icon: Layers, label: "Tire dúvidas sobre os módulos" },
-  { icon: BadgeCheck, label: "Entenda qual módulo atende sua empresa" },
-  { icon: List, label: "Conheça os planos e funcionalidades" },
-  { icon: ShieldCheck, label: "Receba orientação pra começar com segurança" },
-];
+function Audience() {
+  const segments = [
+    { icon: Factory, label: "Indústria" },
+    { icon: Store, label: "Comércio" },
+    { icon: Cpu, label: "Tecnologia" },
+    { icon: Truck, label: "Logística" },
+    { icon: MessageCircle, label: "Serviços" },
+  ];
+
+  return (
+    <section className="py-24 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
+            <Globe size={16} className="text-cyan-600 dark:text-cyan-400" />
+            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+              Multi-setor
+            </span>
+          </span>
+          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
+            Feito para diversos segmentos
+          </h2>
+          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+            Do comércio à indústria, adapta-se ao seu negócio
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
+          {segments.map((segment) => (
+            <div
+              key={segment.label}
+              className="group relative overflow-hidden rounded-3xl bg-white dark:bg-slate-800 p-6 border border-slate-200 dark:border-slate-700 transition-all hover:shadow-xl hover:scale-105"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+              <div className="relative">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg group-hover:scale-110 transition-transform">
+                  <segment.icon size={28} />
+                </span>
+                <p className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
+                  {segment.label}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function Features() {
-  return (
-    <section
-      id="funcionalidades"
-      className="border-t border-[var(--border)] bg-[var(--surface)] py-20"
-    >
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-            O que esperar do sistema AlePejo ERP Cloud
-          </h2>
+  const features = [
+    {
+      icon: Database,
+      title: "Gestão de Estoque",
+      description: "Controle multi-depósito, inventário periódico e rastreabilidade completa.",
+    },
+    {
+      icon: BarChart3,
+      title: "Financeiro Integrado",
+      description: "Fluxo de caixa, contas a pagar/receber e relatórios financeiros detalhados.",
+    },
+    {
+      icon: ShoppingCart,
+      title: "Compras e Vendas",
+      description: "Cotações, pedidos, orçamentos e gestão completa do ciclo comercial.",
+    },
+    {
+      icon: Users,
+      title: "RH e Folha",
+      description: "Gestão de colaboradores, folha de pagamento e benefícios.",
+    },
+    {
+      icon: BadgeCheck,
+      title: "Controle de Qualidade",
+      description: "Padrões de qualidade, inspeções e certificações.",
+    },
+    {
+      icon: LayoutDashboard,
+      title: "Dashboard Executivo",
+      description: "Visão geral de KPIs e indicadores de performance em tempo real.",
+    },
+  ];
 
-          <p className="mt-3 text-[var(--text-muted)]">
-            O Sistema AlePejo ERP Cloud oferece funcionalidades essenciais
-            para empresas que querem manter a operação em dia com mais
-            simplicidade. Cada módulo conversa com os outros — o que entra
-            em Vendas reflete no Estoque e no Financeiro, sem digitar duas
-            vezes.
-          </p>
+  return (
+    <section className="py-24 bg-white dark:bg-slate-900">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
+            <LayoutDashboard size={16} className="text-cyan-600 dark:text-cyan-400" />
+            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+              Módulos completos
+            </span>
+          </span>
+          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
+            Tudo que sua empresa precisa
+          </h2>
         </div>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-2">
-          {spotlightFeatures.map((feature) => (
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature) => (
             <div
               key={feature.title}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-7"
+              className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-8 border border-slate-200 dark:border-slate-700 transition-all hover:shadow-2xl hover:scale-[1.02]"
             >
-              <span className="inline-flex rounded-xl aurora-icon-badge p-3">
-                <feature.icon size={22} />
-              </span>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform" />
 
-              <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">
-                {feature.title}
-              </h3>
+              <div className="relative">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-xl group-hover:scale-110 transition-transform">
+                  <feature.icon size={28} />
+                </div>
 
-              <p className="mt-1.5 text-sm text-[var(--text-muted)]">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {moduleGroups.map((mod) => (
-            <div
-              key={mod.title}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5 transition-colors hover:border-[var(--primary)]"
-            >
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex rounded-lg aurora-icon-badge p-2">
-                  <mod.icon size={16} />
-                </span>
-                <p className="font-semibold text-[var(--text-primary)]">
-                  {mod.title}
+                <p className="font-display mt-6 text-xl font-bold text-slate-900 dark:text-white">
+                  {feature.title}
+                </p>
+                <p className="mt-3 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {feature.description}
                 </p>
               </div>
-
-              <ul className="mt-3 space-y-1.5">
-                {mod.items.map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-start gap-2 text-xs text-[var(--text-muted)]"
-                  >
-                    <CheckCircle2
-                      size={13}
-                      className="mt-0.5 shrink-0 text-[var(--success)]"
-                    />
-                    {item}
-                  </li>
-                ))}
-              </ul>
             </div>
           ))}
         </div>
@@ -1083,118 +705,43 @@ function Features() {
   );
 }
 
-/**
- * Recursos de gestão do próprio sistema (não são módulos de operação
- * do dia a dia) — mesmo layout de card do Features(), seção separada
- * pra deixar claro que é outra categoria de funcionalidade.
- */
 function AdminSection() {
   return (
-    <section className="border-t border-[var(--border)] py-20">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-            Administração do sistema
+    <section className="py-24 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
+            <ShieldCheck size={16} className="text-cyan-600 dark:text-cyan-400" />
+            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+              Administração completa
+            </span>
+          </span>
+          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
+            Controle total do seu sistema
           </h2>
-
-          <p className="mt-3 text-[var(--text-muted)]">
-            O administrador da empresa tem controle total sobre quem acessa
-            o quê, e sobre a cara do sistema.
+          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+            Configure usuários, permissões, segurança e personalização
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {adminGroups.map((group) => (
-            <div
-              key={group.title}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors hover:border-[var(--primary)]"
-            >
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex rounded-lg aurora-icon-badge p-2">
-                  <group.icon size={16} />
-                </span>
-                <p className="font-semibold text-[var(--text-primary)]">
-                  {group.title}
-                </p>
-              </div>
-
-              <ul className="mt-3 space-y-1.5">
-                {group.items.map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-start gap-2 text-xs text-[var(--text-muted)]"
-                  >
-                    <CheckCircle2
-                      size={13}
-                      className="mt-0.5 shrink-0 text-[var(--success)]"
-                    />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** "Quer configurar sua marca / 100% online / usuários ilimitados" — os 3 diferenciais logo abaixo do Hero. */
-function ValueProps() {
-  return (
-    <section className="border-t border-[var(--border)] bg-[var(--surface)] py-14">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="grid gap-6 sm:grid-cols-3">
-          {valueProps.map((item) => (
-            <div key={item.title} className="flex items-start gap-3">
-              <span className="inline-flex shrink-0 rounded-xl aurora-icon-badge p-2.5">
-                <item.icon size={20} />
-              </span>
-              <div>
-                <p className="font-semibold text-[var(--text-primary)]">
-                  {item.title}
-                </p>
-                <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-                  {item.description}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** "Quem pode usar essa ferramenta?" */
-function Audience() {
-  return (
-    <section className="py-20">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-            Quem pode usar essa ferramenta?
-          </h2>
-        </div>
-
-        <div className="mt-10 grid gap-5 sm:grid-cols-2">
-          {audienceItems.map((item) => (
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: Users, title: "Gestão de Usuários", desc: "Crie usuários e defina perfis de acesso" },
+            { icon: ShieldCheck, title: "Permissões", desc: "Controle fino do que cada usuário pode fazer" },
+            { icon: MapPin, title: "Multi-unidade", desc: "Gerencie várias filiais em um só sistema" },
+            { icon: Settings2, title: "Personalização", desc: "Adapte o sistema ao seu negócio" },
+          ].map((item) => (
             <div
               key={item.title}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-7"
+              className="glass-card rounded-3xl p-6 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700"
             >
-              <span className="inline-flex rounded-xl aurora-icon-badge p-3">
-                <item.icon size={22} />
-              </span>
-
-              <h3 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg">
+                <item.icon size={24} />
+              </div>
+              <p className="font-display mt-4 text-lg font-bold text-slate-900 dark:text-white">
                 {item.title}
-              </h3>
-
-              <p className="mt-1.5 text-sm text-[var(--text-muted)]">
-                {item.description}
               </p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -1203,98 +750,22 @@ function Audience() {
   );
 }
 
-/** Banner de chamada pra demonstração personalizada, com botão levando pro formulário de contato. */
-function DemoCta() {
-  return (
-    <section className="border-t border-[var(--border)] py-20">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="aurora-banner relative overflow-hidden rounded-3xl px-6 py-12 text-center shadow-2xl shadow-[color:rgb(124_58_237_/_0.3)] sm:px-14">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-3xl"
-          />
-
-          <span className="glass-panel relative inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white">
-            <CalendarClock size={13} />
-            Demonstração personalizada
-          </span>
-
-          <h2 className="relative mt-4 text-3xl font-bold text-white">
-            Agende agora mesmo uma demonstração do Sistema AlePejo
-          </h2>
-
-          <p className="relative mx-auto mt-3 max-w-xl text-white/85">
-            Nossa equipe vai te mostrar na prática como o sistema pode
-            ajudar sua empresa a organizar informações e simplificar a
-            gestão.
-          </p>
-
-          <div className="relative mx-auto mt-8 grid max-w-2xl gap-3 text-left sm:grid-cols-2">
-            {demoBullets.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center gap-2.5 rounded-xl bg-white/10 px-4 py-3 text-sm font-medium text-white"
-              >
-                <item.icon size={16} className="shrink-0" />
-                {item.label}
-              </div>
-            ))}
-          </div>
-
-          <a
-            href="#contato"
-            className="relative mt-8 inline-block rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[#4f46e5] shadow-lg transition-transform hover:scale-[1.03]"
-          >
-            Agendar demonstração
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/**
- * Demonstração guiada — o "vídeo" do sistema, montado com as próprias
- * telas em vez de um arquivo gravado: passa módulo por módulo sozinho,
- * mostra a tela de cada um e conta o que ele faz.
- *
- * A voz sai do próprio navegador (Web Speech API, pt-BR). É o único
- * jeito de ter narração sem hospedar áudio, e tem uma vantagem real:
- * quando o texto de um módulo mudar, a narração muda junto — não fica
- * um vídeo velho contando o sistema errado. Onde a API não existe (ou
- * não tem voz em português), o tour roda igual, só sem som.
- *
- * Começa parado de propósito: navegador nenhum deixa um site falar
- * sem o visitante clicar antes, e som automático espantaria mais gente
- * do que convenceria.
- */
-// Robô "falando" (gesticulando) — toca uma vez ao lado da legenda
-// quando o tour começa, depois descansa no vídeo padrão em loop pro
-// resto do tour, sem ficar repetindo o mesmo gesto o tempo todo.
-const VIDEO_APRESENTANDO = "/videos/pejo-demo-preview.webm";
-const VIDEO_IDLE = "/videos/pejo-idle.webm";
-
 function DemoTour() {
+  const [activeId, setActiveId] = useState(demoTabs[0].id);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(true);
   const [started, setStarted] = useState(false);
   const [canSpeak, setCanSpeak] = useState(false);
-  const [videoMiniatura, setVideoMiniatura] = useState(VIDEO_APRESENTANDO);
 
-  const step = demoTabs[index];
+  const step = demoTabs[index] ?? demoTabs[0];
   const voices = useSpeechVoices();
   const voice = pickVoice(voices);
 
   useEffect(() => {
-    setCanSpeak(
-      typeof window !== "undefined" && "speechSynthesis" in window
-    );
+    setCanSpeak(typeof window !== "undefined" && "speechSynthesis" in window);
   }, []);
 
-  // Uma parada por vez: fala (ou conta o tempo) e avança sozinho. O
-  // cleanup corta a fala pendente — sem ele, pausar ou trocar de
-  // módulo deixaria a voz anterior terminando por cima da nova.
   useEffect(() => {
     if (!playing) {
       return;
@@ -1306,7 +777,6 @@ function DemoTour() {
       if (cancelled) {
         return;
       }
-
       if (index < demoTabs.length - 1) {
         setIndex(index + 1);
       } else {
@@ -1322,14 +792,9 @@ function DemoTour() {
       }
 
       utterance.lang = "pt-BR";
-      // Ritmo normal de fala: abaixo disso a leitura fica arrastada.
       utterance.rate = 1.04;
-      // Tom neutro: numa voz masculina, forçar pra cima (como se fazia
-      // com a feminina) soa artificial — natural é ficar perto de 1.
       utterance.pitch = 1.0;
       utterance.onend = advance;
-      // Se a fala falhar (aba sem permissão, voz indisponível), o tour
-      // não pode travar parado nesse módulo pra sempre.
       utterance.onerror = advance;
 
       window.speechSynthesis.cancel();
@@ -1349,7 +814,6 @@ function DemoTour() {
     };
   }, [playing, sound, index, step.narration, canSpeak, voice]);
 
-  // Sair da página falando seria constrangedor pro visitante.
   useEffect(() => {
     return () => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -1371,189 +835,123 @@ function DemoTour() {
   const finished = started && !playing && index === demoTabs.length - 1;
 
   return (
-    <section id="demonstracao" className="py-20">
+    <section id="demonstracao" className="py-24 bg-white dark:bg-slate-900">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-            <PlayCircle size={13} className="text-[var(--primary)]" />
-            Demonstração guiada
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
+            <Play size={16} className="text-cyan-600 dark:text-cyan-400" />
+            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+              Demonstração interativa
+            </span>
           </span>
-
-          <h2 className="mt-4 text-3xl font-bold text-[var(--text-primary)]">
-            Veja o sistema funcionando, módulo por módulo
+          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
+            Veja o sistema em ação
           </h2>
-
-          <p className="mt-3 text-[var(--text-muted)]">
-            Aperte o play e deixe o Pejo, nosso assistente, te levar
-            módulo por módulo, explicando em voz alta o que cada um
-            faz. Dados de exemplo, só pra ilustrar.
+          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+            Explore os principais módulos do AlePejo ERP Cloud
           </p>
         </div>
 
-        <div className="mx-auto mt-10 flex flex-wrap justify-center gap-2">
-          {demoTabs.map((t, position) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => goTo(position)}
-              className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors ${
-                position === index
-                  ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
-                  : "border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="relative mx-auto mt-8">
-          <AppPreview
-            activeId={step.id}
-            onSelect={(id) =>
-              goTo(demoTabs.findIndex((t) => t.id === id))
-            }
-            interactive
-          />
+        <div className="relative mx-auto max-w-5xl">
+          <AppPreview activeId={activeId} onSelect={(id) => goTo(demoTabs.findIndex((t) => t.id === id))} interactive />
 
           {!started && (
             <button
               type="button"
               onClick={play}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-[color:rgb(9_13_25_/_0.55)] backdrop-blur-[2px] transition-colors hover:bg-[color:rgb(9_13_25_/_0.62)]"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-[rgb(15_23_42_/_0.7)] backdrop-blur-[2px] transition-colors hover:bg-[rgb(15_23_42_/_0.8)]"
             >
-              <span className="aurora-banner flex h-16 w-16 items-center justify-center rounded-full text-white shadow-2xl">
-                <Play size={26} className="ml-1" fill="currentColor" />
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-2xl">
+                <Play size={28} className="ml-1" fill="currentColor" />
               </span>
-
-              <span className="text-lg font-semibold text-white">
-                Assistir à demonstração com o Pejo
-              </span>
-
+              <span className="text-lg font-semibold text-white">Ver demonstração</span>
               <span className="text-sm text-white/80">
-                {demoTabs.length} módulos · cerca de 3 minutos
-                {canSpeak ? " · com narração" : ""}
+                {demoTabs.length} módulos{canSpeak ? " · com narração" : ""}
               </span>
             </button>
           )}
         </div>
 
-        {/* Legenda + controles: a narração também vem escrita, pra quem
-            assiste no mudo, no trabalho ou não ouve. */}
-        <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-          <div className="flex items-center gap-3">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-hover)]">
-              <div
-                className="aurora-banner h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${((index + 1) / demoTabs.length) * 100}%`,
-                }}
-              />
+        {started && (
+          <div className="mx-auto mt-8 max-w-4xl">
+            <div className="mx-auto flex flex-wrap justify-center gap-2 mb-6">
+              {demoTabs.map((tab, position) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => goTo(position)}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                    position === index
+                      ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                      : "border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-cyan-500"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">
-              {index + 1} de {demoTabs.length}
-            </span>
-          </div>
-
-          <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-            <div className="flex shrink-0 flex-col items-center">
-              <ChromaKeyVideo
-                src={videoMiniatura}
-                loop={videoMiniatura === VIDEO_IDLE}
-                onEnded={() => setVideoMiniatura(VIDEO_IDLE)}
-                className="h-auto w-[110px] sm:w-[125px]"
-              />
-            </div>
-
-            {/* Balão de fala: a pontinha à esquerda liga o texto ao
-                mascote, deixando claro que a voz é dele. */}
-            <div className="relative min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
-              <span
-                aria-hidden
-                className="absolute -left-[7px] top-8 hidden h-3 w-3 rotate-45 border-b border-l border-[var(--border)] bg-[var(--background)] sm:block"
-              />
-
-              <div className="flex items-center gap-2">
-                <span className="aurora-icon-badge flex h-7 w-7 items-center justify-center rounded-lg">
-                  <step.icon size={15} />
-                </span>
-
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  {step.label}
-                </p>
+            <div className="glass-card rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg">
+                  <span className="text-xl font-bold">{index + 1}</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {step.pageTitle}
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{step.subtitle}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPlaying(!playing)}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-cyan-500 hover:text-cyan-600 transition-colors"
+                  >
+                    {playing ? <Pause size={18} /> : <Play size={18} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSound(!sound)}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-cyan-500 hover:text-cyan-600 transition-colors"
+                  >
+                    {sound ? <MessageCircle size={18} /> : <MessageCircle size={18} className="opacity-50" />}
+                  </button>
+                </div>
               </div>
 
-              <p className="mt-2 text-[15px] leading-relaxed text-[var(--text-secondary)]">
+              <div className="mt-4 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                 {step.narration}
-              </p>
+              </div>
             </div>
           </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
-          <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                if (finished) {
-                  setIndex(0);
-                  setPlaying(true);
+function DemoCta() {
+  const trialDays = useTrialDays();
 
-                  return;
-                }
+  return (
+    <section className="py-24 bg-gradient-to-r from-cyan-600 via-blue-600 to-slate-700 text-center">
+      <div className="mx-auto max-w-4xl px-6">
+        <h2 className="font-display text-4xl font-bold text-white mb-6">
+          Comece a transformar sua gestão hoje
+        </h2>
 
-                if (playing) {
-                  setPlaying(false);
+        <p className="text-xl text-white/90 mb-10">
+          {trialDays} dias grátis, sem cartão de crédito. Teste todos os módulos sem compromisso.
+        </p>
 
-                  return;
-                }
-
-                play();
-              }}
-              className="flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-            >
-              {playing ? (
-                <>
-                  <Pause size={16} fill="currentColor" />
-                  Pausar
-                </>
-              ) : (
-                <>
-                  <Play size={16} fill="currentColor" />
-                  {finished ? "Assistir de novo" : "Continuar"}
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => goTo(index - 1)}
-              className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] disabled:opacity-40"
-            >
-              Anterior
-            </button>
-
-            <button
-              type="button"
-              disabled={index === demoTabs.length - 1}
-              onClick={() => goTo(index + 1)}
-              className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] disabled:opacity-40"
-            >
-              Próximo
-            </button>
-
-            {canSpeak && (
-              <button
-                type="button"
-                onClick={() => setSound(!sound)}
-                className="ml-auto flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)]"
-              >
-                {sound ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                {sound ? "Som ligado" : "Som desligado"}
-              </button>
-            )}
-          </div>
-        </div>
+        <Link
+          href="/planos"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-semibold text-slate-900 shadow-xl transition-all hover:scale-105 hover:shadow-2xl"
+        >
+          Começar teste grátis
+          <ArrowRight size={18} />
+        </Link>
       </div>
     </section>
   );
@@ -1561,69 +959,40 @@ function DemoTour() {
 
 function Implantacao() {
   return (
-    <section
-      id="implantacao"
-      className="border-t border-[var(--border)] bg-[var(--surface)] py-20"
-    >
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 lg:grid-cols-2 lg:items-center">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
-            <GraduationCap size={12} className="text-[var(--primary)]" />
-            Opcional
+    <section className="py-24 bg-white dark:bg-slate-900">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
+            <Clock size={16} className="text-cyan-600 dark:text-cyan-400" />
+            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+              Implementação
+            </span>
           </span>
-
-          <h2 className="mt-4 text-3xl font-bold text-[var(--text-primary)]">
-            Implantação e treinamento presencial
+          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
+              Setup em minutos
           </h2>
-
-          <p className="mt-3 text-[var(--text-muted)]">
-            Se preferir não configurar sozinho, também fazemos a implantação
-            e o treinamento da sua equipe presencialmente, na sua empresa —
-            cadastros iniciais, parametrização e acompanhamento até o time
-            pegar o jeito do sistema.
+          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+            Comece a usar o sistema em 3 passos simples
           </p>
-
-          <Link
-            href="#contato"
-            className="mt-6 inline-block rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--background)]"
-          >
-            Perguntar sobre implantação
-          </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-8 md:grid-cols-3">
           {[
-            {
-              title: "Configuração inicial",
-              description:
-                "Cadastros de apoio, plano de contas e parâmetros ajustados com a sua operação.",
-            },
-            {
-              title: "Treinamento da equipe",
-              description:
-                "Time treinado nas telas do dia a dia, presencialmente ou remoto.",
-            },
-            {
-              title: "Migração de dados",
-              description:
-                "Importação dos cadastros de clientes, produtos e estoque existentes.",
-            },
-            {
-              title: "Acompanhamento",
-              description:
-                "Suporte próximo nas primeiras semanas de uso, até a equipe ganhar ritmo.",
-            },
+            { step: "1", title: "Cadastre sua empresa", desc: "Crie sua conta e configure as informações básicas" },
+            { step: "2", title: "Configure os módulos", desc: "Ative os módulos que sua empresa precisa" },
+            { step: "3", title: "Comece a usar", desc: "Importe seus dados e comece a gerenciar" },
           ].map((item) => (
             <div
-              key={item.title}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5"
+              key={item.step}
+              className="glass-card rounded-3xl p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700 text-center"
             >
-              <p className="font-semibold text-[var(--text-primary)]">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-2xl font-bold mx-auto mb-4">
+                {item.step}
+              </div>
+              <p className="font-display text-xl font-bold text-slate-900 dark:text-white mb-2">
                 {item.title}
               </p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">
-                {item.description}
-              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -1635,168 +1004,126 @@ function Implantacao() {
 function Contact() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [done, setDone] = useState(false);
-
-  function setField(field: keyof typeof emptyForm, value: string) {
-    setForm((previous) => ({ ...previous, [field]: value }));
-  }
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
-    if (loading) {
-      return;
-    }
-
-    setError("");
     setLoading(true);
+    setError(null);
 
     try {
-      await contactService.submit({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim() || undefined,
-        company: form.company.trim() || undefined,
-        message: form.message.trim(),
-      });
-
-      setDone(true);
+      await contactService.send(form);
+      setSuccess(true);
+      setForm(emptyForm);
     } catch (err) {
-      setError(
-        extractMessage(err, "Não foi possível enviar sua mensagem.")
-      );
+      setError(extractMessage(err, "Erro ao enviar mensagem. Tente novamente."));
     } finally {
       setLoading(false);
     }
   }
 
-  const fieldClass = `
-    h-11 w-full rounded-xl border border-[var(--border)]
-    bg-[var(--surface)] px-3 text-sm text-[var(--text-primary)]
-    outline-none transition-colors
-    focus:border-[var(--primary)]
-  `;
-
-  const labelClass =
-    "mb-1 block text-sm font-medium text-[var(--text-secondary)]";
-
   return (
-    <section id="contato" className="border-t border-[var(--border)] py-20">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 md:grid-cols-2">
-        <div>
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
+    <section className="py-24 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+      <div className="mx-auto max-w-4xl px-6">
+        <div className="mx-auto max-w-2xl text-center mb-16">
+          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
+            <Mail size={16} className="text-cyan-600 dark:text-cyan-400" />
+            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+              Contato
+            </span>
+          </span>
+          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
             Fale com a gente
           </h2>
-
-          <p className="mt-3 text-[var(--text-muted)]">
-            Tem dúvida sobre os planos, os módulos, ou quer saber mais sobre
-            implantação e treinamento? Manda uma mensagem.
+          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+            Tem dúvidas? Entre em contato e respondemos em até 24h
           </p>
-
-          <div className="mt-8 space-y-4 text-sm text-[var(--text-secondary)]">
-            <a
-              href="mailto:suporte@alepejo.com.br"
-              className="flex items-center gap-3 hover:text-[var(--text-primary)]"
-            >
-              <Mail size={18} className="text-[var(--primary)]" />
-              suporte@alepejo.com.br
-            </a>
-
-            <a
-              href="https://wa.me/5543991544557"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 hover:text-[var(--text-primary)]"
-            >
-              <MessageCircle size={18} className="text-[var(--primary)]" />
-              (43) 9 9154-4557
-            </a>
-
-            <div className="flex items-center gap-3">
-              <MapPin size={18} className="text-[var(--primary)]" />
-              Atendimento remoto ou presencial para todo o Brasil
-            </div>
-          </div>
         </div>
 
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-          {done ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-              <CheckCircle2 size={32} className="text-[var(--success)]" />
-              <p className="font-medium text-[var(--text-primary)]">
-                Mensagem enviada!
+        <div className="glass-card rounded-3xl p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700">
+          {success ? (
+            <div className="text-center py-12">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-emerald-500 text-white mx-auto mb-4">
+                <CheckCircle2 size={36} />
+              </div>
+              <p className="text-xl font-semibold text-slate-900 dark:text-white">
+                Mensagem enviada com sucesso!
               </p>
-              <p className="text-sm text-[var(--text-muted)]">
-                Vamos responder em breve no e-mail informado.
+              <p className="mt-2 text-slate-600 dark:text-slate-400">
+                Entraremos em contato em breve.
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
                 <div>
-                  <label className={labelClass} htmlFor="name">
-                    Nome <span className="text-[var(--danger)]">*</span>
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                    Nome
                   </label>
                   <input
-                    id="name"
-                    className={fieldClass}
+                    type="text"
                     value={form.name}
-                    onChange={(e) => setField("name", e.target.value)}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    placeholder="Seu nome"
                   />
                 </div>
 
                 <div>
-                  <label className={labelClass} htmlFor="contactEmail">
-                    E-mail <span className="text-[var(--danger)]">*</span>
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                    Email
                   </label>
                   <input
-                    id="contactEmail"
                     type="email"
-                    className={fieldClass}
                     value={form.email}
-                    onChange={(e) => setField("email", e.target.value)}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    placeholder="seu@email.com"
                   />
                 </div>
 
                 <div>
-                  <label className={labelClass} htmlFor="contactPhone">
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
                     Telefone
                   </label>
                   <input
-                    id="contactPhone"
-                    className={fieldClass}
+                    type="tel"
                     value={form.phone}
-                    onChange={(e) => setField("phone", e.target.value)}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    placeholder="(00) 00000-0000"
                   />
                 </div>
 
                 <div>
-                  <label className={labelClass} htmlFor="contactCompany">
+                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
                     Empresa
                   </label>
                   <input
-                    id="contactCompany"
-                    className={fieldClass}
+                    type="text"
                     value={form.company}
-                    onChange={(e) => setField("company", e.target.value)}
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className={labelClass} htmlFor="contactMessage">
-                    Mensagem <span className="text-[var(--danger)]">*</span>
-                  </label>
-                  <textarea
-                    id="contactMessage"
-                    rows={4}
-                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--primary)]"
-                    value={form.message}
-                    onChange={(e) => setField("message", e.target.value)}
+                    onChange={(e) => setForm({ ...form, company: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    placeholder="Nome da sua empresa"
                   />
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+                  Mensagem
+                </label>
+                <textarea
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  rows={4}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none"
+                  placeholder="Como podemos ajudar?"
+                />
+              </div>
+
               {error && (
-                <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+                <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-600 dark:text-red-400">
                   {error}
                 </div>
               )}
@@ -1805,7 +1132,7 @@ function Contact() {
                 type="button"
                 disabled={loading}
                 onClick={() => void handleSubmit()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:scale-[1.02] hover:shadow-2xl disabled:opacity-60"
               >
                 {loading && <Loader2 size={16} className="animate-spin" />}
                 {loading ? "Enviando..." : "Enviar mensagem"}
@@ -1822,22 +1149,22 @@ function FinalCta() {
   const trialDays = useTrialDays();
 
   return (
-    <section className="border-t border-[var(--border)] bg-[var(--surface)] py-20 text-center">
-      <div className="mx-auto max-w-2xl px-6">
-        <h2 className="text-3xl font-bold text-[var(--text-primary)]">
-          Pronto pra simplificar a gestão da sua empresa?
+    <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-center">
+      <div className="mx-auto max-w-3xl px-6">
+        <h2 className="font-display text-4xl font-bold text-white mb-6">
+          Pronto para simplificar a gestão da sua empresa?
         </h2>
 
-        <p className="mt-3 text-[var(--text-muted)]">
-          {trialDays} dia{trialDays === 1 ? "" : "s"} grátis, sem cartão de
-          crédito. Escolha o plano e comece agora.
+        <p className="text-xl text-blue-100/80 mb-10">
+          {trialDays} dias grátis, sem cartão de crédito. Escolha o plano e comece agora.
         </p>
 
         <Link
           href="/planos"
-          className="aurora-banner mt-8 inline-block rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[color:rgb(37_99_235_/_0.35)] transition-transform hover:scale-[1.03]"
+          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:scale-105 hover:shadow-2xl"
         >
           Ver planos e preços
+          <ArrowRight size={18} />
         </Link>
       </div>
     </section>
@@ -1848,11 +1175,10 @@ function Footer() {
   const visits = useVisitCounter();
 
   return (
-    <footer className="border-t border-[var(--border)] py-8">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-[var(--text-muted)]">
+    <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-8">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-slate-600 dark:text-slate-400">
         <p>
-          © {new Date().getFullYear()} AlePejo Assessoria e Prestação de
-          Serviço Ltda.
+          © {new Date().getFullYear()} AlePejo Assessoria e Prestação de Serviço Ltda.
         </p>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -1865,7 +1191,7 @@ function Footer() {
 
           <Link
             href="/privacidade"
-            className="font-medium hover:text-[var(--text-primary)] hover:underline"
+            className="font-medium hover:text-slate-900 dark:hover:text-white hover:underline"
           >
             Política de Privacidade
           </Link>
@@ -1877,7 +1203,7 @@ function Footer() {
 
 export default function InstitucionalPage() {
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <PublicNav />
       <Hero />
       <ValueProps />
