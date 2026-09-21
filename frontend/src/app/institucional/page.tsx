@@ -42,6 +42,13 @@ import {
   Truck,
   Users,
   Zap,
+  ChevronRight,
+  ChevronDown,
+  Star,
+  Zap as Lightning,
+  Target,
+  Layers,
+  PieChart,
 } from "lucide-react";
 
 import { systemConfig } from "@/config/system";
@@ -92,29 +99,9 @@ const financeiroChartData = [
   { month: "Abr", receita: 28700, despesa: 21200 },
   { month: "Mai", receita: 35900, despesa: 19800 },
   { month: "Jun", receita: 41200, despesa: 22600 },
-  { month: "Jul", receita: 38500, despesa: 20100 },
-  { month: "Ago", receita: 44300, despesa: 23400 },
+  { month: "Jul", receita: 38900, despesa: 20100 },
+  { month: "Ago", receita: 44500, despesa: 23800 },
 ];
-
-function chartMoney(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  });
-}
-
-function extractMessage(err: unknown, fallback: string) {
-  const message = (
-    err as { response?: { data?: { message?: unknown } } }
-  )?.response?.data?.message;
-
-  if (Array.isArray(message)) {
-    return message.join(" ");
-  }
-
-  return typeof message === "string" ? message : fallback;
-}
 
 const emptyForm = {
   name: "",
@@ -129,10 +116,10 @@ type BadgeTone = "success" | "warning" | "danger" | "neutral";
 type DemoListRow = (string | { label: string; tone: BadgeTone })[];
 
 const BADGE_CLASS: Record<BadgeTone, string> = {
-  success: "bg-[var(--success-soft)] text-[var(--success)]",
-  warning: "bg-[var(--warning-soft)] text-[var(--warning)]",
-  danger: "bg-[var(--danger-soft)] text-[var(--danger)]",
-  neutral: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  success: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  warning: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  danger: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  neutral: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
 };
 
 const demoTabs: {
@@ -284,10 +271,10 @@ function KpiCardsMock({ cards }: { cards: { label: string; value: string; sub?: 
   return (
     <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
       {cards.map((c) => (
-        <div key={c.label} className="rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] p-3.5">
-          <p className="text-xs font-medium text-[var(--text-muted)]">{c.label}</p>
-          <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">{c.value}</p>
-          {c.sub && <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">{c.sub}</p>}
+        <div key={c.label} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-800">
+          <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{c.label}</p>
+          <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{c.value}</p>
+          {c.sub && <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-500">{c.sub}</p>}
         </div>
       ))}
     </div>
@@ -297,13 +284,13 @@ function KpiCardsMock({ cards }: { cards: { label: string; value: string; sub?: 
 function ListMock({ columns, rows }: { columns: string[]; rows: DemoListRow[] }) {
   return (
     <>
-      <div className="mt-4 flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-3 text-xs text-[var(--text-muted)]">
+      <div className="mt-4 flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
         <Search size={13} />
         Pesquisar...
       </div>
-      <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--border)]">
+      <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
         <div className="min-w-[440px]">
-          <div className="flex bg-[var(--surface-hover)] px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">
+          <div className="flex bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
             {columns.map((col, i) => (
               <span key={col} className={i === 0 ? "flex-1" : "w-28 shrink-0 text-right"}>
                 {col}
@@ -311,11 +298,11 @@ function ListMock({ columns, rows }: { columns: string[]; rows: DemoListRow[] })
             ))}
           </div>
           {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex items-center border-t border-[var(--border)] px-4 py-3 text-sm">
+            <div key={rowIndex} className="flex items-center border-t border-slate-200 px-4 py-3 text-sm dark:border-slate-700">
               {row.map((cell, cellIndex) => (
                 <span
                   key={cellIndex}
-                  className={cellIndex === 0 ? "flex-1 truncate text-[var(--text-primary)]" : "w-28 shrink-0 text-right text-[var(--text-muted)]"}
+                  className={cellIndex === 0 ? "flex-1 truncate text-slate-900 dark:text-white" : "w-28 shrink-0 text-right text-slate-600 dark:text-slate-400"}
                 >
                   {typeof cell === "object" ? <Badge label={cell.label} tone={cell.tone} /> : cell}
                 </span>
@@ -330,293 +317,176 @@ function ListMock({ columns, rows }: { columns: string[]; rows: DemoListRow[] })
 
 function FinanceChartMock() {
   return (
-    <div className="mt-4 rounded-xl border border-[var(--border)] p-4">
-      <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Receita realizada x despesa</p>
-      <div style={{ height: 220 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={financeiroChartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={12} />
-            <YAxis stroke="var(--text-muted)" fontSize={12} tickFormatter={(v) => chartMoney(Number(v))} width={48} />
-            <Tooltip
-              contentStyle={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              formatter={(v) => chartMoney(Number(v))}
-            />
-            <Bar dataKey="receita" name="Receita" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="despesa" name="Despesa" fill="var(--text-muted)" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={financeiroChartData}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
+          <XAxis dataKey="month" className="text-xs text-slate-600 dark:text-slate-400" />
+          <YAxis className="text-xs text-slate-600 dark:text-slate-400" />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "hsl(var(--background))",
+              border: "1px solid hsl(var(--border))",
+              borderRadius: "8px",
+            }}
+          />
+          <Bar dataKey="receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="despesa" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
 
-function AppPreview({
-  activeId,
-  onSelect,
-  interactive,
-}: {
-  activeId: string;
-  onSelect?: (id: string) => void;
-  interactive?: boolean;
-}) {
-  const [view, setView] = useState<"list" | "dashboard">("list");
-  const tab = demoTabs.find((t) => t.id === activeId) ?? demoTabs[0];
-
-  function selectModule(id: string) {
-    setView("list");
-    onSelect?.(id);
+function extractMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === "object" && "message" in err && typeof err.message === "string") {
+    return err.message;
   }
-
-  return (
-    <div className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
-      <div className="flex">
-        <div className="hidden w-52 shrink-0 flex-col gap-1 border-r border-[var(--border)] p-3 md:flex">
-          <div className="mb-2 flex items-center gap-2 px-2 py-1">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
-              <LayoutDashboard size={14} />
-            </span>
-            <span className="text-sm font-bold text-[var(--text-primary)]">
-              {systemConfig.company.name}
-            </span>
-          </div>
-
-          {demoTabs.map((mod) => {
-            const isActive = mod.id === activeId;
-
-            return (
-              <button
-                key={mod.id}
-                type="button"
-                disabled={!interactive}
-                onClick={() => interactive && selectModule(mod.id)}
-                className={`flex h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                } ${interactive ? "cursor-pointer" : "cursor-default"}`}
-              >
-                <mod.icon size={17} className="shrink-0" />
-                <span className="truncate">{mod.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="min-w-0 flex-1 p-6 sm:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold text-[var(--text-primary)] sm:text-xl">
-                {tab.pageTitle}
-              </h3>
-              <p className="text-sm text-[var(--text-muted)]">
-                {tab.subtitle}
-              </p>
-            </div>
-
-            <span className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-3 py-2 text-xs font-semibold text-white">
-              <Plus size={13} />
-              {tab.newLabel}
-            </span>
-          </div>
-
-          {tab.hasDashboard && (
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => interactive && setView("list")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  view === "list"
-                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
-                    : "border border-[var(--border)] text-[var(--text-secondary)]"
-                }`}
-              >
-                <List size={13} />
-                Lançamentos
-              </button>
-              <button
-                type="button"
-                onClick={() => interactive && setView("dashboard")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  view === "dashboard"
-                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
-                    : "border border-[var(--border)] text-[var(--text-secondary)]"
-                }`}
-              >
-                <BarChart3 size={13} />
-                Dashboard
-              </button>
-            </div>
-          )}
-
-          {view === "dashboard" && tab.hasDashboard ? (
-            <FinanceChartMock />
-          ) : (
-            tab.columns && tab.rows && <ListMock columns={tab.columns} rows={tab.rows} />
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return fallback;
 }
 
+// ============ HERO SECTION ============
 function Hero() {
   const trialDays = useTrialDays();
 
   return (
-    <section className="relative z-0 overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.15),transparent_50%)]" />
-      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(6,182,212,0.15),transparent_50%)]" />
+    <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTAwIDUwTQzLjMgODMuNCAwIDEwMCAwIDUwWiIgZmlsbD0id2hpdGUiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-10" />
+      
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+      </div>
 
-      <div className="relative mx-auto max-w-7xl px-6 py-24 lg:py-32">
-        <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
+      <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2">
-              <Sparkles size={16} className="text-cyan-400" />
-              <span className="text-sm font-semibold text-cyan-300">
-                ERP completo para sua empresa
-              </span>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium backdrop-blur-sm">
+              <Sparkles size={16} />
+              <span>Plataforma ERP completa</span>
             </div>
-
-            <h1 className="font-display text-5xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl">
-              Sistema ERP
+            
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
+              Gerencie sua empresa
               <br />
-              <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                na nuvem
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-white">
+                de ponta a ponta
               </span>
             </h1>
-
-            <p className="max-w-2xl text-xl text-blue-100/80 leading-relaxed">
-              Gerencie toda sua empresa em um só lugar: compras, estoque, financeiro,
-              vendas, RH e produção. Simples, completo e acessível.
+            
+            <p className="text-lg text-white/90 max-w-xl">
+              Sistema ERP completo com módulos integrados de vendas, compras, estoque, financeiro, RH e produção. 
+              Centralize sua gestão e tome decisões com dados em tempo real.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap gap-4">
               <Link
-                href="/planos"
-                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/50"
+                href="/cadastro-empresa"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 font-semibold text-indigo-600 shadow-xl transition-transform hover:scale-105 hover:shadow-2xl"
               >
-                Começar agora
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                Começar grátis
+                <ArrowRight size={18} />
               </Link>
-
               <Link
-                href="#demonstracao"
-                className="inline-flex items-center gap-2 rounded-full border-2 border-cyan-400/30 px-8 py-4 text-sm font-semibold text-cyan-300 transition-all hover:border-cyan-400 hover:text-white"
+                href="/comercial"
+                className="inline-flex items-center gap-2 rounded-full border-2 border-white/30 px-8 py-4 font-semibold backdrop-blur-sm transition-colors hover:bg-white/10"
               >
-                Ver demonstração
+                Ver planos
               </Link>
             </div>
 
-            <div className="flex items-center gap-6 pt-4">
-              <div className="flex items-center gap-2 text-cyan-300">
-                <CheckCircle2 size={20} />
-                <span className="text-sm">{trialDays} dias grátis</span>
+            <div className="flex items-center gap-6 text-sm text-white/80">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-emerald-300" />
+                <span>{trialDays} dias grátis</span>
               </div>
-              <div className="flex items-center gap-2 text-cyan-300">
-                <CheckCircle2 size={20} />
-                <span className="text-sm">Sem cartão de crédito</span>
+              <div className="flex items-center gap-2">
+                <BadgeCheck size={18} className="text-emerald-300" />
+                <span>Sem cartão de crédito</span>
               </div>
-              <div className="flex items-center gap-2 text-cyan-300">
-                <CheckCircle2 size={20} />
-                <span className="text-sm">Setup em minutos</span>
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-emerald-300" />
+                <span>Segurança garantida</span>
               </div>
             </div>
           </div>
 
-          <div className="relative hidden lg:block">
-            <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-3xl blur-3xl" />
-            <div className="relative glass-card rounded-3xl p-6 bg-white/10 backdrop-blur-xl border border-white/20">
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { icon: ShoppingCart, label: "Compras", value: "2.5k" },
-                  { icon: Database, label: "Estoque", value: "15k" },
-                  { icon: BarChart3, label: "Financeiro", value: "R$ 8M" },
-                  { icon: TrendingUp, label: "Vendas", value: "+45%" },
-                ].map((stat) => (
-                  <div key={stat.label} className="flex items-center gap-3 p-4 rounded-xl bg-white/5">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white">
-                      <stat.icon size={20} />
+          <div className="hidden lg:block">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur-2xl opacity-30" />
+              <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-6 shadow-2xl">
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { icon: LayoutDashboard, label: "Dashboard", value: "centralizado" },
+                    { icon: TrendingUp, label: "Crescimento", value: "+40%" },
+                    { icon: Zap, label: "Velocidade", value: "2x mais rápido" },
+                  ].map((item) => (
+                    <div key={item.label} className="text-center p-4 rounded-2xl bg-white/10 backdrop-blur-sm">
+                      <item.icon size={32} className="mx-auto mb-2 text-white" />
+                      <p className="text-sm font-semibold text-white">{item.label}</p>
+                      <p className="text-xs text-white/70">{item.value}</p>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-white">{stat.value}</p>
-                      <p className="text-xs text-cyan-200">{stat.label}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-50 to-transparent dark:from-slate-900" />
     </section>
   );
 }
 
+// ============ VALUE PROPS ============
 function ValueProps() {
   const props = [
     {
-      icon: LayoutDashboard,
-      title: "Tudo integrado",
-      description: "Módulos conectados: compras alimenta estoque, vendas gera financeiro, tudo sincronizado.",
-    },
-    {
-      icon: Smartphone,
-      title: "Acesso móvel",
-      description: "Acesse de qualquer lugar pelo celular ou tablet. Sua empresa no seu bolso.",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Segurança total",
-      description: "Dados criptografados, backups automáticos e controle de acesso por perfil.",
+      icon: Layers,
+      title: "Tudo em um só lugar",
+      description: "Módulos integrados de vendas, compras, estoque, financeiro, RH e produção funcionando juntos.",
     },
     {
       icon: Zap,
-      title: "Implantação rápida",
-      description: "Setup em minutos, sem instalação complexa. Comece a usar hoje mesmo.",
+      title: "Implementação rápida",
+      description: "Comece a usar em minutos, sem necessidade de infraestrutura complexa ou TI dedicada.",
+    },
+    {
+      icon: Smartphone,
+      title: "Acesso em qualquer lugar",
+      description: "Gerencie sua empresa pelo computador, tablet ou celular, onde estiver.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Segurança de dados",
+      description: "Seus dados protegidos com criptografia de ponta a ponta e backups automáticos.",
     },
   ];
 
   return (
-    <section className="py-24 bg-white dark:bg-slate-900">
+    <section className="bg-slate-50 py-24 dark:bg-slate-900">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
-            <Sparkles size={16} className="text-cyan-600 dark:text-cyan-400" />
-            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
-              Por que escolher
-            </span>
-          </span>
-          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-            Benefícios que transformam sua gestão
+        <div className="text-center mb-16">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+            Por que escolher o AlePejo ERP?
           </h2>
+          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+            Uma plataforma completa projetada para simplificar a gestão da sua empresa
+          </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {props.map((prop) => (
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {props.map((prop, index) => (
             <div
-              key={prop.title}
-              className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-8 border border-slate-200 dark:border-slate-700 transition-all hover:shadow-2xl hover:scale-[1.02]"
+              key={index}
+              className="group p-8 rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform" />
-
-              <div className="relative">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-xl group-hover:scale-110 transition-transform">
-                  <prop.icon size={28} />
-                </div>
-
-                <p className="font-display mt-6 text-xl font-bold text-slate-900 dark:text-white">
-                  {prop.title}
-                </p>
-                <p className="mt-3 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {prop.description}
-                </p>
+              <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white mb-6 group-hover:scale-110 transition-transform">
+                <prop.icon size={28} />
               </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{prop.title}</h3>
+              <p className="text-slate-600 dark:text-slate-400">{prop.description}</p>
             </div>
           ))}
         </div>
@@ -625,49 +495,37 @@ function ValueProps() {
   );
 }
 
+// ============ AUDIENCE ============
 function Audience() {
   const segments = [
     { icon: Factory, label: "Indústria" },
     { icon: Store, label: "Comércio" },
     { icon: Cpu, label: "Tecnologia" },
     { icon: Truck, label: "Logística" },
-    { icon: MessageCircle, label: "Serviços" },
+    { icon: Sparkles, label: "Serviços" },
+    { icon: Globe, label: "Internacional" },
   ];
 
   return (
-    <section className="py-24 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+    <section className="py-24 bg-white dark:bg-slate-800">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
-            <Globe size={16} className="text-cyan-600 dark:text-cyan-400" />
-            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
-              Multi-setor
-            </span>
-          </span>
-          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-            Feito para diversos segmentos
+        <div className="text-center mb-16">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+            Feito para seu segmento
           </h2>
-          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-            Do comércio à indústria, adapta-se ao seu negócio
+          <p className="text-lg text-slate-600 dark:text-slate-400">
+            Indústria, comércio, serviços, tecnologia e muito mais
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           {segments.map((segment) => (
             <div
               key={segment.label}
-              className="group relative overflow-hidden rounded-3xl bg-white dark:bg-slate-800 p-6 border border-slate-200 dark:border-slate-700 transition-all hover:shadow-xl hover:scale-105"
+              className="group p-6 rounded-2xl border border-slate-200 text-center hover:border-indigo-500 hover:bg-indigo-50 dark:border-slate-700 dark:hover:bg-slate-700 transition-all"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-              <div className="relative">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg group-hover:scale-110 transition-transform">
-                  <segment.icon size={28} />
-                </span>
-                <p className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
-                  {segment.label}
-                </p>
-              </div>
+              <segment.icon size={40} className="mx-auto mb-4 text-slate-600 group-hover:text-indigo-600 dark:text-slate-400 dark:group-hover:text-indigo-400 transition-colors" />
+              <p className="font-semibold text-slate-900 dark:text-white">{segment.label}</p>
             </div>
           ))}
         </div>
@@ -676,120 +534,64 @@ function Audience() {
   );
 }
 
+// ============ FEATURES ============
 function Features() {
   const features = [
     {
-      icon: Database,
-      title: "Gestão de Estoque",
-      description: "Controle multi-depósito, inventário periódico e rastreabilidade completa.",
-    },
-    {
       icon: BarChart3,
-      title: "Financeiro Integrado",
-      description: "Fluxo de caixa, contas a pagar/receber e relatórios financeiros detalhados.",
+      title: "Dashboard Inteligente",
+      description: "Visão geral do seu negócio com gráficos e KPIs em tempo real.",
     },
     {
-      icon: ShoppingCart,
-      title: "Compras e Vendas",
-      description: "Cotações, pedidos, orçamentos e gestão completa do ciclo comercial.",
+      icon: Target,
+      title: "Gestão de Metas",
+      description: "Defina objetivos e acompanhe o progresso com alertas automáticos.",
     },
     {
-      icon: Users,
-      title: "RH e Folha",
-      description: "Gestão de colaboradores, folha de pagamento e benefícios.",
+      icon: PieChart,
+      title: "Relatórios Personalizados",
+      description: "Crie relatórios customizados para cada área da sua empresa.",
     },
     {
-      icon: BadgeCheck,
-      title: "Controle de Qualidade",
-      description: "Padrões de qualidade, inspeções e certificações.",
+      icon: Smartphone,
+      title: "App Mobile",
+      description: "Acesse o sistema pelo celular com o aplicativo dedicado.",
     },
     {
-      icon: LayoutDashboard,
-      title: "Dashboard Executivo",
-      description: "Visão geral de KPIs e indicadores de performance em tempo real.",
+      icon: MessageCircle,
+      title: "Integração WhatsApp",
+      description: "Envie notificações e lembretes automaticamente via WhatsApp.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Controle de Acesso",
+      description: "Gerencie permissões e perfis de usuário com segurança.",
     },
   ];
 
   return (
-    <section className="py-24 bg-white dark:bg-slate-900">
+    <section className="py-24 bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
-            <LayoutDashboard size={16} className="text-cyan-600 dark:text-cyan-400" />
-            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
-              Módulos completos
-            </span>
-          </span>
-          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-            Tudo que sua empresa precisa
+        <div className="text-center mb-16">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+            Recursos poderosos
           </h2>
-        </div>
-
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-8 border border-slate-200 dark:border-slate-700 transition-all hover:shadow-2xl hover:scale-[1.02]"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform" />
-
-              <div className="relative">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-xl group-hover:scale-110 transition-transform">
-                  <feature.icon size={28} />
-                </div>
-
-                <p className="font-display mt-6 text-xl font-bold text-slate-900 dark:text-white">
-                  {feature.title}
-                </p>
-                <p className="mt-3 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function AdminSection() {
-  return (
-    <section className="py-24 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
-            <ShieldCheck size={16} className="text-cyan-600 dark:text-cyan-400" />
-            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
-              Administração completa
-            </span>
-          </span>
-          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-            Controle total do seu sistema
-          </h2>
-          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-            Configure usuários, permissões, segurança e personalização
+          <p className="text-lg text-slate-600 dark:text-slate-400">
+            Tudo que você precisa para gerenciar sua empresa em um só lugar
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            { icon: Users, title: "Gestão de Usuários", desc: "Crie usuários e defina perfis de acesso" },
-            { icon: ShieldCheck, title: "Permissões", desc: "Controle fino do que cada usuário pode fazer" },
-            { icon: MapPin, title: "Multi-unidade", desc: "Gerencie várias filiais em um só sistema" },
-            { icon: Settings2, title: "Personalização", desc: "Adapte o sistema ao seu negócio" },
-          ].map((item) => (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {features.map((feature, index) => (
             <div
-              key={item.title}
-              className="glass-card rounded-3xl p-6 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700"
+              key={index}
+              className="group p-8 rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 dark:bg-slate-800 dark:border-slate-700"
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg">
-                <item.icon size={24} />
+              <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white mb-6 group-hover:scale-110 transition-transform">
+                <feature.icon size={24} />
               </div>
-              <p className="font-display mt-4 text-lg font-bold text-slate-900 dark:text-white">
-                {item.title}
-              </p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{item.desc}</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{feature.title}</h3>
+              <p className="text-slate-600 dark:text-slate-400">{feature.description}</p>
             </div>
           ))}
         </div>
@@ -798,47 +600,44 @@ function AdminSection() {
   );
 }
 
+// ============ DEMO TOUR ============
 function DemoTour() {
-  const [activeId, setActiveId] = useState(demoTabs[0].id);
-  const [index, setIndex] = useState(0);
+  const [tabIndex, setTabIndex] = useState(0);
+  const [view, setView] = useState<"list" | "dashboard">("list");
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(true);
   const [started, setStarted] = useState(false);
-  const [canSpeak, setCanSpeak] = useState(false);
-
-  const step = demoTabs[index] ?? demoTabs[0];
+  const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
   const voices = useSpeechVoices();
-  const voice = pickVoice(voices);
 
-  useEffect(() => {
-    setCanSpeak(typeof window !== "undefined" && "speechSynthesis" in window);
-  }, []);
+  const tab = demoTabs[tabIndex];
 
-  useEffect(() => {
-    if (!playing) {
-      return;
+  function switchTrack(next: number) {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
+    setTabIndex(next);
+    setView("list");
+    setPlaying(false);
+    setStarted(false);
+  }
+
+  useEffect(() => {
+    if (!playing) return;
 
     let cancelled = false;
 
     function advance() {
-      if (cancelled) {
-        return;
-      }
-      if (index < demoTabs.length - 1) {
-        setIndex(index + 1);
+      if (cancelled) return;
+      if (tabIndex < demoTabs.length - 1) {
+        setTabIndex(tabIndex + 1);
       } else {
         setPlaying(false);
       }
     }
 
     if (sound && canSpeak) {
-      const utterance = new SpeechSynthesisUtterance(step.narration);
-
-      if (voice) {
-        utterance.voice = voice;
-      }
-
+      const utterance = new SpeechSynthesisUtterance(tab.narration);
       utterance.lang = "pt-BR";
       utterance.rate = 1.04;
       utterance.pitch = 1.0;
@@ -854,13 +653,13 @@ function DemoTour() {
       };
     }
 
-    const timer = setTimeout(advance, stepDuration(step.narration));
+    const timer = setTimeout(advance, stepDuration(tab.narration));
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [playing, sound, index, step.narration, canSpeak, voice]);
+  }, [playing, sound, tabIndex, tab.narration, canSpeak]);
 
   useEffect(() => {
     return () => {
@@ -875,180 +674,205 @@ function DemoTour() {
     setPlaying(true);
   }
 
-  function goTo(next: number) {
-    setIndex(next);
-    setStarted(true);
-  }
-
-  const finished = started && !playing && index === demoTabs.length - 1;
+  const finished = started && !playing && tabIndex === demoTabs.length - 1;
 
   return (
-    <section id="demonstracao" className="py-24 bg-white dark:bg-slate-900">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
-            <Play size={16} className="text-cyan-600 dark:text-cyan-400" />
-            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
-              Demonstração interativa
-            </span>
-          </span>
-          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
+    <section className="py-24 bg-white dark:bg-slate-800">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="text-center mb-16">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
             Veja o sistema em ação
           </h2>
-          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-            Explore os principais módulos do AlePejo ERP Cloud
+          <p className="text-lg text-slate-600 dark:text-slate-400">
+            Tour guiado com narração de cada módulo
           </p>
         </div>
 
-        <div className="relative mx-auto max-w-5xl">
-          <AppPreview activeId={activeId} onSelect={(id) => goTo(demoTabs.findIndex((t) => t.id === id))} interactive />
+        <div className="mx-auto max-w-5xl">
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            {demoTabs.map((t, i) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => switchTrack(i)}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                  i === tabIndex
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+                    : "border border-slate-200 text-slate-600 hover:border-indigo-500 dark:border-slate-700 dark:text-slate-400"
+                }`}
+              >
+                <t.icon size={16} />
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-          {!started && (
-            <button
-              type="button"
-              onClick={play}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-[rgb(15_23_42_/_0.7)] backdrop-blur-[2px] transition-colors hover:bg-[rgb(15_23_42_/_0.8)]"
-            >
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-2xl">
-                <Play size={28} className="ml-1" fill="currentColor" />
-              </span>
-              <span className="text-lg font-semibold text-white">Ver demonstração</span>
-              <span className="text-sm text-white/80">
-                {demoTabs.length} módulos{canSpeak ? " · com narração" : ""}
-              </span>
-            </button>
-          )}
-        </div>
+          <div className="relative rounded-3xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900 p-6">
+            {!started && (
+              <button
+                type="button"
+                onClick={play}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-slate-900/60 backdrop-blur-[2px] transition-colors hover:bg-slate-900/68"
+              >
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-2xl">
+                  <Play size={28} className="ml-1" fill="currentColor" />
+                </span>
+                <span className="text-base font-semibold text-white">Iniciar demonstração</span>
+                <span className="text-sm text-white/80">
+                  {demoTabs.length} módulos{canSpeak ? " · com narração" : ""}
+                </span>
+              </button>
+            )}
 
-        {started && (
-          <div className="mx-auto mt-8 max-w-4xl">
-            <div className="mx-auto flex flex-wrap justify-center gap-2 mb-6">
-              {demoTabs.map((tab, position) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => goTo(position)}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-                    position === index
-                      ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
-                      : "border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-cyan-500"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="flex gap-6">
+              <div className="hidden w-64 shrink-0 flex-col gap-2 border-r border-slate-200 p-4 dark:border-slate-700 lg:flex">
+                <div className="mb-4 flex items-center gap-3 px-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                    <LayoutDashboard size={16} />
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">AlePejo ERP</span>
+                </div>
+
+                {demoTabs.map((t, i) => {
+                  const isActive = i === tabIndex;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => switchTrack(i)}
+                      className={`flex h-10 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+                          : "text-slate-600 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      <t.icon size={16} className="shrink-0" />
+                      <span className="truncate">{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">{tab.pageTitle}</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{tab.subtitle}</p>
+                  </div>
+                  {tab.newLabel && (
+                    <span className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-xs font-semibold text-white">
+                      <Plus size={13} />
+                      {tab.newLabel}
+                    </span>
+                  )}
+                </div>
+
+                <div className="min-h-[350px]">
+                  {view === "dashboard" && tab.hasDashboard ? (
+                    <FinanceChartMock />
+                  ) : (
+                    tab.columns && tab.rows && <ListMock columns={tab.columns} rows={tab.rows} />
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="glass-card rounded-2xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg">
-                  <span className="text-xl font-bold">{index + 1}</span>
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 transition-all duration-500"
+                    style={{ width: `${((tabIndex + 1) / demoTabs.length) * 100}%` }}
+                  />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {step.pageTitle}
-                  </p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">{step.subtitle}</p>
+                <span className="shrink-0 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {tabIndex + 1} de {demoTabs.length}
+                </span>
+              </div>
+
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+                <div className="flex shrink-0 flex-col items-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-xl">
+                    <tab.icon size={28} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPlaying(!playing)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-cyan-500 hover:text-cyan-600 transition-colors"
-                  >
-                    {playing ? <Pause size={18} /> : <Play size={18} />}
-                  </button>
+
+                <div className="relative min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{tab.label}</p>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{tab.narration}</p>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (finished) {
+                      setTabIndex(0);
+                      setPlaying(true);
+                      return;
+                    }
+                    if (playing) {
+                      setPlaying(false);
+                      return;
+                    }
+                    play();
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white"
+                >
+                  {playing ? (
+                    <>
+                      <Pause size={16} fill="currentColor" />
+                      Pausar
+                    </>
+                  ) : (
+                    <>
+                      <Play size={16} fill="currentColor" />
+                      {finished ? "Assistir de novo" : "Continuar"}
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={tabIndex === 0}
+                  onClick={() => switchTrack(tabIndex - 1)}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-indigo-500 disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white"
+                >
+                  Anterior
+                </button>
+
+                <button
+                  type="button"
+                  disabled={tabIndex === demoTabs.length - 1}
+                  onClick={() => switchTrack(tabIndex + 1)}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-indigo-500 disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white"
+                >
+                  Próximo
+                </button>
+
+                {canSpeak && (
                   <button
                     type="button"
                     onClick={() => setSound(!sound)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-cyan-500 hover:text-cyan-600 transition-colors"
+                    className="ml-auto flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-indigo-500 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white"
                   >
-                    {sound ? <MessageCircle size={18} /> : <MessageCircle size={18} className="opacity-50" />}
+                    {sound ? <Settings2 size={16} /> : <Settings2 size={16} />}
+                    {sound ? "Som ligado" : "Som desligado"}
                   </button>
-                </div>
-              </div>
-
-              <div className="mt-4 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                {step.narration}
+                )}
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function DemoCta() {
-  const trialDays = useTrialDays();
-
-  return (
-    <section className="py-24 bg-gradient-to-r from-cyan-600 via-blue-600 to-slate-700 text-center">
-      <div className="mx-auto max-w-4xl px-6">
-        <h2 className="font-display text-4xl font-bold text-white mb-6">
-          Comece a transformar sua gestão hoje
-        </h2>
-
-        <p className="text-xl text-white/90 mb-10">
-          {trialDays} dias grátis, sem cartão de crédito. Teste todos os módulos sem compromisso.
-        </p>
-
-        <Link
-          href="/planos"
-          className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-semibold text-slate-900 shadow-xl transition-all hover:scale-105 hover:shadow-2xl"
-        >
-          Começar teste grátis
-          <ArrowRight size={18} />
-        </Link>
-      </div>
-    </section>
-  );
-}
-
-function Implantacao() {
-  return (
-    <section className="py-24 bg-white dark:bg-slate-900">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
-            <Clock size={16} className="text-cyan-600 dark:text-cyan-400" />
-            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
-              Implementação
-            </span>
-          </span>
-          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-              Setup em minutos
-          </h2>
-          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-            Comece a usar o sistema em 3 passos simples
-          </p>
-        </div>
-
-        <div className="grid gap-8 md:grid-cols-3">
-          {[
-            { step: "1", title: "Cadastre sua empresa", desc: "Crie sua conta e configure as informações básicas" },
-            { step: "2", title: "Configure os módulos", desc: "Ative os módulos que sua empresa precisa" },
-            { step: "3", title: "Comece a usar", desc: "Importe seus dados e comece a gerenciar" },
-          ].map((item) => (
-            <div
-              key={item.step}
-              className="glass-card rounded-3xl p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700 text-center"
-            >
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-2xl font-bold mx-auto mb-4">
-                {item.step}
-              </div>
-              <p className="font-display text-xl font-bold text-slate-900 dark:text-white mb-2">
-                {item.title}
-              </p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{item.desc}</p>
-            </div>
-          ))}
         </div>
       </div>
     </section>
   );
 }
 
+// ============ CONTACT ============
 function Contact() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
@@ -1071,160 +895,164 @@ function Contact() {
   }
 
   return (
-    <section className="py-24 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
-      <div className="mx-auto max-w-4xl px-6">
-        <div className="mx-auto max-w-2xl text-center mb-16">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-4 py-2 mb-4">
-            <Mail size={16} className="text-cyan-600 dark:text-cyan-400" />
-            <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">
-              Contato
-            </span>
-          </span>
-          <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-            Fale com a gente
-          </h2>
-          <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-            Tem dúvidas? Entre em contato e respondemos em até 24h
-          </p>
-        </div>
+    <section className="py-24 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-900 dark:to-slate-800">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="grid lg:grid-cols-2 gap-12">
+          <div>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+              Entre em contato
+            </h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
+              Tem dúvidas ou quer saber mais? Nossa equipe está pronta para ajudar.
+            </p>
 
-        <div className="glass-card rounded-3xl p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700">
-          {success ? (
-            <div className="text-center py-12">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-emerald-500 text-white mx-auto mb-4">
-                <CheckCircle2 size={36} />
-              </div>
-              <p className="text-xl font-semibold text-slate-900 dark:text-white">
-                Mensagem enviada com sucesso!
-              </p>
-              <p className="mt-2 text-slate-600 dark:text-slate-400">
-                Entraremos em contato em breve.
-              </p>
-            </div>
-          ) : (
             <div className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                  <Mail size={20} />
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
-                    Nome
-                  </label>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Email</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">contato@alepejo.com.br</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                  <Smartphone size={20} />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Telefone</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">(43) 99999-9999</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                  <MapPin size={20} />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Endereço</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Londrina - PR, Brasil</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xl dark:bg-slate-800 dark:border-slate-700">
+            {success ? (
+              <div className="text-center py-12">
+                <div className="flex justify-center mb-4">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+                    <CheckCircle2 size={36} />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Mensagem enviada!</h3>
+                <p className="text-slate-600 dark:text-slate-400">Entraremos em contato em breve.</p>
+                <button
+                  type="button"
+                  onClick={() => setSuccess(false)}
+                  className="mt-6 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white"
+                >
+                  Enviar outra mensagem
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={(e) => { e.preventDefault(); void handleSubmit(); }} className="space-y-6">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Nome</label>
                   <input
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
-                    placeholder="Seu nome"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                    placeholder="Seu nome completo"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
-                    Email
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                     placeholder="seu@email.com"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
-                    Telefone
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Telefone</label>
                   <input
                     type="tel"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                     placeholder="(00) 00000-0000"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
-                    Empresa
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Empresa</label>
                   <input
                     type="text"
                     value={form.company}
                     onChange={(e) => setForm({ ...form, company: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                     placeholder="Nome da sua empresa"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
-                  Mensagem
-                </label>
-                <textarea
-                  value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  rows={4}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none"
-                  placeholder="Como podemos ajudar?"
-                />
-              </div>
-
-              {error && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-                  {error}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Mensagem</label>
+                  <textarea
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    rows={4}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                    placeholder="Como podemos ajudar?"
+                    required
+                  />
                 </div>
-              )}
 
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => void handleSubmit()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:scale-[1.02] hover:shadow-2xl disabled:opacity-60"
-              >
-                {loading && <Loader2 size={16} className="animate-spin" />}
-                {loading ? "Enviando..." : "Enviar mensagem"}
-              </button>
-            </div>
-          )}
+                {error && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/30 dark:text-red-400">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 font-semibold text-white shadow-lg transition-transform hover:scale-[0.98] disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 size={18} className="animate-spin" />
+                      Enviando...
+                    </span>
+                  ) : (
+                    "Enviar mensagem"
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function FinalCta() {
-  const trialDays = useTrialDays();
-
-  return (
-    <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-center">
-      <div className="mx-auto max-w-3xl px-6">
-        <h2 className="font-display text-4xl font-bold text-white mb-6">
-          Pronto para simplificar a gestão da sua empresa?
-        </h2>
-
-        <p className="text-xl text-blue-100/80 mb-10">
-          {trialDays} dias grátis, sem cartão de crédito. Escolha o plano e comece agora.
-        </p>
-
-        <Link
-          href="/planos"
-          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-cyan-500/30 transition-all hover:scale-105 hover:shadow-2xl"
-        >
-          Ver planos e preços
-          <ArrowRight size={18} />
-        </Link>
-      </div>
-    </section>
-  );
-}
-
+// ============ FOOTER ============
 function Footer() {
   const visits = useVisitCounter();
 
   return (
-    <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-8">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-slate-600 dark:text-slate-400">
+    <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 py-8">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-slate-600 dark:text-slate-400">
         <p>
           © {new Date().getFullYear()} AlePejo Assessoria e Prestação de Serviço Ltda.
         </p>
@@ -1257,13 +1085,8 @@ export default function InstitucionalPage() {
       <ValueProps />
       <Audience />
       <Features />
-      <AdminSection />
       <DemoTour />
-      <DemoCta />
-      <Implantacao />
-      <Faq />
       <Contact />
-      <FinalCta />
       <Footer />
     </div>
   );
