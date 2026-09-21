@@ -42,13 +42,6 @@ import {
   Truck,
   Users,
   Zap,
-  ChevronRight,
-  ChevronDown,
-  Star,
-  Zap as Lightning,
-  Target,
-  Layers,
-  PieChart,
 } from "lucide-react";
 
 import { systemConfig } from "@/config/system";
@@ -443,7 +436,7 @@ function Hero() {
 function ValueProps() {
   const props = [
     {
-      icon: Layers,
+      icon: Store,
       title: "Tudo em um só lugar",
       description: "Módulos integrados de vendas, compras, estoque, financeiro, RH e produção funcionando juntos.",
     },
@@ -543,12 +536,12 @@ function Features() {
       description: "Visão geral do seu negócio com gráficos e KPIs em tempo real.",
     },
     {
-      icon: Target,
+      icon: Users,
       title: "Gestão de Metas",
       description: "Defina objetivos e acompanhe o progresso com alertas automáticos.",
     },
     {
-      icon: PieChart,
+      icon: Database,
       title: "Relatórios Personalizados",
       description: "Crie relatórios customizados para cada área da sua empresa.",
     },
@@ -609,7 +602,6 @@ function DemoTour() {
   const [started, setStarted] = useState(false);
   const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
   const voices = useSpeechVoices();
-  const [robotState, setRobotState] = useState<"idle" | "speaking">("idle");
 
   const tab = demoTabs[tabIndex];
 
@@ -624,12 +616,7 @@ function DemoTour() {
   }
 
   useEffect(() => {
-    if (!playing) {
-      setRobotState("idle");
-      return;
-    }
-
-    setRobotState("speaking");
+    if (!playing) return;
 
     let cancelled = false;
 
@@ -639,7 +626,6 @@ function DemoTour() {
         setTabIndex(tabIndex + 1);
       } else {
         setPlaying(false);
-        setRobotState("idle");
       }
     }
 
@@ -761,13 +747,6 @@ function DemoTour() {
               </div>
 
               <div className="min-w-0 flex-1">
-                {/* Robô da demonstração */}
-                <div className="mb-4 flex justify-center">
-                  <ChromaKeyVideo
-                    src={robotState === "speaking" ? "/videos/robo falando.mp4" : "/videos/Robo normal.mp4"}
-                    className="h-32 w-32"
-                  />
-                </div>
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">{tab.pageTitle}</h3>
@@ -806,9 +785,19 @@ function DemoTour() {
 
               <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
                 <div className="flex shrink-0 flex-col items-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-xl">
-                    <tab.icon size={28} />
-                  </div>
+                  <ChromaKeyVideo
+                    src={playing ? "/videos/robo falando.mp4" : "/videos/Robo normal.mp4"}
+                    loop={!playing}
+                    onEnded={() => {
+                      if (!playing) return;
+                      if (tabIndex < demoTabs.length - 1) {
+                        setTabIndex(tabIndex + 1);
+                      } else {
+                        setPlaying(false);
+                      }
+                    }}
+                    className="h-auto w-[100px] sm:w-[115px]"
+                  />
                 </div>
 
                 <div className="relative min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
