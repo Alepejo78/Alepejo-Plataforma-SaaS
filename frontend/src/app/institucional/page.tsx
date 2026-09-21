@@ -19,15 +19,20 @@ import {
   Clock,
   Cpu,
   Database,
+  Eye,
+  Factory,
   Globe,
   LayoutDashboard,
   Loader2,
+  List,
   Mail,
   MapPin,
   MessageCircle,
+  Pause,
   Play,
   Plus,
   Search,
+  Settings2,
   ShieldCheck,
   ShoppingCart,
   Smartphone,
@@ -121,6 +126,8 @@ const emptyForm = {
 
 type BadgeTone = "success" | "warning" | "danger" | "neutral";
 
+type DemoListRow = (string | { label: string; tone: BadgeTone })[];
+
 const BADGE_CLASS: Record<BadgeTone, string> = {
   success: "bg-[var(--success-soft)] text-[var(--success)]",
   warning: "bg-[var(--warning-soft)] text-[var(--warning)]",
@@ -128,7 +135,18 @@ const BADGE_CLASS: Record<BadgeTone, string> = {
   neutral: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
 };
 
-const demoTabs = [
+const demoTabs: {
+  id: string;
+  icon: any;
+  label: string;
+  pageTitle: string;
+  subtitle: string;
+  newLabel?: string;
+  narration: string;
+  columns: string[];
+  rows: DemoListRow[];
+  hasDashboard?: boolean;
+}[] = [
   {
     id: "cadastros",
     icon: Users,
@@ -222,6 +240,36 @@ const demoTabs = [
       ["PV-002", "Indústria Tech", "R$ 8.900,00", { label: "Orçamento", tone: "warning" as BadgeTone }],
     ],
   },
+  {
+    id: "rh",
+    icon: Users,
+    label: "RH",
+    pageTitle: "Recursos Humanos",
+    subtitle: "Colaboradores, folha e ponto.",
+    newLabel: "Novo colaborador",
+    narration:
+      "Gerencie colaboradores, calcule folha de pagamento com todos os encargos, e controle ponto eletrônico com integração de leitores biométricos.",
+    columns: ["Nome", "Cargo", "Admissão", "Situação"],
+    rows: [
+      ["João Silva", "Analista", "15/03/2024", { label: "Ativo", tone: "success" as BadgeTone }],
+      ["Maria Santos", "Assistente", "01/02/2024", { label: "Ativo", tone: "success" as BadgeTone }],
+    ],
+  },
+  {
+    id: "producao",
+    icon: Cpu,
+    label: "Produção",
+    pageTitle: "Produção",
+    subtitle: "Ordens de produção e acompanhamento.",
+    newLabel: "Nova ordem",
+    narration:
+      "Acompanhe ordens de produção em tempo real, gerencie recursos e otimize o fluxo de trabalho da sua equipe.",
+    columns: ["Ordem", "Produto", "Status", "Prazo"],
+    rows: [
+      ["OP-001", "Servidor Rack", "Em andamento", "25/08"],
+      ["OP-002", "Switch 48p", "Concluído", "20/08"],
+    ],
+  },
 ];
 
 function Badge({ label, tone }: { label: string; tone: BadgeTone }) {
@@ -246,7 +294,7 @@ function KpiCardsMock({ cards }: { cards: { label: string; value: string; sub?: 
   );
 }
 
-function ListMock({ columns, rows }: { columns: string[]; rows: (string | { label: string; tone: BadgeTone })[] }) {
+function ListMock({ columns, rows }: { columns: string[]; rows: DemoListRow[] }) {
   return (
     <>
       <div className="mt-4 flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] px-3 text-xs text-[var(--text-muted)]">
@@ -1012,7 +1060,7 @@ function Contact() {
     setError(null);
 
     try {
-      await contactService.send(form);
+      await contactService.submit(form);
       setSuccess(true);
       setForm(emptyForm);
     } catch (err) {

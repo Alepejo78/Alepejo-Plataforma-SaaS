@@ -62,7 +62,7 @@ function Badge({ label, tone }: { label: string; tone: BadgeTone }) {
  * gravação de tela, é a própria estrutura da UI com dados de exemplo,
  * igual ao `DemoTour` de `/institucional`.
  */
-type ListRow = (string | { label: string; tone: BadgeTone })[];
+type ServiceListRow = (string | { label: string; tone: BadgeTone })[];
 
 interface DesktopStep {
   id: string;
@@ -74,7 +74,7 @@ interface DesktopStep {
   narration: string;
   kind: "list" | "cards" | "chart" | "vaccine";
   columns?: string[];
-  rows?: ListRow[];
+  rows?: ServiceListRow[];
   cards?: { label: string; value: string; sub?: string }[];
 }
 
@@ -278,7 +278,7 @@ function KpiCardsMock({ cards }: { cards: { label: string; value: string; sub?: 
   );
 }
 
-function ListMock({ columns, rows }: { columns: string[]; rows: ListRow[] }) {
+function ListMock({ columns, rows }: { columns: string[]; rows: ServiceListRow[] }) {
   return (
     <>
       <div className="mt-4 flex h-9 items-center gap-2 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] px-3 text-xs text-[var(--mkt-muted)]">
@@ -296,14 +296,14 @@ function ListMock({ columns, rows }: { columns: string[]; rows: ListRow[] }) {
           </div>
           {rows.map((row, rowIndex) => (
             <div key={rowIndex} className="flex items-center border-t border-[var(--mkt-border)] px-4 py-3 text-sm">
-              {row.map((cell, cellIndex) => (
+              {Array.isArray(row) ? row.map((cell, cellIndex) => (
                 <span
                   key={cellIndex}
                   className={cellIndex === 0 ? "flex-1 truncate text-[var(--mkt-ink)]" : "w-28 shrink-0 text-right text-[var(--mkt-muted)]"}
                 >
                   {typeof cell === "object" ? <Badge label={cell.label} tone={cell.tone} /> : cell}
                 </span>
-              ))}
+              )) : null}
             </div>
           ))}
         </div>
