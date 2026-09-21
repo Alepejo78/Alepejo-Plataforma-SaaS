@@ -609,6 +609,7 @@ function DemoTour() {
   const [started, setStarted] = useState(false);
   const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
   const voices = useSpeechVoices();
+  const [robotState, setRobotState] = useState<"idle" | "speaking">("idle");
 
   const tab = demoTabs[tabIndex];
 
@@ -623,7 +624,12 @@ function DemoTour() {
   }
 
   useEffect(() => {
-    if (!playing) return;
+    if (!playing) {
+      setRobotState("idle");
+      return;
+    }
+
+    setRobotState("speaking");
 
     let cancelled = false;
 
@@ -633,6 +639,7 @@ function DemoTour() {
         setTabIndex(tabIndex + 1);
       } else {
         setPlaying(false);
+        setRobotState("idle");
       }
     }
 
@@ -754,6 +761,13 @@ function DemoTour() {
               </div>
 
               <div className="min-w-0 flex-1">
+                {/* Robô da demonstração */}
+                <div className="mb-4 flex justify-center">
+                  <ChromaKeyVideo
+                    src={robotState === "speaking" ? "/videos/robo falando.mp4" : "/videos/Robo normal.mp4"}
+                    className="h-32 w-32"
+                  />
+                </div>
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">{tab.pageTitle}</h3>

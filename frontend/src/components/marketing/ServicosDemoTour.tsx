@@ -37,8 +37,8 @@ import {
 import { ChromaKeyVideo } from "./ChromaKeyVideo";
 import { pickVoice, stepDuration, useSpeechVoices } from "./guided-narration";
 
-const VIDEO_APRESENTANDO = "/videos/pejo-demo-preview.webm";
-const VIDEO_IDLE = "/videos/pejo-idle.webm";
+const VIDEO_APRESENTANDO = "/videos/robo falando.mp4";
+const VIDEO_IDLE = "/videos/Robo normal.mp4";
 
 type BadgeTone = "success" | "warning" | "neutral";
 
