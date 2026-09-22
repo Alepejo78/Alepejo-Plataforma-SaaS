@@ -12,6 +12,15 @@ import type { NextConfig } from "next";
 const BACKEND_URL =
   process.env.BACKEND_URL || "http://localhost:3001";
 
+/**
+ * Backend do AlePejoServiços (produto irmão, banco e deploy próprios) —
+ * só usado pela página pública de preços em /servicos/planos, que lê o
+ * catálogo público de lá. Mesmo truque de rewrite acima, pra não depender
+ * de CORS entre domínios.
+ */
+const SERVICOS_API_URL =
+  process.env.SERVICOS_API_URL || "https://api-apps.alepejo.com.br";
+
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
@@ -19,6 +28,10 @@ const nextConfig: NextConfig = {
       {
         source: "/uploads/:path*",
         destination: `${BACKEND_URL}/uploads/:path*`,
+      },
+      {
+        source: "/api-servicos/:path*",
+        destination: `${SERVICOS_API_URL}/api/:path*`,
       },
     ];
   },

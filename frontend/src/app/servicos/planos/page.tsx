@@ -1,20 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
   Bell,
+  Check,
   CheckCircle2,
   Gift,
   LinkIcon,
-  Lock,
   Sparkles,
   TrendingUp,
   Users,
   Zap,
 } from "lucide-react";
 
+import { getServicosPublicPlans, type ServicosPlan } from "@/services/servicos-planos.service";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
@@ -22,6 +24,14 @@ import { marketingFontVars } from "@/components/marketing/fonts";
 import { Reveal } from "@/components/marketing/Reveal";
 import "@/components/marketing/vibrant.css";
 import "@/components/marketing/marketing-shared.css";
+
+function money(value: string | null) {
+  if (value == null) return null;
+  return Number(value).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
 
 const NAV_LINKS = [
   { label: "Recursos", href: "/servicos#recursos" },
@@ -54,6 +64,18 @@ const STATS = [
 ];
 
 export default function ServicosPlanosPage() {
+  const [plans, setPlans] = useState<ServicosPlan[] | null>(null);
+  const [trialDays, setTrialDays] = useState<number | null>(null);
+
+  useEffect(() => {
+    getServicosPublicPlans()
+      .then((res) => {
+        setPlans(res.plans);
+        setTrialDays(res.trialDays);
+      })
+      .catch(() => setPlans([]));
+  }, []);
+
   return (
     <div className={`${marketingFontVars} marketing-page theme-vibrant`}>
       <MarketingNav links={NAV_LINKS} />
@@ -67,7 +89,7 @@ export default function ServicosPlanosPage() {
           <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30 px-4 py-2 mb-6">
             <Sparkles size={16} className="text-purple-600 dark:text-purple-400" />
             <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
-              Planos chegando em breve
+              {trialDays ? `${trialDays} dias de teste grátis` : "Planos AlePejo Serviços"}
             </span>
           </div>
 
@@ -80,8 +102,7 @@ export default function ServicosPlanosPage() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-xl text-slate-600 dark:text-slate-300 leading-relaxed">
-            Estamos fechando o preço certo para o seu negócio. Em breve você escolhe o
-            plano ideal aqui mesmo.
+            Escolha o plano ideal pro seu negócio e comece a agendar hoje mesmo.
           </p>
 
           {/* Stats */}
@@ -145,48 +166,90 @@ export default function ServicosPlanosPage() {
         </div>
       </Reveal>
 
-      {/* Coming Soon Section */}
+      {/* Plans Section */}
       <Reveal as="section" className="py-24 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
-        <div className="mx-auto max-w-4xl px-6">
+        <div className="mx-auto max-w-5xl px-6">
           <div className="mx-auto max-w-2xl text-center mb-16">
-            <span className="inline-flex items-center gap-2 rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30 px-4 py-2 mb-4">
-              <Lock size={16} className="text-purple-600 dark:text-purple-400" />
-              <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
-                Em breve
-              </span>
-            </span>
             <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-              Planos personalizados
+              Nossos planos
             </h2>
             <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-              Estamos trabalhando em planos que se encaixam perfeitamente no seu orçamento
+              {trialDays
+                ? `Todos os planos começam com ${trialDays} dias de teste grátis.`
+                : "Escolha o plano que se encaixa no seu negócio."}
             </p>
           </div>
 
-          <div className="glass-card rounded-3xl p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700">
-            <div className="flex flex-col items-center text-center gap-6">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-xl">
-                <Sparkles size={36} />
-              </div>
-
-              <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                  Quer ser avisado?
-                </p>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Entre em contato e te avisamos assim que os planos estiverem disponíveis
-                </p>
-              </div>
-
+          {!plans ? (
+            <p className="text-center text-slate-500 dark:text-slate-400">Carregando planos…</p>
+          ) : plans.length === 0 ? (
+            <div className="glass-card mx-auto max-w-md rounded-3xl p-8 text-center bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700">
+              <p className="text-slate-600 dark:text-slate-400">
+                Estamos fechando os planos. Fale com a gente pra saber o que já está disponível.
+              </p>
               <Link
                 href="/servicos#contato"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-purple-500/30 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50"
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-purple-500/30 transition-all hover:scale-105"
               >
                 Falar com consultor
                 <ArrowRight size={18} />
               </Link>
             </div>
-          </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-3">
+              {plans.map((plan) => (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-3xl border p-8 ${
+                    plan.highlighted
+                      ? "border-purple-400 bg-white shadow-2xl shadow-purple-500/20 dark:border-purple-500 dark:bg-slate-800 md:scale-105"
+                      : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+                  }`}
+                >
+                  {plan.highlighted && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1 text-xs font-semibold text-white">
+                      Mais popular
+                    </span>
+                  )}
+
+                  <p className="font-display text-xl font-bold text-slate-900 dark:text-white">
+                    {plan.name}
+                  </p>
+                  {plan.description && (
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                      {plan.description}
+                    </p>
+                  )}
+
+                  <p className="mt-6">
+                    <span className="text-4xl font-bold text-slate-900 dark:text-white">
+                      {money(plan.monthlyPrice) ?? "Sob consulta"}
+                    </span>
+                    {plan.monthlyPrice && (
+                      <span className="text-slate-500 dark:text-slate-400">/mês</span>
+                    )}
+                  </p>
+                  {plan.yearlyPrice && (
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      ou {money(plan.yearlyPrice)}/ano
+                    </p>
+                  )}
+
+                  <Link
+                    href="/servicos#contato"
+                    className={`mt-8 flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:scale-105 ${
+                      plan.highlighted
+                        ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30"
+                        : "border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <Check size={16} />
+                    Começar agora
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Reveal>
 
