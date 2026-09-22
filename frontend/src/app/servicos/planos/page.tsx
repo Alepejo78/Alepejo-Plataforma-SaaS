@@ -40,10 +40,15 @@ function num(value: string | null) {
 /** Frontend do AlePejoServiços (produto irmão) — onde o cadastro/assinatura de verdade acontece. */
 const SERVICOS_APP_URL = "https://apps.alepejo.com.br";
 
-function signupUrl(planId: string, cycle: "MONTHLY" | "YEARLY", buyNow: boolean) {
+function signupUrl(planId: string, cycle: "MONTHLY" | "YEARLY") {
   const params = new URLSearchParams({ planId, cycle });
-  if (buyNow) params.set("buyNow", "true");
   return `${SERVICOS_APP_URL}/painel/cadastro?${params.toString()}`;
+}
+
+/** "Comprar agora" paga ANTES do cadastro existir — mesmo padrão do /checkout do ERP. */
+function checkoutUrl(planId: string, cycle: "MONTHLY" | "YEARLY") {
+  const params = new URLSearchParams({ planId, cycle });
+  return `${SERVICOS_APP_URL}/painel/checkout?${params.toString()}`;
 }
 
 const NAV_LINKS = [
@@ -286,7 +291,7 @@ export default function ServicosPlanosPage() {
 
                     <div className="mt-8 flex flex-1 flex-col justify-end gap-2">
                       <Link
-                        href={signupUrl(plan.id, billingCycle, false)}
+                        href={signupUrl(plan.id, billingCycle)}
                         className={`flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:scale-105 ${
                           plan.highlighted
                             ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30"
@@ -300,7 +305,7 @@ export default function ServicosPlanosPage() {
                       </Link>
 
                       <Link
-                        href={signupUrl(plan.id, billingCycle, true)}
+                        href={checkoutUrl(plan.id, billingCycle)}
                         className="text-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:underline"
                       >
                         Comprar agora
