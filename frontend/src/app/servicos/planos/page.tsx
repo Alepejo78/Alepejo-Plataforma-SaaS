@@ -33,6 +33,19 @@ function money(value: string | null) {
   });
 }
 
+function num(value: string | null) {
+  return Number(value ?? 0);
+}
+
+/** Frontend do AlePejoServiços (produto irmão) — onde o cadastro/assinatura de verdade acontece. */
+const SERVICOS_APP_URL = "https://apps.alepejo.com.br";
+
+function signupUrl(planId: string, cycle: "MONTHLY" | "YEARLY", buyNow: boolean) {
+  const params = new URLSearchParams({ planId, cycle });
+  if (buyNow) params.set("buyNow", "true");
+  return `${SERVICOS_APP_URL}/painel/cadastro?${params.toString()}`;
+}
+
 const NAV_LINKS = [
   { label: "Recursos", href: "/servicos#recursos" },
   { label: "Segmentos", href: "/servicos#segmentos" },
@@ -66,6 +79,7 @@ const STATS = [
 export default function ServicosPlanosPage() {
   const [plans, setPlans] = useState<ServicosPlan[] | null>(null);
   const [trialDays, setTrialDays] = useState<number | null>(null);
+  const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
 
   useEffect(() => {
     getServicosPublicPlans()
@@ -180,6 +194,35 @@ export default function ServicosPlanosPage() {
             </p>
           </div>
 
+          {plans && plans.length > 0 && (
+            <div className="mb-10 flex justify-center">
+              <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("YEARLY")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                    billingCycle === "YEARLY"
+                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  Pago anualmente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("MONTHLY")}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                    billingCycle === "MONTHLY"
+                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  Pago mensalmente
+                </button>
+              </div>
+            </div>
+          )}
+
           {!plans ? (
             <p className="text-center text-slate-500 dark:text-slate-400">Carregando planos…</p>
           ) : plans.length === 0 ? (
@@ -197,57 +240,75 @@ export default function ServicosPlanosPage() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-3">
-              {plans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className={`relative rounded-3xl border p-8 ${
-                    plan.highlighted
-                      ? "border-purple-400 bg-white shadow-2xl shadow-purple-500/20 dark:border-purple-500 dark:bg-slate-800 md:scale-105"
-                      : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
-                  }`}
-                >
-                  {plan.highlighted && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1 text-xs font-semibold text-white">
-                      Mais popular
-                    </span>
-                  )}
+              {plans.map((plan) => {
+                const monthly = num(plan.monthlyPrice);
+                const yearly = num(plan.yearlyPrice);
+                const displayPrice =
+                  billingCycle === "YEARLY" && yearly > 0 ? yearly / 12 : monthly;
 
-                  <p className="font-display text-xl font-bold text-slate-900 dark:text-white">
-                    {plan.name}
-                  </p>
-                  {plan.description && (
-                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                      {plan.description}
-                    </p>
-                  )}
-
-                  <p className="mt-6">
-                    <span className="text-4xl font-bold text-slate-900 dark:text-white">
-                      {money(plan.monthlyPrice) ?? "Sob consulta"}
-                    </span>
-                    {plan.monthlyPrice && (
-                      <span className="text-slate-500 dark:text-slate-400">/mês</span>
-                    )}
-                  </p>
-                  {plan.yearlyPrice && (
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      ou {money(plan.yearlyPrice)}/ano
-                    </p>
-                  )}
-
-                  <Link
-                    href="/servicos#contato"
-                    className={`mt-8 flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:scale-105 ${
+                return (
+                  <div
+                    key={plan.id}
+                    className={`relative flex flex-col rounded-3xl border p-8 ${
                       plan.highlighted
-                        ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30"
-                        : "border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                        ? "border-purple-400 bg-white shadow-2xl shadow-purple-500/20 dark:border-purple-500 dark:bg-slate-800 md:scale-105"
+                        : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
                     }`}
                   >
-                    <Check size={16} />
-                    Começar agora
-                  </Link>
-                </div>
-              ))}
+                    {plan.highlighted && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1 text-xs font-semibold text-white">
+                        Mais popular
+                      </span>
+                    )}
+
+                    <p className="font-display text-xl font-bold text-slate-900 dark:text-white">
+                      {plan.name}
+                    </p>
+                    {plan.description && (
+                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                        {plan.description}
+                      </p>
+                    )}
+
+                    <p className="mt-6">
+                      <span className="text-4xl font-bold text-slate-900 dark:text-white">
+                        {displayPrice > 0 ? money(String(displayPrice)) : "Sob consulta"}
+                      </span>
+                      {displayPrice > 0 && (
+                        <span className="text-slate-500 dark:text-slate-400">/mês</span>
+                      )}
+                    </p>
+                    {billingCycle === "YEARLY" && yearly > 0 && (
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        cobrado {money(plan.yearlyPrice)}/ano
+                      </p>
+                    )}
+
+                    <div className="mt-8 flex flex-1 flex-col justify-end gap-2">
+                      <Link
+                        href={signupUrl(plan.id, billingCycle, false)}
+                        className={`flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:scale-105 ${
+                          plan.highlighted
+                            ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30"
+                            : "border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        <Check size={16} />
+                        {trialDays
+                          ? `Começar teste de ${trialDays} dia${trialDays === 1 ? "" : "s"}`
+                          : "Começar teste grátis"}
+                      </Link>
+
+                      <Link
+                        href={signupUrl(plan.id, billingCycle, true)}
+                        className="text-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:underline"
+                      >
+                        Comprar agora
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
