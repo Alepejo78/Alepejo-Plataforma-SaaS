@@ -309,3 +309,15 @@
 .theme-erp .aurora-banner {
   background-image: linear-gradient(180deg, #3b6cf0, #2456d6);
 }
+
+/* Texto longo (política de privacidade) */
+.theme-erp .prose-content {
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+.theme-erp .prose-content h2 {
+  font-family: var(--font-erp-display), sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}

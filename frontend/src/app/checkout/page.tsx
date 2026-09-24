@@ -17,7 +17,8 @@ import {
 } from "@/services/billing.service";
 import { PaymentCheckout } from "@/components/billing/PaymentCheckout";
 import { PublicNav } from "@/components/marketing/PublicNav";
-import "@/components/marketing/aurora.css";
+import { erpFontVars } from "@/components/marketing/fonts";
+import "@/components/marketing/erp.css";
 
 function extractMessage(err: unknown, fallback: string) {
   const message = (
@@ -132,9 +133,9 @@ function CheckoutForm() {
 
   if (!planId || planError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-8">
+      <div className={`${erpFontVars} theme-erp flex min-h-screen items-center justify-center p-8`}>
         <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
-          <h1 className="mb-2 text-xl font-bold text-[var(--text-primary)]">
+          <h1 className="font-display mb-2 text-2xl font-semibold text-[var(--text-primary)]">
             Escolha um plano pra começar
           </h1>
 
@@ -144,7 +145,7 @@ function CheckoutForm() {
 
           <Link
             href="/planos"
-            className="inline-block rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+            className="erp-btn erp-btn-primary"
           >
             Ver planos
           </Link>
@@ -157,10 +158,10 @@ function CheckoutForm() {
     billingCycle === "YEARLY" ? plan?.yearlyPrice : plan?.monthlyPrice;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--background)]">
+    <div className={`${erpFontVars} theme-erp relative min-h-screen overflow-hidden`}>
       <div
         aria-hidden
-        className="aurora-bg pointer-events-none absolute inset-x-0 top-0 h-[500px] opacity-[0.14]"
+        className="erp-hero pointer-events-none absolute inset-x-0 top-0 h-64"
       />
 
       <PublicNav />
@@ -168,14 +169,14 @@ function CheckoutForm() {
       <div className="relative mx-auto max-w-4xl px-6 py-12">
         <Link
           href="/planos"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-[var(--erp-ice)]/80 transition-colors hover:text-white"
         >
           <ArrowLeft size={16} />
           Voltar para os planos
         </Link>
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm">
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+          <h1 className="font-display text-3xl font-semibold text-[var(--text-primary)]">
             Finalizar compra
           </h1>
 

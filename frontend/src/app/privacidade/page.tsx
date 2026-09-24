@@ -1,27 +1,36 @@
 import Link from "next/link";
 
 import { PublicNav } from "@/components/marketing/PublicNav";
+import { erpFontVars } from "@/components/marketing/fonts";
+import "@/components/marketing/marketing-shared.css";
+import "@/components/marketing/erp.css";
 
 const lastUpdated = "30 de agosto de 2026";
 
 export default function PrivacidadePage() {
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className={`${erpFontVars} theme-erp min-h-screen`}>
       <PublicNav />
 
-      <div className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="text-3xl font-bold text-[var(--text-primary)]">
-          Política de Privacidade
-        </h1>
-        <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]">
-          AlePejo ERP Cloud
-        </p>
+      <section className="erp-hero">
+        <div className="mx-auto max-w-3xl px-6 pb-14 pt-14">
+          <p className="erp-rise erp-eyebrow" style={{ ["--i" as string]: 0 }}>
+            AlePejo ERP Cloud
+          </p>
+          <h1
+            className="erp-rise font-display mt-5 text-4xl font-semibold leading-tight sm:text-5xl"
+            style={{ ["--i" as string]: 1 }}
+          >
+            Política de Privacidade
+          </h1>
+          <p className="erp-rise mt-4 text-sm text-[var(--erp-ice)]/70" style={{ ["--i" as string]: 2 }}>
+            Última atualização: {lastUpdated}
+          </p>
+        </div>
+      </section>
 
-        <p className="mt-2 text-sm text-[var(--text-muted)]">
-          Última atualização: {lastUpdated}
-        </p>
-
-        <div className="prose-content mt-10 space-y-8 text-sm leading-relaxed text-[var(--text-secondary)]">
+      <div className="mx-auto max-w-3xl px-6 py-14">
+        <div className="prose-content space-y-8 text-sm leading-relaxed text-[var(--text-secondary)]">
           <p>
             A <strong>AlePejo Assessoria e Prestação de Serviço Ltda.</strong>,
             inscrita no CNPJ sob nº <strong>68.275.303/0001-50</strong>,
