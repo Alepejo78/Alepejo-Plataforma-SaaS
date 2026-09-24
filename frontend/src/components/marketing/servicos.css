@@ -522,3 +522,37 @@
     animation: none;
   }
 }
+
+/* ───────── Seção "Teste você mesmo": fundo próprio, em grade ───────── */
+.sv-lab {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--sv-cream);
+  background:
+    radial-gradient(55% 60% at 50% 0%, rgb(224 170 71 / 0.22), transparent 70%),
+    linear-gradient(180deg, #17110a, #21180d);
+}
+
+.sv-lab::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgb(240 197 109 / 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(240 197 109 / 0.09) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(90% 80% at 50% 30%, #000, transparent 85%);
+  -webkit-mask-image: radial-gradient(90% 80% at 50% 30%, #000, transparent 85%);
+}
+
+.sv-lab-panel {
+  animation: sv-pop 0.5s var(--sv-ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-lab-panel {
+    animation: none;
+  }
+}
