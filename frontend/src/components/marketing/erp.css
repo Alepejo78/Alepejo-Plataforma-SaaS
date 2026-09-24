@@ -299,3 +299,8 @@
     transform: none;
   }
 }
+
+/* Componentes compartilhados (FAQ) que ainda usam a classe do tema antigo */
+.theme-erp .aurora-banner {
+  background-image: linear-gradient(180deg, #3b6cf0, #2456d6);
+}

@@ -1,29 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Bell,
-  Check,
-  CheckCircle2,
-  Gift,
-  LinkIcon,
-  Sparkles,
-  TrendingUp,
-  Users,
-  Zap,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Bell, Check, Gift, Link as LinkIcon, Star } from "lucide-react";
 
 import { getServicosPublicPlans, type ServicosPlan } from "@/services/servicos-planos.service";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
-import { marketingFontVars } from "@/components/marketing/fonts";
+import { servicosFontVars } from "@/components/marketing/fonts";
 import { Reveal } from "@/components/marketing/Reveal";
-import "@/components/marketing/vibrant.css";
 import "@/components/marketing/marketing-shared.css";
+import "@/components/marketing/servicos.css";
 
 function money(value: string | null) {
   if (value == null) return null;
@@ -75,12 +64,6 @@ const AVAILABLE_NOW = [
   },
 ];
 
-const STATS = [
-  { value: "50K+", label: "Negócios ativos", icon: TrendingUp },
-  { value: "2M+", label: "Agendamentos", icon: CheckCircle2 },
-  { value: "95%", label: "Satisfação", icon: Users },
-];
-
 export default function ServicosPlanosPage() {
   const [plans, setPlans] = useState<ServicosPlan[] | null>(null);
   const [trialDays, setTrialDays] = useState<number | null>(null);
@@ -96,195 +79,151 @@ export default function ServicosPlanosPage() {
   }, []);
 
   return (
-    <div className={`${marketingFontVars} marketing-page theme-vibrant`}>
+    <div className={`${servicosFontVars} marketing-page theme-servicos`}>
       <MarketingNav links={NAV_LINKS} />
 
-      {/* Hero Section */}
-      <section className="relative z-0 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <div aria-hidden className="absolute inset-0 bg-[linear-gradient(135deg,rgba(59,130,246,0.1),rgba(147,51,234,0.1),rgba(236,72,153,0.1))]" />
-        <div aria-hidden className="mkt-dotgrid pointer-events-none absolute inset-0 opacity-20" />
-
-        <Reveal className="relative mx-auto max-w-4xl px-6 py-24 lg:py-32 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30 px-4 py-2 mb-6">
-            <Sparkles size={16} className="text-purple-600 dark:text-purple-400" />
-            <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+      {/* Abertura */}
+      <section className="sv-hero">
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 pb-20 pt-16 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-center lg:py-24">
+          <div className="max-w-xl">
+            <p className="sv-rise sv-eyebrow" style={{ ["--i" as string]: 0 }}>
               {trialDays ? `${trialDays} dias de teste grátis` : "Planos AlePejo Serviços"}
-            </span>
-          </div>
-
-          <h1 className="font-display text-5xl font-bold leading-tight text-slate-900 dark:text-white sm:text-6xl lg:text-7xl">
-            Planos para cada
-            <br />
-            <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 bg-clip-text text-transparent">
-              tamanho de agenda
-            </span>
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-2xl text-xl text-slate-600 dark:text-slate-300 leading-relaxed">
-            Escolha o plano ideal pro seu negócio e comece a agendar hoje mesmo.
-          </p>
-
-          {/* Stats */}
-          <div className="mx-auto mt-12 grid grid-cols-3 gap-6 max-w-2xl">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="flex flex-col items-center gap-2">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg">
-                  <stat.icon size={20} />
-                </div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {stat.value}
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </section>
-
-      {/* Available Now Section */}
-      <Reveal as="section" className="py-24 bg-white dark:bg-slate-900">
-        <div className="mx-auto max-w-4xl px-6">
-          <div className="mx-auto max-w-2xl text-center mb-16">
-            <span className="inline-flex items-center gap-2 rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30 px-4 py-2 mb-4">
-              <Zap size={16} className="text-purple-600 dark:text-purple-400" />
-              <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
-                Já disponível
-              </span>
-            </span>
-            <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-              Já dá pra usar hoje
-            </h2>
-            <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-              Essas funcionalidades já estão funcionando e podem ser usadas agora mesmo
             </p>
+            <h1
+              className="sv-rise font-display mt-6 text-4xl font-semibold leading-[1.05] sm:text-5xl"
+              style={{ ["--i" as string]: 1 }}
+            >
+              Planos para o tamanho da sua agenda.
+            </h1>
+            <p
+              className="sv-rise mt-6 max-w-[48ch] text-lg leading-relaxed text-[var(--sv-cream)]/80"
+              style={{ ["--i" as string]: 2 }}
+            >
+              Escolha o plano do seu negócio e comece a agendar hoje mesmo.
+            </p>
+
+            <div
+              className="sv-rise mt-9 inline-flex items-center gap-1 rounded-full border border-[var(--sv-night-line)] bg-[rgb(255_240_210/0.05)] p-1"
+              style={{ ["--i" as string]: 3 }}
+              role="group"
+              aria-label="Ciclo de cobrança"
+            >
+              {(
+                [
+                  ["YEARLY", "Pago anualmente"],
+                  ["MONTHLY", "Pago mensalmente"],
+                ] as const
+              ).map(([cycle, label]) => (
+                <button
+                  key={cycle}
+                  type="button"
+                  onClick={() => setBillingCycle(cycle)}
+                  aria-pressed={billingCycle === cycle}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 active:scale-95 ${
+                    billingCycle === cycle
+                      ? "bg-[var(--sv-gold-soft)] text-[#1f170d]"
+                      : "text-[var(--sv-cream)]/80 hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {AVAILABLE_NOW.map((item) => (
-              <div
-                key={item.title}
-                className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-8 border border-slate-200 dark:border-slate-700 transition-all hover:shadow-2xl hover:scale-[1.02]"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform" />
-
-                <div className="relative">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-xl group-hover:scale-110 transition-transform">
-                    <item.icon size={28} />
-                  </div>
-
-                  <p className="font-display mt-6 text-xl font-bold text-slate-900 dark:text-white">
-                    {item.title}
-                  </p>
-                  <p className="mt-3 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
+          <div className="sv-rise hidden lg:block" style={{ ["--i" as string]: 2 }}>
+            <div className="sv-laptop">
+              <div className="sv-laptop-screen">
+                <Image
+                  src="/marketing/servicos/agenda.webp"
+                  alt="Agenda do dia do AlePejo Serviços"
+                  width={1600}
+                  height={643}
+                  priority
+                  sizes="40vw"
+                  className="sv-shot"
+                />
               </div>
-            ))}
+              <div className="sv-laptop-base" aria-hidden />
+            </div>
           </div>
         </div>
-      </Reveal>
+      </section>
 
-      {/* Plans Section */}
-      <Reveal as="section" className="py-24 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+      {/* Planos */}
+      <Reveal as="section" className="bg-[var(--mkt-bg)] py-24">
         <div className="mx-auto max-w-5xl px-6">
-          <div className="mx-auto max-w-2xl text-center mb-16">
-            <h2 className="font-display text-4xl font-bold text-slate-900 dark:text-white">
-              Nossos planos
-            </h2>
-            <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+          <div className="mb-14 max-w-2xl">
+            <p className="sv-eyebrow sv-eyebrow-light">Nossos planos</p>
+            <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
               {trialDays
                 ? `Todos os planos começam com ${trialDays} dias de teste grátis.`
                 : "Escolha o plano que se encaixa no seu negócio."}
-            </p>
+            </h2>
           </div>
 
-          {plans && plans.length > 0 && (
-            <div className="mb-10 flex justify-center">
-              <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1">
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle("YEARLY")}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                    billingCycle === "YEARLY"
-                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  Pago anualmente
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle("MONTHLY")}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                    billingCycle === "MONTHLY"
-                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  Pago mensalmente
-                </button>
-              </div>
-            </div>
-          )}
-
           {!plans ? (
-            <p className="text-center text-slate-500 dark:text-slate-400">Carregando planos…</p>
+            <div className="grid gap-6 md:grid-cols-3" aria-busy="true" aria-label="Carregando planos">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="sv-skel h-80 rounded-3xl" />
+              ))}
+            </div>
           ) : plans.length === 0 ? (
-            <div className="glass-card mx-auto max-w-md rounded-3xl p-8 text-center bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700">
-              <p className="text-slate-600 dark:text-slate-400">
+            <div className="mkt-panel max-w-md p-8">
+              <p className="text-[var(--mkt-muted)]">
                 Estamos fechando os planos. Fale com a gente pra saber o que já está disponível.
               </p>
-              <Link
-                href="/servicos#contato"
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-purple-500/30 transition-all hover:scale-105"
-              >
+              <Link href="/servicos#contato" className="sv-btn sv-btn-ink mt-6">
                 Falar com consultor
-                <ArrowRight size={18} />
+                <ArrowRight size={17} aria-hidden />
               </Link>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid items-stretch gap-6 md:grid-cols-3">
               {plans.map((plan) => {
                 const monthly = num(plan.monthlyPrice);
                 const yearly = num(plan.yearlyPrice);
-                const displayPrice =
-                  billingCycle === "YEARLY" && yearly > 0 ? yearly / 12 : monthly;
+                const displayPrice = billingCycle === "YEARLY" && yearly > 0 ? yearly / 12 : monthly;
 
                 return (
                   <div
                     key={plan.id}
-                    className={`relative flex flex-col rounded-3xl border p-8 ${
+                    className={`sv-plan relative flex flex-col rounded-3xl border p-8 ${
                       plan.highlighted
-                        ? "border-purple-400 bg-white shadow-2xl shadow-purple-500/20 dark:border-purple-500 dark:bg-slate-800 md:scale-105"
-                        : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+                        ? "border-[var(--sv-gold)]/50 bg-[var(--sv-night)] text-[var(--sv-cream)] shadow-[0_30px_60px_-30px_rgb(70_45_10/0.7)] md:-translate-y-3"
+                        : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-[var(--mkt-ink)]"
                     }`}
                   >
                     {plan.highlighted && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1 text-xs font-semibold text-white">
+                      <span className="absolute -top-3 left-8 inline-flex items-center gap-1.5 rounded-full bg-[var(--sv-gold-soft)] px-3 py-1 text-xs font-bold text-[#1f170d]">
+                        <Star size={12} aria-hidden />
                         Mais popular
                       </span>
                     )}
 
-                    <p className="font-display text-xl font-bold text-slate-900 dark:text-white">
-                      {plan.name}
-                    </p>
+                    <p className="font-display text-xl font-semibold">{plan.name}</p>
                     {plan.description && (
-                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                      <p
+                        className={`mt-2 text-sm leading-relaxed ${
+                          plan.highlighted ? "text-[var(--sv-cream)]/75" : "text-[var(--mkt-muted)]"
+                        }`}
+                      >
                         {plan.description}
                       </p>
                     )}
 
                     <p className="mt-6">
-                      <span className="text-4xl font-bold text-slate-900 dark:text-white">
+                      <span className="font-display text-4xl font-semibold [font-variant-numeric:tabular-nums]">
                         {displayPrice > 0 ? money(String(displayPrice)) : "Sob consulta"}
                       </span>
                       {displayPrice > 0 && (
-                        <span className="text-slate-500 dark:text-slate-400">/mês</span>
+                        <span className={plan.highlighted ? "text-[var(--sv-cream)]/70" : "text-[var(--mkt-muted)]"}>
+                          /mês
+                        </span>
                       )}
                     </p>
                     {billingCycle === "YEARLY" && yearly > 0 && (
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      <p className={`mt-1 text-sm ${plan.highlighted ? "text-[var(--sv-cream)]/70" : "text-[var(--mkt-muted)]"}`}>
                         cobrado {money(plan.yearlyPrice)}/ano
                       </p>
                     )}
@@ -292,13 +231,13 @@ export default function ServicosPlanosPage() {
                     <div className="mt-8 flex flex-1 flex-col justify-end gap-2">
                       <Link
                         href={signupUrl(plan.id, billingCycle)}
-                        className={`flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:scale-105 ${
+                        className={`sv-btn justify-center ${
                           plan.highlighted
-                            ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30"
-                            : "border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                            ? "sv-btn-gold"
+                            : "border border-[var(--mkt-border)] text-[var(--mkt-ink)] hover:border-[var(--mkt-accent-2)]"
                         }`}
                       >
-                        <Check size={16} />
+                        <Check size={16} aria-hidden />
                         {trialDays
                           ? `Começar teste de ${trialDays} dia${trialDays === 1 ? "" : "s"}`
                           : "Começar teste grátis"}
@@ -306,7 +245,11 @@ export default function ServicosPlanosPage() {
 
                       <Link
                         href={checkoutUrl(plan.id, billingCycle)}
-                        className="text-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:underline"
+                        className={`rounded-lg py-2 text-center text-sm font-semibold hover:underline ${
+                          plan.highlighted
+                            ? "text-[var(--sv-cream)]/80 hover:text-white"
+                            : "text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)]"
+                        }`}
                       >
                         Comprar agora
                       </Link>
@@ -319,14 +262,42 @@ export default function ServicosPlanosPage() {
         </div>
       </Reveal>
 
-      {/* Back Button */}
-      <section className="py-12 bg-white dark:bg-slate-900">
-        <div className="mx-auto max-w-4xl px-6">
+      {/* Já disponível */}
+      <Reveal as="section" className="bg-[var(--mkt-bg-alt)] py-24">
+        <div className="mx-auto grid max-w-5xl gap-14 px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
+          <div>
+            <p className="sv-eyebrow sv-eyebrow-light">Já disponível</p>
+            <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
+              Já dá pra usar hoje.
+            </h2>
+            <p className="mt-4 leading-relaxed text-[var(--mkt-muted)]">
+              Essas funcionalidades já estão funcionando e podem ser usadas agora mesmo.
+            </p>
+          </div>
+
+          <ul className="divide-y divide-[var(--mkt-border)] border-y border-[var(--mkt-border)]">
+            {AVAILABLE_NOW.map((item) => (
+              <li key={item.title} className="sv-benefit grid grid-cols-[auto_1fr] gap-x-5 py-6">
+                <span className="mt-0.5 flex size-11 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--mkt-accent-2)_16%,transparent)] text-[var(--mkt-accent)]">
+                  <item.icon size={20} strokeWidth={1.75} aria-hidden />
+                </span>
+                <div>
+                  <h3 className="font-display text-xl font-semibold text-[var(--mkt-ink)]">{item.title}</h3>
+                  <p className="mt-1.5 leading-relaxed text-[var(--mkt-muted)]">{item.description}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Reveal>
+
+      <section className="bg-[var(--mkt-bg)] py-10">
+        <div className="mx-auto max-w-5xl px-6">
           <Link
             href="/servicos"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium text-[var(--mkt-muted)] transition-colors hover:text-[var(--mkt-accent)]"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={16} aria-hidden />
             Voltar para o AlePejo Serviços
           </Link>
         </div>
@@ -338,13 +309,6 @@ export default function ServicosPlanosPage() {
       />
 
       <MarketingFooter page="servicos-planos" />
-
-      <style jsx>{`
-        .glass-card {
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-        }
-      `}</style>
     </div>
   );
 }

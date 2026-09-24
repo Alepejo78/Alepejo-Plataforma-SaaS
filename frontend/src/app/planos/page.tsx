@@ -20,7 +20,8 @@ import {
 } from "@/services/company-onboarding.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
 import { Faq } from "@/components/marketing/Faq";
-import "@/components/marketing/aurora.css";
+import { erpFontVars } from "@/components/marketing/fonts";
+import "@/components/marketing/erp.css";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
@@ -593,56 +594,64 @@ export default function PlanosPage() {
   const customPlan = plans.find((p) => p.code === "CUSTOM");
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--background)]">
-      <div
-        aria-hidden
-        className="aurora-bg pointer-events-none absolute inset-x-0 top-0 h-[600px] opacity-[0.14]"
-      />
-
+    <div className={`${erpFontVars} theme-erp relative min-h-screen overflow-hidden`}>
       <PublicNav hidePlanosLink />
 
-      <div className="relative mx-auto max-w-5xl px-6 py-16">
-        <div className="mb-12 text-center">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">
-            Escolha o <span className="aurora-text">plano</span> do seu
-            negócio
+      <section className="erp-hero">
+        <div className="relative mx-auto max-w-5xl px-6 pb-16 pt-16 text-center">
+          <p className="erp-rise erp-eyebrow" style={{ ["--i" as string]: 0 }}>
+            Planos AlePejo ERP
+          </p>
+
+          <h1
+            className="erp-rise font-display mt-5 text-4xl font-semibold leading-[1.08] sm:text-5xl"
+            style={{ ["--i" as string]: 1 }}
+          >
+            Escolha o plano do seu negócio.
           </h1>
 
-          <p className="mt-3 text-[var(--text-muted)]">
+          <p
+            className="erp-rise mx-auto mt-4 max-w-xl text-[var(--erp-ice)]/80"
+            style={{ ["--i" as string]: 2 }}
+          >
             {trialDays} dia{trialDays === 1 ? "" : "s"} grátis pra testar,
             sem cartão de crédito. Cancele quando quiser.
           </p>
-        </div>
 
-        {!loading && !error && (
-          <div className="mb-8 flex justify-center">
-            <div className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1">
-              <button
-                type="button"
-                onClick={() => setBillingCycle("YEARLY")}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                  billingCycle === "YEARLY"
-                    ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
-                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                Pago anualmente
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingCycle("MONTHLY")}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                  billingCycle === "MONTHLY"
-                    ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
-                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                Pago mensalmente
-              </button>
+          {!loading && !error && (
+            <div className="erp-rise mt-8 flex justify-center" style={{ ["--i" as string]: 3 }}>
+              <div className="erp-glass inline-flex items-center gap-1 rounded-full p-1">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("YEARLY")}
+                  aria-pressed={billingCycle === "YEARLY"}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95 ${
+                    billingCycle === "YEARLY"
+                      ? "bg-[var(--erp-blue)] text-[#0a1424]"
+                      : "text-[var(--erp-ice)]/80 hover:text-white"
+                  }`}
+                >
+                  Pago anualmente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle("MONTHLY")}
+                  aria-pressed={billingCycle === "MONTHLY"}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95 ${
+                    billingCycle === "MONTHLY"
+                      ? "bg-[var(--erp-blue)] text-[#0a1424]"
+                      : "text-[var(--erp-ice)]/80 hover:text-white"
+                  }`}
+                >
+                  Pago mensalmente
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      </section>
 
+      <div className="relative mx-auto max-w-5xl px-6 pb-16 pt-12">
         {loading && (
           <div className="grid gap-6 md:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -708,14 +717,14 @@ export default function PlanosPage() {
               <div
                 key={plan.id}
                 data-plano
-                className={`relative flex w-[280px] shrink-0 snap-start flex-col rounded-2xl border bg-[var(--surface)] p-6 sm:w-[300px] ${
+                className={`relative flex w-[280px] shrink-0 snap-start flex-col rounded-2xl border bg-[var(--surface)] p-6 transition-transform duration-300 hover:-translate-y-1 sm:w-[300px] ${
                   plan.highlighted
-                    ? "border-transparent shadow-2xl shadow-[color:rgb(124_58_237_/_0.25)] ring-2 ring-[#7c3aed]/40"
+                    ? "border-transparent shadow-2xl shadow-[color:rgb(36_86_214_/_0.25)] ring-2 ring-[var(--primary)]/40"
                     : "border-[var(--border)]"
                 }`}
               >
                 {plan.highlighted && (
-                  <span className="aurora-banner absolute -top-3 left-6 flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white">
+                  <span className="erp-accent absolute -top-3 left-6 flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white">
                     <Star size={12} />
                     Mais escolhido
                   </span>
@@ -789,9 +798,9 @@ export default function PlanosPage() {
                 <div className="mt-6 flex flex-col gap-2">
                   <Link
                     href={`/cadastro-empresa?planId=${plan.id}`}
-                    className={`rounded-xl px-4 py-3 text-center text-sm font-semibold transition-transform ${
+                    className={`rounded-xl px-4 py-3 text-center text-sm font-semibold transition-all ${
                       plan.highlighted
-                        ? "aurora-banner text-white shadow-md hover:scale-[1.02]"
+                        ? "erp-accent text-white shadow-md hover:-translate-y-0.5 active:scale-[0.98]"
                         : "border border-[var(--border)] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                     }`}
                   >

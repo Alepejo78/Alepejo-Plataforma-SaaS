@@ -653,7 +653,7 @@ function Contact() {
                 </div>
                 <div>
                   <p className="text-sm text-[var(--text-muted)]">Email</p>
-                  <p className="font-semibold text-[var(--text-primary)]">contato@alepejo.com.br</p>
+                  <a href="mailto:suporte@alepejo.com.br" className="font-semibold text-[var(--text-primary)] hover:underline">suporte@alepejo.com.br</a>
                 </div>
               </div>
 
@@ -672,8 +672,8 @@ function Contact() {
                   <MapPin size={20} />
                 </div>
                 <div>
-                  <p className="text-sm text-[var(--text-muted)]">Endereço</p>
-                  <p className="font-semibold text-[var(--text-primary)]">Londrina - PR, Brasil</p>
+                  <p className="text-sm text-[var(--text-muted)]">Atendimento</p>
+                  <p className="font-semibold text-[var(--text-primary)]">Atendimento remoto em todo o Brasil, presencial a negociar.</p>
                 </div>
               </div>
             </div>

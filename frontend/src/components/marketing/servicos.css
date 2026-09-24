@@ -436,3 +436,48 @@
   background-image: linear-gradient(135deg, #7a520b, #a86f14);
   color: #ffffff;
 }
+
+/* ───────── Planos ───────── */
+.sv-plan {
+  transition:
+    transform 0.4s var(--sv-ease),
+    box-shadow 0.4s ease;
+}
+
+.sv-plan:hover {
+  transform: translateY(-6px);
+}
+
+.sv-skel {
+  position: relative;
+  overflow: hidden;
+  background: var(--mkt-surface-2);
+}
+
+.sv-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.5), transparent);
+  animation: sv-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes sv-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-plan,
+  .sv-plan:hover {
+    transition: none;
+    transform: none;
+  }
+
+  .sv-skel::after {
+    animation: none;
+    display: none;
+  }
+}
