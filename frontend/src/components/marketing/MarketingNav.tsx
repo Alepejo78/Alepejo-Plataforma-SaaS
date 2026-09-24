@@ -18,12 +18,17 @@ export function MarketingNav({
   ctaHref,
   secondaryCtaLabel,
   secondaryCtaHref,
+  ctaClassName,
+  secondaryCtaClassName,
 }: {
   links: NavLink[];
   ctaLabel?: string;
   ctaHref?: string;
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
+  /** Substituem o estilo padrão dos botões (ex.: as cores de cada produto em /inicio). */
+  ctaClassName?: string;
+  secondaryCtaClassName?: string;
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)]/85 backdrop-blur-md">
@@ -64,7 +69,10 @@ export function MarketingNav({
           {secondaryCtaLabel && secondaryCtaHref && (
             <Link
               href={secondaryCtaHref}
-              className="hidden rounded-full border border-[var(--mkt-border)] px-4 py-2.5 text-sm font-semibold text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-accent)] hover:text-[var(--mkt-accent)] sm:inline-flex"
+              className={
+                secondaryCtaClassName ??
+                "hidden rounded-full border border-[var(--mkt-border)] px-4 py-2.5 text-sm font-semibold text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-accent)] hover:text-[var(--mkt-accent)] sm:inline-flex"
+              }
             >
               {secondaryCtaLabel}
             </Link>
@@ -73,7 +81,10 @@ export function MarketingNav({
           {ctaLabel && ctaHref && (
             <Link
               href={ctaHref}
-              className="rounded-full bg-[var(--mkt-ink)] px-5 py-2.5 text-sm font-semibold text-[var(--mkt-bg)] transition-transform hover:scale-[1.04]"
+              className={
+                ctaClassName ??
+                "rounded-full bg-[var(--mkt-ink)] px-5 py-2.5 text-sm font-semibold text-[var(--mkt-bg)] transition-transform hover:scale-[1.04]"
+              }
             >
               {ctaLabel}
             </Link>

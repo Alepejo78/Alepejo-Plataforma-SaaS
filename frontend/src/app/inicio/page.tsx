@@ -70,6 +70,8 @@ export default function InicioPage() {
         ctaHref="/servicos"
         secondaryCtaLabel="AlePejo ERP"
         secondaryCtaHref="/institucional"
+        secondaryCtaClassName="erp-btn erp-btn-primary !hidden !px-5 !py-2.5 sm:!inline-flex"
+        ctaClassName="sv-btn sv-btn-gold !px-5 !py-2.5"
       />
 
       {/* Abertura */}
