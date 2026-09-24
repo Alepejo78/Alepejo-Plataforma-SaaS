@@ -1,0 +1,438 @@
+/*
+ * Identidade visual do AlePejo Serviços (`/servicos`): café escuro, creme
+ * e dourado — a mesma paleta do próprio sistema (sidebar café + botões
+ * dourados), pra o que se promete na página ser o que aparece na tela.
+ * Só declara tokens `--mkt-*` (lidos por nav/rodapé/contato/tour) e o
+ * que é exclusivo desta página (`sv-*`). Animações só com transform e
+ * opacity; tudo cai pra estado final sem movimento em reduced-motion.
+ */
+
+.theme-servicos {
+  --font-marketing-display: var(--font-servicos-display);
+  --font-marketing-body: var(--font-servicos-body);
+
+  --mkt-bg: #f6efe2;
+  --mkt-bg-alt: #fbf7ee;
+  --mkt-surface: #fffdf8;
+  --mkt-surface-2: #efe4cf;
+  --mkt-ink: #1f170d;
+  --mkt-muted: #6b5a45;
+  --mkt-border: #e3d5b8;
+  --mkt-accent: #8a5e0d;
+  --mkt-accent-2: #b7791a;
+  --mkt-accent-3: #0d7a6e;
+  --mkt-contrast: #fffdf8;
+
+  --sv-night: #17110a;
+  --sv-night-2: #21180d;
+  --sv-night-line: rgb(255 240 210 / 0.12);
+  --sv-gold: #e0aa47;
+  --sv-gold-soft: #f0c56d;
+  --sv-cream: #f7eddb;
+  --sv-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .theme-servicos {
+  --mkt-bg: #16100a;
+  --mkt-bg-alt: #1d160d;
+  --mkt-surface: #251c11;
+  --mkt-surface-2: #2e2314;
+  --mkt-ink: #f7eddb;
+  --mkt-muted: #cbb896;
+  --mkt-border: #3d2f1b;
+  --mkt-accent: #e0aa47;
+  --mkt-accent-2: #f0c56d;
+  --mkt-accent-3: #3cc3b0;
+  --mkt-contrast: #16100a;
+}
+
+.theme-servicos .font-display {
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
+/* ───────── Botões: hover, foco visível e clique ───────── */
+.sv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.95rem 1.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    transform 0.3s var(--sv-ease),
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.3s ease,
+    color 0.25s ease;
+}
+
+.sv-btn svg {
+  transition: transform 0.3s var(--sv-ease);
+}
+
+.sv-btn:hover svg {
+  transform: translateX(4px);
+}
+
+.sv-btn:hover {
+  transform: translateY(-2px);
+}
+
+.sv-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.sv-btn:focus-visible,
+.sv-tab:focus-visible {
+  outline: 2px solid var(--sv-gold-soft);
+  outline-offset: 3px;
+}
+
+.sv-btn-gold {
+  background: linear-gradient(135deg, #f0c56d, #d9a03c);
+  color: #1f170d;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.45),
+    0 10px 28px -12px rgb(217 160 60 / 0.7);
+}
+
+.sv-btn-gold:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.55),
+    0 16px 34px -12px rgb(217 160 60 / 0.85);
+}
+
+.sv-btn-ghost {
+  border: 1px solid rgb(255 240 210 / 0.28);
+  color: var(--sv-cream);
+  background: rgb(255 240 210 / 0.04);
+  backdrop-filter: blur(8px);
+}
+
+.sv-btn-ghost:hover {
+  border-color: var(--sv-gold-soft);
+  background: rgb(255 240 210 / 0.1);
+}
+
+.sv-btn-ink {
+  background: #1f170d;
+  color: #f7eddb;
+}
+
+.sv-btn-ink:hover {
+  background: #33260f;
+}
+
+/* ───────── Hero ───────── */
+.sv-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--sv-cream);
+  background:
+    radial-gradient(60% 55% at 78% 20%, rgb(224 170 71 / 0.22), transparent 70%),
+    radial-gradient(45% 50% at 8% 85%, rgb(13 122 110 / 0.18), transparent 70%),
+    linear-gradient(180deg, #17110a 0%, #1d150b 100%);
+}
+
+.sv-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(rgb(255 240 210 / 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+}
+
+.sv-rise {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: sv-rise 0.85s var(--sv-ease) forwards;
+  animation-delay: calc(var(--i, 0) * 90ms + 80ms);
+}
+
+@keyframes sv-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sv-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sv-gold);
+}
+
+.sv-eyebrow::before {
+  content: "";
+  width: 1.75rem;
+  height: 1px;
+  background: currentColor;
+}
+
+.sv-eyebrow-light {
+  color: var(--mkt-accent);
+}
+
+/* Vidro com borda de refração */
+.sv-glass {
+  background: rgb(255 244 222 / 0.08);
+  border: 1px solid rgb(255 240 210 / 0.16);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ───────── Notebook e janela do sistema ───────── */
+.sv-laptop {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: perspective(1600px) rotateY(var(--ry, -6deg)) rotateX(var(--rx, 2deg));
+  transition: transform 0.6s var(--sv-ease);
+  will-change: transform;
+}
+
+.sv-laptop-screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px 14px 4px 4px;
+  border: 8px solid #0d0905;
+  border-bottom-width: 10px;
+  background: #0d0905;
+  box-shadow:
+    0 50px 80px -30px rgb(0 0 0 / 0.65),
+    0 0 0 1px rgb(255 240 210 / 0.1);
+}
+
+.sv-laptop-base {
+  height: 12px;
+  margin: 0 -4%;
+  border-radius: 0 0 18px 18px;
+  background: linear-gradient(180deg, #3a2f22, #1a140c);
+  box-shadow: 0 24px 40px -18px rgb(0 0 0 / 0.7);
+}
+
+.sv-laptop-base::before {
+  content: "";
+  display: block;
+  width: 18%;
+  height: 4px;
+  margin: 0 auto;
+  border-radius: 0 0 8px 8px;
+  background: #0d0905;
+}
+
+.sv-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Cartões flutuantes (telas menores sobre o notebook) */
+.sv-float {
+  transform: translateY(0);
+  animation: sv-float 9s ease-in-out infinite;
+}
+
+@keyframes sv-float {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* ───────── Vitrine com abas ───────── */
+.sv-tab {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-left: 2px solid var(--mkt-border);
+  padding: 0.85rem 1rem 0.85rem 1.25rem;
+  text-align: left;
+  color: var(--mkt-muted);
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.3s var(--sv-ease);
+}
+
+.sv-tab:hover {
+  color: var(--mkt-ink);
+  transform: translateX(3px);
+}
+
+.sv-tab[aria-selected="true"] {
+  color: var(--mkt-ink);
+  border-color: var(--mkt-accent-2);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--mkt-accent-2) 12%, transparent), transparent);
+}
+
+.sv-tab-desc {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.4s var(--sv-ease),
+    opacity 0.3s ease;
+}
+
+.sv-tab-desc > span {
+  overflow: hidden;
+}
+
+.sv-tab[aria-selected="true"] .sv-tab-desc {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.sv-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(1.015);
+  transition:
+    opacity 0.5s ease,
+    transform 0.7s var(--sv-ease);
+  pointer-events: none;
+}
+
+.sv-slide[data-active="true"] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* Destaque sobre área real da captura */
+.sv-hl {
+  position: absolute;
+  border-radius: 10px;
+  border: 2px solid var(--sv-gold-soft);
+  background: rgb(240 197 109 / 0.1);
+  box-shadow: 0 0 0 9999px rgb(23 17 10 / 0);
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity 0.45s ease,
+    transform 0.6s var(--sv-ease);
+  transition-delay: 0s;
+}
+
+.sv-slide[data-active="true"] .sv-hl {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(0.35s + var(--d, 0) * 0.18s);
+}
+
+.sv-hl-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translateY(calc(-100% - 6px));
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1f170d;
+  background: var(--sv-gold-soft);
+}
+
+/* ───────── Passos do link público ───────── */
+.sv-step {
+  transition: transform 0.5s var(--sv-ease), box-shadow 0.5s ease;
+}
+
+.sv-step:hover {
+  transform: translateY(-8px) rotate(0deg);
+}
+
+/* ───────── Lista de benefícios ───────── */
+.sv-benefit {
+  transition: background-color 0.3s ease, padding-left 0.4s var(--sv-ease);
+}
+
+.sv-benefit:hover {
+  padding-left: 0.75rem;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--mkt-accent-2) 9%, transparent), transparent);
+}
+
+.sv-segment {
+  transition:
+    transform 0.3s var(--sv-ease),
+    background-color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.sv-segment:hover {
+  transform: translateY(-3px);
+  border-color: var(--mkt-accent-2);
+  background: color-mix(in srgb, var(--mkt-accent-2) 10%, var(--mkt-surface));
+}
+
+.sv-night {
+  color: var(--sv-cream);
+  background:
+    radial-gradient(50% 60% at 15% 0%, rgb(224 170 71 / 0.16), transparent 70%),
+    linear-gradient(180deg, var(--sv-night), var(--sv-night-2));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-rise {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .sv-float {
+    animation: none;
+  }
+
+  .sv-laptop,
+  .sv-slide,
+  .sv-hl,
+  .sv-btn,
+  .sv-tab,
+  .sv-step,
+  .sv-segment,
+  .sv-benefit {
+    transition: none;
+  }
+
+  .sv-btn:hover,
+  .sv-btn:hover svg,
+  .sv-tab:hover,
+  .sv-step:hover,
+  .sv-segment:hover {
+    transform: none;
+  }
+}
+
+/* Tela pequena: sem inclinação 3D nem cartões flutuantes */
+@media (max-width: 1023px) {
+  .sv-laptop {
+    transform: none;
+  }
+}
+
+/* Classes herdadas pelo tour de demonstração (ServicosDemoTour), agora no dourado da marca */
+.theme-servicos .vibrant-banner {
+  background-image: linear-gradient(120deg, #7a520b 0%, #a86f14 100%);
+}
+
+.theme-servicos .vibrant-icon-badge {
+  background-image: linear-gradient(135deg, #7a520b, #a86f14);
+  color: #ffffff;
+}

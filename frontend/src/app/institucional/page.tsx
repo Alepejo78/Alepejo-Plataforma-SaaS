@@ -12,36 +12,27 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ArrowRight,
-  BadgeCheck,
   BarChart3,
   CheckCircle2,
   Clock,
   Cpu,
   Database,
   Eye,
-  Factory,
-  Globe,
   LayoutDashboard,
   Loader2,
   List,
   Mail,
   MapPin,
-  MessageCircle,
   Pause,
   Play,
   Plus,
   Search,
   Settings2,
-  ShieldCheck,
   ShoppingCart,
   Smartphone,
-  Sparkles,
   Store,
   TrendingUp,
-  Truck,
   Users,
-  Zap,
 } from "lucide-react";
 
 import { systemConfig } from "@/config/system";
@@ -52,7 +43,11 @@ import { PublicNav } from "@/components/marketing/PublicNav";
 import { Faq } from "@/components/marketing/Faq";
 import { ChromaKeyVideo } from "@/components/marketing/ChromaKeyVideo";
 import { pickVoice, stepDuration, useSpeechVoices } from "@/components/marketing/guided-narration";
-import "@/components/marketing/aurora.css";
+import { erpFontVars } from "@/components/marketing/fonts";
+import { ErpAudience, ErpFeatures, ErpHero, ErpShowcase, ErpValueProps } from "@/components/marketing/ErpSections";
+import "@/components/marketing/marketing-shared.css";
+import "@/components/marketing/servicos.css";
+import "@/components/marketing/erp.css";
 
 function useTrialDays() {
   const [trialDays, setTrialDays] = useState(14);
@@ -109,10 +104,10 @@ type BadgeTone = "success" | "warning" | "danger" | "neutral";
 type DemoListRow = (string | { label: string; tone: BadgeTone })[];
 
 const BADGE_CLASS: Record<BadgeTone, string> = {
-  success: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  warning: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  danger: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  neutral: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
+  success: "bg-emerald-100 text-emerald-700",
+  warning: "bg-amber-100 text-amber-700",
+  danger: "bg-red-100 text-red-700",
+  neutral: "bg-[var(--primary-soft)] text-[var(--text-secondary)]",
 };
 
 const demoTabs: {
@@ -264,10 +259,10 @@ function KpiCardsMock({ cards }: { cards: { label: string; value: string; sub?: 
   return (
     <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
       {cards.map((c) => (
-        <div key={c.label} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-800">
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{c.label}</p>
-          <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{c.value}</p>
-          {c.sub && <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-500">{c.sub}</p>}
+        <div key={c.label} className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3.5">
+          <p className="text-xs font-medium text-[var(--text-muted)]">{c.label}</p>
+          <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">{c.value}</p>
+          {c.sub && <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">{c.sub}</p>}
         </div>
       ))}
     </div>
@@ -277,13 +272,13 @@ function KpiCardsMock({ cards }: { cards: { label: string; value: string; sub?: 
 function ListMock({ columns, rows }: { columns: string[]; rows: DemoListRow[] }) {
   return (
     <>
-      <div className="mt-4 flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+      <div className="mt-4 flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 text-xs text-[var(--text-muted)]">
         <Search size={13} />
         Pesquisar...
       </div>
-      <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+      <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--border)]">
         <div className="min-w-[440px]">
-          <div className="flex bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+          <div className="flex bg-[var(--background)] px-4 py-2.5 text-xs font-semibold text-[var(--text-muted)]">
             {columns.map((col, i) => (
               <span key={col} className={i === 0 ? "flex-1" : "w-28 shrink-0 text-right"}>
                 {col}
@@ -291,11 +286,11 @@ function ListMock({ columns, rows }: { columns: string[]; rows: DemoListRow[] })
             ))}
           </div>
           {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex items-center border-t border-slate-200 px-4 py-3 text-sm dark:border-slate-700">
+            <div key={rowIndex} className="flex items-center border-t border-[var(--border)] px-4 py-3 text-sm">
               {row.map((cell, cellIndex) => (
                 <span
                   key={cellIndex}
-                  className={cellIndex === 0 ? "flex-1 truncate text-slate-900 dark:text-white" : "w-28 shrink-0 text-right text-slate-600 dark:text-slate-400"}
+                  className={cellIndex === 0 ? "flex-1 truncate text-[var(--text-primary)]" : "w-28 shrink-0 text-right text-[var(--text-muted)]"}
                 >
                   {typeof cell === "object" ? <Badge label={cell.label} tone={cell.tone} /> : cell}
                 </span>
@@ -310,21 +305,21 @@ function ListMock({ columns, rows }: { columns: string[]; rows: DemoListRow[] })
 
 function FinanceChartMock() {
   return (
-    <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+    <div className="mt-4 rounded-xl border border-[var(--border)] p-4">
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={financeiroChartData}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
-          <XAxis dataKey="month" className="text-xs text-slate-600 dark:text-slate-400" />
-          <YAxis className="text-xs text-slate-600 dark:text-slate-400" />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-[var(--border)]" />
+          <XAxis dataKey="month" className="text-xs text-[var(--text-muted)]" />
+          <YAxis className="text-xs text-[var(--text-muted)]" />
           <Tooltip
             contentStyle={{
-              backgroundColor: "hsl(var(--background))",
-              border: "1px solid hsl(var(--border))",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: "8px",
             }}
           />
-          <Bar dataKey="receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="despesa" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="receita" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="despesa" fill="var(--text-muted)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -338,261 +333,6 @@ function extractMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-// ============ HERO SECTION ============
-function Hero() {
-  const trialDays = useTrialDays();
-
-  return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTAwIDUwTQzLjMgODMuNCAwIDEwMCAwIDUwWiIgZmlsbD0id2hpdGUiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-10" />
-      
-      <div className="absolute inset-0">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-      </div>
-
-      <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium backdrop-blur-sm">
-              <Sparkles size={16} />
-              <span>Plataforma ERP completa</span>
-            </div>
-            
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-              Gerencie sua empresa
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-white">
-                de ponta a ponta
-              </span>
-            </h1>
-            
-            <p className="text-lg text-white/90 max-w-xl">
-              Sistema ERP completo com módulos integrados de vendas, compras, estoque, financeiro, RH e produção. 
-              Centralize sua gestão e tome decisões com dados em tempo real.
-            </p>
-
-            <div className="flex flex-wrap gap-4">
-              <Link
-                href="/cadastro-empresa"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 font-semibold text-indigo-600 shadow-xl transition-transform hover:scale-105 hover:shadow-2xl"
-              >
-                Começar grátis
-                <ArrowRight size={18} />
-              </Link>
-              <Link
-                href="/comercial"
-                className="inline-flex items-center gap-2 rounded-full border-2 border-white/30 px-8 py-4 font-semibold backdrop-blur-sm transition-colors hover:bg-white/10"
-              >
-                Ver planos
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-6 text-sm text-white/80">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={18} className="text-emerald-300" />
-                <span>{trialDays} dias grátis</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <BadgeCheck size={18} className="text-emerald-300" />
-                <span>Sem cartão de crédito</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={18} className="text-emerald-300" />
-                <span>Segurança garantida</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden lg:block">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur-2xl opacity-30" />
-              <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-6 shadow-2xl">
-                <div className="grid grid-cols-3 gap-4">
-                  {[
-                    { icon: LayoutDashboard, label: "Dashboard", value: "centralizado" },
-                    { icon: TrendingUp, label: "Crescimento", value: "+40%" },
-                    { icon: Zap, label: "Velocidade", value: "2x mais rápido" },
-                  ].map((item) => (
-                    <div key={item.label} className="text-center p-4 rounded-2xl bg-white/10 backdrop-blur-sm">
-                      <item.icon size={32} className="mx-auto mb-2 text-white" />
-                      <p className="text-sm font-semibold text-white">{item.label}</p>
-                      <p className="text-xs text-white/70">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-50 to-transparent dark:from-slate-900" />
-    </section>
-  );
-}
-
-// ============ VALUE PROPS ============
-function ValueProps() {
-  const props = [
-    {
-      icon: Store,
-      title: "Tudo em um só lugar",
-      description: "Módulos integrados de vendas, compras, estoque, financeiro, RH e produção funcionando juntos.",
-    },
-    {
-      icon: Zap,
-      title: "Implementação rápida",
-      description: "Comece a usar em minutos, sem necessidade de infraestrutura complexa ou TI dedicada.",
-    },
-    {
-      icon: Smartphone,
-      title: "Acesso em qualquer lugar",
-      description: "Gerencie sua empresa pelo computador, tablet ou celular, onde estiver.",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Segurança de dados",
-      description: "Seus dados protegidos com criptografia de ponta a ponta e backups automáticos.",
-    },
-  ];
-
-  return (
-    <section className="bg-slate-50 py-24 dark:bg-slate-900">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center mb-16">
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-            Por que escolher o AlePejo ERP?
-          </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            Uma plataforma completa projetada para simplificar a gestão da sua empresa
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {props.map((prop, index) => (
-            <div
-              key={index}
-              className="group p-8 rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700"
-            >
-              <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white mb-6 group-hover:scale-110 transition-transform">
-                <prop.icon size={28} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{prop.title}</h3>
-              <p className="text-slate-600 dark:text-slate-400">{prop.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ============ AUDIENCE ============
-function Audience() {
-  const segments = [
-    { icon: Factory, label: "Indústria" },
-    { icon: Store, label: "Comércio" },
-    { icon: Cpu, label: "Tecnologia" },
-    { icon: Truck, label: "Logística" },
-    { icon: Sparkles, label: "Serviços" },
-    { icon: Globe, label: "Internacional" },
-  ];
-
-  return (
-    <section className="py-24 bg-white dark:bg-slate-800">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center mb-16">
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-            Feito para seu segmento
-          </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400">
-            Indústria, comércio, serviços, tecnologia e muito mais
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-          {segments.map((segment) => (
-            <div
-              key={segment.label}
-              className="group p-6 rounded-2xl border border-slate-200 text-center hover:border-indigo-500 hover:bg-indigo-50 dark:border-slate-700 dark:hover:bg-slate-700 transition-all"
-            >
-              <segment.icon size={40} className="mx-auto mb-4 text-slate-600 group-hover:text-indigo-600 dark:text-slate-400 dark:group-hover:text-indigo-400 transition-colors" />
-              <p className="font-semibold text-slate-900 dark:text-white">{segment.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ============ FEATURES ============
-function Features() {
-  const features = [
-    {
-      icon: BarChart3,
-      title: "Dashboard Inteligente",
-      description: "Visão geral do seu negócio com gráficos e KPIs em tempo real.",
-    },
-    {
-      icon: Users,
-      title: "Gestão de Metas",
-      description: "Defina objetivos e acompanhe o progresso com alertas automáticos.",
-    },
-    {
-      icon: Database,
-      title: "Relatórios Personalizados",
-      description: "Crie relatórios customizados para cada área da sua empresa.",
-    },
-    {
-      icon: Smartphone,
-      title: "App Mobile",
-      description: "Acesse o sistema pelo celular com o aplicativo dedicado.",
-    },
-    {
-      icon: MessageCircle,
-      title: "Integração WhatsApp",
-      description: "Envie notificações e lembretes automaticamente via WhatsApp.",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Controle de Acesso",
-      description: "Gerencie permissões e perfis de usuário com segurança.",
-    },
-  ];
-
-  return (
-    <section className="py-24 bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center mb-16">
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-            Recursos poderosos
-          </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400">
-            Tudo que você precisa para gerenciar sua empresa em um só lugar
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="group p-8 rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 dark:bg-slate-800 dark:border-slate-700"
-            >
-              <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white mb-6 group-hover:scale-110 transition-transform">
-                <feature.icon size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{feature.title}</h3>
-              <p className="text-slate-600 dark:text-slate-400">{feature.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 // ============ DEMO TOUR ============
 function DemoTour() {
   const [tabIndex, setTabIndex] = useState(0);
@@ -600,7 +340,11 @@ function DemoTour() {
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(true);
   const [started, setStarted] = useState(false);
-  const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
+  // Só no cliente (após montar): evita divergência entre o HTML do servidor e o da hidratação.
+  const [canSpeak, setCanSpeak] = useState(false);
+  useEffect(() => {
+    setCanSpeak("speechSynthesis" in window);
+  }, []);
   const voices = useSpeechVoices();
 
   const tab = demoTabs[tabIndex];
@@ -670,13 +414,14 @@ function DemoTour() {
   const finished = started && !playing && tabIndex === demoTabs.length - 1;
 
   return (
-    <section className="py-24 bg-white dark:bg-slate-800">
+    <section id="demonstracao" className="scroll-mt-20 py-24 bg-[var(--surface)]">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center mb-16">
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+        <div className="mb-16 max-w-2xl">
+          <p className="erp-eyebrow erp-eyebrow-light mb-5">Demonstração guiada</p>
+          <h2 className="font-display text-3xl sm:text-4xl font-semibold text-[var(--text-primary)] mb-4">
             Veja o sistema em ação
           </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400">
+          <p className="text-lg text-[var(--text-muted)]">
             Tour guiado com narração de cada módulo
           </p>
         </div>
@@ -690,8 +435,8 @@ function DemoTour() {
                 onClick={() => switchTrack(i)}
                 className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                   i === tabIndex
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
-                    : "border border-slate-200 text-slate-600 hover:border-indigo-500 dark:border-slate-700 dark:text-slate-400"
+                    ? "erp-accent text-white"
+                    : "border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--primary)]"
                 }`}
               >
                 <t.icon size={16} />
@@ -700,14 +445,14 @@ function DemoTour() {
             ))}
           </div>
 
-          <div className="relative rounded-3xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900 p-6">
+          <div className="relative rounded-3xl border border-[var(--border)] bg-[var(--background)] p-6">
             {!started && (
               <button
                 type="button"
                 onClick={play}
                 className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-slate-900/60 backdrop-blur-[2px] transition-colors hover:bg-slate-900/68"
               >
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-2xl">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full erp-accent text-white shadow-2xl">
                   <Play size={28} className="ml-1" fill="currentColor" />
                 </span>
                 <span className="text-base font-semibold text-white">Iniciar demonstração</span>
@@ -718,12 +463,12 @@ function DemoTour() {
             )}
 
             <div className="flex gap-6">
-              <div className="hidden w-64 shrink-0 flex-col gap-2 border-r border-slate-200 p-4 dark:border-slate-700 lg:flex">
+              <div className="hidden w-64 shrink-0 flex-col gap-2 border-r border-[var(--border)] p-4 lg:flex">
                 <div className="mb-4 flex items-center gap-3 px-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg erp-accent text-white">
                     <LayoutDashboard size={16} />
                   </span>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">AlePejo ERP</span>
+                  <span className="text-sm font-bold text-[var(--text-primary)]">AlePejo ERP</span>
                 </div>
 
                 {demoTabs.map((t, i) => {
@@ -735,8 +480,8 @@ function DemoTour() {
                       onClick={() => switchTrack(i)}
                       className={`flex h-10 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition-colors ${
                         isActive
-                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
-                          : "text-slate-600 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700"
+                          ? "erp-accent text-white"
+                          : "text-[var(--text-muted)] hover:bg-[var(--primary-soft)]"
                       }`}
                     >
                       <t.icon size={16} className="shrink-0" />
@@ -749,11 +494,11 @@ function DemoTour() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">{tab.pageTitle}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{tab.subtitle}</p>
+                    <h3 className="text-lg font-bold text-[var(--text-primary)]">{tab.pageTitle}</h3>
+                    <p className="text-sm text-[var(--text-muted)]">{tab.subtitle}</p>
                   </div>
                   {tab.newLabel && (
-                    <span className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-xs font-semibold text-white">
+                    <span className="flex items-center gap-1.5 rounded-xl erp-accent px-3 py-2 text-xs font-semibold text-white">
                       <Plus size={13} />
                       {tab.newLabel}
                     </span>
@@ -770,15 +515,15 @@ function DemoTour() {
               </div>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border)]">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 transition-all duration-500"
+                    className="h-full rounded-full erp-accent transition-all duration-500"
                     style={{ width: `${((tabIndex + 1) / demoTabs.length) * 100}%` }}
                   />
                 </div>
-                <span className="shrink-0 text-xs font-medium text-slate-600 dark:text-slate-400">
+                <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">
                   {tabIndex + 1} de {demoTabs.length}
                 </span>
               </div>
@@ -787,28 +532,20 @@ function DemoTour() {
                 <div className="flex shrink-0 flex-col items-center">
                   <ChromaKeyVideo
                     src={playing ? "/videos/robo falando.mp4" : "/videos/Robo normal.mp4"}
-                    loop={!playing}
-                    onEnded={() => {
-                      if (!playing) return;
-                      if (tabIndex < demoTabs.length - 1) {
-                        setTabIndex(tabIndex + 1);
-                      } else {
-                        setPlaying(false);
-                      }
-                    }}
+                    loop={true}
                     className="h-auto w-[100px] sm:w-[115px]"
                   />
                 </div>
 
-                <div className="relative min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                <div className="relative min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{tab.label}</p>
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{tab.label}</p>
                   </div>
-                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{tab.narration}</p>
+                  <p className="mt-2 text-sm text-[var(--text-muted)]">{tab.narration}</p>
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -823,7 +560,7 @@ function DemoTour() {
                     }
                     play();
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white"
+                  className="flex items-center gap-2 rounded-xl erp-accent px-4 py-2.5 text-sm font-semibold text-white"
                 >
                   {playing ? (
                     <>
@@ -842,7 +579,7 @@ function DemoTour() {
                   type="button"
                   disabled={tabIndex === 0}
                   onClick={() => switchTrack(tabIndex - 1)}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-indigo-500 disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white"
+                  className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--primary)] disabled:opacity-40"
                 >
                   Anterior
                 </button>
@@ -851,7 +588,7 @@ function DemoTour() {
                   type="button"
                   disabled={tabIndex === demoTabs.length - 1}
                   onClick={() => switchTrack(tabIndex + 1)}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-indigo-500 disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white"
+                  className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--primary)] disabled:opacity-40"
                 >
                   Próximo
                 </button>
@@ -860,7 +597,7 @@ function DemoTour() {
                   <button
                     type="button"
                     onClick={() => setSound(!sound)}
-                    className="ml-auto flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-indigo-500 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white"
+                    className="ml-auto flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--primary)]"
                   >
                     {sound ? <Settings2 size={16} /> : <Settings2 size={16} />}
                     {sound ? "Som ligado" : "Som desligado"}
@@ -898,51 +635,51 @@ function Contact() {
   }
 
   return (
-    <section className="py-24 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-900 dark:to-slate-800">
+    <section id="contato" className="scroll-mt-20 py-24 bg-[var(--background)]">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid lg:grid-cols-2 gap-12">
           <div>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mb-4">
               Entre em contato
             </h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
+            <p className="text-lg text-[var(--text-muted)] mb-8">
               Tem dúvidas ou quer saber mais? Nossa equipe está pronta para ajudar.
             </p>
 
             <div className="space-y-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl erp-accent text-white">
                   <Mail size={20} />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Email</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">contato@alepejo.com.br</p>
+                  <p className="text-sm text-[var(--text-muted)]">Email</p>
+                  <p className="font-semibold text-[var(--text-primary)]">contato@alepejo.com.br</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl erp-accent text-white">
                   <Smartphone size={20} />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Telefone</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">(43) 99999-9999</p>
+                  <p className="text-sm text-[var(--text-muted)]">Telefone</p>
+                  <p className="font-semibold text-[var(--text-primary)]">(43) 99154-4557</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl erp-accent text-white">
                   <MapPin size={20} />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Endereço</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">Londrina - PR, Brasil</p>
+                  <p className="text-sm text-[var(--text-muted)]">Endereço</p>
+                  <p className="font-semibold text-[var(--text-primary)]">Londrina - PR, Brasil</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xl dark:bg-slate-800 dark:border-slate-700">
+          <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] p-8 shadow-xl">
             {success ? (
               <div className="text-center py-12">
                 <div className="flex justify-center mb-4">
@@ -950,12 +687,12 @@ function Contact() {
                     <CheckCircle2 size={36} />
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Mensagem enviada!</h3>
-                <p className="text-slate-600 dark:text-slate-400">Entraremos em contato em breve.</p>
+                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">Mensagem enviada!</h3>
+                <p className="text-[var(--text-muted)]">Entraremos em contato em breve.</p>
                 <button
                   type="button"
                   onClick={() => setSuccess(false)}
-                  className="mt-6 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-semibold text-white"
+                  className="mt-6 rounded-xl erp-accent px-6 py-3 font-semibold text-white"
                 >
                   Enviar outra mensagem
                 </button>
@@ -963,65 +700,65 @@ function Contact() {
             ) : (
               <form onSubmit={(e) => { e.preventDefault(); void handleSubmit(); }} className="space-y-6">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Nome</label>
+                  <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Nome</label>
                   <input
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/25"
                     placeholder="Seu nome completo"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                  <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Email</label>
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/25"
                     placeholder="seu@email.com"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Telefone</label>
+                  <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Telefone</label>
                   <input
                     type="tel"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/25"
                     placeholder="(00) 00000-0000"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Empresa</label>
+                  <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Empresa</label>
                   <input
                     type="text"
                     value={form.company}
                     onChange={(e) => setForm({ ...form, company: e.target.value })}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/25"
                     placeholder="Nome da sua empresa"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Mensagem</label>
+                  <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Mensagem</label>
                   <textarea
                     value={form.message}
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                     rows={4}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/25"
                     placeholder="Como podemos ajudar?"
                     required
                   />
                 </div>
 
                 {error && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/30 dark:text-red-400">
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     {error}
                   </div>
                 )}
@@ -1029,7 +766,7 @@ function Contact() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 font-semibold text-white shadow-lg transition-transform hover:scale-[0.98] disabled:opacity-50"
+                  className="w-full rounded-xl erp-accent px-6 py-4 font-semibold text-white shadow-lg transition-transform hover:scale-[0.98] disabled:opacity-50"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -1054,8 +791,8 @@ function Footer() {
   const visits = useVisitCounter();
 
   return (
-    <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 py-8">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-slate-600 dark:text-slate-400">
+    <footer className="border-t border-[var(--border)] bg-[var(--surface)] py-8">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 text-xs text-[var(--text-muted)]">
         <p>
           © {new Date().getFullYear()} AlePejo Assessoria e Prestação de Serviço Ltda.
         </p>
@@ -1070,7 +807,7 @@ function Footer() {
 
           <Link
             href="/privacidade"
-            className="font-medium hover:text-slate-900 dark:hover:text-white hover:underline"
+            className="font-medium hover:text-slate-900 hover:underline"
           >
             Política de Privacidade
           </Link>
@@ -1081,13 +818,16 @@ function Footer() {
 }
 
 export default function InstitucionalPage() {
+  const trialDays = useTrialDays();
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className={`${erpFontVars} theme-erp min-h-screen`}>
       <PublicNav />
-      <Hero />
-      <ValueProps />
-      <Audience />
-      <Features />
+      <ErpHero trialDays={trialDays} />
+      <ErpValueProps />
+      <ErpShowcase />
+      <ErpAudience />
+      <ErpFeatures />
       <DemoTour />
       <Contact />
       <Footer />
