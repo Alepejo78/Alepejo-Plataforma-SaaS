@@ -1,20 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-// A pergunta aberta usa o mesmo gradiente dos botões de destaque
-// (`aurora-banner`); importado aqui pra sanfona não depender de quem a
-// coloca na página ter importado antes.
-import "./aurora.css";
+import "./marketing-shared.css";
 
-interface FaqItem {
+export interface FaqItem {
   question: string;
   answer: string;
 }
 
-/** Compartilhado entre /institucional e /planos — mesmas perguntas nos dois lugares. */
-export const faqItems: FaqItem[] = [
+/** Perguntas do AlePejo ERP (exibidas em /institucional). */
+export const erpFaqItems: FaqItem[] = [
   {
     question: "O sistema é online?",
     answer:
@@ -90,93 +87,151 @@ export const faqItems: FaqItem[] = [
   },
 ];
 
-/** Perguntas frequentes — sanfona, só uma aberta por vez. */
+/** Perguntas do AlePejo Serviços (exibidas em /servicos). */
+export const servicosFaqItems: FaqItem[] = [
+  {
+    question: "O que é o AlePejo Serviços?",
+    answer:
+      "É um sistema online de agenda e gestão para negócios de atendimento, como barbearia, salão, clínica, petshop e estética. Reúne agenda, link de agendamento para o cliente, cadastro e histórico de clientes, financeiro, comissões, fidelidade e app do profissional.",
+  },
+  {
+    question: "Meu cliente precisa instalar alguma coisa para agendar?",
+    answer:
+      "Não. O cliente abre o link de agendamento do seu negócio no navegador, escolhe o serviço, o profissional e o horário livre, e recebe a confirmação com um código e um link para ver ou cancelar o agendamento.",
+  },
+  {
+    question: "Como funcionam os lembretes por WhatsApp?",
+    answer:
+      "O sistema envia lembretes antes do atendimento pelo WhatsApp da própria empresa (você conecta o número nas configurações). O cliente responde 1 para confirmar, 2 para cancelar ou 3 para reagendar, e a agenda se atualiza sozinha. Só a primeira resposta a cada lembrete vale.",
+  },
+  {
+    question: "E se um cliente cancelar e o horário ficar vago?",
+    answer:
+      "Com a lista de espera, quando um horário é liberado o próximo da lista recebe a oferta por WhatsApp e responde 1 para agendar ou 2 para recusar. Se aceitar, o agendamento é criado; se recusar, a oferta segue para o próximo.",
+  },
+  {
+    question: "Consigo vender pacotes e assinaturas?",
+    answer:
+      "Sim. Você cria pacotes de sessões e planos de assinatura com créditos. O crédito do cliente aparece no agendamento, no painel e no link público, é consumido no atendimento e devolvido se o agendamento for cancelado.",
+  },
+  {
+    question: "Como funciona o programa de fidelidade?",
+    answer:
+      "Você define quantos pontos cada real gasto vale, quanto vale cada ponto no resgate e o saldo mínimo para resgatar. Os pontos são creditados quando o atendimento é concluído, e o cliente escolhe quantos usar ao confirmar um agendamento online.",
+  },
+  {
+    question: "Como o profissional é remunerado no sistema?",
+    answer:
+      "O sistema calcula a comissão de cada atendimento concluído e permite fazer o acerto de contas: soma tudo o que é devido ao profissional e gera um título único de pagamento, a qualquer momento. Profissionais que recebem direto na própria conta podem ser configurados no cadastro.",
+  },
+  {
+    question: "Existe aplicativo para o profissional?",
+    answer:
+      "Sim. Pelo celular, cada profissional acompanha a própria agenda e o faturamento, sem precisar abrir o sistema completo.",
+  },
+  {
+    question: "Serve para outros segmentos além de salão de beleza?",
+    answer:
+      "Serve. O sistema atende barbearia, salão, manicure, maquiagem, estética e depilação, bem-estar, odontologia, clínica de estética, petshop e estética automotiva, com a linguagem de cada segmento no link público. Para petshops e clínicas veterinárias há ainda a carteira de vacinação do pet.",
+  },
+  {
+    question: "Preciso instalar algum programa ou ter servidor?",
+    answer:
+      "Não. O sistema é online e roda no navegador, no computador ou no celular.",
+  },
+  {
+    question: "Os dados da minha empresa ficam misturados com os de outras?",
+    answer:
+      "Não. Cada empresa enxerga apenas os próprios dados, e o acesso da equipe é controlado por perfis de permissão.",
+  },
+  {
+    question: "Existe período de teste?",
+    answer:
+      "Sim, todos os planos começam com um período de teste grátis. A duração e os valores atuais aparecem na página de planos.",
+  },
+  {
+    question: "Como falo com o suporte?",
+    answer:
+      "Pelo e-mail suporte@alepejo.com.br ou pelo WhatsApp (43) 99154-4557. O atendimento é remoto em todo o Brasil, e o presencial pode ser negociado.",
+  },
+];
+
+/**
+ * Perguntas frequentes — sanfona animada, uma aberta por vez. Lê só os
+ * tokens `--mkt-*` (definidos por cada tema), então serve às duas páginas.
+ */
 export function Faq({
+  items,
   title = "Perguntas frequentes",
-  contactHref = "/institucional#contato",
+  contactHref,
+  id = "perguntas-frequentes",
 }: {
+  items: FaqItem[];
   title?: string;
-  /** Link do "Fale com a gente" no rodapé — cada página aponta pro seu próprio formulário de contato. */
-  contactHref?: string;
+  /** Link do "Fale com a gente" no rodapé — cada página aponta pro seu contato. */
+  contactHref: string;
+  id?: string;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const base = useId();
 
   return (
-    <section
-      id="perguntas-frequentes"
-      className="border-t border-[var(--border)] bg-[var(--surface)] py-20"
-    >
-      <div className="mx-auto max-w-3xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">
+    <section id={id} className="scroll-mt-20 bg-[var(--mkt-bg-alt)] py-24">
+      <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <p className="mkt-eyebrow">Dúvidas</p>
+          <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
             {title}
           </h2>
+          <p className="mt-4 text-sm text-[var(--mkt-muted)]">
+            Não achou sua dúvida aqui?{" "}
+            <a href={contactHref} className="font-semibold text-[var(--mkt-accent)] underline-offset-4 hover:underline">
+              Fale com a gente
+            </a>
+            .
+          </p>
         </div>
 
-        <div className="mt-10 space-y-3">
-          {faqItems.map((item, index) => {
+        <ul className="divide-y divide-[var(--mkt-border)] border-y border-[var(--mkt-border)]">
+          {items.map((item, index) => {
             const isOpen = openIndex === index;
+            const panelId = `${base}-p${index}`;
+            const buttonId = `${base}-b${index}`;
 
             return (
-              // `overflow-hidden` porque a pergunta aberta ganha o
-              // gradiente de ponta a ponta — sem isso ele vaza por cima
-              // dos cantos arredondados da caixa.
-              <div
-                key={item.question}
-                className={`overflow-hidden rounded-2xl border bg-[var(--background)] transition-shadow ${
-                  isOpen
-                    ? "border-transparent shadow-md"
-                    : "border-[var(--border)]"
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenIndex(isOpen ? null : index)}
-                  aria-expanded={isOpen}
-                  className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors ${
-                    isOpen
-                      ? "aurora-banner text-white"
-                      : "hover:bg-[var(--surface-hover)]"
-                  }`}
-                >
-                  <span
-                    className={`font-medium ${
-                      isOpen ? "text-white" : "text-[var(--text-primary)]"
-                    }`}
+              <li key={item.question}>
+                <h3>
+                  <button
+                    type="button"
+                    id={buttonId}
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    onClick={() => setOpenIndex(isOpen ? null : index)}
+                    className="mkt-acc-btn flex w-full items-center justify-between gap-4 py-5 text-left"
                   >
-                    {item.question}
-                  </span>
-
-                  <ChevronDown
-                    size={18}
-                    className={`shrink-0 transition-transform ${
-                      isOpen
-                        ? "rotate-180 text-white"
-                        : "text-[var(--text-muted)]"
-                    }`}
-                  />
-                </button>
-
-                {isOpen && (
-                  <p className="px-5 pb-4 text-sm text-[var(--text-muted)]">
-                    {item.answer}
-                  </p>
-                )}
-              </div>
+                    <span className="font-display text-lg font-semibold text-[var(--mkt-ink)]">{item.question}</span>
+                    <ChevronDown
+                      size={18}
+                      aria-hidden
+                      className={`mkt-acc-chevron shrink-0 text-[var(--mkt-muted)] ${isOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </h3>
+                <div
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={buttonId}
+                  className="mkt-acc-panel"
+                  data-open={isOpen}
+                >
+                  <div>
+                    <p className="max-w-[68ch] pb-5 leading-relaxed text-[var(--mkt-muted)]">{item.answer}</p>
+                  </div>
+                </div>
+              </li>
             );
           })}
-        </div>
-
-        <p className="mt-8 text-center text-sm text-[var(--text-muted)]">
-          Não achou sua dúvida aqui?{" "}
-          <a
-            href={contactHref}
-            className="font-semibold text-[var(--primary)] hover:underline"
-          >
-            Fale com a gente
-          </a>
-          .
-        </p>
+        </ul>
       </div>
     </section>
   );

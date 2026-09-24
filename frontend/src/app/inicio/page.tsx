@@ -1,10 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import {
   ArrowRight,
   Boxes,
   Building2,
-  CalendarClock,
   MapPin,
   ShoppingCart,
   TrendingUp,
@@ -17,10 +16,12 @@ import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
 import { SystemsStackedCards } from "@/components/marketing/SystemsStackedCards";
 import { SERVICE_SEGMENTS } from "@/components/marketing/segments-data";
-import { marketingFontVars } from "@/components/marketing/fonts";
-import "@/components/marketing/aurora.css";
-import "@/components/marketing/marketing-shared.css";
+import { erpBody, servicosDisplay } from "@/components/marketing/fonts";
 import { Reveal } from "@/components/marketing/Reveal";
+import "@/components/marketing/marketing-shared.css";
+import "@/components/marketing/servicos.css";
+import "@/components/marketing/erp.css";
+import "@/components/marketing/inicio.css";
 
 const ERP_MODULES = [
   { label: "Estoque", icon: Boxes },
@@ -62,7 +63,7 @@ const TIMELINE = [
 
 export default function InicioPage() {
   return (
-    <div className={`${marketingFontVars} marketing-page theme-aurora`}>
+    <div className={`${servicosDisplay.variable} ${erpBody.variable} marketing-page theme-inicio`}>
       <MarketingNav
         links={NAV_LINKS}
         ctaLabel="AlePejo Serviços"
@@ -71,234 +72,190 @@ export default function InicioPage() {
         secondaryCtaHref="/institucional"
       />
 
-      <section className="relative overflow-hidden">
-        <div aria-hidden className="mkt-dotgrid pointer-events-none absolute inset-0 opacity-40" />
-        <div
-          aria-hidden
-          className="aurora-bg pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-[0.14]"
-        />
-
-        <div className="relative mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-28">
-          <div>
-            <h1 className="font-display text-4xl font-bold leading-[1.08] text-[var(--mkt-ink)] sm:text-5xl lg:text-[3.4rem]">
-              De uma planilha de Excel a dois sistemas que já cuidam do seu
-              negócio.
+      {/* Abertura */}
+      <section className="in-hero">
+        <div className="mx-auto grid max-w-7xl gap-14 px-6 pb-20 pt-16 lg:min-h-[calc(100dvh-4.5rem)] lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-center lg:gap-12 lg:py-20">
+          <div className="max-w-2xl">
+            <p className="in-rise mkt-eyebrow" style={{ ["--i" as string]: 0 }}>
+              AlePejo Assessoria e Prestação de Serviços
+            </p>
+            <h1
+              className="in-rise font-display mt-6 text-4xl font-semibold leading-[1.06] text-[var(--mkt-ink)] sm:text-5xl lg:text-[3.3rem]"
+              style={{ ["--i" as string]: 1 }}
+            >
+              De uma planilha de Excel a dois sistemas que já cuidam do seu negócio.
             </h1>
-
-            <p className="mt-6 max-w-xl text-lg text-[var(--mkt-muted)]">
-              Somos a AlePejo: consultoria que virou tecnologia. Hoje
-              mantemos um ERP completo para a gestão da empresa e o AlePejo
-              Serviços, para quem vive de atender e agendar clientes.
+            <p
+              className="in-rise mt-6 max-w-[54ch] text-lg leading-relaxed text-[var(--mkt-muted)]"
+              style={{ ["--i" as string]: 2 }}
+            >
+              Somos a AlePejo: consultoria que virou tecnologia. Hoje mantemos um ERP completo para a gestão da empresa
+              e o AlePejo Serviços, para quem vive de atender e agendar clientes.
             </p>
 
-            <div className="mt-9 flex flex-wrap items-center gap-4">
-              <Link
-                href="/servicos"
-                className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(120deg,var(--mkt-accent),var(--mkt-accent-2))] px-6 py-3 text-sm font-semibold text-[var(--mkt-contrast)] shadow-lg shadow-[color:color-mix(in_srgb,var(--mkt-accent)_35%,transparent)] transition-transform hover:scale-[1.03]"
-              >
+            <div className="in-rise mt-9 flex flex-wrap items-center gap-3" style={{ ["--i" as string]: 3 }}>
+              <Link href="/servicos" className="sv-btn sv-btn-gold">
                 Ver o AlePejo Serviços
-                <ArrowRight size={16} />
+                <ArrowRight size={17} aria-hidden />
               </Link>
-
-              <Link
-                href="/institucional"
-                className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(120deg,var(--mkt-accent-2),var(--mkt-accent-3))] px-6 py-3 text-sm font-semibold text-[var(--mkt-contrast)] shadow-lg shadow-[color:color-mix(in_srgb,var(--mkt-accent-2)_35%,transparent)] transition-transform hover:scale-[1.03]"
-              >
-                <Boxes size={16} />
+              <Link href="/institucional" className="erp-btn erp-btn-primary">
+                <Boxes size={17} aria-hidden />
                 Conhecer o ERP completo
               </Link>
             </div>
           </div>
 
-          <Reveal>
+          <div className="in-rise" style={{ ["--i" as string]: 3 }}>
             <SystemsStackedCards />
-          </Reveal>
+            <p className="mt-4 text-xs text-[var(--mkt-muted)]">
+              Capturas dos sistemas reais, com dados fictícios de demonstração.
+            </p>
+          </div>
         </div>
       </section>
 
-      <Reveal as="section" id="sobre" className="border-t border-[var(--mkt-border)] py-20">
-        <div className="mx-auto max-w-4xl px-6">
-          <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
-            Sobre a AlePejo
-          </h2>
+      {/* Sobre */}
+      <Reveal as="section" id="sobre" className="scroll-mt-20 bg-[var(--mkt-bg-alt)] py-24">
+        <div className="mx-auto grid max-w-7xl gap-14 px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <p className="mkt-eyebrow">Sobre a AlePejo</p>
+            <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
+              Do Excel ao sistema em nuvem.
+            </h2>
+          </div>
 
-          <div className="mkt-timeline mt-12 space-y-10 pl-11">
+          <ol className="divide-y divide-[var(--mkt-border)] border-y border-[var(--mkt-border)]">
             {TIMELINE.map((step) => (
-              <div key={step.cell} className="relative">
-                <span className="mkt-timeline-marker absolute -left-11 top-0 flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mkt-surface)] text-xs font-bold text-[var(--mkt-accent)] ring-2 ring-[var(--mkt-border)]">
+              <li key={step.cell} className="in-step grid grid-cols-[3.5rem_1fr] gap-x-5 py-8">
+                <span className="in-cell flex h-9 w-14 items-center justify-center rounded-md border border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-xs font-bold text-[var(--mkt-accent)]">
                   {step.cell}
                 </span>
-                <h3 className="font-display text-lg font-semibold text-[var(--mkt-ink)]">
-                  {step.title}
-                </h3>
-                <p className="mt-2 max-w-2xl text-[var(--mkt-muted)]">{step.text}</p>
+                <div>
+                  <h3 className="font-display text-xl font-semibold text-[var(--mkt-ink)]">{step.title}</h3>
+                  <p className="mt-2 max-w-[62ch] leading-relaxed text-[var(--mkt-muted)]">{step.text}</p>
 
-                {step.cell === "C1" && (
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {ERP_MODULES.map((module) => (
-                      <span
-                        key={module.label}
-                        className="mkt-chip inline-flex cursor-default items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1.5 text-xs font-medium text-[var(--mkt-ink)]"
-                      >
-                        <module.icon size={13} className="text-[var(--mkt-accent)]" />
-                        {module.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  {step.cell === "C1" && (
+                    <ul className="mt-5 flex flex-wrap gap-2">
+                      {ERP_MODULES.map((module) => (
+                        <li
+                          key={module.label}
+                          className="in-chip inline-flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1.5 text-xs font-medium text-[var(--mkt-ink)]"
+                        >
+                          <module.icon size={13} className="text-[var(--mkt-accent)]" aria-hidden />
+                          {module.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
-                {step.cell === "D1" && (
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {SERVICE_SEGMENTS.map((segment) => (
-                      <span
-                        key={segment.label}
-                        className="mkt-chip inline-flex cursor-default items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1.5 text-xs font-medium text-[var(--mkt-ink)]"
-                      >
-                        <segment.icon size={13} className="text-[var(--mkt-accent-2)]" />
-                        {segment.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  {step.cell === "D1" && (
+                    <ul className="mt-5 flex flex-wrap gap-2">
+                      {SERVICE_SEGMENTS.map((segment) => (
+                        <li
+                          key={segment.label}
+                          className="in-chip inline-flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1.5 text-xs font-medium text-[var(--mkt-ink)]"
+                        >
+                          <segment.icon size={13} className="text-[var(--mkt-accent-2)]" aria-hidden />
+                          {segment.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </li>
             ))}
+          </ol>
+        </div>
+      </Reveal>
+
+      {/* Os dois sistemas */}
+      <Reveal as="section" id="sistemas" className="scroll-mt-20 bg-[var(--mkt-bg)] py-24">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mb-14 max-w-2xl">
+            <p className="mkt-eyebrow">Nossos sistemas</p>
+            <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
+              Dois sistemas, um só compromisso.
+            </h2>
+            <p className="mt-4 leading-relaxed text-[var(--mkt-muted)]">
+              Simplificar a gestão do seu negócio — por dentro e no atendimento ao cliente.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <article className="in-door in-door-erp">
+              <div className="p-8 pb-0 sm:p-10 sm:pb-0">
+                <span className="mkt-eyebrow !text-[var(--erp-blue)]">Gestão da empresa</span>
+                <h3 className="font-display mt-4 text-2xl font-semibold">AlePejo ERP Cloud</h3>
+                <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-[var(--erp-ice)]/80">
+                  Estoque, compras, vendas, financeiro com fluxo de caixa, RH com folha e ponto, produção e multiunidade,
+                  tudo online.
+                </p>
+                <ul className="mt-4 space-y-1.5 text-sm text-[var(--erp-ice)]/80">
+                  <li>• Estoque por depósito, com contagem de inventário</li>
+                  <li>• Fluxo de caixa e contas a pagar e a receber</li>
+                  <li>• Ponto, holerite e folha de pagamento da equipe</li>
+                  <li>• Multiunidade: matriz e filiais no mesmo lugar</li>
+                </ul>
+                <Link href="/institucional" className="erp-btn erp-btn-primary mt-6">
+                  Conhecer o ERP
+                  <ArrowRight size={17} aria-hidden />
+                </Link>
+              </div>
+              <div className="in-door-shot mt-auto">
+                <Image
+                  src="/marketing/erp/receber.webp"
+                  alt="Contas a receber do AlePejo ERP Cloud"
+                  width={1600}
+                  height={757}
+                  sizes="(min-width: 1024px) 40vw, 90vw"
+                />
+              </div>
+            </article>
+
+            <article className="in-door in-door-srv">
+              <div className="p-8 pb-0 sm:p-10 sm:pb-0">
+                <span className="mkt-eyebrow !text-[var(--sv-gold)]">Agenda e atendimento</span>
+                <h3 className="font-display mt-4 text-2xl font-semibold">AlePejo Serviços</h3>
+                <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-[var(--sv-cream)]/80">
+                  Agendamento online para salões, barbearias, clínicas, petshops e outros negócios de atendimento: link
+                  público, lembretes, fidelidade e histórico do cliente.
+                </p>
+                <ul className="mt-4 space-y-1.5 text-sm text-[var(--sv-cream)]/80">
+                  <li>• Link de agendamento com a cara do seu negócio</li>
+                  <li>• Confirmação e lembrete automático no WhatsApp</li>
+                  <li>• Prontuário e, para petshop, carteira de vacinação</li>
+                  <li>• Pontos de fidelidade para trazer o cliente de volta</li>
+                </ul>
+                <Link href="/servicos" className="sv-btn sv-btn-gold mt-6">
+                  Conhecer o Serviços
+                  <ArrowRight size={17} aria-hidden />
+                </Link>
+              </div>
+              <div className="in-door-shot mt-auto">
+                <Image
+                  src="/marketing/servicos/cliente.webp"
+                  alt="Ficha do cliente do AlePejo Serviços"
+                  width={1600}
+                  height={659}
+                  sizes="(min-width: 1024px) 40vw, 90vw"
+                />
+              </div>
+            </article>
           </div>
         </div>
       </Reveal>
 
-      <Reveal
-        as="section"
-        id="sistemas"
-        className="border-t border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] py-20"
-      >
-        <div className="mx-auto max-w-6xl px-6">
-          <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
-            Dois sistemas, um só compromisso
-          </h2>
-          <p className="mt-3 max-w-xl text-[var(--mkt-muted)]">
-            Simplificar a gestão do seu negócio — por dentro e no atendimento
-            ao cliente.
-          </p>
-
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
-            <div
-              className="mkt-panel mkt-panel-lift flex flex-col p-8"
-              style={
-                {
-                  "--panel-accent": "var(--mkt-accent)",
-                  background:
-                    "radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--mkt-accent) 10%, var(--mkt-surface)), var(--mkt-surface))",
-                } as CSSProperties
-              }
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--mkt-accent),var(--mkt-accent-2))] text-white">
-                <Boxes size={22} />
-              </span>
-
-              <h3 className="font-display mt-5 text-xl font-bold text-[var(--mkt-ink)]">
-                AlePejo ERP Cloud
-              </h3>
-
-              <p className="mt-2 text-sm text-[var(--mkt-muted)]">
-                Gestão completa da empresa: estoque, compras, vendas,
-                financeiro com fluxo de caixa, RH com folha de pagamento e
-                ponto, produção e multiunidade — tudo online.
-              </p>
-
-              <ul className="mt-3 flex-1 space-y-1.5 text-sm text-[var(--mkt-muted)]">
-                <li>• Controle de estoque com alerta de reposição</li>
-                <li>• Fluxo de caixa e contas a pagar/receber</li>
-                <li>• Ponto e folha de pagamento da equipe</li>
-                <li>• Multiunidade: matriz e filiais no mesmo lugar</li>
-              </ul>
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                {["Estoque", "Financeiro", "RH e folha", "Multiunidade"].map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-[var(--mkt-surface-2)] px-3 py-1 text-xs font-medium text-[var(--mkt-ink)]"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              <Link
-                href="/institucional"
-                className="mt-6 inline-flex items-center gap-1.5 font-semibold text-[var(--mkt-accent)] hover:underline"
-              >
-                Conhecer o ERP
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-
-            <div
-              className="mkt-panel mkt-panel-lift flex flex-col p-8"
-              style={
-                {
-                  "--panel-accent": "#db2777",
-                  background:
-                    "radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, #db2777 10%, var(--mkt-surface)), var(--mkt-surface))",
-                } as CSSProperties
-              }
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#db2777,#ea580c)] text-white">
-                <CalendarClock size={22} />
-              </span>
-
-              <h3 className="font-display mt-5 text-xl font-bold text-[var(--mkt-ink)]">
-                AlePejo Serviços
-              </h3>
-
-              <p className="mt-2 text-sm text-[var(--mkt-muted)]">
-                Agendamento online para salões, barbearias, clínicas,
-                petshops e outros negócios de atendimento — link público,
-                lembretes, fidelidade e histórico do cliente.
-              </p>
-
-              <ul className="mt-3 flex-1 space-y-1.5 text-sm text-[var(--mkt-muted)]">
-                <li>• Link de agendamento com a cara do seu negócio</li>
-                <li>• Confirmação e lembrete automático no WhatsApp</li>
-                <li>• Prontuário e, pra petshop, carteira de vacina</li>
-                <li>• Pontos de fidelidade pra trazer o cliente de volta</li>
-              </ul>
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                {["Agenda online", "Lembretes no WhatsApp", "Fidelidade", "Prontuário"].map(
-                  (tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-[var(--mkt-surface-2)] px-3 py-1 text-xs font-medium text-[var(--mkt-ink)]"
-                    >
-                      {tag}
-                    </span>
-                  )
-                )}
-              </div>
-
-              <Link
-                href="/servicos"
-                className="mt-6 inline-flex items-center gap-1.5 font-semibold text-[#db2777] hover:underline"
-              >
-                Conhecer o Serviços
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-
-      <div className="border-t border-[var(--mkt-border)] py-14">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-6 text-sm text-[var(--mkt-muted)]">
-          <span className="flex items-center gap-2">
-            <Users size={16} className="text-[var(--mkt-accent)]" />
+      <div className="border-y border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] py-12">
+        <ul className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-4 px-6 text-sm text-[var(--mkt-muted)]">
+          <li className="flex items-center gap-2">
+            <Users size={16} className="text-[var(--mkt-accent)]" aria-hidden />
             Suporte próximo, sem robô de atendimento
-          </span>
-          <span className="flex items-center gap-2">
-            <MapPin size={16} className="text-[var(--mkt-accent)]" />
+          </li>
+          <li className="flex items-center gap-2">
+            <MapPin size={16} className="text-[var(--mkt-accent)]" aria-hidden />
             Atendimento remoto em todo o Brasil, presencial a negociar
-          </span>
-        </div>
+          </li>
+        </ul>
       </div>
 
       <ContactSection />

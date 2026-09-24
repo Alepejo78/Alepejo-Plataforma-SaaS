@@ -481,3 +481,44 @@
     display: none;
   }
 }
+
+/* ───────── Simulador e modais ───────── */
+.sv-fade-in {
+  animation: sv-fade 0.6s var(--sv-ease) both;
+}
+
+@keyframes sv-fade {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+.sv-modal-backdrop {
+  animation: sv-backdrop 0.25s ease both;
+}
+
+.sv-modal-panel {
+  animation: sv-pop 0.4s var(--sv-ease) both;
+}
+
+@keyframes sv-backdrop {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sv-pop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-fade-in,
+  .sv-modal-backdrop,
+  .sv-modal-panel {
+    animation: none;
+  }
+}

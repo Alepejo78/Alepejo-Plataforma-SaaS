@@ -19,7 +19,6 @@ import {
   type PublicPlan,
 } from "@/services/company-onboarding.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
-import { Faq } from "@/components/marketing/Faq";
 import { erpFontVars } from "@/components/marketing/fonts";
 import "@/components/marketing/erp.css";
 
@@ -866,8 +865,6 @@ export default function PlanosPage() {
           </Link>
         </p>
       </div>
-
-      <Faq contactHref="/institucional#contato" />
 
       {customOpen && customPlan && (
         <CustomPlanModal

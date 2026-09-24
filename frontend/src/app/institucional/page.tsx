@@ -40,7 +40,7 @@ import { contactService } from "@/services/contact.service";
 import { companyOnboardingService } from "@/services/company-onboarding.service";
 import { siteVisitService } from "@/services/site-visit.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
-import { Faq } from "@/components/marketing/Faq";
+import { Faq, erpFaqItems } from "@/components/marketing/Faq";
 import { ChromaKeyVideo } from "@/components/marketing/ChromaKeyVideo";
 import { pickVoice, stepDuration, useSpeechVoices } from "@/components/marketing/guided-narration";
 import { erpFontVars } from "@/components/marketing/fonts";
@@ -829,6 +829,7 @@ export default function InstitucionalPage() {
       <ErpAudience />
       <ErpFeatures />
       <DemoTour />
+      <Faq items={erpFaqItems} contactHref="/institucional#contato" />
       <Contact />
       <Footer />
     </div>

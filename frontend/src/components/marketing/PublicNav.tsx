@@ -16,7 +16,7 @@ export function PublicNav({
   return (
     <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2">
-        <Link href="/institucional" className="flex items-center gap-2.5">
+        <Link href="/inicio" className="flex items-center gap-2.5" aria-label="Ir para a página inicial da AlePejo">
           {/*
             A arte agora vem com fundo transparente e sem moldura vazia
             (~1,57:1), então a altura manda e a largura acompanha — em

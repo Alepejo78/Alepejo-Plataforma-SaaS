@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Bell, Check, Gift, Link as LinkIcon, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Bell, Check, Gift, Link as LinkIcon, Star } from "lucide-react";
 
 import { getServicosPublicPlans, type ServicosPlan } from "@/services/servicos-planos.service";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
 import { servicosFontVars } from "@/components/marketing/fonts";
+import { Modal } from "@/components/marketing/Modal";
 import { Reveal } from "@/components/marketing/Reveal";
 import "@/components/marketing/marketing-shared.css";
 import "@/components/marketing/servicos.css";
@@ -46,21 +47,75 @@ const NAV_LINKS = [
   { label: "Contato", href: "/servicos#contato" },
 ];
 
-const AVAILABLE_NOW = [
+/** Link público de exemplo (agendamento de um negócio real do sistema). */
+const PUBLIC_LINK_URL = "https://apps.alepejo.com.br/alepejo-agendamentos";
+
+type AvailableAction = "link" | "whatsapp" | "fidelidade";
+
+const AVAILABLE_NOW: {
+  icon: typeof LinkIcon;
+  title: string;
+  description: string;
+  action: AvailableAction;
+  cta: string;
+}[] = [
   {
     icon: LinkIcon,
     title: "Link de agendamento",
     description: "Sua página pública de horários, já funcionando hoje.",
+    action: "link",
+    cta: "Abrir o link público",
   },
   {
     icon: Bell,
     title: "Lembretes no WhatsApp",
     description: "Confirmação e lembrete automático antes do atendimento.",
+    action: "whatsapp",
+    cta: "Ver as mensagens",
   },
   {
     icon: Gift,
     title: "Fidelidade",
     description: "Pontos por atendimento e resgate configurável.",
+    action: "fidelidade",
+    cta: "Ver a configuração",
+  },
+];
+
+/**
+ * Mensagens automáticas enviadas por WhatsApp (textos padrão do sistema, com
+ * dados fictícios de exemplo). A empresa pode personalizar os modelos.
+ */
+const WHATSAPP_MESSAGES: { label: string; text: string; reply?: string }[] = [
+  {
+    label: "Confirmação do agendamento",
+    text: "Olá, Marina! Seu horário para Corte feminino está reservado para 25/09/2026 às 14:00 com Fernanda.",
+  },
+  {
+    label: "Lembrete (24 horas e 2 horas antes)",
+    text: "Olá, Marina! Lembrando que seu horário com Fernanda é em 25/09/2026 às 14:00.\n\n1. Confirmar\n2. Cancelar\n3. Reagendar",
+    reply: "1",
+  },
+  {
+    label: "Cancelamento",
+    text: "Olá, Marina. Seu agendamento de 25/09/2026 às 14:00 foi cancelado.",
+  },
+  {
+    label: "Lista de espera: um horário vagou",
+    text: "Boa notícia, Marina! Abriu um horário de Corte feminino no dia 25/09 às 14:00 com Fernanda.\n\nResponda:\n1 - CONFIRMAR e agendar este horário\n2 - RECUSAR (você sai da lista de espera)\n\nA oferta vale por 30 minutos.",
+    reply: "1",
+  },
+  {
+    label: "Pedido de avaliação",
+    text: "Olá, Marina! Como foi seu atendimento com Fernanda? Avalie aqui: (link da avaliação)",
+  },
+  {
+    label: "Aniversário",
+    text: "Feliz aniversário, Marina! Temos uma condição especial pra você. Agende seu horário:",
+  },
+  {
+    label: "Retorno de clientes",
+    text: "Olá, Marina! Já faz 45 dias desde seu último atendimento. Que tal agendar um novo horário?",
   },
 ];
 
@@ -68,6 +123,7 @@ export default function ServicosPlanosPage() {
   const [plans, setPlans] = useState<ServicosPlan[] | null>(null);
   const [trialDays, setTrialDays] = useState<number | null>(null);
   const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
+  const [modal, setModal] = useState<"whatsapp" | "fidelidade" | null>(null);
 
   useEffect(() => {
     getServicosPublicPlans()
@@ -276,17 +332,38 @@ export default function ServicosPlanosPage() {
           </div>
 
           <ul className="divide-y divide-[var(--mkt-border)] border-y border-[var(--mkt-border)]">
-            {AVAILABLE_NOW.map((item) => (
-              <li key={item.title} className="sv-benefit grid grid-cols-[auto_1fr] gap-x-5 py-6">
-                <span className="mt-0.5 flex size-11 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--mkt-accent-2)_16%,transparent)] text-[var(--mkt-accent)]">
-                  <item.icon size={20} strokeWidth={1.75} aria-hidden />
-                </span>
-                <div>
-                  <h3 className="font-display text-xl font-semibold text-[var(--mkt-ink)]">{item.title}</h3>
-                  <p className="mt-1.5 leading-relaxed text-[var(--mkt-muted)]">{item.description}</p>
-                </div>
-              </li>
-            ))}
+            {AVAILABLE_NOW.map((item) => {
+              const inner = (
+                <>
+                  <span className="mt-0.5 flex size-11 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--mkt-accent-2)_16%,transparent)] text-[var(--mkt-accent)]">
+                    <item.icon size={20} strokeWidth={1.75} aria-hidden />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-xl font-semibold text-[var(--mkt-ink)]">{item.title}</h3>
+                    <p className="mt-1.5 leading-relaxed text-[var(--mkt-muted)]">{item.description}</p>
+                    <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mkt-accent)]">
+                      {item.cta}
+                      <ArrowUpRight size={15} aria-hidden />
+                    </span>
+                  </div>
+                </>
+              );
+              const cls =
+                "sv-benefit grid w-full grid-cols-[auto_1fr] gap-x-5 py-6 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--mkt-accent-2)]";
+              return (
+                <li key={item.title}>
+                  {item.action === "link" ? (
+                    <a href={PUBLIC_LINK_URL} target="_blank" rel="noopener noreferrer" className={cls}>
+                      {inner}
+                    </a>
+                  ) : (
+                    <button type="button" onClick={() => setModal(item.action as "whatsapp" | "fidelidade")} className={cls}>
+                      {inner}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </Reveal>
@@ -302,6 +379,43 @@ export default function ServicosPlanosPage() {
           </Link>
         </div>
       </section>
+
+      <Modal open={modal === "whatsapp"} onClose={() => setModal(null)} title="Mensagens automáticas por WhatsApp">
+        <p className="mb-5 text-sm text-[var(--mkt-muted)]">
+          Estas são as principais mensagens que o sistema envia aos seus clientes (textos padrão, com dados fictícios de
+          exemplo). Você pode personalizar cada modelo.
+        </p>
+        <ul className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
+          {WHATSAPP_MESSAGES.map((m) => (
+            <li key={m.label}>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--mkt-accent)]">{m.label}</p>
+              <div className="max-w-[92%] whitespace-pre-line rounded-2xl rounded-tl-md bg-[#dcf8c6] px-4 py-3 text-sm leading-relaxed text-[#1f2a1f] shadow-sm">
+                {m.text}
+              </div>
+              {m.reply && (
+                <div className="ml-auto mt-2 w-fit rounded-2xl rounded-tr-md bg-[var(--mkt-surface-2)] px-4 py-2 text-sm font-semibold text-[var(--mkt-ink)]">
+                  {m.reply}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Modal>
+
+      <Modal open={modal === "fidelidade"} onClose={() => setModal(null)} title="Programa de fidelidade">
+        <p className="mb-4 text-sm text-[var(--mkt-muted)]">
+          Tela de configuração do sistema: você define quantos pontos cada real gasto vale, quanto vale cada ponto no
+          resgate e o saldo mínimo para liberar o resgate.
+        </p>
+        <Image
+          src="/marketing/servicos/fidelidade-config.webp"
+          alt="Configuração do programa de fidelidade: pontos por real gasto, valor de cada ponto no resgate e saldo mínimo"
+          width={660}
+          height={533}
+          sizes="(min-width: 640px) 36rem, 90vw"
+          className="h-auto w-full rounded-2xl border border-[var(--mkt-border)]"
+        />
+      </Modal>
 
       <ContactSection
         title="Fale sobre os planos"

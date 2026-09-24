@@ -31,6 +31,11 @@
   --mkt-muted: var(--text-muted);
   --mkt-ink: var(--text-primary);
   --mkt-accent-2: var(--primary);
+  --mkt-accent: var(--primary-text);
+  --mkt-bg: var(--background);
+  --mkt-bg-alt: var(--surface);
+  --mkt-surface: var(--surface);
+  --mkt-surface-2: var(--primary-soft);
   --sv-gold-soft: #a9c4ff;
   --sv-ease: cubic-bezier(0.16, 1, 0.3, 1);
 

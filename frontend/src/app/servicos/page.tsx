@@ -15,18 +15,22 @@ import {
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
+import { Faq, servicosFaqItems } from "@/components/marketing/Faq";
 import { SERVICE_SEGMENTS } from "@/components/marketing/segments-data";
 import { servicosFontVars } from "@/components/marketing/fonts";
 import { Reveal } from "@/components/marketing/Reveal";
 import { ServicosDemoTour } from "@/components/marketing/ServicosDemoTour";
 import { ServicosShowcase } from "@/components/marketing/ServicosShowcase";
+import { ServicosSimulador } from "@/components/marketing/ServicosSimulador";
 import { ServicosTilt } from "@/components/marketing/ServicosTilt";
 import "@/components/marketing/marketing-shared.css";
 import "@/components/marketing/servicos.css";
 
 const NAV_LINKS = [
+  { label: "Teste na prática", href: "/servicos#teste" },
   { label: "Recursos", href: "/servicos#recursos" },
   { label: "Segmentos", href: "/servicos#segmentos" },
+  { label: "Dúvidas", href: "/servicos#perguntas-frequentes" },
   { label: "Contato", href: "/servicos#contato" },
 ];
 
@@ -252,6 +256,19 @@ export default function ServicosPage() {
             </p>
           </div>
           <ServicosDemoTour />
+
+          <div id="teste" className="mt-28 scroll-mt-24">
+            <div className="mb-12 max-w-2xl">
+              <p className="sv-eyebrow sv-eyebrow-light">Teste você mesmo</p>
+              <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
+                Faça um agendamento e veja a gestão se atualizar.
+              </h2>
+              <p className="mt-4 leading-relaxed text-[var(--mkt-muted)]">
+                Escolha um serviço como cliente, reserve um horário e acompanhe a agenda, o caixa e o dashboard do negócio. É uma simulação: nada é enviado nem cobrado.
+              </p>
+            </div>
+            <ServicosSimulador />
+          </div>
         </div>
       </Reveal>
 
@@ -329,6 +346,8 @@ export default function ServicosPage() {
           </div>
         </div>
       </section>
+
+      <Faq items={servicosFaqItems} contactHref="/servicos#contato" />
 
       <ContactSection
         title="Fale sobre o AlePejo Serviços"

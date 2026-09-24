@@ -1,0 +1,247 @@
+/*
+ * Identidade da página inicial da AlePejo (`/inicio`): papel quente, tinta
+ * azul-escura e um fio dourado (as cores da própria logo). Cada produto entra
+ * com a sua cor — azul para o ERP, café e dourado para o Serviços — e reaproveita
+ * as classes de botão de erp.css e servicos.css.
+ */
+
+.theme-inicio {
+  --font-marketing-display: var(--font-servicos-display);
+  --font-marketing-body: var(--font-erp-body);
+
+  --mkt-bg: #f6f3ec;
+  --mkt-bg-alt: #fbf9f4;
+  --mkt-surface: #fffdf9;
+  --mkt-surface-2: #ece6d8;
+  --mkt-ink: #131a2b;
+  --mkt-muted: #5a6072;
+  --mkt-border: #ded8c8;
+  --mkt-accent: #8a5e0d;
+  --mkt-accent-2: #b7791a;
+  --mkt-accent-3: #0d7a6e;
+  --mkt-contrast: #fffdf9;
+
+  /* variáveis lidas pelos botões dos dois produtos */
+  --sv-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --erp-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --sv-gold: #e0aa47;
+  --sv-gold-soft: #f0c56d;
+  --sv-cream: #f7eddb;
+  --erp-blue: #6c9bff;
+  --erp-ice: #e8eefb;
+}
+
+.dark .theme-inicio {
+  --mkt-bg: #0e1220;
+  --mkt-bg-alt: #131828;
+  --mkt-surface: #182034;
+  --mkt-surface-2: #212a42;
+  --mkt-ink: #eef0f7;
+  --mkt-muted: #aab1c6;
+  --mkt-border: #2b3552;
+  --mkt-accent: #e0aa47;
+  --mkt-accent-2: #f0c56d;
+  --mkt-accent-3: #3cc3b0;
+  --mkt-contrast: #0e1220;
+}
+
+.theme-inicio .font-display {
+  letter-spacing: -0.02em;
+}
+
+/* ───────── Abertura ───────── */
+.in-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(50% 55% at 88% 12%, rgb(183 121 26 / 0.16), transparent 70%),
+    radial-gradient(45% 50% at 5% 95%, rgb(36 86 214 / 0.1), transparent 70%),
+    var(--mkt-bg);
+}
+
+.in-rise {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: in-rise 0.85s var(--sv-ease) forwards;
+  animation-delay: calc(var(--i, 0) * 90ms + 80ms);
+}
+
+@keyframes in-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ───────── Dois cartões empilhados (telas reais) ───────── */
+.in-stack {
+  position: relative;
+  height: 22rem;
+}
+
+.in-shot {
+  position: absolute;
+  width: 78%;
+  overflow: hidden;
+  border-radius: 1.1rem;
+  border: 6px solid #0d0905;
+  background: #0d0905;
+  box-shadow: 0 40px 60px -30px rgb(0 0 0 / 0.55);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.6s var(--sv-ease),
+    box-shadow 0.4s ease;
+}
+
+.in-shot:focus-visible {
+  outline: 2px solid var(--mkt-accent-2);
+  outline-offset: 4px;
+}
+
+.in-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.in-shot-erp {
+  left: 0;
+  top: 0;
+  border-color: #0a1424;
+  transform: rotate(-3deg) scale(0.94);
+  z-index: 1;
+}
+
+.in-shot-srv {
+  right: 0;
+  bottom: 0;
+  transform: rotate(2.5deg) scale(0.94);
+  z-index: 1;
+}
+
+.in-shot[data-front="true"] {
+  z-index: 2;
+  transform: rotate(0deg) scale(1.02);
+  box-shadow: 0 50px 70px -30px rgb(0 0 0 / 0.65);
+}
+
+.in-shot-tag {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgb(10 20 36 / 0.85);
+  backdrop-filter: blur(6px);
+}
+
+/* ───────── Linha do tempo (o "A1, B1..." das planilhas) ───────── */
+.in-cell {
+  font-family: var(--font-erp-body), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.in-step {
+  transition:
+    transform 0.4s var(--sv-ease),
+    background-color 0.3s ease;
+}
+
+/* ───────── Cartões dos sistemas ───────── */
+.in-door {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1.75rem;
+  transition:
+    transform 0.5s var(--sv-ease),
+    box-shadow 0.5s ease;
+}
+
+.in-door:hover {
+  transform: translateY(-6px);
+}
+
+.in-door-erp {
+  color: var(--erp-ice);
+  background:
+    radial-gradient(60% 50% at 90% 0%, rgb(70 120 240 / 0.3), transparent 70%),
+    linear-gradient(180deg, #0a1424, #101f38);
+  box-shadow: 0 40px 70px -40px rgb(10 20 36 / 0.8);
+}
+
+.in-door-srv {
+  color: var(--sv-cream);
+  background:
+    radial-gradient(60% 50% at 90% 0%, rgb(224 170 71 / 0.26), transparent 70%),
+    linear-gradient(180deg, #17110a, #21180d);
+  box-shadow: 0 40px 70px -40px rgb(23 17 10 / 0.8);
+}
+
+.in-door-shot {
+  margin: 1.5rem -1rem -1px 2rem;
+  overflow: hidden;
+  border-radius: 0.9rem 0 0 0;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-right: 0;
+  border-bottom: 0;
+  transition: transform 0.6s var(--sv-ease);
+}
+
+.in-door:hover .in-door-shot {
+  transform: translate(-6px, -6px);
+}
+
+.in-door-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.in-chip {
+  transition:
+    transform 0.3s var(--sv-ease),
+    border-color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.in-chip:hover {
+  transform: translateY(-2px);
+  border-color: var(--mkt-accent-2);
+  background: color-mix(in srgb, var(--mkt-accent-2) 10%, var(--mkt-surface));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .in-rise {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .in-shot,
+  .in-door,
+  .in-door-shot,
+  .in-chip,
+  .in-step {
+    transition: none;
+  }
+
+  .in-door:hover,
+  .in-door:hover .in-door-shot,
+  .in-chip:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .in-stack {
+    height: 18rem;
+  }
+}
