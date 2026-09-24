@@ -44,13 +44,6 @@ export function MarketingFooter({ page }: { page: string }) {
           )}
 
           <Link
-            href="/trabalhe-conosco"
-            className="font-medium hover:text-[var(--mkt-ink)] hover:underline"
-          >
-            Trabalhe conosco
-          </Link>
-
-          <Link
             href="/privacidade"
             className="font-medium hover:text-[var(--mkt-ink)] hover:underline"
           >
