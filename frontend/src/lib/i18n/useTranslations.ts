@@ -33,15 +33,20 @@ export function useTranslations(dictionaries: LocaleDictionaries) {
   }
 
   function tList(key: string): string[] {
+    return tItems<string>(key);
+  }
+
+  /** Lê um array de qualquer formato (ex.: perguntas/respostas do FAQ), com o mesmo fallback pro pt-BR. */
+  function tItems<T>(key: string): T[] {
     const path = key.split(".");
     const value = lookup(dictionaries[locale] ?? {}, path);
-    if (Array.isArray(value)) return value as string[];
+    if (Array.isArray(value)) return value as T[];
 
     const fallback = lookup(dictionaries[DEFAULT_LOCALE] ?? {}, path);
-    if (Array.isArray(fallback)) return fallback as string[];
+    if (Array.isArray(fallback)) return fallback as T[];
 
     return [];
   }
 
-  return { t, tList, locale };
+  return { t, tList, tItems, locale };
 }

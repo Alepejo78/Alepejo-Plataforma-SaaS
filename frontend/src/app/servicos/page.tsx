@@ -17,7 +17,7 @@ import {
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
-import { Faq, servicosFaqItems } from "@/components/marketing/Faq";
+import { Faq, useServicosFaqItems } from "@/components/marketing/Faq";
 import { SERVICE_SEGMENTS } from "@/components/marketing/segments-data";
 import { servicosFontVars } from "@/components/marketing/fonts";
 import { Reveal } from "@/components/marketing/Reveal";
@@ -42,6 +42,7 @@ const BENEFIT_ICONS = [CalendarCheck, Bell, Hourglass, PackageCheck, Gift, Smart
 export default function ServicosPage() {
   const { t } = useTranslations(servicosDictionary);
   const { t: tSegment } = useTranslations(segmentsDictionary);
+  const servicosFaqItems = useServicosFaqItems();
 
   const NAV_LINKS = [
     { label: t("nav.teste"), href: "/servicos#teste" },

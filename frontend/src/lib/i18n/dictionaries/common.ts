@@ -30,20 +30,6 @@ export const segmentsDictionary: LocaleDictionaries = {
       esteticaAutomotiva: "Auto detailing",
     },
   },
-  "pt-PT": {
-    segments: {
-      barbearia: "Barbearia",
-      salao: "Cabeleireiro",
-      manicure: "Manicure e verniz de gel",
-      maquiagem: "Maquilhagem",
-      estetica: "Estética e depilação",
-      bemEstar: "Bem-estar",
-      odontologia: "Odontologia",
-      clinicaEstetica: "Clínica de estética",
-      petshop: "Petshop, banho e tosquia",
-      esteticaAutomotiva: "Estética automóvel",
-    },
-  },
 };
 
 /** `ContactSection` — reaproveitado em /inicio, /servicos e /servicos/planos. */
@@ -86,25 +72,6 @@ export const contactSectionDictionary: LocaleDictionaries = {
       genericError: "We couldn't send your message.",
     },
   },
-  "pt-PT": {
-    contact: {
-      defaultTitle: "Fale connosco",
-      defaultDescription: "Tem dúvidas sobre os planos ou quer saber mais? Envie-nos uma mensagem.",
-      subtitle: "Dúvidas sobre a empresa? Quer saber mais sobre os sistemas? Entre em contacto.",
-      phoneLabel: "(43) 9 9154-4557",
-      addressLabel: "Atendimento remoto em todo o Brasil, presencial a combinar",
-      sentTitle: "Mensagem enviada!",
-      sentSubtitle: "Vamos responder brevemente para o e-mail indicado.",
-      nameLabel: "Nome",
-      emailLabel: "E-mail",
-      phoneFieldLabel: "Telefone",
-      companyLabel: "Empresa",
-      messageLabel: "Mensagem",
-      sendButton: "Enviar mensagem",
-      sending: "A enviar...",
-      genericError: "Não foi possível enviar a sua mensagem.",
-    },
-  },
 };
 
 /** `MarketingFooter` — rodapé de /inicio, /servicos e /servicos/planos. */
@@ -121,13 +88,6 @@ export const marketingFooterDictionary: LocaleDictionaries = {
       copyright: "AlePejo Assessoria e Prestação de Serviço Ltda.",
       visits: "visits",
       privacy: "Privacy Policy",
-    },
-  },
-  "pt-PT": {
-    footer: {
-      copyright: "AlePejo Assessoria e Prestação de Serviço Ltda.",
-      visits: "visitas",
-      privacy: "Política de Privacidade",
     },
   },
 };

@@ -24,98 +24,102 @@ import {
 import { Reveal } from "./Reveal";
 import { ProductShowcase, type Slide } from "./ServicosShowcase";
 import { ServicosTilt } from "./ServicosTilt";
-
-const ERP_SLIDES: Slide[] = [
-  {
-    id: "dashboard",
-    tab: "Dashboard",
-    description: "Indicadores e gráficos da equipe: função, setor e perfil dos colaboradores.",
-    src: "/marketing/erp/dashboard.webp",
-    width: 1600,
-    height: 756,
-    alt: "Dashboard do AlePejo ERP com gráficos de colaboradores por função, setor e sexo",
-    highlights: [{ label: "Indicadores da empresa", x: 17, y: 27, w: 80, h: 11 }],
-  },
-  {
-    id: "compras",
-    tab: "Compras",
-    description: "Cotações, pedidos e recebimento. O recebimento atualiza o estoque.",
-    src: "/marketing/erp/compras.webp",
-    width: 1600,
-    height: 750,
-    alt: "Lista de compras com fornecedor, depósito, total e situação",
-    highlights: [{ label: "Do pedido ao recebimento", x: 18, y: 35, w: 80, h: 13 }],
-  },
-  {
-    id: "vendas",
-    tab: "Vendas",
-    description: "Vendas e baixa de estoque na aprovação, com orçamentos, pedidos e ordens de serviço.",
-    src: "/marketing/erp/vendas.webp",
-    width: 1600,
-    height: 753,
-    alt: "Lista de vendas com cliente, depósito, valores e situação",
-    highlights: [{ label: "Baixa de estoque na aprovação", x: 18, y: 36, w: 80, h: 11 }],
-  },
-  {
-    id: "estoque",
-    tab: "Estoque",
-    description: "Histórico de entradas, saídas e ajustes, por produto e depósito.",
-    src: "/marketing/erp/estoque.webp",
-    width: 1600,
-    height: 750,
-    alt: "Movimentações de estoque com entradas e saídas por produto e depósito",
-    highlights: [{ label: "Entradas e saídas", x: 18, y: 44, w: 80, h: 17 }],
-  },
-  {
-    id: "receber",
-    tab: "Financeiro",
-    description: "Títulos a receber com vencimento, forma de pagamento e situação.",
-    src: "/marketing/erp/receber.webp",
-    width: 1600,
-    height: 757,
-    alt: "Contas a receber com vencimento, cliente, valor e situação",
-    highlights: [{ label: "Situação de cada título", x: 18, y: 36, w: 80, h: 24 }],
-  },
-  {
-    id: "orcamento",
-    tab: "Orçamento",
-    description: "Planejado x realizado mês a mês, com receitas, despesas e resultado.",
-    src: "/marketing/erp/orcamento.webp",
-    width: 1600,
-    height: 753,
-    alt: "Orçamento anual com receita e despesa orçadas e realizadas por mês",
-    highlights: [{ label: "Planejado x realizado", x: 18, y: 28, w: 80, h: 32 }],
-  },
-  {
-    id: "producao",
-    tab: "Produção",
-    description: "Ordens de produção com origem, prazo e situação.",
-    src: "/marketing/erp/producao.webp",
-    width: 1600,
-    height: 749,
-    alt: "Ordens de produção com produto, depósito, origem, previsão e situação",
-    highlights: [{ label: "Prazo e situação", x: 16, y: 35, w: 82, h: 11 }],
-  },
-  {
-    id: "rh",
-    tab: "RH",
-    description: "Indicadores de colaboradores por função e setor.",
-    src: "/marketing/erp/rh.webp",
-    width: 1600,
-    height: 757,
-    alt: "Indicadores de RH com colaboradores ativos e média salarial por função e setor",
-    highlights: [{ label: "Colaboradores ativos", x: 18, y: 34, w: 78, h: 12 }],
-  },
-];
+import { useTranslations } from "@/lib/i18n/useTranslations";
+import { erpSectionsDictionary } from "@/lib/i18n/dictionaries/erpSections";
 
 export function ErpShowcase() {
+  const { t } = useTranslations(erpSectionsDictionary);
+
+  const ERP_SLIDES: Slide[] = [
+    {
+      id: "dashboard",
+      tab: "Dashboard",
+      description: t("showcase.slideDashboard"),
+      src: "/marketing/erp/dashboard.webp",
+      width: 1600,
+      height: 756,
+      alt: "Dashboard do AlePejo ERP com gráficos de colaboradores por função, setor e sexo",
+      highlights: [{ label: t("showcase.highlightIndicadores"), x: 17, y: 27, w: 80, h: 11 }],
+    },
+    {
+      id: "compras",
+      tab: "Compras",
+      description: t("showcase.slideCompras"),
+      src: "/marketing/erp/compras.webp",
+      width: 1600,
+      height: 750,
+      alt: "Lista de compras com fornecedor, depósito, total e situação",
+      highlights: [{ label: t("showcase.highlightCompras"), x: 18, y: 35, w: 80, h: 13 }],
+    },
+    {
+      id: "vendas",
+      tab: "Vendas",
+      description: t("showcase.slideVendas"),
+      src: "/marketing/erp/vendas.webp",
+      width: 1600,
+      height: 753,
+      alt: "Lista de vendas com cliente, depósito, valores e situação",
+      highlights: [{ label: t("showcase.highlightVendas"), x: 18, y: 36, w: 80, h: 11 }],
+    },
+    {
+      id: "estoque",
+      tab: "Estoque",
+      description: t("showcase.slideEstoque"),
+      src: "/marketing/erp/estoque.webp",
+      width: 1600,
+      height: 750,
+      alt: "Movimentações de estoque com entradas e saídas por produto e depósito",
+      highlights: [{ label: t("showcase.highlightEstoque"), x: 18, y: 44, w: 80, h: 17 }],
+    },
+    {
+      id: "receber",
+      tab: "Financeiro",
+      description: t("showcase.slideReceber"),
+      src: "/marketing/erp/receber.webp",
+      width: 1600,
+      height: 757,
+      alt: "Contas a receber com vencimento, cliente, valor e situação",
+      highlights: [{ label: t("showcase.highlightReceber"), x: 18, y: 36, w: 80, h: 24 }],
+    },
+    {
+      id: "orcamento",
+      tab: "Orçamento",
+      description: t("showcase.slideOrcamento"),
+      src: "/marketing/erp/orcamento.webp",
+      width: 1600,
+      height: 753,
+      alt: "Orçamento anual com receita e despesa orçadas e realizadas por mês",
+      highlights: [{ label: t("showcase.highlightOrcamento"), x: 18, y: 28, w: 80, h: 32 }],
+    },
+    {
+      id: "producao",
+      tab: "Produção",
+      description: t("showcase.slideProducao"),
+      src: "/marketing/erp/producao.webp",
+      width: 1600,
+      height: 749,
+      alt: "Ordens de produção com produto, depósito, origem, previsão e situação",
+      highlights: [{ label: t("showcase.highlightProducao"), x: 16, y: 35, w: 82, h: 11 }],
+    },
+    {
+      id: "rh",
+      tab: "RH",
+      description: t("showcase.slideRh"),
+      src: "/marketing/erp/rh.webp",
+      width: 1600,
+      height: 757,
+      alt: "Indicadores de RH com colaboradores ativos e média salarial por função e setor",
+      highlights: [{ label: t("showcase.highlightRh"), x: 18, y: 34, w: 78, h: 12 }],
+    },
+  ];
+
   return (
     <Reveal as="section" className="bg-[var(--surface)] py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-14 max-w-2xl">
-          <p className="erp-eyebrow erp-eyebrow-light">O sistema em uso</p>
+          <p className="erp-eyebrow erp-eyebrow-light">{t("showcase.eyebrow")}</p>
           <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--text-primary)] sm:text-4xl">
-            Cada módulo, do jeito que a equipe usa.
+            {t("showcase.title")}
           </h2>
         </div>
         <ProductShowcase slides={ERP_SLIDES} stageAspect={2.12} />
@@ -125,34 +129,35 @@ export function ErpShowcase() {
 }
 
 export function ErpHero({ trialDays }: { trialDays: number }) {
+  const { t } = useTranslations(erpSectionsDictionary);
+
   return (
     <section className="erp-hero">
       <div className="mx-auto grid max-w-7xl gap-14 px-6 pb-20 pt-16 lg:min-h-[calc(100dvh-4.5rem)] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-10 lg:py-20">
         <div className="max-w-xl">
           <p className="erp-rise erp-eyebrow" style={{ ["--i" as string]: 0 }}>
-            AlePejo ERP Cloud
+            {t("hero.eyebrow")}
           </p>
           <h1
             className="erp-rise font-display mt-6 text-4xl font-semibold leading-[1.05] sm:text-5xl lg:text-[3.3rem]"
             style={{ ["--i" as string]: 1 }}
           >
-            Toda a operação da empresa, num só lugar e sob controle.
+            {t("hero.title")}
           </h1>
           <p
             className="erp-rise mt-6 max-w-[52ch] text-lg leading-relaxed text-[var(--erp-ice)]/80"
             style={{ ["--i" as string]: 2 }}
           >
-            Vendas, compras, estoque, financeiro, RH e produção integrados num ERP na nuvem, com permissões por perfil
-            e os dados de cada empresa separados dos demais.
+            {t("hero.subtitle")}
           </p>
 
           <div className="erp-rise mt-9 flex flex-wrap items-center gap-3" style={{ ["--i" as string]: 3 }}>
             <Link href="/cadastro-empresa" className="erp-btn erp-btn-primary">
-              Começar grátis
+              {t("hero.ctaStart")}
               <ArrowRight size={17} aria-hidden />
             </Link>
             <Link href="/comercial" className="erp-btn erp-btn-ghost">
-              Ver planos
+              {t("hero.ctaPlans")}
             </Link>
           </div>
 
@@ -160,12 +165,14 @@ export function ErpHero({ trialDays }: { trialDays: number }) {
             className="erp-rise mt-10 flex flex-wrap gap-x-6 gap-y-2 border-t border-[var(--erp-line)] pt-6 text-sm text-[var(--erp-ice)]/75"
             style={{ ["--i" as string]: 4 }}
           >
-            {[`${trialDays} dias grátis`, "Sem cartão de crédito", "Permissões por perfil"].map((point) => (
-              <li key={point} className="flex items-center gap-2">
-                <span aria-hidden className="size-1.5 rounded-full bg-[var(--erp-blue)]" />
-                {point}
-              </li>
-            ))}
+            {[t("hero.trialPoint").replace("{days}", String(trialDays)), t("hero.noCard"), t("hero.permissions")].map(
+              (point) => (
+                <li key={point} className="flex items-center gap-2">
+                  <span aria-hidden className="size-1.5 rounded-full bg-[var(--erp-blue)]" />
+                  {point}
+                </li>
+              ),
+            )}
           </ul>
         </div>
 
@@ -184,46 +191,31 @@ export function ErpHero({ trialDays }: { trialDays: number }) {
             </div>
             <div className="sv-laptop-base" aria-hidden />
           </div>
-          <p className="mt-4 text-xs text-[var(--erp-ice)]/60">
-            Captura do sistema real, com dados fictícios de demonstração.
-          </p>
+          <p className="mt-4 text-xs text-[var(--erp-ice)]/60">{t("hero.screenshotNote")}</p>
         </ServicosTilt>
       </div>
     </section>
   );
 }
 
-const VALUE_PROPS = [
-  {
-    icon: Boxes,
-    title: "Módulos que conversam entre si",
-    text: "Uma venda dá baixa no estoque e já gera o título financeiro. Vendas, compras, estoque, financeiro, RH e produção usam os mesmos cadastros.",
-  },
-  {
-    icon: Rocket,
-    title: "Comece sem infraestrutura",
-    text: "Cadastre a empresa e teste o sistema na nuvem, sem servidor próprio nem equipe de TI dedicada.",
-  },
-  {
-    icon: Smartphone,
-    title: "No computador, tablet ou celular",
-    text: "O sistema roda no navegador, então a equipe acessa de onde estiver.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Cada empresa enxerga só os próprios dados",
-    text: "Os dados são separados por empresa e o acesso é controlado por perfil de usuário.",
-  },
-];
+const VALUE_PROP_ICONS = [Boxes, Rocket, Smartphone, ShieldCheck];
 
 export function ErpValueProps() {
+  const { t } = useTranslations(erpSectionsDictionary);
+
+  const VALUE_PROPS = VALUE_PROP_ICONS.map((icon, i) => ({
+    icon,
+    title: t(`valueProps.p${i + 1}Title`),
+    text: t(`valueProps.p${i + 1}Text`),
+  }));
+
   return (
     <Reveal as="section" id="implantacao" className="bg-[var(--background)] py-24">
       <div className="mx-auto grid max-w-7xl gap-14 px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
         <div className="lg:sticky lg:top-28 lg:self-start">
-          <p className="erp-eyebrow erp-eyebrow-light">Por que o AlePejo ERP</p>
+          <p className="erp-eyebrow erp-eyebrow-light">{t("valueProps.eyebrow")}</p>
           <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--text-primary)] sm:text-4xl">
-            Organização e clareza para decidir com os dados em mãos.
+            {t("valueProps.title")}
           </h2>
         </div>
 
@@ -248,29 +240,35 @@ export function ErpValueProps() {
   );
 }
 
-const SEGMENTS = [
-  { icon: Factory, label: "Indústria" },
-  { icon: Store, label: "Comércio" },
-  { icon: Cpu, label: "Tecnologia" },
-  { icon: Truck, label: "Logística" },
-  { icon: Sparkles, label: "Serviços" },
-  { icon: Globe, label: "Internacional" },
+const AUDIENCE_ICONS_KEYS: [typeof Factory, string][] = [
+  [Factory, "industria"],
+  [Store, "comercio"],
+  [Cpu, "tecnologia"],
+  [Truck, "logistica"],
+  [Sparkles, "servicos"],
+  [Globe, "internacional"],
 ];
 
 export function ErpAudience() {
+  const { t } = useTranslations(erpSectionsDictionary);
+
+  const SEGMENTS = AUDIENCE_ICONS_KEYS.map(([icon, key]) => ({
+    icon,
+    key,
+    label: t(`audience.${key}`),
+  }));
+
   return (
     <Reveal as="section" className="erp-navy py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-14 max-w-2xl">
-          <p className="erp-eyebrow">Segmentos</p>
-          <h2 className="font-display mt-5 text-3xl font-semibold leading-tight sm:text-4xl">
-            Indústria, comércio, serviços, tecnologia e mais.
-          </h2>
+          <p className="erp-eyebrow">{t("audience.eyebrow")}</p>
+          <h2 className="font-display mt-5 text-3xl font-semibold leading-tight sm:text-4xl">{t("audience.title")}</h2>
         </div>
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {SEGMENTS.map((segment) => (
             <li
-              key={segment.label}
+              key={segment.key}
               className="erp-glass erp-chip flex flex-col gap-4 rounded-2xl p-5 hover:!bg-[rgb(70_120_240/0.18)]"
             >
               <segment.icon size={24} strokeWidth={1.5} className="text-[var(--erp-blue)]" aria-hidden />
@@ -283,48 +281,25 @@ export function ErpAudience() {
   );
 }
 
-const FEATURES = [
-  {
-    icon: BarChart3,
-    title: "Dashboard",
-    text: "Visão geral do negócio com gráficos e indicadores.",
-  },
-  {
-    icon: Users,
-    title: "Gestão de metas",
-    text: "Defina objetivos e acompanhe o progresso com alertas automáticos.",
-  },
-  {
-    icon: Database,
-    title: "Relatórios",
-    text: "Relatórios para cada área da empresa.",
-  },
-  {
-    icon: Smartphone,
-    title: "App mobile",
-    text: "Acesso pelo celular com o aplicativo dedicado.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Integração com WhatsApp",
-    text: "Notificações e lembretes enviados automaticamente por WhatsApp.",
-  },
-  {
-    icon: KeyRound,
-    title: "Controle de acesso",
-    text: "Permissões e perfis de usuário para cada pessoa da equipe.",
-  },
-];
+const FEATURE_ICONS = [BarChart3, Users, Database, Smartphone, MessageCircle, KeyRound];
 
 export function ErpFeatures() {
+  const { t } = useTranslations(erpSectionsDictionary);
+
+  const FEATURES = FEATURE_ICONS.map((icon, i) => ({
+    icon,
+    title: t(`features.f${i + 1}Title`),
+    text: t(`features.f${i + 1}Text`),
+  }));
+
   return (
     <Reveal as="section" id="funcionalidades" className="bg-[var(--surface)] py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-14 grid gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
           <div>
-            <p className="erp-eyebrow erp-eyebrow-light">Funcionalidades</p>
+            <p className="erp-eyebrow erp-eyebrow-light">{t("features.eyebrow")}</p>
             <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--text-primary)] sm:text-4xl">
-              O que você usa no dia a dia.
+              {t("features.title")}
             </h2>
           </div>
         </div>
