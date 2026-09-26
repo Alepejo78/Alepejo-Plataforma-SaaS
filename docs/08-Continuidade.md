@@ -3,6 +3,43 @@
 Documento de handoff. Se você é uma IA assumindo este projeto, leia este
 arquivo e o `07-Escopo-Planilha.md` antes de alterar qualquer coisa.
 
+## 🟢 Seletor de idioma PT-BR/EN nas páginas públicas (26-09-2026, feito no chat na nuvem)
+
+Pedido do usuário: bandeira de idioma em `www.alepejo.com.br` e todas as
+páginas ligadas a ela, com tradução do conteúdo. Escopo acertado com o
+usuário: só PT-BR e inglês (chegou a existir uma versão PT-PT também,
+removida a pedido antes do merge).
+
+- **Infra nova** em `frontend/src/lib/i18n/`: `LanguageProvider` (guarda a
+  escolha em `localStorage`, sem cookie, sem tocar em `middleware.ts` —
+  que já tem lógica sensível de domínio de vitrine + empresa logada) e
+  `useTranslations(dictionary)` (hook `t(key)`/`tItems<T>(key)`, com
+  fallback pro pt-BR se faltar chave). Dicionários em
+  `frontend/src/lib/i18n/dictionaries/*.ts`, um arquivo por página/
+  componente compartilhado.
+- `LanguageSwitcher` (bandeira 🇧🇷/🇺🇸) inserido no `MarketingNav` (usado
+  por `/inicio`, `/servicos`, `/servicos/planos`) e no `PublicNav` (usado
+  por `/institucional`, `/planos`, `/checkout`, `/privacidade` — o
+  `/checkout` ganhou o seletor de brinde por usar o mesmo componente, mas
+  o conteúdo dele **não foi traduzido**, fora do pedido original).
+- **Traduzidas 100%:** `/inicio`, `/servicos`, `/servicos/planos`,
+  `/institucional` (inclui a demonstração guiada — a narração por voz
+  troca `utterance.lang` para inglês também), `/planos`, `/privacidade`.
+- **Duas exceções conscientes, não são bug:**
+  - Em `/planos`, nome/descrição de cada plano e módulo (`plan.name`,
+    `plan.description`, `mod.name` em `DISPLAY_NAME_OVERRIDES`) vêm do
+    backend (`companyOnboardingService`, cadastro do administrador em
+    português) — não dá pra traduzir isso no frontend sem i18n no
+    catálogo do banco. Ficam em português mesmo com o toggle em inglês.
+  - `/privacidade`: a versão em inglês (`PrivacyContentEnUs.tsx`) é
+    tradução de cortesia — tem um aviso no topo de que a versão em
+    português (`PrivacyContentPtBr.tsx`) é a juridicamente válida,
+    porque a LGPD é lei brasileira. Escolha deliberada: nunca deixar a
+    tradução "parecer" o documento legal de verdade.
+- PR: `Alepejo78/Alepejo-Plataforma-SaaS#1`, mergeado. `npm run build`
+  (typecheck + build de produção) limpo em cada etapa — não testado ainda
+  em produção logado (fazer isso antes de considerar 100% fechado).
+
 ## 🟢 Limite de relatórios ampliado; Importar/Exportar Parceiros vira permissão própria; "Limpar tudo" nas notificações (06-09-2026)
 
 Trabalho retomado do Claude Desktop (estava pronto mas não commitado) — testado local e commitado nesta sessão via Claude Code.
