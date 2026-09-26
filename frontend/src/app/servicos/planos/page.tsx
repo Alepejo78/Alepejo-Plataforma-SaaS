@@ -12,6 +12,8 @@ import { ContactSection } from "@/components/marketing/ContactSection";
 import { servicosFontVars } from "@/components/marketing/fonts";
 import { Modal } from "@/components/marketing/Modal";
 import { Reveal } from "@/components/marketing/Reveal";
+import { useTranslations } from "@/lib/i18n/useTranslations";
+import { servicosPlanosDictionary } from "@/lib/i18n/dictionaries/servicosPlanos";
 import "@/components/marketing/marketing-shared.css";
 import "@/components/marketing/servicos.css";
 
@@ -41,89 +43,59 @@ function checkoutUrl(planId: string, cycle: "MONTHLY" | "YEARLY") {
   return `${SERVICOS_APP_URL}/painel/checkout?${params.toString()}`;
 }
 
-const NAV_LINKS = [
-  { label: "Recursos", href: "/servicos#recursos" },
-  { label: "Segmentos", href: "/servicos#segmentos" },
-  { label: "Contato", href: "/servicos#contato" },
-];
-
 /** Link público de exemplo (agendamento de um negócio real do sistema). */
 const PUBLIC_LINK_URL = "https://apps.alepejo.com.br/alepejo-agendamentos";
 
 type AvailableAction = "link" | "whatsapp" | "fidelidade";
 
-const AVAILABLE_NOW: {
-  icon: typeof LinkIcon;
-  title: string;
-  description: string;
-  action: AvailableAction;
-  cta: string;
-}[] = [
-  {
-    icon: LinkIcon,
-    title: "Link de agendamento",
-    description: "Sua página pública de horários, já funcionando hoje.",
-    action: "link",
-    cta: "Abrir o link público",
-  },
-  {
-    icon: Bell,
-    title: "Lembretes no WhatsApp",
-    description: "Confirmação e lembrete automático antes do atendimento.",
-    action: "whatsapp",
-    cta: "Ver as mensagens",
-  },
-  {
-    icon: Gift,
-    title: "Fidelidade",
-    description: "Pontos por atendimento e resgate configurável.",
-    action: "fidelidade",
-    cta: "Ver a configuração",
-  },
-];
-
-/**
- * Mensagens automáticas enviadas por WhatsApp (textos padrão do sistema, com
- * dados fictícios de exemplo). A empresa pode personalizar os modelos.
- */
-const WHATSAPP_MESSAGES: { label: string; text: string; reply?: string }[] = [
-  {
-    label: "Confirmação do agendamento",
-    text: "Olá, Marina! Seu horário para Corte feminino está reservado para 25/09/2026 às 14:00 com Fernanda.",
-  },
-  {
-    label: "Lembrete (24 horas e 2 horas antes)",
-    text: "Olá, Marina! Lembrando que seu horário com Fernanda é em 25/09/2026 às 14:00.\n\n1. Confirmar\n2. Cancelar\n3. Reagendar",
-    reply: "1",
-  },
-  {
-    label: "Cancelamento",
-    text: "Olá, Marina. Seu agendamento de 25/09/2026 às 14:00 foi cancelado.",
-  },
-  {
-    label: "Lista de espera: um horário vagou",
-    text: "Boa notícia, Marina! Abriu um horário de Corte feminino no dia 25/09 às 14:00 com Fernanda.\n\nResponda:\n1 - CONFIRMAR e agendar este horário\n2 - RECUSAR (você sai da lista de espera)\n\nA oferta vale por 30 minutos.",
-    reply: "1",
-  },
-  {
-    label: "Pedido de avaliação",
-    text: "Olá, Marina! Como foi seu atendimento com Fernanda? Avalie aqui: (link da avaliação)",
-  },
-  {
-    label: "Aniversário",
-    text: "Feliz aniversário, Marina! Temos uma condição especial pra você. Agende seu horário:",
-  },
-  {
-    label: "Retorno de clientes",
-    text: "Olá, Marina! Já faz 45 dias desde seu último atendimento. Que tal agendar um novo horário?",
-  },
-];
-
 export default function ServicosPlanosPage() {
+  const { t } = useTranslations(servicosPlanosDictionary);
   const [plans, setPlans] = useState<ServicosPlan[] | null>(null);
   const [trialDays, setTrialDays] = useState<number | null>(null);
   const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
   const [modal, setModal] = useState<"whatsapp" | "fidelidade" | null>(null);
+
+  const NAV_LINKS = [
+    { label: t("nav.recursos"), href: "/servicos#recursos" },
+    { label: t("nav.segmentos"), href: "/servicos#segmentos" },
+    { label: t("nav.contato"), href: "/servicos#contato" },
+  ];
+
+  const AVAILABLE_NOW: {
+    icon: typeof LinkIcon;
+    title: string;
+    description: string;
+    action: AvailableAction;
+    cta: string;
+  }[] = [
+    {
+      icon: LinkIcon,
+      title: t("available.linkTitle"),
+      description: t("available.linkDescription"),
+      action: "link",
+      cta: t("available.linkCta"),
+    },
+    {
+      icon: Bell,
+      title: t("available.whatsappTitle"),
+      description: t("available.whatsappDescription"),
+      action: "whatsapp",
+      cta: t("available.whatsappCta"),
+    },
+    {
+      icon: Gift,
+      title: t("available.loyaltyTitle"),
+      description: t("available.loyaltyDescription"),
+      action: "fidelidade",
+      cta: t("available.loyaltyCta"),
+    },
+  ];
+
+  const WHATSAPP_MESSAGES: { label: string; text: string; reply?: string }[] = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+    label: t(`whatsappModal.m${n}Label`),
+    text: t(`whatsappModal.m${n}Text`),
+    reply: n === 2 || n === 4 ? "1" : undefined,
+  }));
 
   useEffect(() => {
     getServicosPublicPlans()
@@ -143,31 +115,31 @@ export default function ServicosPlanosPage() {
         <div className="mx-auto grid max-w-7xl gap-12 px-6 pb-20 pt-16 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-center lg:py-24">
           <div className="max-w-xl">
             <p className="sv-rise sv-eyebrow" style={{ ["--i" as string]: 0 }}>
-              {trialDays ? `${trialDays} dias de teste grátis` : "Planos AlePejo Serviços"}
+              {trialDays ? t("hero.eyebrowTrial").replace("{days}", String(trialDays)) : t("hero.eyebrowDefault")}
             </p>
             <h1
               className="sv-rise font-display mt-6 text-4xl font-semibold leading-[1.05] sm:text-5xl"
               style={{ ["--i" as string]: 1 }}
             >
-              Planos para o tamanho da sua agenda.
+              {t("hero.title")}
             </h1>
             <p
               className="sv-rise mt-6 max-w-[48ch] text-lg leading-relaxed text-[var(--sv-cream)]/80"
               style={{ ["--i" as string]: 2 }}
             >
-              Escolha o plano do seu negócio e comece a agendar hoje mesmo.
+              {t("hero.subtitle")}
             </p>
 
             <div
               className="sv-rise mt-9 inline-flex items-center gap-1 rounded-full border border-[var(--sv-night-line)] bg-[rgb(255_240_210/0.05)] p-1"
               style={{ ["--i" as string]: 3 }}
               role="group"
-              aria-label="Ciclo de cobrança"
+              aria-label={t("hero.cycleGroupLabel")}
             >
               {(
                 [
-                  ["YEARLY", "Pago anualmente"],
-                  ["MONTHLY", "Pago mensalmente"],
+                  ["YEARLY", t("hero.yearly")],
+                  ["MONTHLY", t("hero.monthly")],
                 ] as const
               ).map(([cycle, label]) => (
                 <button
@@ -210,27 +182,23 @@ export default function ServicosPlanosPage() {
       <Reveal as="section" className="bg-[var(--mkt-bg)] py-24">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mb-14 max-w-2xl">
-            <p className="sv-eyebrow sv-eyebrow-light">Nossos planos</p>
+            <p className="sv-eyebrow sv-eyebrow-light">{t("plans.eyebrow")}</p>
             <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
-              {trialDays
-                ? `Todos os planos começam com ${trialDays} dias de teste grátis.`
-                : "Escolha o plano que se encaixa no seu negócio."}
+              {trialDays ? t("plans.titleTrial").replace("{days}", String(trialDays)) : t("plans.titleDefault")}
             </h2>
           </div>
 
           {!plans ? (
-            <div className="grid gap-6 md:grid-cols-3" aria-busy="true" aria-label="Carregando planos">
+            <div className="grid gap-6 md:grid-cols-3" aria-busy="true" aria-label={t("plans.loadingLabel")}>
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="sv-skel h-80 rounded-3xl" />
               ))}
             </div>
           ) : plans.length === 0 ? (
             <div className="mkt-panel max-w-md p-8">
-              <p className="text-[var(--mkt-muted)]">
-                Estamos fechando os planos. Fale com a gente pra saber o que já está disponível.
-              </p>
+              <p className="text-[var(--mkt-muted)]">{t("plans.emptyText")}</p>
               <Link href="/servicos#contato" className="sv-btn sv-btn-ink mt-6">
-                Falar com consultor
+                {t("plans.emptyCta")}
                 <ArrowRight size={17} aria-hidden />
               </Link>
             </div>
@@ -253,7 +221,7 @@ export default function ServicosPlanosPage() {
                     {plan.highlighted && (
                       <span className="absolute -top-3 left-8 inline-flex items-center gap-1.5 rounded-full bg-[var(--sv-gold-soft)] px-3 py-1 text-xs font-bold text-[#1f170d]">
                         <Star size={12} aria-hidden />
-                        Mais popular
+                        {t("plans.popular")}
                       </span>
                     )}
 
@@ -270,17 +238,17 @@ export default function ServicosPlanosPage() {
 
                     <p className="mt-6">
                       <span className="font-display text-4xl font-semibold [font-variant-numeric:tabular-nums]">
-                        {displayPrice > 0 ? money(String(displayPrice)) : "Sob consulta"}
+                        {displayPrice > 0 ? money(String(displayPrice)) : t("plans.onRequest")}
                       </span>
                       {displayPrice > 0 && (
                         <span className={plan.highlighted ? "text-[var(--sv-cream)]/70" : "text-[var(--mkt-muted)]"}>
-                          /mês
+                          {t("plans.perMonth")}
                         </span>
                       )}
                     </p>
                     {billingCycle === "YEARLY" && yearly > 0 && (
                       <p className={`mt-1 text-sm ${plan.highlighted ? "text-[var(--sv-cream)]/70" : "text-[var(--mkt-muted)]"}`}>
-                        cobrado {money(plan.yearlyPrice)}/ano
+                        {t("plans.billedYearly").replace("{price}", money(plan.yearlyPrice) ?? "")}
                       </p>
                     )}
 
@@ -295,8 +263,10 @@ export default function ServicosPlanosPage() {
                       >
                         <Check size={16} aria-hidden />
                         {trialDays
-                          ? `Começar teste de ${trialDays} dia${trialDays === 1 ? "" : "s"}`
-                          : "Começar teste grátis"}
+                          ? t("plans.startTrial")
+                              .replace("{days}", String(trialDays))
+                              .replace("{plural}", trialDays === 1 ? "" : "s")
+                          : t("plans.startTrialGeneric")}
                       </Link>
 
                       <Link
@@ -307,7 +277,7 @@ export default function ServicosPlanosPage() {
                             : "text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)]"
                         }`}
                       >
-                        Comprar agora
+                        {t("plans.buyNow")}
                       </Link>
                     </div>
                   </div>
@@ -322,13 +292,11 @@ export default function ServicosPlanosPage() {
       <Reveal as="section" className="bg-[var(--mkt-bg-alt)] py-24">
         <div className="mx-auto grid max-w-5xl gap-14 px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
           <div>
-            <p className="sv-eyebrow sv-eyebrow-light">Já disponível</p>
+            <p className="sv-eyebrow sv-eyebrow-light">{t("available.eyebrow")}</p>
             <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
-              Já dá pra usar hoje.
+              {t("available.title")}
             </h2>
-            <p className="mt-4 leading-relaxed text-[var(--mkt-muted)]">
-              Essas funcionalidades já estão funcionando e podem ser usadas agora mesmo.
-            </p>
+            <p className="mt-4 leading-relaxed text-[var(--mkt-muted)]">{t("available.subtitle")}</p>
           </div>
 
           <ul className="divide-y divide-[var(--mkt-border)] border-y border-[var(--mkt-border)]">
@@ -375,16 +343,13 @@ export default function ServicosPlanosPage() {
             className="inline-flex items-center gap-2 text-sm font-medium text-[var(--mkt-muted)] transition-colors hover:text-[var(--mkt-accent)]"
           >
             <ArrowLeft size={16} aria-hidden />
-            Voltar para o AlePejo Serviços
+            {t("backLink")}
           </Link>
         </div>
       </section>
 
-      <Modal open={modal === "whatsapp"} onClose={() => setModal(null)} title="Mensagens automáticas por WhatsApp">
-        <p className="mb-5 text-sm text-[var(--mkt-muted)]">
-          Estas são as principais mensagens que o sistema envia aos seus clientes (textos padrão, com dados fictícios de
-          exemplo). Você pode personalizar cada modelo.
-        </p>
+      <Modal open={modal === "whatsapp"} onClose={() => setModal(null)} title={t("whatsappModal.title")}>
+        <p className="mb-5 text-sm text-[var(--mkt-muted)]">{t("whatsappModal.intro")}</p>
         <ul className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
           {WHATSAPP_MESSAGES.map((m) => (
             <li key={m.label}>
@@ -402,14 +367,11 @@ export default function ServicosPlanosPage() {
         </ul>
       </Modal>
 
-      <Modal open={modal === "fidelidade"} onClose={() => setModal(null)} title="Programa de fidelidade">
-        <p className="mb-4 text-sm text-[var(--mkt-muted)]">
-          Tela de configuração do sistema: você define quantos pontos cada real gasto vale, quanto vale cada ponto no
-          resgate e o saldo mínimo para liberar o resgate.
-        </p>
+      <Modal open={modal === "fidelidade"} onClose={() => setModal(null)} title={t("loyaltyModal.title")}>
+        <p className="mb-4 text-sm text-[var(--mkt-muted)]">{t("loyaltyModal.intro")}</p>
         <Image
           src="/marketing/servicos/fidelidade-config.webp"
-          alt="Configuração do programa de fidelidade: pontos por real gasto, valor de cada ponto no resgate e saldo mínimo"
+          alt={t("loyaltyModal.imageAlt")}
           width={660}
           height={533}
           sizes="(min-width: 640px) 36rem, 90vw"
@@ -417,10 +379,7 @@ export default function ServicosPlanosPage() {
         />
       </Modal>
 
-      <ContactSection
-        title="Fale sobre os planos"
-        description="Conta pra gente o que seu negócio precisa — avaliamos o plano ideal com você."
-      />
+      <ContactSection title={t("contact.title")} description={t("contact.description")} />
 
       <MarketingFooter page="servicos-planos" />
     </div>

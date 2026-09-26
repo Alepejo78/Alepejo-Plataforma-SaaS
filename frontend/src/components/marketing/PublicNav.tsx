@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { systemConfig } from "@/config/system";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 /**
  * Cabeçalho compartilhado das páginas públicas (institucional, planos)
@@ -69,6 +70,8 @@ export function PublicNav({
         </nav>
 
         <div className="flex items-center gap-3">
+          <LanguageSwitcher />
+
           <Link
             href="/login"
             className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"

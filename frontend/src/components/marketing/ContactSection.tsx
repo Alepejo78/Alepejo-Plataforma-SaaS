@@ -4,6 +4,8 @@ import { useState } from "react";
 import { CheckCircle2, Loader2, Mail, MapPin, MessageCircle } from "lucide-react";
 
 import { contactService } from "@/services/contact.service";
+import { useTranslations } from "@/lib/i18n/useTranslations";
+import { contactSectionDictionary } from "@/lib/i18n/dictionaries/common";
 
 function extractMessage(err: unknown, fallback: string) {
   const message = (
@@ -26,12 +28,15 @@ const emptyForm = { name: "", email: "", phone: "", company: "", message: "" };
  * sem duplicar o backend.
  */
 export function ContactSection({
-  title = "Fale com a gente",
-  description = "Tem dúvida sobre os planos ou quer saber mais? Manda uma mensagem.",
+  title,
+  description,
 }: {
   title?: string;
   description?: string;
 }) {
+  const { t } = useTranslations(contactSectionDictionary);
+  const resolvedTitle = title ?? t("contact.defaultTitle");
+  const resolvedDescription = description ?? t("contact.defaultDescription");
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -60,7 +65,7 @@ export function ContactSection({
 
       setDone(true);
     } catch (err) {
-      setError(extractMessage(err, "Não foi possível enviar sua mensagem."));
+      setError(extractMessage(err, t("contact.genericError")));
     } finally {
       setLoading(false);
     }
@@ -80,13 +85,11 @@ export function ContactSection({
       <div className="mx-auto grid max-w-6xl gap-10 px-6 md:grid-cols-2">
         <div>
           <h2 className="font-display text-3xl font-bold text-[var(--mkt-ink)]">
-            {title}
+            {resolvedTitle}
           </h2>
 
-          <p className="mt-3 text-[var(--mkt-muted)]">{description}</p>
-          <p className="mt-1 text-sm text-[var(--mkt-muted)]">
-            Dúvidas sobre a empresa? Quer saber mais sobre os sistemas? Entre em contato.
-          </p>
+          <p className="mt-3 text-[var(--mkt-muted)]">{resolvedDescription}</p>
+          <p className="mt-1 text-sm text-[var(--mkt-muted)]">{t("contact.subtitle")}</p>
 
           <div className="mt-8 space-y-4 text-sm text-[var(--mkt-ink)]">
             <a
@@ -104,12 +107,12 @@ export function ContactSection({
               className="flex items-center gap-3 transition-colors hover:text-[var(--mkt-accent)]"
             >
               <MessageCircle size={18} className="text-[var(--mkt-accent)]" />
-              (43) 9 9154-4557
+              {t("contact.phoneLabel")}
             </a>
 
             <div className="flex items-center gap-3">
               <MapPin size={18} className="text-[var(--mkt-accent)]" />
-              Atendimento remoto em todo o Brasil, presencial a negociar
+              {t("contact.addressLabel")}
             </div>
           </div>
         </div>
@@ -118,17 +121,15 @@ export function ContactSection({
           {done ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
               <CheckCircle2 size={32} className="text-[var(--mkt-accent-3)]" />
-              <p className="font-medium text-[var(--mkt-ink)]">Mensagem enviada!</p>
-              <p className="text-sm text-[var(--mkt-muted)]">
-                Vamos responder em breve no e-mail informado.
-              </p>
+              <p className="font-medium text-[var(--mkt-ink)]">{t("contact.sentTitle")}</p>
+              <p className="text-sm text-[var(--mkt-muted)]">{t("contact.sentSubtitle")}</p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={labelClass} htmlFor="mkt-name">
-                    Nome <span className="text-[var(--danger)]">*</span>
+                    {t("contact.nameLabel")} <span className="text-[var(--danger)]">*</span>
                   </label>
                   <input
                     id="mkt-name"
@@ -140,7 +141,7 @@ export function ContactSection({
 
                 <div>
                   <label className={labelClass} htmlFor="mkt-email">
-                    E-mail <span className="text-[var(--danger)]">*</span>
+                    {t("contact.emailLabel")} <span className="text-[var(--danger)]">*</span>
                   </label>
                   <input
                     id="mkt-email"
@@ -153,7 +154,7 @@ export function ContactSection({
 
                 <div>
                   <label className={labelClass} htmlFor="mkt-phone">
-                    Telefone
+                    {t("contact.phoneFieldLabel")}
                   </label>
                   <input
                     id="mkt-phone"
@@ -165,7 +166,7 @@ export function ContactSection({
 
                 <div>
                   <label className={labelClass} htmlFor="mkt-company">
-                    Empresa
+                    {t("contact.companyLabel")}
                   </label>
                   <input
                     id="mkt-company"
@@ -177,7 +178,7 @@ export function ContactSection({
 
                 <div className="sm:col-span-2">
                   <label className={labelClass} htmlFor="mkt-message">
-                    Mensagem <span className="text-[var(--danger)]">*</span>
+                    {t("contact.messageLabel")} <span className="text-[var(--danger)]">*</span>
                   </label>
                   <textarea
                     id="mkt-message"
@@ -202,7 +203,7 @@ export function ContactSection({
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(120deg,var(--mkt-accent),var(--mkt-accent-2))] px-5 py-3 text-sm font-semibold text-[var(--mkt-contrast)] transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
               >
                 {loading && <Loader2 size={16} className="animate-spin" />}
-                {loading ? "Enviando..." : "Enviar mensagem"}
+                {loading ? t("contact.sending") : t("contact.sendButton")}
               </button>
             </div>
           )}

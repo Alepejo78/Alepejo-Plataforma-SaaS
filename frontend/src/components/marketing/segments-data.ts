@@ -18,15 +18,16 @@ import {
  * `/inicio` (chip de prova social na seção Sobre) e `/servicos`
  * (grade de segmentos) pra não duplicar a lista duas vezes neste repo.
  */
-export const SERVICE_SEGMENTS: { label: string; icon: LucideIcon }[] = [
-  { label: "Barbearia", icon: Scissors },
-  { label: "Salão de beleza", icon: Sparkles },
-  { label: "Manicure e esmalteria", icon: Sparkles },
-  { label: "Maquiagem", icon: Palette },
-  { label: "Estética e depilação", icon: Sparkles },
-  { label: "Bem-estar", icon: HeartPulse },
-  { label: "Odontologia", icon: Smile },
-  { label: "Clínica de estética", icon: Stethoscope },
-  { label: "Petshop, banho e tosa", icon: PawPrint },
-  { label: "Estética automotiva", icon: Car },
+/** `key` casa com `segments.<key>` no dicionário `common.ts` (i18n). */
+export const SERVICE_SEGMENTS: { key: string; icon: LucideIcon }[] = [
+  { key: "barbearia", icon: Scissors },
+  { key: "salao", icon: Sparkles },
+  { key: "manicure", icon: Sparkles },
+  { key: "maquiagem", icon: Palette },
+  { key: "estetica", icon: Sparkles },
+  { key: "bemEstar", icon: HeartPulse },
+  { key: "odontologia", icon: Smile },
+  { key: "clinicaEstetica", icon: Stethoscope },
+  { key: "petshop", icon: PawPrint },
+  { key: "esteticaAutomotiva", icon: Car },
 ];
