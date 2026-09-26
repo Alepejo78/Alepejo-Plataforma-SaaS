@@ -58,12 +58,6 @@ export default function InicioPage() {
     <div className={`${servicosDisplay.variable} ${erpBody.variable} marketing-page theme-inicio`}>
       <MarketingNav
         links={NAV_LINKS}
-        ctaLabel={t("nav.ctaServicos")}
-        ctaHref="/servicos"
-        secondaryCtaLabel={t("nav.ctaErp")}
-        secondaryCtaHref="/institucional"
-        secondaryCtaClassName="erp-btn erp-btn-primary !hidden !px-5 !py-2.5 sm:!inline-flex"
-        ctaClassName="sv-btn sv-btn-gold !px-5 !py-2.5"
       />
 
       {/* Abertura */}
