@@ -20,14 +20,17 @@ import {
 } from "@/services/company-onboarding.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
 import { erpFontVars } from "@/components/marketing/fonts";
+import { useTranslations } from "@/lib/i18n/useTranslations";
+import { planosDictionary } from "@/lib/i18n/dictionaries/planos";
 import "@/components/marketing/erp.css";
 
 function num(value: string | number | null | undefined) {
   return Number(value ?? 0);
 }
 
-function money(value: string | number | null | undefined) {
-  return num(value).toLocaleString("pt-BR", {
+/** Preço sempre em BRL (cobrança real é em reais) — só o agrupamento de dígitos segue o idioma da tela. */
+function money(value: string | number | null | undefined, locale: string) {
+  return num(value).toLocaleString(locale, {
     style: "currency",
     currency: "BRL",
   });
@@ -108,6 +111,7 @@ function CustomPlanModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const { t, locale } = useTranslations(planosDictionary);
 
   const [modules, setModules] = useState<PublicModule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,9 +123,9 @@ function CustomPlanModal({
     companyOnboardingService
       .listPublicModules()
       .then((list) => setModules(list))
-      .catch(() => setError("Não foi possível carregar os módulos."))
+      .catch(() => setError(t("modal.loadModulesError")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   /** Módulos que dependem de `mod` e estão marcados agora — enquanto essa lista não for vazia, `mod` não pode ser desmarcado sozinho. */
   function dependents(mod: PublicModule): PublicModule[] {
@@ -264,9 +268,9 @@ function CustomPlanModal({
               >
                 {checked
                   ? num(mod.monthlyPrice) > 0
-                    ? `${money(mod.monthlyPrice)}/mês`
-                    : "Incluso"
-                  : "—"}
+                    ? `${money(mod.monthlyPrice, locale)}${t("modal.perMonth")}`
+                    : t("modal.included")
+                  : t("modal.dash")}
               </span>
             </div>
           );
@@ -280,19 +284,14 @@ function CustomPlanModal({
       <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-lg">
         <div className="flex items-center justify-between p-6 pb-4">
           <div>
-            <h2 className="text-lg font-bold text-[var(--text-primary)]">
-              Monte seu plano
-            </h2>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Escolha os módulos que sua empresa vai usar — sem
-              obrigatoriedade nenhuma.
-            </p>
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">{t("modal.title")}</h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">{t("modal.subtitle")}</p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fechar"
+            aria-label={t("modal.close")}
             className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)]"
           >
             <X size={18} />
@@ -325,26 +324,23 @@ function CustomPlanModal({
               <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-5">
                 <div>
                   <p className="text-xs text-[var(--text-muted)]">
-                    {selected.size} módulo(s) escolhido(s)
+                    {t("modal.chosenCount").replace("{n}", String(selected.size))}
                   </p>
 
                   {billingCycle === "MONTHLY" && totalSavings > 0 && (
                     <span className="mb-1 mt-1 inline-block rounded-full bg-[var(--warning-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--warning)]">
-                      Economize {money(totalSavings)} no plano anual
+                      {t("modal.saveYearly").replace("{amount}", money(totalSavings, locale))}
                     </span>
                   )}
 
                   <p className="text-2xl font-bold text-[var(--text-primary)]">
-                    {money(displayTotal)}
-                    <span className="text-sm font-normal text-[var(--text-muted)]">
-                      {" "}
-                      /mês
-                    </span>
+                    {money(displayTotal, locale)}
+                    <span className="text-sm font-normal text-[var(--text-muted)]"> {t("modal.perMonth")}</span>
                   </p>
 
                   {billingCycle === "YEARLY" && totalYearly > 0 && (
                     <p className="text-sm text-[var(--text-muted)]">
-                      cobrado {money(totalYearly)}/ano
+                      {t("modal.billedYearly").replace("{amount}", money(totalYearly, locale))}
                     </p>
                   )}
                 </div>
@@ -355,7 +351,7 @@ function CustomPlanModal({
                     onClick={() => handleContinue(false)}
                     className="rounded-xl bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
                   >
-                    Continuar com {selected.size} módulo(s)
+                    {t("modal.continueWith").replace("{n}", String(selected.size))}
                   </button>
 
                   <button
@@ -363,14 +359,14 @@ function CustomPlanModal({
                     onClick={() => handleContinue(true)}
                     className="text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:underline"
                   >
-                    Comprar agora
+                    {t("modal.buyNow")}
                   </button>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-[var(--border)] p-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  Visão do plano
+                  {t("modal.planOverview")}
                 </p>
 
                 <div className="grid gap-x-6 sm:grid-cols-2">
@@ -382,7 +378,7 @@ function CustomPlanModal({
 
             <div className="space-y-3 overflow-y-auto px-6 py-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                Escolha os módulos
+                {t("modal.chooseModules")}
               </p>
 
               {orderedModules.map((mod) => {
@@ -427,7 +423,7 @@ function CustomPlanModal({
 
                           {locked && (
                             <p className="text-xs text-[var(--text-muted)]">
-                              Necessário para {lockedBy}
+                              {t("modal.requiredFor").replace("{names}", lockedBy)}
                             </p>
                           )}
                         </div>
@@ -435,8 +431,8 @@ function CustomPlanModal({
 
                       <span className="shrink-0 text-sm font-semibold text-[var(--text-primary)]">
                         {num(mod.monthlyPrice) > 0
-                          ? `+ ${money(mod.monthlyPrice)}/mês`
-                          : "Incluso"}
+                          ? `+ ${money(mod.monthlyPrice, locale)}${t("modal.perMonth")}`
+                          : t("modal.included")}
                       </span>
                     </label>
 
@@ -453,7 +449,7 @@ function CustomPlanModal({
                               isExpanded ? "rotate-180" : ""
                             }`}
                           />
-                          O que está incluído
+                          {t("modal.whatsIncluded")}
                         </button>
 
                         {isExpanded && (
@@ -486,6 +482,7 @@ function CustomPlanModal({
 }
 
 export default function PlanosPage() {
+  const { t, locale } = useTranslations(planosDictionary);
   const [plans, setPlans] = useState<PublicPlan[]>([]);
   const [trialDays, setTrialDays] = useState(14);
   const [loading, setLoading] = useState(true);
@@ -541,9 +538,7 @@ export default function PlanosPage() {
       companyOnboardingService
         .listPublicPlans()
         .then(setPlans)
-        .catch(() =>
-          setError("Não foi possível carregar os planos. Tente novamente.")
-        )
+        .catch(() => setError(t("loadPlansError")))
         .finally(() => setLoading(false));
 
       companyOnboardingService
@@ -599,22 +594,23 @@ export default function PlanosPage() {
       <section className="erp-hero">
         <div className="relative mx-auto max-w-5xl px-6 pb-16 pt-16 text-center">
           <p className="erp-rise erp-eyebrow" style={{ ["--i" as string]: 0 }}>
-            Planos AlePejo ERP
+            {t("hero.eyebrow")}
           </p>
 
           <h1
             className="erp-rise font-display mt-5 text-4xl font-semibold leading-[1.08] sm:text-5xl"
             style={{ ["--i" as string]: 1 }}
           >
-            Escolha o plano do seu negócio.
+            {t("hero.title")}
           </h1>
 
           <p
             className="erp-rise mx-auto mt-4 max-w-xl text-[var(--erp-ice)]/80"
             style={{ ["--i" as string]: 2 }}
           >
-            {trialDays} dia{trialDays === 1 ? "" : "s"} grátis pra testar,
-            sem cartão de crédito. Cancele quando quiser.
+            {t("hero.subtitle")
+              .replace("{days}", String(trialDays))
+              .replace("{plural}", trialDays === 1 ? "" : "s")}
           </p>
 
           {!loading && !error && (
@@ -630,7 +626,7 @@ export default function PlanosPage() {
                       : "text-[var(--erp-ice)]/80 hover:text-white"
                   }`}
                 >
-                  Pago anualmente
+                  {t("hero.yearly")}
                 </button>
                 <button
                   type="button"
@@ -642,7 +638,7 @@ export default function PlanosPage() {
                       : "text-[var(--erp-ice)]/80 hover:text-white"
                   }`}
                 >
-                  Pago mensalmente
+                  {t("hero.monthly")}
                 </button>
               </div>
             </div>
@@ -673,7 +669,7 @@ export default function PlanosPage() {
             <button
               type="button"
               onClick={() => rolar(-1)}
-              aria-label="Ver planos anteriores"
+              aria-label={t("prevPlans")}
               className={`absolute -left-3 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] shadow-lg transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] md:flex ${
                 podeVoltar ? "" : "pointer-events-none opacity-0"
               }`}
@@ -684,7 +680,7 @@ export default function PlanosPage() {
             <button
               type="button"
               onClick={() => rolar(1)}
-              aria-label="Ver próximos planos"
+              aria-label={t("nextPlans")}
               className={`absolute -right-3 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] shadow-lg transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] md:flex ${
                 podeAvancar ? "" : "pointer-events-none opacity-0"
               }`}
@@ -725,7 +721,7 @@ export default function PlanosPage() {
                 {plan.highlighted && (
                   <span className="erp-accent absolute -top-3 left-6 flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white">
                     <Star size={12} />
-                    Mais escolhido
+                    {t("card.mostChosen")}
                   </span>
                 )}
 
@@ -742,21 +738,18 @@ export default function PlanosPage() {
                 <div className="mt-4">
                   {billingCycle === "MONTHLY" && planSavings > 0 && (
                     <span className="mb-2 inline-block rounded-full bg-[var(--warning-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--warning)]">
-                      Economize {money(planSavings)} no plano anual
+                      {t("card.saveYearly").replace("{amount}", money(planSavings, locale))}
                     </span>
                   )}
 
                   <p className="text-3xl font-bold text-[var(--text-primary)]">
-                    {money(displayPrice)}
-                    <span className="text-sm font-normal text-[var(--text-muted)]">
-                      {" "}
-                      /mês
-                    </span>
+                    {money(displayPrice, locale)}
+                    <span className="text-sm font-normal text-[var(--text-muted)]"> {t("card.perMonth")}</span>
                   </p>
 
                   {billingCycle === "YEARLY" && planYearly > 0 ? (
                     <p className="mt-1 text-sm text-[var(--text-muted)]">
-                      cobrado {money(planYearly)}/ano
+                      {t("card.billedYearly").replace("{amount}", money(planYearly, locale))}
                     </p>
                   ) : (
                     planYearly > 0 && (
@@ -765,14 +758,14 @@ export default function PlanosPage() {
                         onClick={() => setBillingCycle("YEARLY")}
                         className="mt-1 text-sm font-medium text-[var(--primary)] hover:underline"
                       >
-                        Ou pague {money(planYearly)}/ano →
+                        {t("card.orPayYearly").replace("{amount}", money(planYearly, locale))}
                       </button>
                     )
                   )}
 
                   {num(plan.setupFee) > 0 && (
                     <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      + {money(plan.setupFee)} taxa de implantação
+                      {t("card.setupFee").replace("{amount}", money(plan.setupFee, locale))}
                     </p>
                   )}
                 </div>
@@ -803,15 +796,16 @@ export default function PlanosPage() {
                         : "border border-[var(--border)] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
                     }`}
                   >
-                    Começar teste de {trialDays} dia
-                    {trialDays === 1 ? "" : "s"}
+                    {t("card.startTrial")
+                      .replace("{days}", String(trialDays))
+                      .replace("{plural}", trialDays === 1 ? "" : "s")}
                   </Link>
 
                   <Link
                     href={`/checkout?planId=${plan.id}&cycle=${billingCycle}`}
                     className="rounded-xl px-4 py-3 text-center text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:underline"
                   >
-                    Comprar agora
+                    {t("card.buyNow")}
                   </Link>
                 </div>
               </div>
@@ -829,13 +823,8 @@ export default function PlanosPage() {
               </span>
 
               <div>
-                <p className="font-semibold text-[var(--text-primary)]">
-                  Customizado
-                </p>
-                <p className="text-sm text-[var(--text-muted)]">
-                  Não se encaixou nos planos acima? Monte o seu escolhendo
-                  só os módulos que precisa.
-                </p>
+                <p className="font-semibold text-[var(--text-primary)]">{t("custom.title")}</p>
+                <p className="text-sm text-[var(--text-muted)]">{t("custom.description")}</p>
               </div>
             </div>
 
@@ -844,24 +833,24 @@ export default function PlanosPage() {
               onClick={() => setCustomOpen(true)}
               className="shrink-0 rounded-xl border border-[var(--border)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
             >
-              Montar meu plano
+              {t("custom.button")}
             </button>
           </div>
         )}
 
         <p className="mt-10 text-center text-sm text-[var(--text-muted)]">
-          Já tem conta?{" "}
+          {t("haveAccount")}{" "}
           <Link
             href="/login"
             className="font-medium text-[var(--text-primary)] hover:underline"
           >
-            Entrar
+            {t("signIn")}
           </Link>
         </p>
 
         <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
           <Link href="/privacidade" className="hover:underline">
-            Política de Privacidade
+            {t("privacyLink")}
           </Link>
         </p>
       </div>

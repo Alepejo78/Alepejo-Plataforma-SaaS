@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { systemConfig } from "@/config/system";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 interface NavLink {
   label: string;
@@ -66,6 +67,8 @@ export function MarketingNav({
         </nav>
 
         <div className="flex items-center gap-2.5">
+          <LanguageSwitcher />
+
           {secondaryCtaLabel && secondaryCtaHref && (
             <Link
               href={secondaryCtaHref}

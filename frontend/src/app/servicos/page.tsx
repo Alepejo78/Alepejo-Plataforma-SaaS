@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -15,7 +17,7 @@ import {
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { ContactSection } from "@/components/marketing/ContactSection";
-import { Faq, servicosFaqItems } from "@/components/marketing/Faq";
+import { Faq, useServicosFaqItems } from "@/components/marketing/Faq";
 import { SERVICE_SEGMENTS } from "@/components/marketing/segments-data";
 import { servicosFontVars } from "@/components/marketing/fonts";
 import { Reveal } from "@/components/marketing/Reveal";
@@ -23,126 +25,80 @@ import { ServicosDemoTour } from "@/components/marketing/ServicosDemoTour";
 import { ServicosShowcase } from "@/components/marketing/ServicosShowcase";
 import { ServicosLab } from "@/components/marketing/ServicosLab";
 import { ServicosTilt } from "@/components/marketing/ServicosTilt";
+import { useTranslations } from "@/lib/i18n/useTranslations";
+import { servicosDictionary } from "@/lib/i18n/dictionaries/servicos";
+import { segmentsDictionary } from "@/lib/i18n/dictionaries/common";
 import "@/components/marketing/marketing-shared.css";
 import "@/components/marketing/servicos.css";
 
-const NAV_LINKS = [
-  { label: "Teste na prática", href: "/servicos#teste" },
-  { label: "Recursos", href: "/servicos#recursos" },
-  { label: "Segmentos", href: "/servicos#segmentos" },
-  { label: "Dúvidas", href: "/servicos#perguntas-frequentes" },
-  { label: "Contato", href: "/servicos#contato" },
+const STEP_IMAGES = [
+  { src: "/marketing/servicos/passo1.webp", width: 336, height: 428, offset: "lg:mt-0", tilt: "lg:-rotate-2" },
+  { src: "/marketing/servicos/passo2.webp", width: 356, height: 468, offset: "lg:mt-14", tilt: "lg:rotate-1" },
+  { src: "/marketing/servicos/passo3.webp", width: 384, height: 394, offset: "lg:mt-6", tilt: "lg:-rotate-1" },
 ];
 
-const HERO_POINTS = ["Link próprio de agendamento", "Lembretes por WhatsApp", "App do profissional"];
-
-const STEPS = [
-  {
-    n: "1",
-    title: "Escolhe o serviço",
-    text: "Cardápio com duração e preço, do jeito que você cadastrou.",
-    src: "/marketing/servicos/passo1.webp",
-    width: 336,
-    height: 428,
-    alt: "Link público de agendamento: lista de serviços com preço e duração",
-    offset: "lg:mt-0",
-    tilt: "lg:-rotate-2",
-  },
-  {
-    n: "2",
-    title: "Escolhe profissional e horário",
-    text: "Só aparecem horários livres, sem conflito com a agenda.",
-    src: "/marketing/servicos/passo2.webp",
-    width: 356,
-    height: 468,
-    alt: "Link público de agendamento: escolha de profissional, data e horário",
-    offset: "lg:mt-14",
-    tilt: "lg:rotate-1",
-  },
-  {
-    n: "3",
-    title: "Recebe a confirmação",
-    text: "Código de confirmação e link para ver ou cancelar.",
-    src: "/marketing/servicos/passo3.webp",
-    width: 384,
-    height: 394,
-    alt: "Tela de agendamento confirmado com código de confirmação",
-    offset: "lg:mt-6",
-    tilt: "lg:-rotate-1",
-  },
-];
-
-const BENEFITS = [
-  {
-    icon: CalendarCheck,
-    title: "Link de agendamento próprio",
-    text: "O cliente escolhe serviço, profissional e horário sozinho, num link com a cara do seu negócio, sem grupo de WhatsApp lotado.",
-  },
-  {
-    icon: Bell,
-    title: "Lembretes e confirmação por WhatsApp",
-    text: "Cada agendamento recebe lembrete, e o cliente confirma ou cancela respondendo à própria mensagem.",
-  },
-  {
-    icon: Hourglass,
-    title: "Lista de espera",
-    text: "Um horário liberou? O próximo da lista recebe a oferta por WhatsApp e aceita ou recusa na resposta.",
-  },
-  {
-    icon: PackageCheck,
-    title: "Pacotes e assinaturas",
-    text: "O crédito do cliente aparece no agendamento, no painel e no link público, com a comissão do profissional tratada à parte.",
-  },
-  {
-    icon: Gift,
-    title: "Programa de fidelidade",
-    text: "Pontos por atendimento e resgate configurável para o cliente voltar.",
-  },
-  {
-    icon: Smartphone,
-    title: "App do profissional",
-    text: "Cada profissional acompanha a própria agenda pelo celular, sem abrir o sistema completo.",
-  },
-  {
-    icon: Wallet,
-    title: "Financeiro, comissões e acerto de contas",
-    text: "Atendimento concluído vira lançamento. As comissões de cada profissional viram um único título de pagamento.",
-  },
-];
+const BENEFIT_ICONS = [CalendarCheck, Bell, Hourglass, PackageCheck, Gift, Smartphone, Wallet];
 
 export default function ServicosPage() {
+  const { t } = useTranslations(servicosDictionary);
+  const { t: tSegment } = useTranslations(segmentsDictionary);
+  const servicosFaqItems = useServicosFaqItems();
+
+  const NAV_LINKS = [
+    { label: t("nav.teste"), href: "/servicos#teste" },
+    { label: t("nav.recursos"), href: "/servicos#recursos" },
+    { label: t("nav.segmentos"), href: "/servicos#segmentos" },
+    { label: t("nav.duvidas"), href: "/servicos#perguntas-frequentes" },
+    { label: t("nav.contato"), href: "/servicos#contato" },
+  ];
+
+  const HERO_POINTS = [t("hero.point1"), t("hero.point2"), t("hero.point3")];
+
+  const STEPS = STEP_IMAGES.map((img, i) => ({
+    n: String(i + 1),
+    title: t(`steps.step${i + 1}Title`),
+    text: t(`steps.step${i + 1}Text`),
+    alt: t(`steps.step${i + 1}Alt`),
+    ...img,
+  }));
+
+  const BENEFITS = BENEFIT_ICONS.map((icon, i) => ({
+    icon,
+    title: t(`benefits.b${i + 1}Title`),
+    text: t(`benefits.b${i + 1}Text`),
+  }));
+
   return (
     <div className={`${servicosFontVars} marketing-page theme-servicos`}>
-      <MarketingNav links={NAV_LINKS} ctaLabel="Ver planos" ctaHref="/servicos/planos" />
+      <MarketingNav links={NAV_LINKS} ctaLabel={t("nav.ctaPlanos")} ctaHref="/servicos/planos" />
 
       {/* Abertura */}
       <section className="sv-hero">
         <div className="mx-auto grid max-w-7xl gap-14 px-6 pb-20 pt-16 lg:min-h-[calc(100dvh-4.5rem)] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-10 lg:py-20">
           <div className="max-w-xl">
             <p className="sv-rise sv-eyebrow" style={{ ["--i" as string]: 0 }}>
-              AlePejo Serviços
+              {t("hero.eyebrow")}
             </p>
             <h1
               className="sv-rise font-display mt-6 text-4xl font-semibold leading-[1.05] sm:text-5xl lg:text-[3.4rem]"
               style={{ ["--i" as string]: 1 }}
             >
-              A agenda do seu negócio, do link de agendamento ao financeiro.
+              {t("hero.title")}
             </h1>
             <p
               className="sv-rise mt-6 max-w-[52ch] text-lg leading-relaxed text-[var(--sv-cream)]/80"
               style={{ ["--i" as string]: 2 }}
             >
-              Barbearias, salões, clínicas, petshops e outros negócios de atendimento organizam agenda, clientes e
-              equipe num só sistema. O cliente agenda sozinho, e você acompanha tudo pelo painel e pelo celular.
+              {t("hero.subtitle")}
             </p>
 
             <div className="sv-rise mt-9 flex flex-wrap items-center gap-3" style={{ ["--i" as string]: 3 }}>
               <Link href="/servicos/planos" className="sv-btn sv-btn-gold">
-                Começar agora
+                {t("hero.ctaComecar")}
                 <ArrowRight size={17} aria-hidden />
               </Link>
               <Link href="/servicos#contato" className="sv-btn sv-btn-ghost">
-                Falar com consultor
+                {t("hero.ctaConsultor")}
               </Link>
             </div>
 
@@ -194,14 +150,11 @@ export default function ServicosPage() {
       <Reveal as="section" className="bg-[var(--mkt-bg)] py-24">
         <div className="mx-auto grid max-w-7xl gap-14 px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
           <div className="lg:sticky lg:top-28 lg:self-start">
-            <p className="sv-eyebrow sv-eyebrow-light">Para o seu cliente</p>
+            <p className="sv-eyebrow sv-eyebrow-light">{t("steps.eyebrow")}</p>
             <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
-              Um link, disponível o dia todo.
+              {t("steps.title")}
             </h2>
-            <p className="mt-5 max-w-[46ch] leading-relaxed text-[var(--mkt-muted)]">
-              O link do seu negócio já nasce com as cores e o vocabulário do seu segmento. Seu cliente agenda de dia
-              ou de madrugada, e a agenda do painel se atualiza na hora.
-            </p>
+            <p className="mt-5 max-w-[46ch] leading-relaxed text-[var(--mkt-muted)]">{t("steps.subtitle")}</p>
           </div>
 
           <ol className="grid items-start gap-8 sm:grid-cols-3">
@@ -234,9 +187,9 @@ export default function ServicosPage() {
       <Reveal as="section" className="bg-[var(--mkt-bg-alt)] py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-14 max-w-2xl">
-            <p className="sv-eyebrow sv-eyebrow-light">O sistema em uso</p>
+            <p className="sv-eyebrow sv-eyebrow-light">{t("showcase.eyebrow")}</p>
             <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
-              O que sua equipe vê no dia a dia.
+              {t("showcase.title")}
             </h2>
           </div>
           <ServicosShowcase />
@@ -247,13 +200,11 @@ export default function ServicosPage() {
       <Reveal as="section" className="bg-[var(--mkt-bg)] py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-12 max-w-2xl">
-            <p className="sv-eyebrow sv-eyebrow-light">Demonstração interativa</p>
+            <p className="sv-eyebrow sv-eyebrow-light">{t("demo.eyebrow")}</p>
             <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
-              Veja como funciona na prática.
+              {t("demo.title")}
             </h2>
-            <p className="mt-4 leading-relaxed text-[var(--mkt-muted)]">
-              Explore o sistema completo, o link público e o app do profissional.
-            </p>
+            <p className="mt-4 leading-relaxed text-[var(--mkt-muted)]">{t("demo.subtitle")}</p>
           </div>
           <ServicosDemoTour />
         </div>
@@ -265,9 +216,9 @@ export default function ServicosPage() {
       <Reveal as="section" id="recursos" className="bg-[var(--mkt-bg-alt)] py-24">
         <div className="mx-auto grid max-w-7xl gap-14 px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
           <div className="lg:sticky lg:top-28 lg:self-start">
-            <p className="sv-eyebrow sv-eyebrow-light">Recursos</p>
+            <p className="sv-eyebrow sv-eyebrow-light">{t("benefits.eyebrow")}</p>
             <h2 className="font-display mt-5 text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
-              Menos mensagem manual, mais agenda organizada.
+              {t("benefits.title")}
             </h2>
           </div>
           <ul className="divide-y divide-[var(--mkt-border)] border-y border-[var(--mkt-border)]">
@@ -290,22 +241,20 @@ export default function ServicosPage() {
       <Reveal as="section" id="segmentos" className="sv-night py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-14 max-w-2xl">
-            <p className="sv-eyebrow">Segmentos</p>
+            <p className="sv-eyebrow">{t("segments.eyebrow")}</p>
             <h2 className="font-display mt-5 text-3xl font-semibold leading-tight sm:text-4xl">
-              De barbearia a petshop, um sistema com o jeito do seu atendimento.
+              {t("segments.title")}
             </h2>
-            <p className="mt-4 leading-relaxed text-[var(--sv-cream)]/75">
-              Cada segmento tem a própria linguagem, do vocabulário do link público à carteira de vacinação do pet.
-            </p>
+            <p className="mt-4 leading-relaxed text-[var(--sv-cream)]/75">{t("segments.subtitle")}</p>
           </div>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {SERVICE_SEGMENTS.map((segment) => (
               <li
-                key={segment.label}
+                key={segment.key}
                 className="sv-segment sv-glass flex items-center gap-3 rounded-2xl px-4 py-4"
               >
                 <segment.icon size={20} strokeWidth={1.75} className="shrink-0 text-[var(--sv-gold)]" aria-hidden />
-                <span className="text-sm font-medium">{segment.label}</span>
+                <span className="text-sm font-medium">{tSegment(`segments.${segment.key}`)}</span>
               </li>
             ))}
           </ul>
@@ -316,21 +265,21 @@ export default function ServicosPage() {
       <section className="bg-[var(--mkt-bg)] py-24">
         <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-8 px-6 md:flex-row md:items-center">
           <div>
-            <p className="sv-eyebrow sv-eyebrow-light">Próximo passo</p>
+            <p className="sv-eyebrow sv-eyebrow-light">{t("final.eyebrow")}</p>
             <h2 className="font-display mt-5 max-w-[20ch] text-3xl font-semibold leading-tight text-[var(--mkt-ink)] sm:text-4xl">
-              Vamos organizar a sua agenda?
+              {t("final.title")}
             </h2>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/servicos/planos" className="sv-btn sv-btn-ink">
-              Ver planos e preços
+              {t("final.ctaPlanos")}
               <CalendarClock size={17} aria-hidden />
             </Link>
             <Link
               href="/servicos#contato"
               className="sv-btn border border-[var(--mkt-border)] text-[var(--mkt-ink)] hover:border-[var(--mkt-accent-2)]"
             >
-              Falar com consultor
+              {t("final.ctaConsultor")}
             </Link>
           </div>
         </div>
@@ -338,10 +287,7 @@ export default function ServicosPage() {
 
       <Faq items={servicosFaqItems} contactHref="/servicos#contato" />
 
-      <ContactSection
-        title="Fale sobre o AlePejo Serviços"
-        description="Quer saber se o Serviços atende o seu segmento? Manda uma mensagem."
-      />
+      <ContactSection title={t("contact.title")} description={t("contact.description")} />
 
       <MarketingFooter page="servicos" />
     </div>

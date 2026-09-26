@@ -4,6 +4,7 @@ import { Fira_Code, Fira_Sans } from "next/font/google";
 
 import { ThemeProvider } from "../providers/theme-provider";
 import { AuthProvider } from "../providers/AuthProvider";
+import { LanguageProvider } from "../lib/i18n/LanguageProvider";
 import { TabsProvider } from "../providers/TabsProvider";
 import { ShowLockedModulesProvider } from "../providers/ShowLockedModulesProvider";
 import { BrandFooter } from "../components/layout/BrandFooter";
@@ -44,19 +45,21 @@ export default function RootLayout({
       className={`${firaSans.variable} ${firaCode.variable}`}
     >
       <body>
-        <AuthProvider>
-          <ShowLockedModulesProvider>
-            <TabsProvider>
-              <ThemeProvider>
-                <BrandColorStyle />
-                {children}
-                <MascoteFlutuante />
-                <WhatsappFloatingButton />
-                <BrandFooter />
-              </ThemeProvider>
-            </TabsProvider>
-          </ShowLockedModulesProvider>
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <ShowLockedModulesProvider>
+              <TabsProvider>
+                <ThemeProvider>
+                  <BrandColorStyle />
+                  {children}
+                  <MascoteFlutuante />
+                  <WhatsappFloatingButton />
+                  <BrandFooter />
+                </ThemeProvider>
+              </TabsProvider>
+            </ShowLockedModulesProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
