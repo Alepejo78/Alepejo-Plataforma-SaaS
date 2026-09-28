@@ -17,7 +17,7 @@ import { servicosPlanosDictionary } from "@/lib/i18n/dictionaries/servicosPlanos
 import "@/components/marketing/marketing-shared.css";
 import "@/components/marketing/servicos.css";
 
-function money(value: string | null) {
+function money(value: string | number | null) {
   if (value == null) return null;
   return Number(value).toLocaleString("pt-BR", {
     style: "currency",
@@ -29,18 +29,232 @@ function num(value: string | null) {
   return Number(value ?? 0);
 }
 
+interface Extras {
+  professionals: number;
+  companies: number;
+}
+
+const NO_EXTRAS: Extras = { professionals: 0, companies: 0 };
+
+/**
+ * Mesma conta do `quotePlan` do backend (base + adicionais de profissionais e empresas, ×12 no
+ * ciclo anual) — só uma prévia pro visitante ver o valor mudar na hora. O preço que realmente vale
+ * é recalculado no servidor quando o checkout é criado (o navegador não é fonte confiável).
+ */
+function previewQuote(plan: ServicosPlan, cycle: "MONTHLY" | "YEARLY", extras: Extras) {
+  const base = cycle === "YEARLY" ? num(plan.yearlyPrice) : num(plan.monthlyPrice);
+  const multiplier = cycle === "YEARLY" ? 12 : 1;
+  const unit = {
+    professional: num(plan.extraProfessionalPrice) * multiplier,
+    company: num(plan.extraCompanyPrice) * multiplier,
+  };
+  const extrasTotal = unit.professional * extras.professionals + unit.company * extras.companies;
+  const total = base + extrasTotal;
+  return { base, unit, extrasTotal, total, monthlyTotal: cycle === "YEARLY" ? total / 12 : total };
+}
+
 /** Frontend do AlePejoServiços (produto irmão) — onde o cadastro/assinatura de verdade acontece. */
 const SERVICOS_APP_URL = "https://apps.alepejo.com.br";
 
-function signupUrl(planId: string, cycle: "MONTHLY" | "YEARLY") {
-  const params = new URLSearchParams({ planId, cycle });
+function signupUrl(planId: string, cycle: "MONTHLY" | "YEARLY", extras: Extras) {
+  const params = new URLSearchParams({
+    planId,
+    cycle,
+    extraProfessionals: String(extras.professionals),
+    extraCompanies: String(extras.companies),
+  });
   return `${SERVICOS_APP_URL}/painel/cadastro?${params.toString()}`;
 }
 
 /** "Comprar agora" paga ANTES do cadastro existir — mesmo padrão do /checkout do ERP. */
-function checkoutUrl(planId: string, cycle: "MONTHLY" | "YEARLY") {
-  const params = new URLSearchParams({ planId, cycle });
+function checkoutUrl(planId: string, cycle: "MONTHLY" | "YEARLY", extras: Extras) {
+  const params = new URLSearchParams({
+    planId,
+    cycle,
+    extraProfessionals: String(extras.professionals),
+    extraCompanies: String(extras.companies),
+  });
   return `${SERVICOS_APP_URL}/painel/checkout?${params.toString()}`;
+}
+
+function ExtraStepper({
+  label,
+  unitPrice,
+  max,
+  value,
+  onChange,
+  tone,
+}: {
+  label: string;
+  unitPrice: number;
+  max: number;
+  value: number;
+  onChange: (value: number) => void;
+  tone: "gold" | "ink";
+}) {
+  const { t } = useTranslations(servicosPlanosDictionary);
+  const clamp = (v: number) => Math.min(max, Math.max(0, v));
+  const stepBtn =
+    tone === "gold"
+      ? "border-[var(--sv-night-line)] text-[var(--sv-cream)] hover:bg-[rgb(255_240_210/0.08)] disabled:opacity-30"
+      : "border-[var(--mkt-border)] text-[var(--mkt-ink)] hover:bg-[var(--mkt-surface-2)] disabled:opacity-30";
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className={tone === "gold" ? "text-[var(--sv-cream)]/80" : "text-[var(--mkt-muted)]"}>{label}</span>
+        <span className="font-semibold">
+          +{value}
+          {value > 0 && ` · ${money(unitPrice * value)}`}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(clamp(value - 1))}
+          disabled={value <= 0}
+          aria-label={t("plans.decreaseAria").replace("{label}", label)}
+          className={`flex size-7 shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-colors ${stepBtn}`}
+        >
+          −
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={max}
+          step={1}
+          value={value}
+          onChange={(e) => onChange(clamp(Number(e.target.value)))}
+          className="w-full accent-[var(--sv-gold)]"
+          aria-label={label}
+        />
+        <button
+          type="button"
+          onClick={() => onChange(clamp(value + 1))}
+          disabled={value >= max}
+          aria-label={t("plans.increaseAria").replace("{label}", label)}
+          className={`flex size-7 shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-colors ${stepBtn}`}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PlanCard({
+  plan,
+  billingCycle,
+  trialDays,
+}: {
+  plan: ServicosPlan;
+  billingCycle: "MONTHLY" | "YEARLY";
+  trialDays: number | null;
+}) {
+  const { t } = useTranslations(servicosPlanosDictionary);
+  const [extras, setExtras] = useState<Extras>(NO_EXTRAS);
+  const quote = previewQuote(plan, billingCycle, extras);
+  const tone: "gold" | "ink" = plan.highlighted ? "gold" : "ink";
+
+  return (
+    <div
+      className={`sv-plan relative flex flex-col rounded-3xl border p-8 ${
+        plan.highlighted
+          ? "border-[var(--sv-gold)]/50 bg-[var(--sv-night)] text-[var(--sv-cream)] shadow-[0_30px_60px_-30px_rgb(70_45_10/0.7)] md:-translate-y-3"
+          : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-[var(--mkt-ink)]"
+      }`}
+    >
+      {plan.highlighted && (
+        <span className="absolute -top-3 left-8 inline-flex items-center gap-1.5 rounded-full bg-[var(--sv-gold-soft)] px-3 py-1 text-xs font-bold text-[#1f170d]">
+          <Star size={12} aria-hidden />
+          {t("plans.popular")}
+        </span>
+      )}
+
+      <p className="font-display text-xl font-semibold">{plan.name}</p>
+      {plan.description && (
+        <p className={`mt-2 text-sm leading-relaxed ${plan.highlighted ? "text-[var(--sv-cream)]/75" : "text-[var(--mkt-muted)]"}`}>
+          {plan.description}
+        </p>
+      )}
+
+      <p className="mt-6">
+        <span className="font-display text-4xl font-semibold [font-variant-numeric:tabular-nums]">
+          {quote.monthlyTotal > 0 ? money(quote.monthlyTotal) : t("plans.onRequest")}
+        </span>
+        {quote.monthlyTotal > 0 && (
+          <span className={plan.highlighted ? "text-[var(--sv-cream)]/70" : "text-[var(--mkt-muted)]"}>{t("plans.perMonth")}</span>
+        )}
+      </p>
+      {billingCycle === "YEARLY" && quote.total > 0 && (
+        <p className={`mt-1 text-sm ${plan.highlighted ? "text-[var(--sv-cream)]/70" : "text-[var(--mkt-muted)]"}`}>
+          {t("plans.billedYearly").replace("{price}", money(quote.total) ?? "")}
+        </p>
+      )}
+
+      <ul className={`mt-4 space-y-0.5 text-xs ${plan.highlighted ? "text-[var(--sv-cream)]/75" : "text-[var(--mkt-muted)]"}`}>
+        <li>
+          {plan.includedProfessionals ?? t("plans.noLimit")} {t("plans.professionalsIncludedSuffix")}
+        </li>
+        <li>
+          {plan.includedCompanies ?? t("plans.noLimit")} {t("plans.companiesIncludedSuffix")}
+        </li>
+      </ul>
+
+      {plan.customizable && (
+        <div
+          className={`mt-4 space-y-3 rounded-xl p-3 ${
+            plan.highlighted ? "bg-[rgb(255_240_210/0.05)]" : "bg-[var(--mkt-surface-2)]"
+          }`}
+        >
+          <p className={`text-[11px] font-semibold uppercase tracking-wide ${plan.highlighted ? "text-[var(--sv-cream)]/60" : "text-[var(--mkt-muted)]"}`}>
+            {t("plans.customize")}
+          </p>
+          <ExtraStepper
+            label={t("plans.extraProfessionals")}
+            unitPrice={quote.unit.professional}
+            max={5}
+            value={extras.professionals}
+            onChange={(professionals) => setExtras((e) => ({ ...e, professionals }))}
+            tone={tone}
+          />
+          <ExtraStepper
+            label={t("plans.extraCompanies")}
+            unitPrice={quote.unit.company}
+            max={10}
+            value={extras.companies}
+            onChange={(companies) => setExtras((e) => ({ ...e, companies }))}
+            tone={tone}
+          />
+        </div>
+      )}
+
+      <div className="mt-8 flex flex-1 flex-col justify-end gap-2">
+        <Link
+          href={signupUrl(plan.id, billingCycle, extras)}
+          className={`sv-btn justify-center ${
+            plan.highlighted ? "sv-btn-gold" : "border border-[var(--mkt-border)] text-[var(--mkt-ink)] hover:border-[var(--mkt-accent-2)]"
+          }`}
+        >
+          <Check size={16} aria-hidden />
+          {trialDays
+            ? t("plans.startTrial")
+                .replace("{days}", String(trialDays))
+                .replace("{plural}", trialDays === 1 ? "" : "s")
+            : t("plans.startTrialGeneric")}
+        </Link>
+
+        <Link
+          href={checkoutUrl(plan.id, billingCycle, extras)}
+          className={`rounded-lg py-2 text-center text-sm font-semibold hover:underline ${
+            plan.highlighted ? "text-[var(--sv-cream)]/80 hover:text-white" : "text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)]"
+          }`}
+        >
+          {t("plans.buyNow")}
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 /** Link público de exemplo (agendamento de um negócio real do sistema). */
@@ -204,85 +418,9 @@ export default function ServicosPlanosPage() {
             </div>
           ) : (
             <div className="grid items-stretch gap-6 md:grid-cols-3">
-              {plans.map((plan) => {
-                const monthly = num(plan.monthlyPrice);
-                const yearly = num(plan.yearlyPrice);
-                const displayPrice = billingCycle === "YEARLY" && yearly > 0 ? yearly / 12 : monthly;
-
-                return (
-                  <div
-                    key={plan.id}
-                    className={`sv-plan relative flex flex-col rounded-3xl border p-8 ${
-                      plan.highlighted
-                        ? "border-[var(--sv-gold)]/50 bg-[var(--sv-night)] text-[var(--sv-cream)] shadow-[0_30px_60px_-30px_rgb(70_45_10/0.7)] md:-translate-y-3"
-                        : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-[var(--mkt-ink)]"
-                    }`}
-                  >
-                    {plan.highlighted && (
-                      <span className="absolute -top-3 left-8 inline-flex items-center gap-1.5 rounded-full bg-[var(--sv-gold-soft)] px-3 py-1 text-xs font-bold text-[#1f170d]">
-                        <Star size={12} aria-hidden />
-                        {t("plans.popular")}
-                      </span>
-                    )}
-
-                    <p className="font-display text-xl font-semibold">{plan.name}</p>
-                    {plan.description && (
-                      <p
-                        className={`mt-2 text-sm leading-relaxed ${
-                          plan.highlighted ? "text-[var(--sv-cream)]/75" : "text-[var(--mkt-muted)]"
-                        }`}
-                      >
-                        {plan.description}
-                      </p>
-                    )}
-
-                    <p className="mt-6">
-                      <span className="font-display text-4xl font-semibold [font-variant-numeric:tabular-nums]">
-                        {displayPrice > 0 ? money(String(displayPrice)) : t("plans.onRequest")}
-                      </span>
-                      {displayPrice > 0 && (
-                        <span className={plan.highlighted ? "text-[var(--sv-cream)]/70" : "text-[var(--mkt-muted)]"}>
-                          {t("plans.perMonth")}
-                        </span>
-                      )}
-                    </p>
-                    {billingCycle === "YEARLY" && yearly > 0 && (
-                      <p className={`mt-1 text-sm ${plan.highlighted ? "text-[var(--sv-cream)]/70" : "text-[var(--mkt-muted)]"}`}>
-                        {t("plans.billedYearly").replace("{price}", money(plan.yearlyPrice) ?? "")}
-                      </p>
-                    )}
-
-                    <div className="mt-8 flex flex-1 flex-col justify-end gap-2">
-                      <Link
-                        href={signupUrl(plan.id, billingCycle)}
-                        className={`sv-btn justify-center ${
-                          plan.highlighted
-                            ? "sv-btn-gold"
-                            : "border border-[var(--mkt-border)] text-[var(--mkt-ink)] hover:border-[var(--mkt-accent-2)]"
-                        }`}
-                      >
-                        <Check size={16} aria-hidden />
-                        {trialDays
-                          ? t("plans.startTrial")
-                              .replace("{days}", String(trialDays))
-                              .replace("{plural}", trialDays === 1 ? "" : "s")
-                          : t("plans.startTrialGeneric")}
-                      </Link>
-
-                      <Link
-                        href={checkoutUrl(plan.id, billingCycle)}
-                        className={`rounded-lg py-2 text-center text-sm font-semibold hover:underline ${
-                          plan.highlighted
-                            ? "text-[var(--sv-cream)]/80 hover:text-white"
-                            : "text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)]"
-                        }`}
-                      >
-                        {t("plans.buyNow")}
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
+              {plans.map((plan) => (
+                <PlanCard key={plan.id} plan={plan} billingCycle={billingCycle} trialDays={trialDays} />
+              ))}
             </div>
           )}
         </div>

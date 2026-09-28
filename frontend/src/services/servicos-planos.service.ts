@@ -6,6 +6,11 @@ export interface ServicosPlan {
   monthlyPrice: string | null;
   yearlyPrice: string | null;
   highlighted: boolean;
+  includedProfessionals: number | null;
+  includedCompanies: number | null;
+  extraProfessionalPrice: string | null;
+  extraCompanyPrice: string | null;
+  customizable: boolean;
 }
 
 interface ServicosPublicPlansResponse {
