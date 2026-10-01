@@ -110,7 +110,7 @@ const CHARGE_STATE: Record<
 };
 
 const CHARGE_TYPE_LABEL: Record<ChargeType, string> = {
-  SUBSCRIPTION: "Mensalidade",
+  SUBSCRIPTION: "Mensalidade - ERP",
   SETUP_FEE: "Taxa de implantação",
   ADDON: "Módulo adicional",
 };
@@ -1326,7 +1326,7 @@ function WebsiteLicenseTab() {
                 {license.monthly && (
                   <div className="rounded-2xl border border-[var(--border)] p-4">
                     <p className="text-sm font-medium text-[var(--text-primary)]">
-                      Mensalidade
+                      Mensalidade - Website
                     </p>
 
                     <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">

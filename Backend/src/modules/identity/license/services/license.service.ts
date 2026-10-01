@@ -16,6 +16,7 @@ import { CUSTOM_PLAN_CODE } from '../constants/custom-plan.constants';
 import { expandModuleIdsWithDependencies } from '../utils/module-dependencies.util';
 import { BillingService } from '../../../billing/services/billing.service';
 import { SiteWebIntegrationClientService } from './site-web-integration-client.service';
+import { WebsiteFinancialEntryService } from './website-financial-entry.service';
 
 @Injectable()
 export class LicenseService {
@@ -23,6 +24,7 @@ export class LicenseService {
     private readonly repository: LicenseRepository,
     private readonly billing: BillingService,
     private readonly siteWebIntegration: SiteWebIntegrationClientService,
+    private readonly websiteFinancialEntry: WebsiteFinancialEntryService,
   ) {}
 
   async getCompanyLicenses(companyId: string) {
@@ -485,6 +487,13 @@ async getWebsiteLicense(companyId: string) {
     return { found: false as const };
   }
 
-  return this.siteWebIntegration.lookup(company.document, company.email);
+  const lookup = await this.siteWebIntegration.lookup(
+    company.document,
+    company.email,
+  );
+
+  await this.websiteFinancialEntry.sync(companyId, lookup);
+
+  return lookup;
 }
 }

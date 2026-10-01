@@ -5,12 +5,14 @@ export interface WebsiteLicenseSetup {
   paid: boolean;
   dueDate: string | null;
   paymentUrl: string | null;
+  invoiceNumber: string | null;
 }
 
 export interface WebsiteLicenseMonthly {
   amount: number;
   dueDate: string;
   paymentUrl: string | null;
+  invoiceNumber: string | null;
   overdue: boolean;
 }
 
