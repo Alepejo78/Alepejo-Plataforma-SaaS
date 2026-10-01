@@ -15,12 +15,14 @@ import { UpdateModuleFeatureLineDto } from '../dto/update-module-feature-line.dt
 import { CUSTOM_PLAN_CODE } from '../constants/custom-plan.constants';
 import { expandModuleIdsWithDependencies } from '../utils/module-dependencies.util';
 import { BillingService } from '../../../billing/services/billing.service';
+import { SiteWebIntegrationClientService } from './site-web-integration-client.service';
 
 @Injectable()
 export class LicenseService {
   constructor(
     private readonly repository: LicenseRepository,
     private readonly billing: BillingService,
+    private readonly siteWebIntegration: SiteWebIntegrationClientService,
   ) {}
 
   async getCompanyLicenses(companyId: string) {
@@ -464,5 +466,25 @@ async getPlatformSettings() {
 
 async updatePlatformSettings(trialDays: number) {
   return this.repository.updatePlatformSettings({ trialDays });
+}
+
+/**
+ * Aba "Website" de Configurações > Licenciamento — plano Site WEB
+ * contratado pela empresa no AlePejoServiços, achado automaticamente
+ * pelo CNPJ e e-mail já cadastrados na própria empresa (nunca por
+ * dado digitado na hora, para não vazar o plano de ninguém).
+ */
+async getWebsiteLicense(companyId: string) {
+  const company = await this.repository.findCompany(companyId);
+
+  if (!company) {
+    throw new NotFoundException('Empresa não encontrada.');
+  }
+
+  if (!company.document || !company.email) {
+    return { found: false as const };
+  }
+
+  return this.siteWebIntegration.lookup(company.document, company.email);
 }
 }

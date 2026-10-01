@@ -10,6 +10,7 @@ import {
   Clock,
   CreditCard,
   ExternalLink,
+  Globe,
   Loader2,
   Package,
   Star,
@@ -40,6 +41,7 @@ import {
   type LicenseModule,
   type ModuleLicenseStatus,
   type MyLicense,
+  type WebsiteLicense,
 } from "@/services/license.service";
 
 const STATUS_LABELS: Record<CompanyPlanStatus, string> = {
@@ -56,6 +58,24 @@ const STATUS_BADGE_CLASS: Record<CompanyPlanStatus, string> = {
   PAST_DUE: "bg-[var(--warning-soft)] text-[var(--warning)]",
   BLOCKED: "bg-[var(--danger-soft)] text-[var(--danger)]",
   CANCELLED: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+};
+
+type WebsiteOrderStatus = Extract<WebsiteLicense, { found: true }>["status"];
+
+const WEBSITE_STATUS_LABELS: Record<WebsiteOrderStatus, string> = {
+  AGUARDANDO_COBRANCA: "Aguardando cobrança",
+  COBRANCA_GERADA: "Taxa de implantação gerada",
+  TAXA_PAGA: "Taxa paga — site em produção",
+  ATIVO: "Ativo",
+  CANCELADO: "Cancelado",
+};
+
+const WEBSITE_STATUS_BADGE_CLASS: Record<WebsiteOrderStatus, string> = {
+  AGUARDANDO_COBRANCA: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+  COBRANCA_GERADA: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  TAXA_PAGA: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  ATIVO: "bg-[var(--success-soft)] text-[var(--success)]",
+  CANCELADO: "bg-[var(--danger-soft)] text-[var(--danger)]",
 };
 
 /** Como cada situação de fatura aparece na tela de Cobranças. */
@@ -693,7 +713,7 @@ function ChangePlanModal({
   );
 }
 
-export default function LicenciamentoPage() {
+function ErpLicenseTab() {
   const { refreshUser } = useAuth();
 
   const [license, setLicense] = useState<MyLicense | null>(
@@ -787,12 +807,12 @@ export default function LicenciamentoPage() {
   }
 
   return (
-    <OsShell workspaceLabel="Licenciamento">
+    <>
       <div className="space-y-8">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-              Licenciamento
+              Licenciamento — ERP
             </h1>
 
             <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -1156,6 +1176,224 @@ export default function LicenciamentoPage() {
           }}
         />
       )}
+    </>
+  );
+}
+
+/**
+ * Plano Website (AlePejoServiços) — achado automaticamente pelo CNPJ e
+ * e-mail já cadastrados na própria empresa (`LicenseService.
+ * getWebsiteLicense` no backend). Só mostra e deixa pagar; qualquer
+ * outra ação (cancelar, assinar contrato) continua no painel do
+ * AlePejoServiços.
+ */
+function WebsiteLicenseTab() {
+  const [license, setLicense] = useState<WebsiteLicense | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    licenseService
+      .meWebsite()
+      .then(setLicense)
+      .catch(() =>
+        setError("Não foi possível carregar o plano Website.")
+      )
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="space-y-8">
+      <header>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+          Licenciamento — Website
+        </h1>
+
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
+          Plano de site institucional contratado com a AlePejo,
+          identificado pelo CNPJ e e-mail da sua empresa.
+        </p>
+      </header>
+
+      {loading && (
+        <div className="h-32 animate-pulse rounded-2xl bg-[var(--surface-hover)]" />
+      )}
+
+      {!loading && error && (
+        <div className="flex items-center gap-3 rounded-2xl border border-[var(--danger)] bg-[var(--danger-soft)] p-4 text-sm text-[var(--danger)]">
+          <AlertTriangle size={18} />
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && license && !license.found && (
+        <div className="flex items-start gap-3 rounded-2xl border border-[var(--border)] p-6 text-[var(--text-muted)]">
+          <Globe size={20} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium text-[var(--text-primary)]">
+              Nenhum plano Website encontrado para esta empresa.
+            </p>
+            <p className="mt-1 text-sm">
+              Fale com a AlePejo se você já contratou um site e esperava
+              vê-lo aqui — a busca usa o CNPJ e o e-mail cadastrados em
+              Configurações &gt; Empresa.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && license && license.found && (
+        <>
+          <section className="rounded-2xl border border-[var(--border)] p-6">
+            <h2 className="text-sm font-medium text-[var(--text-muted)]">
+              Plano atual
+            </h2>
+
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <p className="text-xl font-semibold text-[var(--text-primary)]">
+                {license.planName ?? "Site institucional"}
+              </p>
+
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${WEBSITE_STATUS_BADGE_CLASS[license.status]}`}
+              >
+                {WEBSITE_STATUS_LABELS[license.status]}
+              </span>
+
+              {license.siteBlocked && (
+                <span className="rounded-full bg-[var(--danger-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--danger)]">
+                  Site fora do ar
+                </span>
+              )}
+            </div>
+
+            {license.siteName && (
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
+                Site:{" "}
+                <a
+                  href={`https://${license.siteName}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[var(--text-primary)] hover:underline"
+                >
+                  {license.siteName}
+                </a>
+              </p>
+            )}
+          </section>
+
+          {(license.setup || license.monthly) && (
+            <section>
+              <h2 className="mb-3 text-sm font-medium text-[var(--text-muted)]">
+                Cobranças
+              </h2>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {license.setup && (
+                  <div className="rounded-2xl border border-[var(--border)] p-4">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      Taxa de implantação
+                    </p>
+
+                    <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">
+                      {money(license.setup.amount)}
+                    </p>
+
+                    <p
+                      className={`mt-1 text-sm ${license.setup.paid ? "text-[var(--success)]" : "text-[var(--warning)]"}`}
+                    >
+                      {license.setup.paid
+                        ? "Paga"
+                        : license.setup.dueDate
+                          ? `Vence em ${formatDate(license.setup.dueDate)}`
+                          : "A pagar"}
+                    </p>
+
+                    {!license.setup.paid && license.setup.paymentUrl && (
+                      <a
+                        href={license.setup.paymentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                      >
+                        Pagar
+                        <ExternalLink size={13} />
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {license.monthly && (
+                  <div className="rounded-2xl border border-[var(--border)] p-4">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      Mensalidade
+                    </p>
+
+                    <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">
+                      {money(license.monthly.amount)}
+                    </p>
+
+                    <p
+                      className={`mt-1 text-sm ${license.monthly.overdue ? "text-[var(--danger)]" : "text-[var(--warning)]"}`}
+                    >
+                      {license.monthly.overdue
+                        ? `Vencida em ${formatDate(license.monthly.dueDate)}`
+                        : `Vence em ${formatDate(license.monthly.dueDate)}`}
+                    </p>
+
+                    {license.monthly.paymentUrl && (
+                      <a
+                        href={license.monthly.paymentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
+                      >
+                        Pagar
+                        <ExternalLink size={13} />
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function LicenciamentoPage() {
+  const [tab, setTab] = useState<"erp" | "website">("erp");
+
+  const tabButtonClass = (active: boolean) =>
+    `rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
+      active
+        ? "bg-[var(--primary)] text-[var(--primary-contrast)]"
+        : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+    }`;
+
+  return (
+    <OsShell workspaceLabel="Licenciamento">
+      <div className="mb-6 flex items-center gap-2 border-b border-[var(--border)] pb-4">
+        <button
+          type="button"
+          onClick={() => setTab("erp")}
+          className={tabButtonClass(tab === "erp")}
+        >
+          ERP
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setTab("website")}
+          className={tabButtonClass(tab === "website")}
+        >
+          Website
+        </button>
+      </div>
+
+      {tab === "erp" ? <ErpLicenseTab /> : <WebsiteLicenseTab />}
     </OsShell>
   );
 }

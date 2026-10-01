@@ -73,6 +73,18 @@ export class LicenseController {
     return this.service.history(companyId);
   }
 
+  @Get('me/website')
+  @Permissions('license.view')
+  @ApiOperation({
+    summary:
+      'Meu plano Website (AlePejoServiços), achado pelo CNPJ/e-mail da empresa',
+  })
+  getMineWebsite(
+    @CurrentUser('companyId') companyId: string,
+  ) {
+    return this.service.getWebsiteLicense(companyId);
+  }
+
   @Post('me/trial')
   @Permissions('license.trial')
   @ApiOperation({ summary: 'Iniciar trial de um módulo para minha empresa' })

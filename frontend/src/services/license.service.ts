@@ -134,6 +134,38 @@ export interface PlatformSettings {
 }
 
 /**
+ * Plano Website (AlePejoServiços) achado pelo CNPJ/e-mail da própria
+ * empresa — ver `LicenseService.getWebsiteLicense` no backend. `found:
+ * false` cobre tanto "não comprou site" quanto "integração indisponível".
+ */
+export type WebsiteLicense =
+  | { found: false }
+  | {
+      found: true;
+      planName: string | null;
+      siteName: string | null;
+      status:
+        | "AGUARDANDO_COBRANCA"
+        | "COBRANCA_GERADA"
+        | "TAXA_PAGA"
+        | "ATIVO"
+        | "CANCELADO";
+      siteBlocked: boolean;
+      setup: {
+        amount: number;
+        paid: boolean;
+        dueDate: string | null;
+        paymentUrl: string | null;
+      } | null;
+      monthly: {
+        amount: number;
+        dueDate: string;
+        paymentUrl: string | null;
+        overdue: boolean;
+      } | null;
+    };
+
+/**
  * Linha de "o que tem incluído" dentro de um módulo, mostrada oculta/
  * expansível pro cliente no montador de plano — o valor aqui é só
  * anotação/planejamento do admin, nunca soma no preço cobrado (quem
@@ -178,6 +210,14 @@ export const licenseService = {
   async me(): Promise<MyLicense> {
     const { data } = await api.get<ApiEnvelope<MyLicense>>(
       "/identity/license/me"
+    );
+
+    return data.data;
+  },
+
+  async meWebsite(): Promise<WebsiteLicense> {
+    const { data } = await api.get<ApiEnvelope<WebsiteLicense>>(
+      "/identity/license/me/website"
     );
 
     return data.data;

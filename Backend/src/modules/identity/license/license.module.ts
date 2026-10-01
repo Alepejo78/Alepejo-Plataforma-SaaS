@@ -7,6 +7,7 @@ import { LicenseController } from './controllers/license.controller';
 import { LicenseService } from './services/license.service';
 import { LicenseRepository } from './repositories/license.repository';
 import { LicenseGuard } from './guards/license.guard';
+import { SiteWebIntegrationClientService } from './services/site-web-integration-client.service';
 
 @Module({
   imports: [PrismaModule, BillingModule],
@@ -17,6 +18,7 @@ import { LicenseGuard } from './guards/license.guard';
     LicenseRepository,
     LicenseService,
     LicenseGuard,
+    SiteWebIntegrationClientService,
   ],
 
   exports: [
