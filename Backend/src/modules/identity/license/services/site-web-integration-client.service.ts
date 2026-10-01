@@ -64,7 +64,11 @@ export class SiteWebIntegrationClientService {
         return { found: false };
       }
 
-      return (await response.json()) as WebsiteLicenseLookup;
+      // O AlePejoServiços embrulha toda resposta num envelope
+      // {success, timestamp, data} (mesmo interceptor global usado
+      // neste ERP) — o dado de verdade está em `.data`, não na raiz.
+      const body = (await response.json()) as { data: WebsiteLicenseLookup };
+      return body.data;
     } catch (err) {
       this.logger.warn(
         `Falha ao consultar o plano Website: ${err instanceof Error ? err.message : err}`,
