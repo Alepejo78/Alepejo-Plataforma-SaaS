@@ -20,6 +20,7 @@ import {
   Eye,
   LayoutDashboard,
   Loader2,
+  Link2,
   List,
   Mail,
   MapPin,
@@ -583,6 +584,23 @@ function Contact() {
                 <div>
                   <p className="text-sm text-[var(--text-muted)]">{t("contact.phoneLabel")}</p>
                   <p className="font-semibold text-[var(--text-primary)]">+55 (43) 99154-4557</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl erp-accent text-white">
+                  <Link2 size={20} />
+                </div>
+                <div>
+                  <p className="text-sm text-[var(--text-muted)]">{t("contact.linksLabel")}</p>
+                  <a
+                    href="https://apps.alepejo.com.br/links"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-[var(--text-primary)] underline underline-offset-2 hover:opacity-80"
+                  >
+                    {t("contact.linksCta")}
+                  </a>
                 </div>
               </div>
 

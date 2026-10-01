@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Loader2, Mail, MapPin, MessageCircle } from "lucide-react";
+import { CheckCircle2, Link2, Loader2, Mail, MapPin, MessageCircle } from "lucide-react";
 
 import { contactService } from "@/services/contact.service";
 import { useTranslations } from "@/lib/i18n/useTranslations";
@@ -108,6 +108,19 @@ export function ContactSection({
             >
               <MessageCircle size={18} className="text-[var(--mkt-accent)]" />
               {t("contact.phoneLabel")}
+            </a>
+
+            <a
+              href="https://apps.alepejo.com.br/links"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 transition-colors hover:text-[var(--mkt-accent)]"
+            >
+              <Link2 size={18} className="text-[var(--mkt-accent)]" />
+              <span>
+                {t("contact.linksLabel")}:{" "}
+                <span className="font-semibold underline underline-offset-2">{t("contact.linksCta")}</span>
+              </span>
             </a>
 
             <div className="flex items-center gap-3">
