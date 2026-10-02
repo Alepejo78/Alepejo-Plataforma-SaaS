@@ -10,6 +10,7 @@ import { ShowLockedModulesProvider } from "../providers/ShowLockedModulesProvide
 import { BrandFooter } from "../components/layout/BrandFooter";
 import { BrandColorStyle } from "../components/layout/BrandColorStyle";
 import { MascoteFlutuante } from "../components/marketing/MascoteFlutuante";
+import { PejoDemoProvider } from "../components/marketing/PejoDemoContext";
 import { WhatsappFloatingButton } from "../components/marketing/WhatsappFloatingButton";
 
 /*
@@ -51,8 +52,10 @@ export default function RootLayout({
               <TabsProvider>
                 <ThemeProvider>
                   <BrandColorStyle />
-                  {children}
-                  <MascoteFlutuante />
+                  <PejoDemoProvider>
+                    {children}
+                    <MascoteFlutuante />
+                  </PejoDemoProvider>
                   <WhatsappFloatingButton />
                   <BrandFooter />
                 </ThemeProvider>

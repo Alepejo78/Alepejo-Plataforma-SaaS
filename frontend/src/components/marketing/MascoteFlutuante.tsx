@@ -1,313 +1,197 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type PointerEvent } from "react";
 import { usePathname } from "next/navigation";
-import { X } from "lucide-react";
-
 import { isMarketingHomepage } from "@/lib/publicRoutes";
+import { usePejoDemo } from "./PejoDemoContext";
 
-import { ChromaKeyVideo } from "./ChromaKeyVideo";
+const PAGES = ["/inicio", "/institucional", "/planos", "/servicos", "/servicos/planos", "/checkout"];
+const NORMAL = "/videos/Robo normal.mp4";
+const TALKING = "/videos/robo falando.mp4";
+const KNOCKING = "/videos/pejo/vidro.mp4";
+const REACTIONS = ["ideia", "acenando", "coracao"];
+const SERVICE_REACTIONS = [...REACTIONS, "academia", "corte", "maquiagem", "personal", "dog"];
 
-/**
- * Páginas em que o Pejo fica de plantão no cantinho. Só as públicas:
- * dentro do ERP a pessoa está trabalhando, e um boneco se mexendo em
- * cima da tela atrapalharia mais do que ajudaria.
- */
-const PAGINAS_COM_MASCOTE = ["/institucional", "/planos", "/checkout"];
+type Position = { left: number; top: number };
+type Drag = Position & { id: number; x: number; y: number; moved: boolean };
+const subscribeHostname = () => () => {};
+const getHostname = () => window.location.hostname;
+const getServerHostname = () => "";
 
-const VIDEO_PADRAO = "/videos/pejo-idle.webm";
-
-/**
- * Mesmo conjunto de reações serve pros dois gatilhos (ociosidade E
- * clique) — escolhe uma ao acaso, toca uma vez, e volta sozinha pro
- * vídeo padrão quando termina (`aoTerminarReacao`).
- */
-const VIDEOS_REACAO = [
-  "/videos/pejo-reaction-2.webm",
-  "/videos/pejo-reaction-4.webm",
-];
-
-/** Espera sem interação até o Pejo "chamar atenção" com uma reação sozinho. */
-const OCIOSO_MS = 10_000;
-
-/** Só acima disso conta como arrastar — abaixo é considerado clique (dedo/mouse tremeu um pouco). */
-const LIMIAR_ARRASTO_PX = 6;
-
-/** `w-56` do balão (224px) + uma folga — usado só pra decidir de que lado ele cabe. */
-const LARGURA_BALAO_PX = 240;
-/** Altura estimada do balão (texto + botão) — generosa de propósito, é só heurística de posicionamento. */
-const ALTURA_BALAO_PX = 190;
-
-interface EstadoArrasto {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  origemLeft: number;
-  origemTop: number;
-  arrastando: boolean;
-}
-
-/**
- * Pejo fixo no canto inferior esquerdo, mas pode ser arrastado pra
- * qualquer lugar da tela (fica preso ali até recarregar a página).
- * Dois estados de vídeo:
- * - padrão: em loop, o tempo todo;
- * - reação (`VIDEOS_REACAO`, escolhida ao acaso): toca uma vez e volta
- *   pro padrão sozinha — disparada tanto por clique quanto por 10s
- *   de ociosidade (`reiniciarOcioso`), mesmo pool pros dois casos.
- */
 export function MascoteFlutuante() {
   const pathname = usePathname();
-  const [aberto, setAberto] = useState(false);
-  const [visivel, setVisivel] = useState(false);
-  const [video, setVideo] = useState(VIDEO_PADRAO);
-  const ociosoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hostname = useSyncExternalStore(subscribeHostname, getHostname, getServerHostname);
+  const visible = PAGES.includes(pathname) || pathname.startsWith("/checkout/") ||
+    (hostname !== "" && isMarketingHomepage(pathname, hostname));
+  // Reset timers and playback on navigation; never run them inside the ERP.
+  return visible ? <Pejo key={pathname} pathname={pathname} /> : null;
+}
 
-  // `null` = posição padrão (CSS bottom/left); depois do 1º arrasto
-  // vira coordenada livre em pixels, sobrepondo o CSS.
-  const [posicao, setPosicao] = useState<{ left: number; top: number } | null>(
-    null
-  );
-  const raizRef = useRef<HTMLDivElement>(null);
-  const arrastoRef = useRef<EstadoArrasto | null>(null);
-  // Setado no fim de um arrasto de verdade — `aoClicar` confere e
-  // ignora o clique nativo que o navegador dispara logo depois do
-  // pointerup (senão todo arrasto também abriria o balão de fala).
-  const arrastouRef = useRef(false);
+function Pejo({ pathname }: { pathname: string }) {
+  const playing = usePejoDemo();
+  const services = pathname === "/servicos" || pathname === "/servicos/planos";
+  const [reaction, setReaction] = useState({ src: NORMAL, sequence: 0 });
+  const [idle, setIdle] = useState(false);
+  const [previousPlaying, setPreviousPlaying] = useState(playing);
+  const [position, setPosition] = useState<Position | null>(null);
+  const rootRef = useRef<HTMLButtonElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const drag = useRef<Drag | null>(null);
+  const suppressClick = useRef(false);
+  const idleRef = useRef(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Lado onde o balão cabe de verdade, recalculado toda vez que abre
-  // (ou o robô muda de posição com ele já aberto) — sem isso, arrastar
-  // o robô pro canto direito deixaria o balão sempre nascendo pra
-  // direita, cortado pela borda da tela.
-  const [ladoBalao, setLadoBalao] = useState<{
-    horizontal: "esquerda" | "direita";
-    vertical: "cima" | "baixo";
-  }>({ horizontal: "direita", vertical: "cima" });
+  // Playback transitions reset reactions before paint, while preserving the dragged position.
+  if (previousPlaying !== playing) {
+    setPreviousPlaying(playing);
+    setIdle(false);
+    setReaction(previous => ({ src: NORMAL, sequence: previous.sequence + 1 }));
+  }
+
+  const randomReaction = useCallback(() => {
+    const pool = services ? SERVICE_REACTIONS : REACTIONS;
+    setReaction(previous => {
+      const choices = pool.map(name => `/videos/pejo/${name}.mp4`).filter(src => src !== previous.src);
+      return { src: choices[Math.floor(Math.random() * choices.length)], sequence: previous.sequence + 1 };
+    });
+  }, [services]);
 
   useEffect(() => {
-    if (!aberto) {
-      return;
+    idleRef.current = false;
+    if (playing) return;
+    function armIdle() {
+      clearTimeout(idleTimer.current);
+      idleTimer.current = setTimeout(() => {
+        idleRef.current = true;
+        setReaction(previous => ({ src: NORMAL, sequence: previous.sequence + 1 }));
+        setIdle(true);
+      }, 30_000);
     }
-
-    const raiz = raizRef.current;
-    if (!raiz) {
-      return;
+    function activity() {
+      if (idleRef.current) {
+        idleRef.current = false;
+        setIdle(false);
+      }
+      armIdle();
     }
-
-    const rect = raiz.getBoundingClientRect();
-    const espacoDireita = window.innerWidth - rect.right;
-    const espacoEsquerda = rect.left;
-    const horizontal =
-      espacoDireita >= LARGURA_BALAO_PX || espacoDireita >= espacoEsquerda
-        ? "direita"
-        : "esquerda";
-
-    // "cima" = balão cresce pra cima a partir da base do robô (visual
-    // de balão de fala clássico); só inverte se não couber (robô
-    // arrastado quase no topo da tela).
-    const vertical = rect.top >= ALTURA_BALAO_PX ? "cima" : "baixo";
-
-    setLadoBalao({ horizontal, vertical });
-  }, [aberto, posicao]);
-
-  function aoPointerDown(event: React.PointerEvent) {
-    const raiz = raizRef.current;
-    if (!raiz) return;
-
-    const rect = raiz.getBoundingClientRect();
-
-    arrastoRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      origemLeft: rect.left,
-      origemTop: rect.top,
-      arrastando: false,
+    armIdle();
+    const events = ["pointermove", "pointerdown", "keydown", "scroll", "wheel", "touchstart"] as const;
+    for (const event of events) window.addEventListener(event, activity, { passive: true, capture: true });
+    const interval = setInterval(() => {
+      if (!idleRef.current && !drag.current && !document.hidden) randomReaction();
+    }, 10_000);
+    return () => {
+      clearTimeout(idleTimer.current);
+      clearInterval(interval);
+      for (const event of events) window.removeEventListener(event, activity, true);
     };
-  }
+  }, [playing, randomReaction]);
 
-  function aoPointerMove(event: React.PointerEvent) {
-    const estado = arrastoRef.current;
-    const raiz = raizRef.current;
-    if (!estado || !raiz || estado.pointerId !== event.pointerId) return;
-
-    const dx = event.clientX - estado.startX;
-    const dy = event.clientY - estado.startY;
-
-    if (!estado.arrastando) {
-      if (Math.hypot(dx, dy) < LIMIAR_ARRASTO_PX) {
-        return;
-      }
-
-      estado.arrastando = true;
-
-      try {
-        raiz.setPointerCapture(event.pointerId);
-      } catch {
-        // Sem captura o arrasto ainda funciona (só fica sujeito a
-        // perder o pointer se o cursor sair muito rápido da área) —
-        // não é motivo pra travar a interação.
-      }
-    }
-
-    const largura = raiz.offsetWidth;
-    const altura = raiz.offsetHeight;
-    const maxLeft = Math.max(window.innerWidth - largura, 0);
-    const maxTop = Math.max(window.innerHeight - altura, 0);
-
-    setPosicao({
-      left: Math.min(Math.max(estado.origemLeft + dx, 0), maxLeft),
-      top: Math.min(Math.max(estado.origemTop + dy, 0), maxTop),
+  const src = playing ? TALKING : idle ? KNOCKING : reaction.src;
+  // Landscape clips have extra side margins: match the robot's apparent size
+  // to the portrait clips without stretching it or resizing the draggable frame.
+  const landscape = src === "/videos/pejo/maquiagem.mp4" || src === "/videos/pejo/personal.mp4";
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    void video.play().catch(() => {
+      // Before the first interaction, browsers can block autoplay with sound.
+      // Keep the animation running; the next knock retries with its original audio.
+      if (videoRef.current !== video || video.muted) return;
+      video.muted = true;
+      void video.play().catch(() => {});
     });
-  }
+  }, [src, reaction.sequence]);
 
-  function aoPointerUp(event: React.PointerEvent) {
-    const estado = arrastoRef.current;
-    if (estado?.pointerId !== event.pointerId) return;
-
-    if (estado.arrastando) {
-      arrastouRef.current = true;
-
-      try {
-        raizRef.current?.releasePointerCapture(event.pointerId);
-      } catch {
-        // Idem aoPointerDown — sem captura ativa não há o que liberar.
-      }
+  useEffect(() => {
+    function fit() {
+      const root = rootRef.current;
+      if (!root) return;
+      setPosition(previous => previous && ({
+        left: Math.max(0, Math.min(previous.left, window.innerWidth - root.offsetWidth)),
+        top: Math.max(0, Math.min(previous.top, window.innerHeight - root.offsetHeight)),
+      }));
     }
-
-    arrastoRef.current = null;
-  }
-
-  const reiniciarOcioso = useCallback(() => {
-    if (ociosoTimer.current) {
-      clearTimeout(ociosoTimer.current);
-    }
-
-    ociosoTimer.current = setTimeout(() => {
-      setVideo(
-        VIDEOS_REACAO[Math.floor(Math.random() * VIDEOS_REACAO.length)]
-      );
-    }, OCIOSO_MS);
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
   }, []);
 
-  useEffect(() => {
-    reiniciarOcioso();
-
-    return () => {
-      if (ociosoTimer.current) {
-        clearTimeout(ociosoTimer.current);
-      }
-    };
-  }, [reiniciarOcioso]);
-
-  /*
-   * `isMarketingHomepage` depende do domínio, que só existe no
-   * navegador — por isso a decisão sai num efeito, depois da
-   * montagem, em vez de direto no corpo do componente (no servidor
-   * daria resultado diferente e quebraria a hidratação).
-   */
-  useEffect(() => {
-    const marketing =
-      PAGINAS_COM_MASCOTE.some(
-        (rota) => pathname === rota || pathname.startsWith(`${rota}/`)
-      ) || isMarketingHomepage(pathname, window.location.hostname);
-
-    setVisivel(marketing);
-  }, [pathname]);
-
-  if (!visivel) {
-    return null;
+  function pointerDown(event: PointerEvent<HTMLButtonElement>) {
+    if (!event.isPrimary || event.button !== 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    suppressClick.current = false;
+    drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, left: rect.left, top: rect.top, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function pointerMove(event: PointerEvent<HTMLButtonElement>) {
+    const current = drag.current;
+    if (!current || current.id !== event.pointerId) return;
+    const dx = event.clientX - current.x;
+    const dy = event.clientY - current.y;
+    if (!current.moved && Math.hypot(dx, dy) < 6) return;
+    current.moved = true;
+    setPosition({
+      left: Math.max(0, Math.min(current.left + dx, window.innerWidth - event.currentTarget.offsetWidth)),
+      top: Math.max(0, Math.min(current.top + dy, window.innerHeight - event.currentTarget.offsetHeight)),
+    });
+  }
+  function pointerUp(event: PointerEvent<HTMLButtonElement>) {
+    if (drag.current?.id !== event.pointerId) return;
+    suppressClick.current = drag.current.moved || event.type === "pointercancel";
+    drag.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  function aoClicar() {
-    if (arrastouRef.current) {
-      // Clique nativo disparado pelo navegador logo após um arrasto —
-      // não é uma intenção de abrir o balão de fala.
-      arrastouRef.current = false;
-      return;
-    }
-
-    setAberto(!aberto);
-    const escolhido =
-      VIDEOS_REACAO[Math.floor(Math.random() * VIDEOS_REACAO.length)];
-    setVideo(escolhido);
-    reiniciarOcioso();
-  }
-
-  function aoTerminarReacao() {
-    if (video !== VIDEO_PADRAO) {
-      setVideo(VIDEO_PADRAO);
-      // Volta a contar os 10s — sem isso a reação de ociosidade só
-      // aconteceria uma vez na vida da página, em vez de repetir
-      // enquanto ninguém interage.
-      reiniciarOcioso();
-    }
-  }
+  const theme = services
+    ? "theme-servicos"
+    : pathname === "/inicio" || pathname === "/"
+      ? "theme-inicio"
+      : "theme-erp";
 
   return (
-    <div
-      ref={raizRef}
-      onPointerDown={aoPointerDown}
-      onPointerMove={aoPointerMove}
-      onPointerUp={aoPointerUp}
-      onPointerCancel={aoPointerUp}
-      style={
-        posicao
-          ? { left: posicao.left, top: posicao.top, bottom: "auto" }
-          : undefined
-      }
-      className={`pointer-events-none fixed z-30 print:hidden ${
-        posicao ? "" : "bottom-12 left-3 sm:left-5"
-      }`}
+    <button
+      ref={rootRef}
+      type="button"
+      aria-label="PEJO: clique para mudar a animação ou arraste para mover"
+      title="Clique para interagir ou arraste para mover"
+      data-pejo-state={playing ? "falando" : idle ? "vidro" : reaction.src === NORMAL ? "normal" : "reacao"}
+      onPointerDown={pointerDown}
+      onPointerMove={pointerMove}
+      onPointerUp={pointerUp}
+      onPointerCancel={pointerUp}
+      onLostPointerCapture={() => { drag.current = null; }}
+      onClick={() => {
+        if (suppressClick.current) { suppressClick.current = false; return; }
+        if (!playing) randomReaction();
+      }}
+      style={{
+        ...(position ? { left: position.left, top: position.top, bottom: "auto" } : {}),
+        background: "var(--mkt-surface, var(--surface))",
+        borderColor: "var(--mkt-border, var(--border))",
+      }}
+      className={`fixed z-30 w-[100px] touch-none select-none overflow-hidden rounded-3xl border-2 p-1.5 shadow-lg outline-offset-4 focus-visible:outline-2 focus-visible:outline-[var(--primary)] active:cursor-grabbing sm:w-[125px] print:hidden ${position ? "" : "bottom-12 left-3 sm:left-5"} cursor-grab ${theme}`}
     >
-      <div className="relative">
-        <ChromaKeyVideo
-          src={video}
-          loop={video === VIDEO_PADRAO}
-          onEnded={aoTerminarReacao}
-          onClick={aoClicar}
-          className="pointer-events-auto h-[110px] w-[160px] cursor-pointer touch-none select-none object-contain drop-shadow-lg sm:h-[135px] sm:w-[195px]"
-        />
-
-        {aberto && (
-          <div
-            className={`pointer-events-auto absolute w-56 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl ${
-              ladoBalao.horizontal === "direita"
-                ? "left-full ml-2"
-                : "right-full mr-2"
-            } ${
-              ladoBalao.vertical === "cima" ? "bottom-0" : "top-0"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => setAberto(false)}
-              aria-label="Fechar"
-              className="absolute right-2 top-2 rounded-lg p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
-              <X size={14} />
-            </button>
-
-            <p className="text-sm font-semibold text-[var(--text-primary)]">
-              Oi! Eu sou o Pejo.
-            </p>
-
-            <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
-              Posso te mostrar o sistema funcionando, módulo por
-              módulo, explicando cada um em voz alta.
-            </p>
-
-            <Link
-              href="/institucional#demonstracao"
-              onClick={() => setAberto(false)}
-              className="mt-3 block rounded-xl bg-[var(--primary)] px-3 py-2 text-center text-xs font-semibold text-[var(--primary-contrast)] transition-colors hover:bg-[var(--primary-hover)]"
-            >
-              Ver a demonstração
-            </Link>
-          </div>
-        )}
-      </div>
-    </div>
+      <span className="block aspect-[4/7] w-full overflow-hidden rounded-2xl bg-white">
+      <video
+        ref={videoRef}
+        key={`${src}-${reaction.sequence}`}
+        src={src}
+        poster={landscape ? src.replace(".mp4", "-poster.jpg") : "/videos/pejo/poster.jpg"}
+        autoPlay
+        muted={src !== KNOCKING}
+        playsInline
+        loop={playing || idle || reaction.src === NORMAL}
+        aria-hidden="true"
+        className="pointer-events-none h-full w-full object-contain"
+        style={landscape ? { transform: "scale(2.25)", transformOrigin: src.includes("maquiagem") ? "45% 50%" : "50% 50%" } : undefined}
+        onEnded={() => {
+          if (!playing && !idleRef.current) setReaction(previous => ({ src: NORMAL, sequence: previous.sequence + 1 }));
+        }}
+        onError={() => {
+          if (!playing && !idleRef.current && reaction.src !== NORMAL) setReaction(previous => ({ src: NORMAL, sequence: previous.sequence + 1 }));
+        }}
+      />
+      </span>
+    </button>
   );
 }

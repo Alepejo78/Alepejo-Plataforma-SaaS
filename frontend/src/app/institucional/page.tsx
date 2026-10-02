@@ -42,8 +42,8 @@ import { companyOnboardingService } from "@/services/company-onboarding.service"
 import { siteVisitService } from "@/services/site-visit.service";
 import { PublicNav } from "@/components/marketing/PublicNav";
 import { Faq, useErpFaqItems } from "@/components/marketing/Faq";
-import { ChromaKeyVideo } from "@/components/marketing/ChromaKeyVideo";
-import { pickVoice, stepDuration, useSpeechVoices } from "@/components/marketing/guided-narration";
+import { usePejoDemoPlayback } from "@/components/marketing/PejoDemoContext";
+import { createNarration, pickVoice, stepDuration, useSpeechVoices } from "@/components/marketing/guided-narration";
 import { erpFontVars } from "@/components/marketing/fonts";
 import { ErpAudience, ErpFeatures, ErpHero, ErpShowcase, ErpValueProps } from "@/components/marketing/ErpSections";
 import { useTranslations } from "@/lib/i18n/useTranslations";
@@ -260,6 +260,7 @@ function DemoTour() {
   const [tabIndex, setTabIndex] = useState(0);
   const [view, setView] = useState<"list" | "dashboard">("list");
   const [playing, setPlaying] = useState(false);
+  usePejoDemoPlayback(playing);
   const [sound, setSound] = useState(true);
   const [started, setStarted] = useState(false);
   // Só no cliente (após montar): evita divergência entre o HTML do servidor e o da hidratação.
@@ -268,6 +269,7 @@ function DemoTour() {
     setCanSpeak("speechSynthesis" in window);
   }, []);
   const voices = useSpeechVoices();
+  const voice = pickVoice(voices, locale);
 
   const tab = demoTabs[tabIndex];
 
@@ -285,6 +287,7 @@ function DemoTour() {
     if (!playing) return;
 
     let cancelled = false;
+    let pauseTimer: ReturnType<typeof setTimeout> | undefined;
 
     function advance() {
       if (cancelled) return;
@@ -296,11 +299,8 @@ function DemoTour() {
     }
 
     if (sound && canSpeak) {
-      const utterance = new SpeechSynthesisUtterance(tab.narration);
-      utterance.lang = locale;
-      utterance.rate = 1.04;
-      utterance.pitch = 1.0;
-      utterance.onend = advance;
+      const utterance = createNarration(tab.narration, voice, locale);
+      utterance.onend = () => { if (!cancelled) pauseTimer = setTimeout(advance, 400); };
       utterance.onerror = advance;
 
       window.speechSynthesis.cancel();
@@ -308,6 +308,7 @@ function DemoTour() {
 
       return () => {
         cancelled = true;
+        clearTimeout(pauseTimer);
         window.speechSynthesis.cancel();
       };
     }
@@ -318,7 +319,7 @@ function DemoTour() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [playing, sound, tabIndex, tab.narration, canSpeak]);
+  }, [playing, sound, tabIndex, tab.narration, canSpeak, voice, locale, demoTabs.length]);
 
   useEffect(() => {
     return () => {
@@ -450,14 +451,6 @@ function DemoTour() {
               </div>
 
               <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-                <div className="flex shrink-0 flex-col items-center">
-                  <ChromaKeyVideo
-                    src={playing ? "/videos/robo falando.mp4" : "/videos/Robo normal.mp4"}
-                    loop={true}
-                    className="h-auto w-[100px] sm:w-[115px]"
-                  />
-                </div>
-
                 <div className="relative min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-4">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{tab.label}</p>

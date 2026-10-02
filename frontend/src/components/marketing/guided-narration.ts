@@ -20,32 +20,7 @@ export function stepDuration(narration: string) {
   return Math.max(7000, Math.round((words / 2.6) * 1000) + 900);
 }
 
-/**
- * Vozes em português que os navegadores costumam ter, separadas por
- * gênero pra pontuar a favor da masculina. As do Edge marcadas como
- * "Natural"/"Online" são neurais e soam bem melhor que a voz robótica
- * antiga do Windows — por isso valem pontos extras.
- */
-const FEMALE_PT_VOICES = [
-  "francisca",
-  "thalita",
-  "brenda",
-  "elza",
-  "giovanna",
-  "leila",
-  "leticia",
-  "letícia",
-  "manuela",
-  "yara",
-  "maria",
-  "luciana",
-  "joana",
-  "camila",
-  "vitoria",
-  "vitória",
-  "helena",
-];
-
+/** Preferência masculina apenas como desempate entre vozes de mesma qualidade. */
 const MALE_PT_VOICES = [
   "daniel",
   "antonio",
@@ -63,13 +38,12 @@ const MALE_PT_VOICES = [
   "felipe",
 ];
 
-/**
- * Escolhe a melhor voz disponível: em português, masculina e o mais
- * natural possível. Cada navegador tem um conjunto diferente, então em
- * vez de fixar um nome a gente pontua e fica com a melhor colocada.
- */
-export function pickVoice(voices: SpeechSynthesisVoice[]) {
-  const candidates = voices.filter((v) => v.lang?.toLowerCase().startsWith("pt"));
+/** Prioriza qualidade e idioma; o gênero não deve superar uma voz natural. */
+export function pickVoice(voices: SpeechSynthesisVoice[], locale = "pt-BR") {
+  const language = locale.toLowerCase().replace("_", "-");
+  const candidates = voices.filter((v) =>
+    v.lang?.toLowerCase().replace("_", "-").split("-")[0] === language.split("-")[0]
+  );
 
   if (candidates.length === 0) {
     return null;
@@ -80,33 +54,24 @@ export function pickVoice(voices: SpeechSynthesisVoice[]) {
     let points = 0;
 
     if (MALE_PT_VOICES.some((n) => name.includes(n))) {
-      points += 60;
-    }
-
-    if (FEMALE_PT_VOICES.some((n) => name.includes(n))) {
-      points -= 60;
+      points += 1;
     }
 
     // Neurais do Edge — as mais naturais que aparecem no navegador.
-    if (name.includes("natural") || name.includes("online")) {
-      points += 60;
+    if (/natural|neural|premium|enhanced/.test(name)) {
+      points += 100;
     }
 
-    /*
-     * A voz do Google em pt-BR é a mesma do navegador de mapas: todo
-     * mundo já ouviu, e no mascote soa como GPS, não como personagem.
-     * Fica por último entre as masculinas — se houver qualquer outra,
-     * ela ganha; se for a única do navegador, ainda assim é usada.
-     */
-    if (name.includes("google")) {
-      points -= 25;
-    }
-
-    if (voice.lang.toLowerCase().replace("_", "-") === "pt-br") {
+    // Vozes remotas vêm antes das vozes locais básicas, sem superar qualidade explícita.
+    if (!voice.localService || name.includes("online") || name.includes("google")) {
       points += 20;
     }
 
-    if (voice.localService) {
+    if (voice.lang.toLowerCase().replace("_", "-") === language) {
+      points += 40;
+    }
+
+    if (voice.default) {
       points += 2;
     }
 
@@ -116,11 +81,21 @@ export function pickVoice(voices: SpeechSynthesisVoice[]) {
   return [...candidates].sort((a, b) => score(b) - score(a))[0];
 }
 
+/** Preserve the voice's original timbre; avoid an artificially shifted pitch. */
+export function createNarration(text: string, voice: SpeechSynthesisVoice | null, locale = "pt-BR") {
+  const utterance = new SpeechSynthesisUtterance(text);
+  if (voice) utterance.voice = voice;
+  utterance.lang = voice?.lang || locale;
+  utterance.rate = voice && /natural|neural|premium|enhanced/i.test(voice.name) ? 1 : 0.96;
+  utterance.pitch = 1;
+  return utterance;
+}
+
 /**
  * As vozes chegam de forma assíncrona no Chrome: na primeira chamada
  * `getVoices()` volta vazio e só depois o evento `voiceschanged`
  * avisa. Sem esperar por ele, o tour começaria com a voz padrão do
- * sistema (em inglês) em vez da masculina em português.
+ * sistema (em inglês) em vez da voz no idioma escolhido.
  */
 export function useSpeechVoices() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);

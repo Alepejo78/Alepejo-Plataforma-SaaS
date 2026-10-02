@@ -34,11 +34,8 @@ import {
   YAxis,
 } from "recharts";
 
-import { ChromaKeyVideo } from "./ChromaKeyVideo";
-import { pickVoice, stepDuration, useSpeechVoices } from "./guided-narration";
-
-const VIDEO_APRESENTANDO = "/videos/robo falando.mp4";
-const VIDEO_IDLE = "/videos/Robo normal.mp4";
+import { usePejoDemoPlayback } from "./PejoDemoContext";
+import { createNarration, pickVoice, stepDuration, useSpeechVoices } from "./guided-narration";
 
 type BadgeTone = "success" | "warning" | "neutral";
 
@@ -604,10 +601,10 @@ export function ServicosDemoTour() {
   const [track, setTrack] = useState<TrackId>("desktop");
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  usePejoDemoPlayback(playing);
   const [sound, setSound] = useState(true);
   const [started, setStarted] = useState(false);
   const [canSpeak, setCanSpeak] = useState(false);
-  const [videoMiniatura, setVideoMiniatura] = useState(VIDEO_APRESENTANDO);
 
   const steps = tourStepsFor(track);
   const step = steps[index] ?? steps[0];
@@ -635,6 +632,7 @@ export function ServicosDemoTour() {
     }
 
     let cancelled = false;
+    let pauseTimer: ReturnType<typeof setTimeout> | undefined;
 
     function advance() {
       if (cancelled) {
@@ -648,16 +646,8 @@ export function ServicosDemoTour() {
     }
 
     if (sound && canSpeak) {
-      const utterance = new SpeechSynthesisUtterance(step.narration);
-
-      if (voice) {
-        utterance.voice = voice;
-      }
-
-      utterance.lang = "pt-BR";
-      utterance.rate = 1.04;
-      utterance.pitch = 1.0;
-      utterance.onend = advance;
+      const utterance = createNarration(step.narration, voice);
+      utterance.onend = () => { if (!cancelled) pauseTimer = setTimeout(advance, 400); };
       utterance.onerror = advance;
 
       window.speechSynthesis.cancel();
@@ -665,6 +655,7 @@ export function ServicosDemoTour() {
 
       return () => {
         cancelled = true;
+        clearTimeout(pauseTimer);
         window.speechSynthesis.cancel();
       };
     }
@@ -773,20 +764,7 @@ export function ServicosDemoTour() {
         </div>
 
         <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-          <div className="flex shrink-0 flex-col items-center">
-            <ChromaKeyVideo
-              src={videoMiniatura}
-              loop={videoMiniatura === VIDEO_IDLE}
-              onEnded={() => setVideoMiniatura(VIDEO_IDLE)}
-              className="h-auto w-[100px] sm:w-[115px]"
-            />
-          </div>
-
           <div className="relative min-w-0 flex-1 rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] p-4">
-            <span
-              aria-hidden
-              className="absolute -left-[7px] top-8 hidden h-3 w-3 rotate-45 border-b border-l border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] sm:block"
-            />
             <div className="flex items-center gap-2">
               <span className="vibrant-icon-badge flex h-7 w-7 items-center justify-center rounded-lg">
                 <step.icon size={15} />
