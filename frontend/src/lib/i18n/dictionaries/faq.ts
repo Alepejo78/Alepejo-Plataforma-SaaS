@@ -44,7 +44,8 @@ export const erpFaqDictionary: LocaleDictionaries = {
       },
       {
         question: "A implantação é gratuita?",
-        answer: "Sim. Por ser 100% online, não precisa instalar nada em servidor ou computador.",
+        answer:
+          "Não. Há uma taxa de implantação para cobrir as despesas de parametrização do sistema e importação de dados. O valor é a combinar.",
       },
       {
         question: "Vocês oferecem treinamento?",
@@ -109,7 +110,8 @@ export const erpFaqDictionary: LocaleDictionaries = {
       },
       {
         question: "Is setup free?",
-        answer: "Yes. Since it's 100% online, there's nothing to install on a server or computer.",
+        answer:
+          "No. There is a setup fee to cover the costs of configuring the system and importing your data. The amount is to be agreed.",
       },
       {
         question: "Do you offer training?",
