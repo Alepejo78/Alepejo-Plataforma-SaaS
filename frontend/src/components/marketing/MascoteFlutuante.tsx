@@ -6,9 +6,10 @@ import { isMarketingHomepage } from "@/lib/publicRoutes";
 import { usePejoDemo } from "./PejoDemoContext";
 
 const PAGES = ["/inicio", "/institucional", "/planos", "/servicos", "/servicos/planos", "/checkout"];
-const NORMAL = "/videos/Robo normal.mp4";
-const TALKING = "/videos/robo falando.mp4";
-const KNOCKING = "/videos/pejo/vidro.mp4";
+const MEDIA = "/videos/pejo/transparent";
+const NORMAL = `${MEDIA}/normal.webm`;
+const TALKING = `${MEDIA}/falando.webm`;
+const KNOCKING = `${MEDIA}/vidro.webm`;
 const REACTIONS = ["ideia", "acenando", "coracao"];
 const SERVICE_REACTIONS = [...REACTIONS, "academia", "corte", "maquiagem", "personal", "dog"];
 
@@ -51,7 +52,7 @@ function Pejo({ pathname }: { pathname: string }) {
   const randomReaction = useCallback(() => {
     const pool = services ? SERVICE_REACTIONS : REACTIONS;
     setReaction(previous => {
-      const choices = pool.map(name => `/videos/pejo/${name}.mp4`).filter(src => src !== previous.src);
+      const choices = pool.map(name => `${MEDIA}/${name}.webm`).filter(src => src !== previous.src);
       return { src: choices[Math.floor(Math.random() * choices.length)], sequence: previous.sequence + 1 };
     });
   }, [services]);
@@ -88,9 +89,7 @@ function Pejo({ pathname }: { pathname: string }) {
   }, [playing, randomReaction]);
 
   const src = playing ? TALKING : idle ? KNOCKING : reaction.src;
-  // Landscape clips have extra side margins: match the robot's apparent size
-  // to the portrait clips without stretching it or resizing the draggable frame.
-  const landscape = src === "/videos/pejo/maquiagem.mp4" || src === "/videos/pejo/personal.mp4";
+  // All transparent clips share the same stage and scale, including landscape originals.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -142,12 +141,6 @@ function Pejo({ pathname }: { pathname: string }) {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  const theme = services
-    ? "theme-servicos"
-    : pathname === "/inicio" || pathname === "/"
-      ? "theme-inicio"
-      : "theme-erp";
-
   return (
     <button
       ref={rootRef}
@@ -166,24 +159,20 @@ function Pejo({ pathname }: { pathname: string }) {
       }}
       style={{
         ...(position ? { left: position.left, top: position.top, bottom: "auto" } : {}),
-        background: "var(--mkt-surface, var(--surface))",
-        borderColor: "var(--mkt-border, var(--border))",
       }}
-      className={`fixed z-30 w-[100px] touch-none select-none overflow-hidden rounded-3xl border-2 p-1.5 shadow-lg outline-offset-4 focus-visible:outline-2 focus-visible:outline-[var(--primary)] active:cursor-grabbing sm:w-[125px] print:hidden ${position ? "" : "bottom-12 left-3 sm:left-5"} cursor-grab ${theme}`}
+      className={`fixed z-30 w-[128px] touch-none select-none border-0 bg-transparent p-0 outline-offset-4 focus-visible:outline-2 focus-visible:outline-[var(--primary)] active:cursor-grabbing sm:w-[160px] print:hidden ${position ? "" : "bottom-12 left-3 sm:left-5"} cursor-grab`}
     >
-      <span className="block aspect-[4/7] w-full overflow-hidden rounded-2xl bg-white">
       <video
         ref={videoRef}
         key={`${src}-${reaction.sequence}`}
         src={src}
-        poster={landscape ? src.replace(".mp4", "-poster.jpg") : "/videos/pejo/poster.jpg"}
+        poster={src.replace(".webm", ".png")}
         autoPlay
         muted={src !== KNOCKING}
         playsInline
         loop={playing || idle || reaction.src === NORMAL}
         aria-hidden="true"
-        className="pointer-events-none h-full w-full object-contain"
-        style={landscape ? { transform: "scale(2.25)", transformOrigin: src.includes("maquiagem") ? "45% 50%" : "50% 50%" } : undefined}
+        className="pointer-events-none block aspect-[6/7] w-full object-contain"
         onEnded={() => {
           if (!playing && !idleRef.current) setReaction(previous => ({ src: NORMAL, sequence: previous.sequence + 1 }));
         }}
@@ -191,7 +180,6 @@ function Pejo({ pathname }: { pathname: string }) {
           if (!playing && !idleRef.current && reaction.src !== NORMAL) setReaction(previous => ({ src: NORMAL, sequence: previous.sequence + 1 }));
         }}
       />
-      </span>
     </button>
   );
 }
