@@ -58,6 +58,7 @@ export default function InicioPage() {
     <div className={`${servicosDisplay.variable} ${erpBody.variable} marketing-page theme-inicio`}>
       <MarketingNav
         links={NAV_LINKS}
+        showProducts
       />
 
       {/* Abertura */}
