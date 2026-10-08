@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { systemConfig } from "@/config/system";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ProductsMenu } from "./ProductsMenu";
 
 interface NavLink {
   label: string;
@@ -21,8 +22,10 @@ export function MarketingNav({
   secondaryCtaHref,
   ctaClassName,
   secondaryCtaClassName,
+  showProducts = false,
 }: {
   links: NavLink[];
+  showProducts?: boolean;
   ctaLabel?: string;
   ctaHref?: string;
   secondaryCtaLabel?: string;
@@ -32,8 +35,8 @@ export function MarketingNav({
   secondaryCtaClassName?: string;
 }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)]/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+    <header className={`sticky top-0 z-20 border-b border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)]/85 backdrop-blur-md ${showProducts ? "has-[[aria-expanded=true]]:z-40" : ""}`}>
+      <div className={`mx-auto flex max-w-6xl items-center justify-between px-6 py-3 ${showProducts ? "flex-wrap gap-y-2" : ""}`}>
         <Link href="/inicio" className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -67,6 +70,7 @@ export function MarketingNav({
         </nav>
 
         <div className="flex items-center gap-2.5">
+          {showProducts && <ProductsMenu />}
           <LanguageSwitcher />
 
           {secondaryCtaLabel && secondaryCtaHref && (
