@@ -12,7 +12,7 @@ const products = [
   { name: "AlePejo Serviços", href: "https://www.alepejo.com.br/servicos", pt: "Agendamento online, atendimento e gestão de clientes para negócios de serviços.", en: "Online scheduling, customer service and client management for service businesses." },
   { name: "AlePejo WEBSITE", href: "https://apps.alepejo.com.br/servicositweb", pt: "Criação de sites para apresentar sua empresa, seus serviços e seus contatos na web.", en: "Websites to present your company, services and contact information online." },
   { name: "AlePejo FINANPESS", href: "https://apps.alepejo.com.br/finanpess", pt: "Controle financeiro pessoal para organizar receitas, despesas e acompanhar seu dinheiro.", en: "Personal finance management to organize income, expenses and track your money." },
-  { name: "AlePejo Link BIOS", href: linkBioUrl, pt: "Sua página de links para a bio: reúna contatos, redes sociais e conteúdos em um único endereço.", en: "Your bio link page: bring contacts, social networks and content together at one address." },
+  { name: "AlePejo - Criar seu próprio link para BIOs", href: linkBioUrl, pt: "Crie sua própria página de links para BIO. Reúna seus contatos, redes sociais e conteúdos em um único endereço.", en: "AlePejo lets you create your own bio link page. Bring contacts, social networks and content together at one address." },
 ];
 
 export function ProductsMenu() {
